@@ -20,42 +20,10 @@ export async function GET() {
   });
 
   const { data, error } = await supabase
-    .from("products")
-    .select(`
-      id,
-      name,
-      slug,
-      description,
-      image_url,
-      category_id,
-      is_active,
-      created_at,
-      category:categories (
-        id,
-        name
-      ),
-      variants:product_variants (
-        id,
-        product_id,
-        sku,
-        size_label,
-        length_mm,
-        width_mm,
-        thickness_mm,
-        core_type,
-        ply_count,
-        unit,
-        moq,
-        currency,
-        unit_price,
-        is_price_on_request,
-        price_notes,
-        is_active,
-        sort_order
-      )
-    `)
-    .eq("is_active", true)
-    .order("name", { ascending: true });
+  .from("products")
+  .select("*")
+  .eq("is_active", true)
+  .order("name", { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
