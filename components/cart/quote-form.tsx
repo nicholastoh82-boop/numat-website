@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 import PhoneInput, { type Value } from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 
-const APPLICATIONS = ['Furniture', 'Flooring', 'Doors', 'Structural', 'Interior', 'Outdoor', 'Other'] as const
+const APPLICATIONS = ['Furniture', 'Door', 'Flooring', 'Wall Panelling', 'Veneer', 'DIY Project'] as const
 
 interface QuoteFormProps {
   onBack: () => void

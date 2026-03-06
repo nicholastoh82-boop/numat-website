@@ -8,8 +8,47 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ProductCard } from '@/components/products/product-card'
 import { ProductQuickView } from '@/components/products/product-quick-view'
-import type { ProductWithCategory, Category } from '@/lib/supabase/types'
-import { cn } from '@/lib/utils'
+
+type ProductVariant = {
+  id: string
+  product_id: string
+  sku: string
+  size_label: string
+  length_mm: number
+  width_mm: number
+  thickness_mm: number
+  core_type: string | null
+  ply_count: number | null
+  unit: string | null
+  moq: number | null
+  currency: string | null
+  unit_price: number | null
+  is_price_on_request?: boolean
+  price_notes?: string | null
+  is_active?: boolean
+  sort_order?: number | null
+}
+
+type ProductApiItem = {
+  id: string
+  name: string
+  title?: string
+  slug: string
+  description?: string
+  image_url?: string
+  category: string
+  unit_price: number | null
+  created_at?: string
+  variants: ProductVariant[]
+}
+
+type Category = {
+  id: string
+  name: string
+  created_at?: string
+  is_active?: boolean
+  display_order?: number | null
+}
 
 const fetcher = async (url: string) => {
   const res = await fetch(url)
@@ -20,99 +59,119 @@ const fetcher = async (url: string) => {
   return data
 }
 
+function slugify(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
 export function ProductsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const initialCategory = (searchParams.get('category') || 'all').toLowerCase()
-  
+
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
-  
-  // Handle category change and update URL
-  const handleCategoryChange = useCallback((category: string) => {
-    const normalizedCategory = category.toLowerCase()
-    setSelectedCategory(normalizedCategory)
-    
-    // Update URL without page reload
-    if (normalizedCategory === 'all') {
-      router.push('/products', { scroll: false })
-    } else {
-      router.push(`/products?category=${normalizedCategory}`, { scroll: false })
-    }
-  }, [router])
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'newest' | 'latest-updated' | 'price-asc' | 'price-desc' | 'name'>('newest')
-  const [quickViewProduct, setQuickViewProduct] = useState<ProductWithCategory | null>(null)
+  const [quickViewProduct, setQuickViewProduct] = useState<ProductApiItem | null>(null)
   const [showFilters, setShowFilters] = useState(false)
 
-  const { data: products, isLoading: productsLoading, error: productsError } = useSWR<ProductWithCategory[]>(
-    '/api/products',
-    fetcher,
-    { fallbackData: [] }
+  const handleCategoryChange = useCallback(
+    (category: string | null) => {
+      const normalizedCategory = (category ?? 'all').toLowerCase()
+      setSelectedCategory(normalizedCategory)
+
+      if (normalizedCategory === 'all') {
+        router.push('/products', { scroll: false })
+      } else {
+        router.push(`/products?category=${normalizedCategory}`, { scroll: false })
+      }
+    },
+    [router]
   )
 
-  const { data: categories } = useSWR<Category[]>(
-    '/api/categories',
-    fetcher,
-    { fallbackData: [] }
-  )
+  const {
+    data: products,
+    isLoading: productsLoading,
+    error: productsError,
+  } = useSWR<ProductApiItem[]>('/api/products', fetcher, {
+    fallbackData: [],
+  })
 
-  // Update category from URL params
+  const { data: categories } = useSWR<Category[]>('/api/categories', fetcher, {
+    fallbackData: [],
+  })
+
   useEffect(() => {
     const cat = searchParams.get('category')
     if (cat) {
-      // Normalize category to lowercase for consistent matching
       setSelectedCategory(cat.toLowerCase())
+    } else {
+      setSelectedCategory('all')
     }
   }, [searchParams])
 
   const filteredProducts = useMemo(() => {
     if (!products) return []
-    
+
     let filtered = [...products]
 
-    // Filter by category - check both the category text field and the categories relationship
     if (selectedCategory !== 'all') {
       const normalizedCategory = selectedCategory.toLowerCase()
-      filtered = filtered.filter(p => {
-        // Check categories relationship (slug)
-        if (p.categories?.slug?.toLowerCase() === normalizedCategory) return true
-        // Check categories relationship (name)
-        if (p.categories?.name?.toLowerCase() === normalizedCategory) return true
-        // Check legacy category text field
-        if (p.category?.toLowerCase() === normalizedCategory) return true
-        // Check if slug matches with hyphen variations
-        const slugWithHyphens = normalizedCategory.replace(/\s+/g, '-')
-        if (p.categories?.slug === slugWithHyphens) return true
-        return false
+      filtered = filtered.filter((p) => {
+        const categoryName = p.category?.toLowerCase() ?? ''
+        return slugify(categoryName) === normalizedCategory
       })
     }
 
-    // Filter by search
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(p =>
-        p.name.toLowerCase().includes(query) ||
-        p.slug.toLowerCase().includes(query) ||
-        p.description?.toLowerCase().includes(query)
-      )
+      filtered = filtered.filter((p) => {
+        return (
+          p.name?.toLowerCase().includes(query) ||
+          p.slug?.toLowerCase().includes(query) ||
+          p.description?.toLowerCase().includes(query) ||
+          p.category?.toLowerCase().includes(query) ||
+          (p.variants ?? []).some((v) =>
+            [
+              v.sku,
+              v.core_type ?? '',
+              String(v.thickness_mm ?? ''),
+              String(v.ply_count ?? ''),
+            ]
+              .join(' ')
+              .toLowerCase()
+              .includes(query)
+          )
+        )
+      })
     }
 
-    // Sort
     switch (sortBy) {
       case 'newest':
-        filtered = filtered.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+        filtered.sort(
+          (a, b) =>
+            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+        )
         break
       case 'latest-updated':
-        filtered = filtered.sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime())
+        filtered.sort(
+          (a, b) =>
+            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+        )
         break
       case 'price-asc':
-        filtered = filtered.sort((a, b) => (a.base_price || 0) - (b.base_price || 0))
+        filtered.sort((a, b) => (a.unit_price || 0) - (b.unit_price || 0))
         break
       case 'price-desc':
-        filtered = filtered.sort((a, b) => (b.base_price || 0) - (a.base_price || 0))
+        filtered.sort((a, b) => (b.unit_price || 0) - (a.unit_price || 0))
         break
       case 'name':
-        filtered = filtered.sort((a, b) => a.name.localeCompare(b.name))
+        filtered.sort((a, b) => a.name.localeCompare(b.name))
         break
     }
 
@@ -120,33 +179,35 @@ export function ProductsContent() {
   }, [products, selectedCategory, searchQuery, sortBy])
 
   const allCategories = useMemo(() => {
-    const cats = [{ slug: 'all', name: 'All Products' }]
-    if (categories) {
-      cats.push(...categories.map(c => ({ slug: c.slug, name: c.name })))
-    }
-    return cats
+    return categories ?? []
   }, [categories])
 
-  const selectedCategoryName = allCategories.find(c => c.slug.toLowerCase() === selectedCategory.toLowerCase())?.name || 'All Products'
+  const selectedCategoryName =
+    allCategories.find((c) => slugify(c.name) === selectedCategory)?.name || 'All Products'
 
   return (
     <>
       <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8 lg:py-12">
-        {/* Header */}
-        <div className="flex flex-col gap-4 mb-8">
+        <div className="mb-8 flex flex-col gap-4">
           <div>
-            <h1 className="font-serif text-3xl sm:text-4xl text-foreground">
+            <h1 className="font-serif text-3xl text-foreground sm:text-4xl">
               {selectedCategoryName}
             </h1>
             <p className="mt-2 text-muted-foreground">
-              {productsLoading ? 'Loading...' : `${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''} available`}
+              {productsLoading
+                ? 'Loading...'
+                : `${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''} available`}
             </p>
+            {productsError && (
+              <p className="mt-2 text-sm text-red-600">
+                Failed to load products: {productsError.message}
+              </p>
+            )}
           </div>
 
-          {/* Search and filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="relative max-w-md flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search products..."
@@ -155,11 +216,12 @@ export function ProductsContent() {
                 className="pl-10"
               />
             </div>
+
             <div className="flex gap-2">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="newest">Newest First</option>
                 <option value="latest-updated">Latest Updated</option>
@@ -167,45 +229,48 @@ export function ProductsContent() {
                 <option value="price-asc">Price: Low to High</option>
                 <option value="price-desc">Price: High to Low</option>
               </select>
+
               <Button
                 variant="outline"
                 size="icon"
-                className="lg:hidden bg-transparent"
+                className="bg-transparent lg:hidden"
                 onClick={() => setShowFilters(!showFilters)}
                 aria-label="Toggle filters"
               >
-                <SlidersHorizontal className="w-4 h-4" />
+                <SlidersHorizontal className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
 
         <div className="flex gap-8">
-          {/* Sidebar filters - Desktop */}
-          <aside className="hidden lg:block w-64 flex-shrink-0">
+          <aside className="hidden w-64 flex-shrink-0 lg:block">
             <CategoryFilters
               categories={allCategories}
-              selected={selectedCategory}
-              onSelect={handleCategoryChange}
+              selectedSlug={selectedCategory === 'all' ? null : selectedCategory}
+              onSelectSlug={handleCategoryChange}
             />
           </aside>
 
-          {/* Mobile filters */}
           {showFilters && (
             <div className="fixed inset-0 z-50 lg:hidden">
-              <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowFilters(false)} />
+              <div
+                className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
+                onClick={() => setShowFilters(false)}
+              />
               <div className="absolute left-0 top-0 h-full w-72 bg-background p-6 shadow-xl">
-                <div className="flex items-center justify-between mb-6">
+                <div className="mb-6 flex items-center justify-between">
                   <h2 className="font-semibold text-foreground">Filters</h2>
                   <Button variant="ghost" size="icon" onClick={() => setShowFilters(false)}>
-                    <X className="w-5 h-5" />
+                    <X className="h-5 w-5" />
                   </Button>
                 </div>
+
                 <CategoryFilters
                   categories={allCategories}
-                  selected={selectedCategory}
-                  onSelect={(cat) => {
-                    handleCategoryChange(cat)
+                  selectedSlug={selectedCategory === 'all' ? null : selectedCategory}
+                  onSelectSlug={(slug) => {
+                    handleCategoryChange(slug)
                     setShowFilters(false)
                   }}
                 />
@@ -213,14 +278,13 @@ export function ProductsContent() {
             </div>
           )}
 
-          {/* Products grid */}
           <div className="flex-1">
             {productsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="py-12 text-center">
                 <p className="text-muted-foreground">No products found matching your criteria.</p>
                 <Button
                   variant="link"
@@ -234,11 +298,11 @@ export function ProductsContent() {
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredProducts.map((product) => (
                   <ProductCard
                     key={product.id}
-                    product={product}
+                    product={product as any}
                     onQuickView={() => setQuickViewProduct(product)}
                   />
                 ))}
@@ -248,10 +312,9 @@ export function ProductsContent() {
         </div>
       </div>
 
-      {/* Quick view modal */}
       {quickViewProduct && (
         <ProductQuickView
-          product={quickViewProduct}
+          product={quickViewProduct as any}
           onClose={() => setQuickViewProduct(null)}
         />
       )}
@@ -260,29 +323,47 @@ export function ProductsContent() {
 }
 
 interface CategoryFiltersProps {
-  categories: { slug: string; name: string }[]
-  selected: string
-  onSelect: (category: string) => void
+  categories: Category[]
+  selectedSlug: string | null
+  onSelectSlug: (slug: string | null) => void
 }
 
-function CategoryFilters({ categories, selected, onSelect }: CategoryFiltersProps) {
+function CategoryFilters({ categories, selectedSlug, onSelectSlug }: CategoryFiltersProps) {
+  const sorted = [...categories]
+    .filter((c) => c.is_active !== false)
+    .sort((a, b) => {
+      const ao = a.display_order ?? 999999
+      const bo = b.display_order ?? 999999
+      if (ao !== bo) return ao - bo
+      return a.name.localeCompare(b.name)
+    })
+
   return (
-    <div className="space-y-1">
-      <h3 className="font-medium text-foreground mb-3">Categories</h3>
-      {categories.map((category) => (
-        <button
-          key={category.slug}
-          onClick={() => onSelect(category.slug)}
-          className={cn(
-            'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
-            selected === category.slug
-              ? 'bg-primary text-primary-foreground font-medium'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          )}
-        >
-          {category.name}
-        </button>
-      ))}
+    <div>
+      <div style={{ fontWeight: 600, marginBottom: 8 }}>Categories</div>
+
+      <button type="button" onClick={() => onSelectSlug(null)} style={{ marginBottom: 8 }}>
+        All Products
+      </button>
+
+      {sorted.map((c) => {
+        const slug = slugify(c.name)
+        const selected = slug === (selectedSlug ?? '')
+
+        return (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onSelectSlug(slug)}
+            style={{
+              display: 'block',
+              fontWeight: selected ? 'bold' : 'normal',
+            }}
+          >
+            {c.name}
+          </button>
+        )
+      })}
     </div>
   )
 }
