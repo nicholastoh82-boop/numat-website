@@ -1,8 +1,23 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function GET() {
-  const supabase = await createClient();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return NextResponse.json(
+      { error: "Missing Supabase environment variables." },
+      { status: 500 }
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 
   const { data, error } = await supabase
     .from("products")
@@ -46,18 +61,28 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const mapped = (data ?? []).map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    title: p.name,
-    slug: p.slug ?? "",
-    description: p.description ?? "",
-    image_url: p.image_url ?? "/placeholder-product.jpg",
-    category: p.category?.name ?? "",
-    unit_price: p.variants?.[0]?.unit_price ?? null,
-    variants: (p.variants ?? []).filter((v: any) => v.is_active !== false),
-    created_at: p.created_at,
-  }));
+  const mapped = (data ?? []).map((p: any) => {
+    const activeVariants = (p.variants ?? [])
+      .filter((v: any) => v.is_active !== false)
+      .sort((a: any, b: any) => {
+        const aSort = a.sort_order ?? 999999;
+        const bSort = b.sort_order ?? 999999;
+        return aSort - bSort;
+      });
+
+    return {
+      id: p.id,
+      name: p.name,
+      title: p.name,
+      slug: p.slug ?? "",
+      description: p.description ?? "",
+      image_url: p.image_url ?? "/placeholder-product.jpg",
+      category: p.category?.name ?? "",
+      unit_price: activeVariants[0]?.unit_price ?? null,
+      variants: activeVariants,
+      created_at: p.created_at,
+    };
+  });
 
   return NextResponse.json(mapped);
 }
