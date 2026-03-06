@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export async function GET(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -15,6 +15,8 @@ export async function GET(
     );
   }
 
+  const { id } = await params;
+
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
@@ -22,12 +24,10 @@ export async function GET(
     },
   });
 
-  const productId = context.params.id;
-
   const { data: product, error: productError } = await supabase
     .from("products")
     .select("*")
-    .eq("id", productId)
+    .eq("id", id)
     .eq("is_active", true)
     .single();
 
@@ -71,7 +71,7 @@ export async function GET(
       is_active,
       sort_order
     `)
-    .eq("product_id", productId)
+    .eq("product_id", id)
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
