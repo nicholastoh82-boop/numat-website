@@ -31,7 +31,6 @@ interface CartState {
   getDiscountPercent: () => number
 }
 
-// Discount tiers based on total quantity
 function calculateDiscountPercent(totalQuantity: number): number {
   if (totalQuantity >= 500) return 15
   if (totalQuantity >= 200) return 10
@@ -49,15 +48,18 @@ export const useCartStore = create<CartState>()(
 
       addItem: (item: CartItem) => {
         const items = get().items
-        const existingItem = items.find(i => i.id === item.id)
+        const existingItem = items.find((i) => i.id === item.id)
 
         if (existingItem) {
           set({
-            items: items.map(i =>
+            items: items.map((i) =>
               i.id === item.id
-                ? { ...i, quantity: i.quantity + item.quantity }
+                ? {
+                    ...i,
+                    quantity: i.quantity + item.quantity,
+                  }
                 : i
-            )
+            ),
           })
         } else {
           set({ items: [...items, item] })
@@ -65,22 +67,27 @@ export const useCartStore = create<CartState>()(
       },
 
       removeItem: (id: string) => {
-        set({ items: get().items.filter(item => item.id !== id) })
+        set({ items: get().items.filter((item) => item.id !== id) })
       },
 
       updateQuantity: (id: string, quantity: number) => {
-        const item = get().items.find(i => i.id === id)
+        const item = get().items.find((i) => i.id === id)
         if (!item) return
-        
+
         if (quantity < item.minOrderQty) {
           get().removeItem(id)
           return
         }
-        
+
         set({
-          items: get().items.map(i =>
-            i.id === id ? { ...i, quantity } : i
-          )
+          items: get().items.map((i) =>
+            i.id === id
+              ? {
+                  ...i,
+                  quantity,
+                }
+              : i
+          ),
         })
       },
 
@@ -90,9 +97,11 @@ export const useCartStore = create<CartState>()(
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
 
-      getTotalItems: () => get().items.reduce((sum, item) => sum + item.quantity, 0),
+      getTotalItems: () =>
+        get().items.reduce((sum, item) => sum + item.quantity, 0),
 
-      getSubtotal: () => get().items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0),
+      getSubtotal: () =>
+        get().items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),
 
       getDiscountPercent: () => {
         const totalItems = get().getTotalItems()
@@ -109,10 +118,10 @@ export const useCartStore = create<CartState>()(
         const subtotal = get().getSubtotal()
         const discount = get().getDiscount()
         return subtotal - discount
-      }
+      },
     }),
     {
-      name: 'numat-cart'
+      name: 'numat-cart',
     }
   )
 )

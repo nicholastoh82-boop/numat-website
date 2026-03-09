@@ -14,15 +14,14 @@ type ProductVariant = {
   product_id: string
   sku: string
   size_label: string
-  length_mm: number
-  width_mm: number
-  thickness_mm: number
+  length_mm: number | null
+  width_mm: number | null
+  thickness_mm: number | null
   core_type: string | null
   ply_count: number | null
   unit: string | null
   moq: number | null
-  currency: string | null
-  unit_price: number | null
+  base_price_usd: number | null
   is_price_on_request?: boolean
   price_notes?: string | null
   is_active?: boolean
@@ -32,19 +31,25 @@ type ProductVariant = {
 type ProductApiItem = {
   id: string
   name: string
-  title?: string
   slug: string
   description?: string
-  image_url?: string
-  category: string
-  unit_price: number | null
-  created_at?: string
+  image_url?: string | null
+  category: string | { id?: string; name?: string } | null
+  categories?: { id: string; name: string } | null
+  base_price_usd: number | null
+  starting_price_usd: number | null
+  min_order_qty?: number | null
+  unit?: string | null
+  sku?: string
+  is_featured?: boolean
+  created_at?: string | null
   variants: ProductVariant[]
 }
 
 type Category = {
   id: string
   name: string
+  slug?: string
   created_at?: string
   is_active?: boolean
   display_order?: number | null
@@ -69,20 +74,87 @@ function slugify(input: string): string {
     .replace(/^-|-$/g, '')
 }
 
+/**
+ * Alias map:
+ * lets old DB category names and new branded UI names point to the same filter bucket
+ */
+function normalizeCategorySlug(input: string): string {
+  const raw = slugify(input)
+
+  const aliasMap: Record<string, string> = {
+    // NuDoor
+    door: 'nudoor',
+    nudoor: 'nudoor',
+
+    // NuFloor
+    flooring: 'nufloor',
+    floor: 'nufloor',
+    nufloor: 'nufloor',
+
+    // NuWall
+    wall: 'nuwall',
+    'wall-panelling': 'nuwall',
+    'wall-paneling': 'nuwall',
+    nuwall: 'nuwall',
+
+    // NuBam Boards
+    nubam: 'nubam-boards',
+    'nubam-boards': 'nubam-boards',
+    veneer: 'nubam-boards',
+
+    // NuSlat
+    diy: 'nuslat',
+    'diy-project': 'nuslat',
+    'diy-projects': 'nuslat',
+    nuslat: 'nuslat',
+
+    // unchanged
+    furniture: 'furniture',
+  }
+
+  return aliasMap[raw] ?? raw
+}
+
+function normalizeCategoryName(input: string): string {
+  const normalizedSlug = normalizeCategorySlug(input)
+
+  const labelMap: Record<string, string> = {
+    nudoor: 'NuDoor',
+    nufloor: 'NuFloor',
+    nuwall: 'NuWall',
+    'nubam-boards': 'NuBam Boards',
+    nuslat: 'NuSlat',
+    furniture: 'Furniture',
+  }
+
+  return labelMap[normalizedSlug] ?? input
+}
+
+function getProductCategoryName(product: ProductApiItem): string {
+  if (typeof product.category === 'string') return product.category
+  if (product.category && typeof product.category === 'object' && typeof product.category.name === 'string') {
+    return product.category.name
+  }
+  if (typeof product.categories?.name === 'string') return product.categories.name
+  return ''
+}
+
 export function ProductsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const initialCategory = (searchParams.get('category') || 'all').toLowerCase()
+  const initialCategory = normalizeCategorySlug(searchParams.get('category') || 'all')
 
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<'newest' | 'latest-updated' | 'price-asc' | 'price-desc' | 'name'>('newest')
+  const [sortBy, setSortBy] = useState<
+    'newest' | 'latest-updated' | 'price-asc' | 'price-desc' | 'name'
+  >('newest')
   const [quickViewProduct, setQuickViewProduct] = useState<ProductApiItem | null>(null)
   const [showFilters, setShowFilters] = useState(false)
 
   const handleCategoryChange = useCallback(
     (category: string | null) => {
-      const normalizedCategory = (category ?? 'all').toLowerCase()
+      const normalizedCategory = normalizeCategorySlug(category ?? 'all')
       setSelectedCategory(normalizedCategory)
 
       if (normalizedCategory === 'all') {
@@ -109,7 +181,7 @@ export function ProductsContent() {
   useEffect(() => {
     const cat = searchParams.get('category')
     if (cat) {
-      setSelectedCategory(cat.toLowerCase())
+      setSelectedCategory(normalizeCategorySlug(cat))
     } else {
       setSelectedCategory('all')
     }
@@ -121,21 +193,23 @@ export function ProductsContent() {
     let filtered = [...products]
 
     if (selectedCategory !== 'all') {
-      const normalizedCategory = selectedCategory.toLowerCase()
       filtered = filtered.filter((p) => {
-        const categoryName = p.category?.toLowerCase() ?? ''
-        return slugify(categoryName) === normalizedCategory
+        const rawCategory = getProductCategoryName(p)
+        const normalizedSlug = normalizeCategorySlug(rawCategory)
+        return normalizedSlug === selectedCategory
       })
     }
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter((p) => {
+        const categoryName = normalizeCategoryName(getProductCategoryName(p)).toLowerCase()
+
         return (
           p.name?.toLowerCase().includes(query) ||
           p.slug?.toLowerCase().includes(query) ||
           p.description?.toLowerCase().includes(query) ||
-          p.category?.toLowerCase().includes(query) ||
+          categoryName.includes(query) ||
           (p.variants ?? []).some((v) =>
             [
               v.sku,
@@ -153,11 +227,6 @@ export function ProductsContent() {
 
     switch (sortBy) {
       case 'newest':
-        filtered.sort(
-          (a, b) =>
-            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-        )
-        break
       case 'latest-updated':
         filtered.sort(
           (a, b) =>
@@ -165,10 +234,10 @@ export function ProductsContent() {
         )
         break
       case 'price-asc':
-        filtered.sort((a, b) => (a.unit_price || 0) - (b.unit_price || 0))
+        filtered.sort((a, b) => (a.starting_price_usd || 0) - (b.starting_price_usd || 0))
         break
       case 'price-desc':
-        filtered.sort((a, b) => (b.unit_price || 0) - (a.unit_price || 0))
+        filtered.sort((a, b) => (b.starting_price_usd || 0) - (a.starting_price_usd || 0))
         break
       case 'name':
         filtered.sort((a, b) => a.name.localeCompare(b.name))
@@ -179,11 +248,35 @@ export function ProductsContent() {
   }, [products, selectedCategory, searchQuery, sortBy])
 
   const allCategories = useMemo(() => {
-    return categories ?? []
+    const source = categories ?? []
+    const dedupedMap = new Map<string, Category>()
+
+    for (const category of source) {
+      if (category.is_active === false) continue
+
+      const normalizedSlug = normalizeCategorySlug(category.slug || category.name)
+      const normalizedName = normalizeCategoryName(category.name)
+
+      if (!dedupedMap.has(normalizedSlug)) {
+        dedupedMap.set(normalizedSlug, {
+          ...category,
+          name: normalizedName,
+          slug: normalizedSlug,
+        })
+      }
+    }
+
+    return Array.from(dedupedMap.values()).sort((a, b) => {
+      const ao = a.display_order ?? 999999
+      const bo = b.display_order ?? 999999
+      if (ao !== bo) return ao - bo
+      return a.name.localeCompare(b.name)
+    })
   }, [categories])
 
   const selectedCategoryName =
-    allCategories.find((c) => slugify(c.name) === selectedCategory)?.name || 'All Products'
+    allCategories.find((c) => normalizeCategorySlug(c.slug || c.name) === selectedCategory)?.name ||
+    'All Products'
 
   return (
     <>
@@ -329,15 +422,6 @@ interface CategoryFiltersProps {
 }
 
 function CategoryFilters({ categories, selectedSlug, onSelectSlug }: CategoryFiltersProps) {
-  const sorted = [...categories]
-    .filter((c) => c.is_active !== false)
-    .sort((a, b) => {
-      const ao = a.display_order ?? 999999
-      const bo = b.display_order ?? 999999
-      if (ao !== bo) return ao - bo
-      return a.name.localeCompare(b.name)
-    })
-
   return (
     <div>
       <div style={{ fontWeight: 600, marginBottom: 8 }}>Categories</div>
@@ -346,13 +430,13 @@ function CategoryFilters({ categories, selectedSlug, onSelectSlug }: CategoryFil
         All Products
       </button>
 
-      {sorted.map((c) => {
-        const slug = slugify(c.name)
+      {categories.map((c) => {
+        const slug = normalizeCategorySlug(c.slug || c.name)
         const selected = slug === (selectedSlug ?? '')
 
         return (
           <button
-            key={c.id}
+            key={slug}
             type="button"
             onClick={() => onSelectSlug(slug)}
             style={{
@@ -360,7 +444,7 @@ function CategoryFilters({ categories, selectedSlug, onSelectSlug }: CategoryFil
               fontWeight: selected ? 'bold' : 'normal',
             }}
           >
-            {c.name}
+            {normalizeCategoryName(c.name)}
           </button>
         )
       })}

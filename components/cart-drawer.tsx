@@ -7,6 +7,7 @@ import { X, Plus, Minus, Trash2, ShoppingCart, Leaf } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCartStore } from '@/lib/cart-store'
 import { cn } from '@/lib/utils'
+import { useCurrency } from '@/components/providers/currency-provider'
 
 const DISCOUNT_THRESHOLD = 20
 
@@ -21,10 +22,11 @@ export default function CartDrawer() {
     getSubtotal,
     getDiscount,
     getTotal,
-    getDiscountPercent
+    getDiscountPercent,
   } = useCartStore()
 
-  // Close on escape key
+  const { formatConvertedFromUsd } = useCurrency()
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -35,13 +37,8 @@ export default function CartDrawer() {
     return () => document.removeEventListener('keydown', handleEscape)
   }, [isOpen, closeCart])
 
-  // Prevent body scroll when open
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    document.body.style.overflow = isOpen ? 'hidden' : ''
     return () => {
       document.body.style.overflow = ''
     }
@@ -56,52 +53,49 @@ export default function CartDrawer() {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className={cn(
-          'fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50 transition-opacity duration-300',
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          'fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm transition-opacity duration-300',
+          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         )}
         onClick={closeCart}
       />
 
-      {/* Drawer */}
       <div
         className={cn(
-          'fixed right-0 top-0 h-full w-full max-w-md bg-background shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col',
+          'fixed right-0 top-0 z-50 flex h-full w-full max-w-md transform flex-col bg-background shadow-2xl transition-transform duration-300 ease-out',
           isOpen ? 'translate-x-0' : 'translate-x-full'
         )}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between border-b border-border p-4">
           <h2 className="text-lg font-semibold text-foreground">Your Cart</h2>
           <Button variant="ghost" size="icon" onClick={closeCart} aria-label="Close cart">
             <X className="h-5 w-5" />
           </Button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <ShoppingCart className="w-8 h-8 text-muted-foreground" />
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <ShoppingCart className="h-8 w-8 text-muted-foreground" />
               </div>
-              <p className="text-muted-foreground mb-4">Your cart is empty</p>
+              <p className="mb-4 text-muted-foreground">Your cart is empty</p>
               <Link href="/products" onClick={closeCart}>
-                <Button variant="outline" className="bg-transparent">Browse Products</Button>
+                <Button variant="outline" className="bg-transparent">
+                  Browse Products
+                </Button>
               </Link>
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Discount progress */}
               {itemsUntilDiscount > 0 && (
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                   <p className="text-sm text-foreground">
                     Add <span className="font-semibold text-primary">{itemsUntilDiscount} more items</span> to get{' '}
                     <span className="font-semibold">3% off</span>
                   </p>
-                  <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full bg-primary transition-all duration-300"
                       style={{ width: `${Math.min((totalItems / DISCOUNT_THRESHOLD) * 100, 100)}%` }}
@@ -110,46 +104,41 @@ export default function CartDrawer() {
                 </div>
               )}
 
-              {/* Cart items */}
               {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-card border border-border rounded-lg p-4"
-                >
+                <div key={item.id} className="rounded-lg border border-border bg-card p-4">
                   <div className="flex gap-3">
-                    {/* Image */}
-                    <div className="w-16 h-16 rounded-lg bg-muted flex-shrink-0 overflow-hidden">
+                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
                       {item.imageUrl ? (
                         <Image
-                          src={item.imageUrl || "/placeholder.svg"}
-                          alt={item.name}
-                          width={64}
-                          height={64}
-                          className="w-full h-full object-cover"
-                        />
+  src={item.imageUrl || '/placeholder.svg'}
+  alt={item.name || 'Product image'}
+  width={64}
+  height={64}
+  className="h-full w-full object-cover"
+/>  
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Leaf className="w-6 h-6 text-primary/40" />
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Leaf className="h-6 w-6 text-primary/40" />
                         </div>
                       )}
                     </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-foreground text-sm leading-tight line-clamp-1">
+
+                    <div className="min-w-0 flex-1">
+                      <h3 className="line-clamp-1 text-sm font-medium leading-tight text-foreground">
                         {item.name}
                       </h3>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                      <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                         {item.specs}
                       </p>
-                      <p className="text-sm font-medium text-primary mt-1">
-                        PHP {item.unitPrice.toLocaleString()} / {item.unit}
+                      <p className="mt-1 text-sm font-medium text-primary">
+                        {formatConvertedFromUsd(item.unitPrice)} / {item.unit}
                       </p>
                     </div>
-                    
+
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0"
+                      className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive"
                       onClick={() => removeItem(item.id)}
                       aria-label={`Remove ${item.name}`}
                     >
@@ -157,7 +146,7 @@ export default function CartDrawer() {
                     </Button>
                   </div>
 
-                  <div className="flex items-center justify-between mt-3">
+                  <div className="mt-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
@@ -182,7 +171,7 @@ export default function CartDrawer() {
                       </Button>
                     </div>
                     <p className="font-semibold text-foreground">
-                      PHP {(item.quantity * item.unitPrice).toLocaleString()}
+                      {formatConvertedFromUsd(item.quantity * item.unitPrice)}
                     </p>
                   </div>
                 </div>
@@ -191,32 +180,29 @@ export default function CartDrawer() {
           )}
         </div>
 
-        {/* Footer */}
         {items.length > 0 && (
-          <div className="border-t border-border p-4 space-y-3 bg-card">
+          <div className="space-y-3 border-t border-border bg-card p-4">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total Items</span>
               <span className="font-medium text-foreground">{totalItems}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium text-foreground">PHP {subtotal.toLocaleString()}</span>
+              <span className="font-medium text-foreground">{formatConvertedFromUsd(subtotal)}</span>
             </div>
             {discountPercent > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-primary">Bulk Discount ({discountPercent}%)</span>
-                <span className="font-medium text-primary">-PHP {discount.toLocaleString()}</span>
+                <span className="font-medium text-primary">-{formatConvertedFromUsd(discount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm pt-2 border-t border-border">
+            <div className="flex justify-between border-t border-border pt-2 text-sm">
               <span className="font-semibold text-foreground">Total (excl. VAT)</span>
-              <span className="font-bold text-lg text-foreground">PHP {total.toLocaleString()}</span>
+              <span className="text-lg font-bold text-foreground">{formatConvertedFromUsd(total)}</span>
             </div>
-            <p className="text-xs text-muted-foreground text-center">
-              Shipping estimate to follow
-            </p>
+            <p className="text-center text-xs text-muted-foreground">Shipping estimate to follow</p>
             <Link href="/cart" onClick={closeCart} className="block">
-              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
                 Request Quote
               </Button>
             </Link>
