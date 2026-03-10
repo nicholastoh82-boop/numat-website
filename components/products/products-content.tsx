@@ -82,33 +82,27 @@ function normalizeCategorySlug(input: string): string {
   const raw = slugify(input)
 
   const aliasMap: Record<string, string> = {
-    // NuDoor
     door: 'nudoor',
     nudoor: 'nudoor',
 
-    // NuFloor
     flooring: 'nufloor',
     floor: 'nufloor',
     nufloor: 'nufloor',
 
-    // NuWall
     wall: 'nuwall',
     'wall-panelling': 'nuwall',
     'wall-paneling': 'nuwall',
     nuwall: 'nuwall',
 
-    // NuBam Boards
     nubam: 'nubam-boards',
     'nubam-boards': 'nubam-boards',
     veneer: 'nubam-boards',
 
-    // NuSlat
     diy: 'nuslat',
     'diy-project': 'nuslat',
     'diy-projects': 'nuslat',
     nuslat: 'nuslat',
 
-    // unchanged
     furniture: 'furniture',
   }
 
@@ -336,13 +330,15 @@ export function ProductsContent() {
           </div>
         </div>
 
-        <div className="flex gap-8">
-          <aside className="hidden w-64 flex-shrink-0 lg:block">
-            <CategoryFilters
-              categories={allCategories}
-              selectedSlug={selectedCategory === 'all' ? null : selectedCategory}
-              onSelectSlug={handleCategoryChange}
-            />
+        <div className="flex flex-col gap-8 lg:flex-row">
+          <aside className="hidden w-72 flex-shrink-0 lg:block">
+            <div className="sticky top-24 rounded-3xl border bg-white p-5 shadow-sm">
+              <CategoryFilters
+                categories={allCategories}
+                selectedSlug={selectedCategory === 'all' ? null : selectedCategory}
+                onSelectSlug={handleCategoryChange}
+              />
+            </div>
           </aside>
 
           {showFilters && (
@@ -353,7 +349,7 @@ export function ProductsContent() {
               />
               <div className="absolute left-0 top-0 h-full w-72 bg-background p-6 shadow-xl">
                 <div className="mb-6 flex items-center justify-between">
-                  <h2 className="font-semibold text-foreground">Filters</h2>
+                  <h2 className="font-semibold text-foreground">Categories</h2>
                   <Button variant="ghost" size="icon" onClick={() => setShowFilters(false)}>
                     <X className="h-5 w-5" />
                   </Button>
@@ -371,7 +367,7 @@ export function ProductsContent() {
             </div>
           )}
 
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             {productsLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -422,32 +418,45 @@ interface CategoryFiltersProps {
 }
 
 function CategoryFilters({ categories, selectedSlug, onSelectSlug }: CategoryFiltersProps) {
+  const allSelected = !selectedSlug
+
   return (
     <div>
-      <div style={{ fontWeight: 600, marginBottom: 8 }}>Categories</div>
+      <div className="mb-4 text-lg font-semibold text-foreground">Categories</div>
 
-      <button type="button" onClick={() => onSelectSlug(null)} style={{ marginBottom: 8 }}>
-        All Products
-      </button>
+      <div className="space-y-1">
+        <button
+          type="button"
+          onClick={() => onSelectSlug(null)}
+          className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+            allSelected
+              ? 'bg-primary text-primary-foreground'
+              : 'text-foreground hover:bg-muted'
+          }`}
+        >
+          <span>All Products</span>
+        </button>
 
-      {categories.map((c) => {
-        const slug = normalizeCategorySlug(c.slug || c.name)
-        const selected = slug === (selectedSlug ?? '')
+        {categories.map((c) => {
+          const slug = normalizeCategorySlug(c.slug || c.name)
+          const selected = slug === (selectedSlug ?? '')
 
-        return (
-          <button
-            key={slug}
-            type="button"
-            onClick={() => onSelectSlug(slug)}
-            style={{
-              display: 'block',
-              fontWeight: selected ? 'bold' : 'normal',
-            }}
-          >
-            {normalizeCategoryName(c.name)}
-          </button>
-        )
-      })}
+          return (
+            <button
+              key={slug}
+              type="button"
+              onClick={() => onSelectSlug(slug)}
+              className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                selected
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-foreground hover:bg-muted'
+              }`}
+            >
+              <span>{normalizeCategoryName(c.name)}</span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

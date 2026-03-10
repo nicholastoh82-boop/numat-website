@@ -175,8 +175,10 @@ const QuoteDocument = ({ quote }: { quote: QuoteData }) => (
             <Text style={styles.colDesc}>{item.product_name}</Text>
             <Text style={styles.colSpecs}>{item.product_specs || '-'}</Text>
             <Text style={styles.colQty}>{item.quantity}</Text>
-            <Text style={styles.colPrice}>{item.unit_price.toLocaleString()}</Text>
-            <Text style={styles.colTotal}>{item.total_price.toLocaleString()}</Text>
+            <Text style={styles.colPrice}>{(item.unit_price ?? 0).toLocaleString()}</Text>
+            <Text style={styles.colTotal}>
+              {((item.total_price ?? 0) || (item.quantity ?? 0) * (item.unit_price ?? 0)).toLocaleString()}
+            </Text>
           </View>
         ))}
       </View>
@@ -186,17 +188,19 @@ const QuoteDocument = ({ quote }: { quote: QuoteData }) => (
         <View>
           <View style={styles.totalRow}>
             <Text>Subtotal:</Text>
-            <Text>PHP {quote.subtotal?.toLocaleString()}</Text>
+            <Text>PHP {(quote.subtotal ?? 0).toLocaleString()}</Text>
           </View>
-          {quote.discount_amount > 0 && (
+          {(quote.discount_amount ?? 0) > 0 && (
             <View style={styles.totalRow}>
               <Text>Discount ({quote.discount_percent}%):</Text>
-              <Text style={{ color: '#166534' }}>- PHP {quote.discount_amount.toLocaleString()}</Text>
+              <Text style={{ color: '#166534' }}>
+                - PHP {(quote.discount_amount ?? 0).toLocaleString()}
+              </Text>
             </View>
           )}
           <View style={[styles.totalRow, styles.grandTotal]}>
             <Text style={styles.totalLabel}>Total Amount:</Text>
-            <Text style={styles.totalLabel}>PHP {quote.total.toLocaleString()}</Text>
+            <Text style={styles.totalLabel}>PHP {(quote.total ?? 0).toLocaleString()}</Text>
           </View>
         </View>
       </View>
@@ -223,29 +227,54 @@ export async function GET(request: NextRequest) {
 
   // Fetch Full Quote Data
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('quotes')
-    .select(`
-      *,
-      customers (
-        name,
-        company_name,
-        email,
-        phone
-      ),
-      quote_items (
-        product_name,
-        product_specs,
-        quantity,
-        unit_price,
-        total_price
+  let data: any = null
+  try {
+    const { data: relational, error } = await supabase
+      .from('quotes')
+      .select(
+        `
+        *,
+        customers (
+          *
+        ),
+        quote_items (*)
+      `
       )
-    `)
-    .eq('id', quoteId)
-    .single()
+      .eq('id', quoteId)
+      .single()
 
-  if (error || !data) {
-    console.error('PDF Fetch Error:', error)
+    if (error) throw error
+    data = relational
+  } catch (err) {
+    // Fallback for schemas without customers relation/table
+    const { data: legacy, error: legacyError } = await supabase
+      .from('quotes')
+      .select(
+        `
+        *,
+        quote_items (*)
+      `
+      )
+      .eq('id', quoteId)
+      .single()
+
+    if (legacyError || !legacy) {
+      console.error('PDF Fetch Error:', legacyError)
+      return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
+    }
+
+    data = {
+      ...legacy,
+      customers: legacy.customers ?? {
+        name: legacy.customer_name ?? 'Guest Customer',
+        company_name: legacy.company ?? null,
+        email: legacy.email ?? '',
+        phone: legacy.phone ?? '',
+      },
+    }
+  }
+
+  if (!data) {
     return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
   }
 

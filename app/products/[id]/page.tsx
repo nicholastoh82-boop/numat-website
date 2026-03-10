@@ -1,8 +1,21 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import useSWR from 'swr'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronRight,
+  Minus,
+  Plus,
+  ShoppingBag,
+} from 'lucide-react'
+import Header from '@/components/header'
+import Footer from '@/components/footer'
+import CartDrawer from '@/components/cart-drawer'
+import ProductDetailImage from '@/components/products/product-detail-image'
 import { useCurrency } from '@/components/providers/currency-provider'
 import { toast } from '@/hooks/use-toast'
 import { useCartStore } from '@/lib/cart-store'
@@ -13,6 +26,8 @@ import {
   validateConfiguredQuantity,
   type ProductFamily,
 } from '@/lib/product-config'
+
+const DOST_PDF_PATH = '/docs/DOST%20Results.pdf'
 
 type Product = {
   id: string
@@ -44,16 +59,305 @@ type Product = {
   }>
 }
 
+type ProductListItem = {
+  id: string
+  name: string
+  slug?: string
+  category?: string | { id?: string; name?: string } | null
+  categories?: { id: string; name: string } | null
+  created_at?: string | null
+}
+
+type Category = {
+  id: string
+  name: string
+  slug?: string
+  created_at?: string
+  is_active?: boolean
+  display_order?: number | null
+}
+
 type SelectOption = {
   label: string
   value: string
 }
 
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  const data = await res.json()
+
+  if (!res.ok) {
+    throw new Error(data?.error || 'Failed to load data.')
+  }
+
+  return data
+}
+
+function slugify(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/['"]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+function normalizeCategorySlug(input: string): string {
+  const raw = slugify(input)
+
+  const aliasMap: Record<string, string> = {
+    door: 'nudoor',
+    nudoor: 'nudoor',
+
+    flooring: 'nufloor',
+    floor: 'nufloor',
+    nufloor: 'nufloor',
+
+    wall: 'nuwall',
+    'wall-panelling': 'nuwall',
+    'wall-paneling': 'nuwall',
+    nuwall: 'nuwall',
+
+    nubam: 'nubam-boards',
+    'nubam-boards': 'nubam-boards',
+    veneer: 'nubam-boards',
+
+    diy: 'nuslat',
+    'diy-project': 'nuslat',
+    'diy-projects': 'nuslat',
+    nuslat: 'nuslat',
+
+    furniture: 'furniture',
+  }
+
+  return aliasMap[raw] ?? raw
+}
+
+function normalizeCategoryName(input: string): string {
+  const normalizedSlug = normalizeCategorySlug(input)
+
+  const labelMap: Record<string, string> = {
+    nudoor: 'NuDoor',
+    nufloor: 'NuFloor',
+    nuwall: 'NuWall',
+    'nubam-boards': 'NuBam Boards',
+    nuslat: 'NuSlat',
+    furniture: 'Furniture',
+  }
+
+  return labelMap[normalizedSlug] ?? input
+}
+
+function getProductCategoryLabel(product: Product | null): string {
+  if (!product?.category) return 'Product'
+  return normalizeCategoryName(product.category)
+}
+
+function getProductCategorySlugFromListItem(product: ProductListItem): string {
+  const raw =
+    typeof product.category === 'string'
+      ? product.category
+      : product.category?.name || product.categories?.name || ''
+
+  return normalizeCategorySlug(raw)
+}
+
+function cleanText(value: string | null | undefined): string {
+  return value?.replace(/\s+/g, ' ').trim() ?? ''
+}
+
+function splitDescriptionContent(
+  description: string | null,
+  productName: string,
+  family: ProductFamily
+) {
+  if (family === 'nuwall') {
+    return {
+      intro:
+        'NuWall engineered bamboo panels manufactured for structural integrity and aesthetic performance.',
+      specsText: '',
+      highlights: [] as string[],
+    }
+  }
+
+  const cleaned = cleanText(description)
+
+  if (!cleaned) {
+    return {
+      intro: `${productName} is designed for sustainable performance, reliable quality, and modern architectural or interior applications.`,
+      specsText: '',
+      highlights: [] as string[],
+    }
+  }
+
+  const withoutLabels = cleaned
+    .replace(/key benefits\s*:?\s*/gi, ' | ')
+    .replace(/applications?\s*:?\s*/gi, ' | ')
+    .replace(/specifications?\s*:?\s*/gi, ' | ')
+    .replace(/\s*[•·]\s*/g, ' | ')
+
+  const parts = withoutLabels
+    .split('|')
+    .map((part) => cleanText(part))
+    .filter(Boolean)
+
+  const intro = parts[0] || cleaned
+  const remaining = parts.slice(1)
+
+  const specLike: string[] = []
+  const highlights: string[] = []
+
+  for (const item of remaining) {
+    const lower = item.toLowerCase()
+
+    const isSpec =
+      lower.includes('thickness') ||
+      lower.includes('size') ||
+      lower.includes('dimension') ||
+      lower.includes('standard size') ||
+      lower.includes('custom sizing') ||
+      /\b\d+\s*mm\b/i.test(item)
+
+    if (isSpec) {
+      specLike.push(item)
+      continue
+    }
+
+    if (item.toLowerCase() !== intro.toLowerCase()) {
+      highlights.push(item)
+    }
+  }
+
+  const dedupedHighlights = Array.from(
+    new Set(
+      highlights.filter(
+        (item) =>
+          item &&
+          item.toLowerCase() !== intro.toLowerCase() &&
+          !specLike.some((spec) => spec.toLowerCase() === item.toLowerCase())
+      )
+    )
+  )
+
+  const specsText = Array.from(new Set(specLike)).join(' • ')
+
+  return {
+    intro,
+    specsText,
+    highlights: dedupedHighlights,
+  }
+}
+
+function getProductUseCases(family: ProductFamily): string[] {
+  switch (family) {
+    case 'nubam-boards':
+      return ['Furniture manufacturing', 'Interior fit-outs', 'Cabinetry']
+    case 'nuwall':
+      return ['Wall panels', 'Interior surfaces', 'Architectural finishes']
+    case 'nudoor':
+      return ['Residential doors', 'Commercial interiors', 'Premium fit-out projects']
+    case 'nufloor':
+      return ['Residential flooring', 'Commercial flooring', 'Sustainable interiors']
+    case 'nuslat':
+      return ['Feature walls', 'Decorative detailing', 'Custom joinery']
+    case 'furniture':
+      return ['Custom furniture', 'Built-in joinery', 'Interior applications']
+    default:
+      return ['Interior applications', 'Architectural projects', 'Sustainable build use']
+  }
+}
+
+function getProductFeatureHighlights(family: ProductFamily): string[] {
+  switch (family) {
+    case 'nubam-boards':
+    case 'nuwall':
+      return ['Engineered strength', 'Premium finish quality', 'Moisture-resistant performance']
+    case 'nudoor':
+      return ['Elegant finish', 'Durable construction', 'Ready for premium projects']
+    case 'nufloor':
+      return ['Clean modern look', 'Stable construction', 'Sustainable material choice']
+    case 'nuslat':
+      return ['Lightweight format', 'Design flexibility', 'In-stock option available']
+    case 'furniture':
+      return ['Custom quote workflow', 'Interior-ready material', 'Design flexibility']
+    default:
+      return ['Engineered bamboo', 'Sustainable material', 'Project-ready quality']
+  }
+}
+
+function getFamilyBadge(family: ProductFamily, categoryLabel: string): string {
+  if (family === 'other') return categoryLabel
+  return normalizeCategoryName(categoryLabel)
+}
+
+function getSelectionRows(resolved: ReturnType<typeof resolveConfiguredVariant>) {
+  const rows = [
+    resolved.model ? { label: 'Model', value: resolved.model } : null,
+    resolved.coreType && resolved.coreType !== '—'
+      ? { label: 'Core Type', value: resolved.coreType }
+      : null,
+    resolved.thickness && resolved.thickness !== '—'
+      ? { label: 'Thickness', value: resolved.thickness }
+      : null,
+    resolved.ply && resolved.ply !== '—' ? { label: 'Ply', value: resolved.ply } : null,
+    resolved.length ? { label: 'Length', value: resolved.length } : null,
+    resolved.dimensions && resolved.dimensions !== '—'
+      ? { label: 'Dimensions', value: resolved.dimensions }
+      : null,
+  ].filter(Boolean) as Array<{ label: string; value: string }>
+
+  return rows
+}
+
+function formatDimensions(value: string) {
+  return value.replace(/\s*x\s*/gi, ' × ')
+}
+
+function OptionPills({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: SelectOption[]
+}) {
+  if (!options.length) return null
+
+  return (
+    <div>
+      <label className="mb-3 block text-sm font-medium text-foreground">{label}</label>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => {
+          const isActive = value === opt.value
+
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
+                isActive
+                  ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
+                  : 'border-black/10 bg-white text-foreground hover:border-black/20 hover:bg-stone-50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>()
+  const router = useRouter()
   const productId = params?.id
-
-  console.log('PAGE productId:', productId)
 
   const { formatConvertedFromUsd } = useCurrency()
   const { addItem, openCart } = useCartStore()
@@ -61,7 +365,6 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [product, setProduct] = useState<Product | null>(null)
-  const [debugData, setDebugData] = useState<any>(null)
 
   const [selectedCoreType, setSelectedCoreType] = useState('Horizontal')
   const [selectedThickness, setSelectedThickness] = useState('')
@@ -69,6 +372,14 @@ export default function ProductDetailPage() {
   const [selectedModel, setSelectedModel] = useState('premium')
   const [selectedLength, setSelectedLength] = useState('8ft')
   const [quantity, setQuantity] = useState(1)
+
+  const { data: categories } = useSWR<Category[]>('/api/categories', fetcher, {
+    fallbackData: [],
+  })
+
+  const { data: allProducts } = useSWR<ProductListItem[]>('/api/products', fetcher, {
+    fallbackData: [],
+  })
 
   useEffect(() => {
     if (!productId) {
@@ -88,16 +399,7 @@ export default function ProductDetailPage() {
         const res = await fetch(`/api/products/${productId}`, { cache: 'no-store' })
         const data = await res.json()
 
-        console.log('FETCH status:', res.status)
-        console.log('FETCH data:', data)
-
         if (!isMounted) return
-
-        setDebugData({
-          productId,
-          status: res.status,
-          data,
-        })
 
         if (!res.ok) {
           throw new Error(data?.error || 'Failed to load product.')
@@ -111,7 +413,6 @@ export default function ProductDetailPage() {
       } catch (err) {
         if (!isMounted) return
         const message = err instanceof Error ? err.message : 'Something went wrong.'
-        console.error('PRODUCT PAGE ERROR:', err)
         setError(message)
       } finally {
         if (isMounted) setLoading(false)
@@ -201,6 +502,7 @@ export default function ProductDetailPage() {
     if (family === 'nudoor') setQuantity(1)
     if (family === 'nufloor') setQuantity(20)
     if (family === 'nuslat') setQuantity(500)
+    if (family === 'furniture') setQuantity(1)
   }, [family])
 
   const resolved = useMemo(() => {
@@ -225,6 +527,63 @@ export default function ProductDetailPage() {
 
   const totalUsd = resolved.priceUsd != null ? resolved.priceUsd * quantity : null
   const quantityError = validateConfiguredQuantity(family, quantity)
+
+  const allCategories = useMemo(() => {
+    const source = categories ?? []
+    const dedupedMap = new Map<string, Category>()
+
+    for (const category of source) {
+      if (category.is_active === false) continue
+
+      const normalizedSlug = normalizeCategorySlug(category.slug || category.name)
+      const normalizedName = normalizeCategoryName(category.name)
+
+      if (!dedupedMap.has(normalizedSlug)) {
+        dedupedMap.set(normalizedSlug, {
+          ...category,
+          name: normalizedName,
+          slug: normalizedSlug,
+        })
+      }
+    }
+
+    return Array.from(dedupedMap.values()).sort((a, b) => {
+      const ao = a.display_order ?? 999999
+      const bo = b.display_order ?? 999999
+      if (ao !== bo) return ao - bo
+      return a.name.localeCompare(b.name)
+    })
+  }, [categories])
+
+  const categoryRepresentativeProducts = useMemo(() => {
+    const map = new Map<string, ProductListItem>()
+
+    for (const item of allProducts ?? []) {
+      const slug = getProductCategorySlugFromListItem(item)
+      if (!slug) continue
+      if (!map.has(slug)) {
+        map.set(slug, item)
+      }
+    }
+
+    return map
+  }, [allProducts])
+
+  const categoryLabel = getProductCategoryLabel(product)
+
+  const descriptionContent = useMemo(
+    () =>
+      splitDescriptionContent(
+        product?.description ?? null,
+        product?.name ?? 'This product',
+        family
+      ),
+    [product, family]
+  )
+
+  const useCases = useMemo(() => getProductUseCases(family), [family])
+  const featureHighlights = useMemo(() => getProductFeatureHighlights(family), [family])
+  const selectionRows = useMemo(() => getSelectionRows(resolved), [resolved])
 
   function buildSpecs() {
     const lines = [
@@ -261,7 +620,7 @@ export default function ProductDetailPage() {
       unitPrice: resolved.priceUsd,
       minOrderQty: resolved.moq,
       unit: resolved.unit,
-      imageUrl: product.image_url,
+      imageUrl: '/Bamboo-Board.png',
       family,
       dimensions: resolved.dimensions,
       thickness: resolved.thickness,
@@ -272,269 +631,570 @@ export default function ProductDetailPage() {
       stockMessage: resolved.stockMessage,
     })
 
+    toast({
+      title: 'Added to quote',
+      description: `${quantity} × ${resolved.productLabel} added to your quote cart.`,
+    })
+
     openCart()
+  }
+
+  function decrementQty() {
+    const next =
+      family === 'nufloor'
+        ? Math.max(resolved.moq, quantity - 20)
+        : Math.max(resolved.moq, quantity - 1)
+
+    setQuantity(next)
+  }
+
+  function incrementQty() {
+    const next = family === 'nufloor' ? quantity + 20 : quantity + 1
+    setQuantity(next)
   }
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-7xl px-4 py-10">
-        <pre>Loading product...</pre>
-      </main>
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <CartDrawer />
+        <main className="flex-1 bg-[#f7f2e8]">
+          <div className="mx-auto max-w-7xl px-4 py-10 lg:px-8 lg:py-12">
+            <div className="rounded-[32px] border border-black/10 bg-white p-8 shadow-sm">
+              <p className="text-muted-foreground">Loading product...</p>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
     )
   }
 
   if (error || !product) {
     return (
-      <main className="mx-auto max-w-7xl px-4 py-10">
-        <div className="mb-4 text-xl font-semibold text-red-700">
-          {error || 'Product not found.'}
-        </div>
-        <pre className="overflow-auto rounded-xl bg-slate-100 p-4 text-sm">
-{JSON.stringify(
-  {
-    productId,
-    error,
-    product,
-    debugData,
-  },
-  null,
-  2
-)}
-        </pre>
-      </main>
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <CartDrawer />
+        <main className="flex-1 bg-[#f7f2e8]">
+          <div className="mx-auto max-w-7xl px-4 py-10 lg:px-8 lg:py-12">
+            <div className="rounded-[32px] border border-black/10 bg-white p-8 shadow-sm">
+              <div className="text-xl font-semibold text-red-700">
+                {error || 'Product not found.'}
+              </div>
+              <div className="mt-4">
+                <Link
+                  href="/products"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  ← Back to products
+                </Link>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
     )
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-10">
-      <div className="mb-6">
-        <Link href="/products" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Back to products
-        </Link>
-      </div>
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
+      <CartDrawer />
+      <main className="flex-1 bg-[#f7f2e8] pb-28 lg:pb-0">
+        <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8 lg:py-10">
+          <div className="mb-6 flex flex-col gap-4">
+            <Link
+              href="/products"
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to products
+            </Link>
 
-      <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-        <section className="rounded-3xl border bg-white p-6 shadow-sm">
-          <p className="mb-2 text-sm uppercase tracking-[0.14em] text-muted-foreground">
-            {product.category || 'Product'}
-          </p>
-
-          <h1 className="text-4xl font-semibold">{product.name}</h1>
-
-          {product.description && (
-            <p className="mt-4 max-w-3xl text-muted-foreground">{product.description}</p>
-          )}
-
-          <div className="mt-8 space-y-5">
-            {(family === 'nubam-boards' || family === 'nuwall') && (
-              <>
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Core Type</label>
-                  <select
-                    value={selectedCoreType}
-                    onChange={(e) => setSelectedCoreType(e.target.value)}
-                    className="w-full rounded-xl border px-4 py-3"
-                  >
-                    {coreTypeOptions.map((opt: SelectOption) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Thickness</label>
-                  <select
-                    value={selectedThickness}
-                    onChange={(e) => setSelectedThickness(e.target.value)}
-                    className="w-full rounded-xl border px-4 py-3"
-                  >
-                    {thicknessOptionsForBoards.map((opt: SelectOption) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Ply</label>
-                  <select
-                    value={selectedPly}
-                    onChange={(e) => setSelectedPly(e.target.value)}
-                    className="w-full rounded-xl border px-4 py-3"
-                  >
-                    {plyOptionsForBoards.map((opt: SelectOption) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
-
-            {family === 'nudoor' && (
-              <div>
-                <label className="mb-2 block text-sm font-medium">Model</label>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full rounded-xl border px-4 py-3"
-                >
-                  {modelOptions.map((opt: SelectOption) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {family === 'nufloor' && (
-              <>
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Thickness</label>
-                  <select
-                    value={selectedThickness}
-                    onChange={(e) => setSelectedThickness(e.target.value)}
-                    className="w-full rounded-xl border px-4 py-3"
-                  >
-                    {floorThicknessOptions.map((opt: SelectOption) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="rounded-xl border bg-muted/30 p-4 text-sm">
-                  Ply: 3 Ply
-                  <br />
-                  Dimensions: 1220mm x 153mm
-                </div>
-              </>
-            )}
-
-            {family === 'nuslat' && (
-              <>
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Thickness</label>
-                  <select
-                    value={selectedThickness}
-                    onChange={(e) => setSelectedThickness(e.target.value)}
-                    className="w-full rounded-xl border px-4 py-3"
-                  >
-                    {slatThicknessOptions.map((opt: SelectOption) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium">Length</label>
-                  <select
-                    value={selectedLength}
-                    onChange={(e) => setSelectedLength(e.target.value)}
-                    className="w-full rounded-xl border px-4 py-3"
-                  >
-                    {slatLengthOptions.map((opt: SelectOption) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {!resolved.inStock && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                    No stock. Only 5mm at 8ft is currently available.
-                  </div>
-                )}
-              </>
-            )}
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">Quantity</label>
-              <input
-                type="number"
-                min={resolved.moq}
-                step={family === 'nufloor' ? 20 : 1}
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value) || resolved.moq)}
-                className="w-full rounded-xl border px-4 py-3"
-              />
-              <p className="mt-2 text-sm text-muted-foreground">
-                MOQ: {resolved.moq} {resolved.unit}
-                {family === 'nufloor' ? ' | Must be in multiples of 20' : ''}
-              </p>
-              {quantityError && <p className="mt-1 text-sm text-red-600">{quantityError}</p>}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>Products</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+              <span>{categoryLabel}</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+              <span className="text-foreground">{product.name}</span>
             </div>
           </div>
-        </section>
 
-        <aside className="rounded-3xl bg-slate-900 p-6 text-white shadow-sm">
-          <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
-            Configuration Summary
-          </p>
+          <div className="mb-6">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <button
+                type="button"
+                onClick={() => router.push('/products')}
+                className="shrink-0 rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-foreground"
+              >
+                All Products
+              </button>
 
-          <div className="mt-5 space-y-4">
-            <div className="rounded-2xl bg-white/5 p-4">
-              <p className="text-sm text-slate-400">Product</p>
-              <p className="mt-1 text-lg font-semibold">{resolved.productLabel}</p>
+              {allCategories.map((category) => {
+                const slug = normalizeCategorySlug(category.slug || category.name)
+                const label = normalizeCategoryName(category.name)
+                const isActive = slug === normalizeCategorySlug(product.category || '')
+                const targetProduct = categoryRepresentativeProducts.get(slug)
+
+                return (
+                  <button
+                    key={slug}
+                    type="button"
+                    onClick={() => {
+                      if (targetProduct?.id) {
+                        router.push(`/products/${targetProduct.id}`)
+                      } else {
+                        router.push(`/products?category=${slug}`)
+                      }
+                    }}
+                    className={`shrink-0 rounded-full px-4 py-2 text-sm transition ${
+                      isActive
+                        ? 'bg-[#16361f] text-white'
+                        : 'border border-black/10 bg-white text-foreground'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
+          </div>
 
-            <div className="rounded-2xl bg-white/5 p-4">
-              <p className="text-sm text-slate-400">Dimensions</p>
-              <p className="mt-1 font-medium">{resolved.dimensions}</p>
-            </div>
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <section className="space-y-8">
+              <div className="overflow-hidden rounded-[34px] border border-black/8 bg-white shadow-sm">
+                <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
+                  <div className="relative min-h-[320px] bg-[#efe7d9] sm:min-h-[420px] lg:min-h-[620px]">
+                    <ProductDetailImage product={product} />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
+                  </div>
 
-            {resolved.coreType && resolved.coreType !== '—' && (
-              <div className="rounded-2xl bg-white/5 p-4">
-                <p className="text-sm text-slate-400">Core Type</p>
-                <p className="mt-1 font-medium">{resolved.coreType}</p>
+                  <div className="p-6 lg:p-8 xl:p-10">
+                    <div className="mb-4 flex flex-wrap items-center gap-3">
+                      <span className="inline-flex rounded-full border border-[#16361f]/15 bg-[#16361f]/8 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-[#16361f]">
+                        {getFamilyBadge(family, categoryLabel)}
+                      </span>
+                    </div>
+
+                    {family !== 'nuwall' ? (
+                      <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl xl:text-5xl">
+                        {product.name}
+                      </h1>
+                    ) : (
+                      <h1 className="sr-only">{product.name}</h1>
+                    )}
+
+                    <p
+                      className={`${
+                        family !== 'nuwall' ? 'mt-5' : 'mt-2'
+                      } max-w-2xl text-base leading-8 text-muted-foreground`}
+                    >
+                      {descriptionContent.intro}
+                    </p>
+
+                    <div className="mt-6 flex flex-wrap gap-2">
+                      {featureHighlights.map((item) => (
+                        <span
+                          key={item}
+                          className="inline-flex rounded-full border border-black/8 bg-stone-50 px-3.5 py-2 text-sm text-foreground"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="mt-8 rounded-[26px] border border-black/8 bg-[#faf6ef] p-5">
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between gap-6 border-b border-black/8 pb-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            MOQ
+                          </p>
+                          <p className="text-right text-base font-semibold text-foreground">
+                            {resolved.moq} {resolved.unit}
+                          </p>
+                        </div>
+
+                        <div className="flex items-start justify-between gap-6 border-b border-black/8 pb-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            Dimensions
+                          </p>
+                          <p className="max-w-[220px] text-right text-base font-semibold leading-7 text-foreground">
+                            {formatDimensions(resolved.dimensions)}
+                          </p>
+                        </div>
+
+                        <div className="flex items-start justify-between gap-6">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            Unit Price
+                          </p>
+                          <p className="text-right text-base font-semibold text-foreground">
+                            {resolved.priceUsd != null
+                              ? formatConvertedFromUsd(resolved.priceUsd)
+                              : resolved.stockMessage || 'Request Quote'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
 
-            {resolved.thickness && resolved.thickness !== '—' && (
-              <div className="rounded-2xl bg-white/5 p-4">
-                <p className="text-sm text-slate-400">Thickness</p>
-                <p className="mt-1 font-medium">{resolved.thickness}</p>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm">
+                  <div className="mb-5">
+                    <h2 className="text-xl font-semibold text-foreground">Best For</h2>
+                  </div>
+
+                  <div className="space-y-3">
+                    {useCases.map((item) => (
+                      <div key={item} className="flex items-start gap-3">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
+                        <p className="text-sm leading-7 text-foreground">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm">
+                  <div className="mb-5">
+                    <h2 className="text-xl font-semibold text-foreground">Product Overview</h2>
+                  </div>
+
+                  <p className="text-sm leading-7 text-foreground/75">
+                    Built for modern projects that require a balance of durability,
+                    clean aesthetics, and sustainable material sourcing.
+                  </p>
+                </div>
               </div>
-            )}
 
-            {resolved.ply && resolved.ply !== '—' && (
-              <div className="rounded-2xl bg-white/5 p-4">
-                <p className="text-sm text-slate-400">Ply</p>
-                <p className="mt-1 font-medium">{resolved.ply}</p>
+              {descriptionContent.highlights.length > 0 && (
+                <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm lg:p-8">
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-semibold text-foreground">Key Highlights</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Main benefits and application strengths
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {descriptionContent.highlights.map((item, index) => (
+                      <div
+                        key={`${item}-${index}`}
+                        className="rounded-[24px] border border-black/8 bg-[#faf6ef] p-5"
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="mt-2 inline-block h-2.5 w-2.5 rounded-full bg-[#16361f]" />
+                          <p className="text-sm leading-7 text-foreground">{item}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm lg:p-8">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-semibold text-foreground">Configure Your Product</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Select the required specifications below to prepare your quote.
+                  </p>
+                </div>
+
+                <div className="space-y-8">
+                  {(family === 'nubam-boards' || family === 'nuwall') && (
+                    <>
+                      <OptionPills
+                        label="Core Type"
+                        value={selectedCoreType}
+                        onChange={setSelectedCoreType}
+                        options={coreTypeOptions}
+                      />
+
+                      <OptionPills
+                        label="Thickness"
+                        value={selectedThickness}
+                        onChange={setSelectedThickness}
+                        options={thicknessOptionsForBoards}
+                      />
+
+                      <OptionPills
+                        label="Ply"
+                        value={selectedPly}
+                        onChange={setSelectedPly}
+                        options={plyOptionsForBoards}
+                      />
+                    </>
+                  )}
+
+                  {family === 'nudoor' && (
+                    <div>
+                      <label className="mb-3 block text-sm font-medium text-foreground">
+                        Model
+                      </label>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        {modelOptions.map((opt) => {
+                          const isActive = selectedModel === opt.value
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setSelectedModel(opt.value)}
+                              className={`rounded-[24px] border p-4 text-left transition ${
+                                isActive
+                                  ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
+                                  : 'border-black/10 bg-white hover:border-black/20 hover:bg-stone-50'
+                              }`}
+                            >
+                              <p className="text-sm font-semibold">{opt.label}</p>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {family === 'nufloor' && (
+                    <>
+                      <OptionPills
+                        label="Thickness"
+                        value={selectedThickness}
+                        onChange={setSelectedThickness}
+                        options={floorThicknessOptions}
+                      />
+
+                      <div className="rounded-[24px] border border-black/8 bg-[#faf6ef] p-4 text-sm leading-7 text-foreground/80">
+                        <span className="font-medium text-foreground">Standard build:</span> 3 Ply
+                        <br />
+                        <span className="font-medium text-foreground">Dimensions:</span> 1220mm × 153mm
+                      </div>
+                    </>
+                  )}
+
+                  {family === 'nuslat' && (
+                    <>
+                      <OptionPills
+                        label="Thickness"
+                        value={selectedThickness}
+                        onChange={setSelectedThickness}
+                        options={slatThicknessOptions}
+                      />
+
+                      <OptionPills
+                        label="Length"
+                        value={selectedLength}
+                        onChange={setSelectedLength}
+                        options={slatLengthOptions}
+                      />
+
+                      {!resolved.inStock && (
+                        <div className="rounded-[24px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                          No stock. Only 5mm at 8ft is currently available.
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className="rounded-[26px] border border-black/8 bg-[#faf6ef] p-5">
+                    <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <label className="mb-3 block text-sm font-medium text-foreground">
+                          Quantity
+                        </label>
+
+                        <div className="inline-flex items-center rounded-full border border-black/10 bg-white p-1 shadow-sm">
+                          <button
+                            type="button"
+                            onClick={decrementQty}
+                            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition hover:bg-stone-50"
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+
+                          <div className="min-w-[72px] px-3 text-center text-base font-semibold text-foreground">
+                            {quantity}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={incrementQty}
+                            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition hover:bg-stone-50"
+                            aria-label="Increase quantity"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <div className="mt-3 text-sm text-muted-foreground">
+                          MOQ: {resolved.moq} {resolved.unit}
+                          {family === 'nufloor' ? ' | Must be in multiples of 20' : ''}
+                        </div>
+
+                        {quantityError && (
+                          <p className="mt-2 text-sm text-red-600">{quantityError}</p>
+                        )}
+                      </div>
+
+                      <div className="rounded-[22px] border border-black/8 bg-white p-4 sm:min-w-[220px]">
+                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          Estimated total
+                        </p>
+                        <p className="mt-2 text-xl font-semibold text-foreground">
+                          {totalUsd != null
+                            ? formatConvertedFromUsd(totalUsd)
+                            : resolved.stockMessage || 'Request Quote'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
 
-            {resolved.length && (
-              <div className="rounded-2xl bg-white/5 p-4">
-                <p className="text-sm text-slate-400">Length</p>
-                <p className="mt-1 font-medium">{resolved.length}</p>
+              <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm lg:p-8">
+                <div className="mb-5">
+                  <h2 className="text-2xl font-semibold text-foreground">Third-party testing</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    ASTM D1037 mechanical testing (ranges published to avoid cherry-picking).
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
+                    MOR: 22.77–69.44 MPa
+                  </span>
+                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
+                    MOE: 2211.82–10256.71 MPa
+                  </span>
+                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
+                    Compression: 25.19–30.46 MPa
+                  </span>
+                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
+                    Hardness: 3918.33–7377.33 N
+                  </span>
+                </div>
+
+                <p className="mt-4 text-xs leading-6 text-muted-foreground">
+                  Results apply to the specific samples submitted for testing (Oct–Nov 2025) and are
+                  provided for reference. Values may vary by product configuration, thickness, moisture
+                  content, and manufacturing lot.
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                  <Link
+                    href="/testing"
+                    className="font-semibold text-primary hover:underline underline-offset-4"
+                  >
+                    View testing page
+                  </Link>
+                  <a
+                    href={DOST_PDF_PATH}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-primary hover:underline underline-offset-4"
+                  >
+                    Download DOST results (PDF)
+                  </a>
+                </div>
               </div>
-            )}
+            </section>
 
-            <div className="rounded-2xl bg-amber-400/10 p-4">
-              <p className="text-sm text-amber-100/80">Unit Price</p>
-              <p className="mt-1 text-2xl font-semibold">
-                {resolved.priceUsd != null
-                  ? formatConvertedFromUsd(resolved.priceUsd)
-                  : resolved.stockMessage || 'Request Quote'}
+            <aside className="hidden xl:block">
+              <div className="sticky top-24 rounded-[30px] bg-[#16241a] p-6 text-white shadow-[0_18px_48px_rgba(0,0,0,0.18)]">
+                <p className="text-xs uppercase tracking-[0.16em] text-white/45">
+                  Configuration summary
+                </p>
+
+                <div className="mt-5 space-y-4">
+                  <div className="rounded-[22px] bg-white/6 p-4">
+                    <p className="text-sm text-white/50">Product</p>
+                    <p className="mt-1 text-lg font-semibold">{resolved.productLabel}</p>
+                  </div>
+
+                  {selectionRows.length > 0 && (
+                    <div className="rounded-[22px] bg-white/6 p-4">
+                      <p className="text-sm text-white/50">Selected configuration</p>
+                      <div className="mt-3 space-y-2.5 text-sm">
+                        {selectionRows.map((row) => (
+                          <div
+                            key={`${row.label}-${row.value}`}
+                            className="flex items-start justify-between gap-4"
+                          >
+                            <span className="text-white/50">{row.label}</span>
+                            <span className="text-right font-medium text-white">
+                              {row.label === 'Dimensions'
+                                ? formatDimensions(row.value)
+                                : row.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-[22px] bg-white/6 p-4">
+                      <p className="text-xs uppercase tracking-[0.14em] text-white/45">MOQ</p>
+                      <p className="mt-2 text-sm font-medium">
+                        {resolved.moq} {resolved.unit}
+                      </p>
+                    </div>
+
+                    <div className="rounded-[22px] bg-white/6 p-4">
+                      <p className="text-xs uppercase tracking-[0.14em] text-white/45">
+                        Quantity
+                      </p>
+                      <p className="mt-2 text-sm font-medium">
+                        {quantity} {resolved.unit}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[22px] border border-white/10 bg-amber-400/10 p-4">
+                    <p className="text-sm text-amber-100/80">Unit Price</p>
+                    <p className="mt-1 text-2xl font-semibold">
+                      {resolved.priceUsd != null
+                        ? formatConvertedFromUsd(resolved.priceUsd)
+                        : resolved.stockMessage || 'Request Quote'}
+                    </p>
+                  </div>
+
+                  <div className="rounded-[22px] border border-white/10 bg-emerald-400/10 p-4">
+                    <p className="text-sm text-emerald-100/80">Estimated Total</p>
+                    <p className="mt-1 text-xl font-semibold">
+                      {totalUsd != null
+                        ? formatConvertedFromUsd(totalUsd)
+                        : resolved.stockMessage || 'Request Quote'}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddToQuote}
+                    disabled={!resolved.inStock || !!quantityError}
+                    className="mt-2 w-full rounded-full bg-white px-4 py-3.5 font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Add to Quote
+                  </button>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/8 bg-white/96 px-4 py-3 backdrop-blur lg:hidden">
+          <div className="mx-auto flex max-w-7xl items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                Estimated total
               </p>
-            </div>
-
-            <div className="rounded-2xl bg-green-400/10 p-4">
-              <p className="text-sm text-green-100/80">Estimated Total</p>
-              <p className="mt-1 text-xl font-semibold">
+              <p className="truncate text-base font-semibold text-foreground">
                 {totalUsd != null
                   ? formatConvertedFromUsd(totalUsd)
                   : resolved.stockMessage || 'Request Quote'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                MOQ {resolved.moq} {resolved.unit}
               </p>
             </div>
 
@@ -542,13 +1202,15 @@ export default function ProductDetailPage() {
               type="button"
               onClick={handleAddToQuote}
               disabled={!resolved.inStock || !!quantityError}
-              className="mt-2 w-full rounded-2xl bg-white px-4 py-3 font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#16361f] px-5 py-3 font-semibold text-white transition hover:bg-[#204a2b] disabled:cursor-not-allowed disabled:opacity-50"
             >
+              <ShoppingBag className="h-4 w-4" />
               Add to Quote
             </button>
           </div>
-        </aside>
-      </div>
-    </main>
+        </div>
+      </main>
+      <Footer />
+    </div>
   )
 }

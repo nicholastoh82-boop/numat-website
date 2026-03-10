@@ -1,17 +1,19 @@
 import Link from 'next/link'
-import { Leaf } from 'lucide-react'
+import Image from 'next/image'
 
 const footerLinks = {
   products: [
-    { name: 'Furniture Boards', href: '/products?category=furniture' },
-    { name: 'Door Panels', href: '/products?category=door' },
-    { name: 'Flooring', href: '/products?category=flooring' },
-    { name: 'Structural', href: '/products?category=structural' },
-    { name: 'Wall Panelling', href: '/products?category=wall-panelling' },
+    { name: 'NuBam Boards', href: '/products?category=nubam-boards' },
+    { name: 'NuDoor', href: '/products?category=nudoor' },
+    { name: 'NuFloor', href: '/products?category=nufloor' },
+    { name: 'NuWall', href: '/products?category=nuwall' },
+    { name: 'NuSlat', href: '/products?category=nuslat' },
+    { name: 'Furniture', href: '/products?category=furniture' },
   ],
   company: [
     { name: 'About Us', href: '/about' },
-    { name: 'ESG & Sustainability', href: '/esg' },
+    { name: 'Testing', href: '/testing' },
+    { name: 'Sustainability', href: '/esg' },
     { name: 'Contact', href: '/contact' },
   ],
   legal: [
@@ -23,39 +25,53 @@ const footerLinks = {
 
 export default function Footer() {
   return (
-    <footer className="bg-secondary border-t border-border">
-      <div className="mx-auto max-w-7xl px-4 py-12 lg:px-8 lg:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-          {/* Brand */}
-          <div className="lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary">
-                <Leaf className="w-5 h-5 text-primary-foreground" />
+    <footer className="border-t border-white/10 bg-[#182019] text-white">
+      <div className="mx-auto max-w-7xl px-4 py-14 lg:px-8 lg:py-16">
+        <div className="grid gap-12 lg:grid-cols-[1.35fr_0.85fr_0.75fr_0.75fr]">
+          <div>
+            <Link href="/" className="inline-block">
+              <div className="relative h-12 w-[220px]">
+                <Image
+                  src="/logo.png"
+                  alt="NUMAT logo"
+                  fill
+                  sizes="220px"
+                  className="object-contain object-left"
+                />
               </div>
-              <span className="font-serif text-2xl text-foreground tracking-tight">NUMAT</span>
             </Link>
-            <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
-              Premium NuBam engineered bamboo products for sustainable construction and design worldwide. 
-              Backed by Wavemaker Impact for verified ESG credentials.
+
+            <p className="mt-6 max-w-md text-sm leading-7 text-white/68">
+              Engineered bamboo materials for refined interiors, fit-outs, doors,
+              flooring, wall finishes, and furniture applications.
             </p>
-            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="inline-flex items-center px-2 py-1 rounded bg-primary/10 text-primary text-xs font-medium">
-                Wavemaker Impact Partner
+
+            <div className="mt-6 flex flex-wrap gap-2">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/75">
+                Singapore-founded
               </span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/75">
+                Manufacturing in the Philippines
+              </span>
+            </div>
+
+            <div className="mt-6 space-y-2 text-sm text-white/68">
+              <p>sales@numat.ph</p>
+              <p>WhatsApp: +60 11 3959 3956</p>
+              <p>Viber: +63 962 812 7829</p>
             </div>
           </div>
 
-          {/* Products */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground tracking-wide uppercase">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/88">
               Products
             </h3>
-            <ul className="mt-4 space-y-3">
+            <ul className="mt-5 space-y-3">
               {footerLinks.products.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-sm text-white/68 transition-colors hover:text-white"
                   >
                     {link.name}
                   </Link>
@@ -64,17 +80,16 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Company */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground tracking-wide uppercase">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/88">
               Company
             </h3>
-            <ul className="mt-4 space-y-3">
+            <ul className="mt-5 space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-sm text-white/68 transition-colors hover:text-white"
                   >
                     {link.name}
                   </Link>
@@ -83,17 +98,16 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Legal */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground tracking-wide uppercase">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/88">
               Legal
             </h3>
-            <ul className="mt-4 space-y-3">
+            <ul className="mt-5 space-y-3">
               {footerLinks.legal.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-sm text-white/68 transition-colors hover:text-white"
                   >
                     {link.name}
                   </Link>
@@ -103,14 +117,11 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Bottom */}
-        <div className="mt-12 pt-8 border-t border-border">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground">
-              {new Date().getFullYear()} NUMAT. All rights reserved. | Founded in Singapore | Factory in Philippines
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Prices shown are Ex Factory CDO, VAT excluded. | sales@numat.ph | +60 16-295 8983
+        <div className="mt-12 border-t border-white/10 pt-6">
+          <div className="flex flex-col gap-3 text-sm text-white/55 md:flex-row md:items-center md:justify-between">
+            <p>{new Date().getFullYear()} NUMAT. All rights reserved.</p>
+            <p>
+              Prices shown in local currency are converted from USD. Final quote values are subject to confirmation.
             </p>
           </div>
         </div>

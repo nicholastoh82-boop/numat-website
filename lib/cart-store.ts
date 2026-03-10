@@ -12,6 +12,15 @@ export interface CartItem {
   minOrderQty: number
   unit: string
   imageUrl?: string | null
+
+  family?: string
+  dimensions?: string
+  thickness?: string
+  ply?: string
+  coreType?: string
+  model?: string
+  length?: string
+  stockMessage?: string
 }
 
 interface CartState {
@@ -48,16 +57,20 @@ export const useCartStore = create<CartState>()(
 
       addItem: (item: CartItem) => {
         const items = get().items
-        const existingItem = items.find((i) => i.id === item.id)
+        const existingItem = items.find(
+          (i) =>
+            i.id === item.id &&
+            i.specs === item.specs &&
+            i.unitPrice === item.unitPrice
+        )
 
         if (existingItem) {
           set({
             items: items.map((i) =>
-              i.id === item.id
-                ? {
-                    ...i,
-                    quantity: i.quantity + item.quantity,
-                  }
+              i.id === existingItem.id &&
+              i.specs === existingItem.specs &&
+              i.unitPrice === existingItem.unitPrice
+                ? { ...i, quantity: i.quantity + item.quantity }
                 : i
             ),
           })
@@ -67,7 +80,7 @@ export const useCartStore = create<CartState>()(
       },
 
       removeItem: (id: string) => {
-        set({ items: get().items.filter((item) => item.id !== id) })
+        set({ items: get().items.filter((item, index) => `${item.id}-${index}` !== id && item.id !== id) })
       },
 
       updateQuantity: (id: string, quantity: number) => {
@@ -75,19 +88,16 @@ export const useCartStore = create<CartState>()(
         if (!item) return
 
         if (quantity < item.minOrderQty) {
-          get().removeItem(id)
+          set({
+            items: get().items.map((i) =>
+              i.id === id ? { ...i, quantity: item.minOrderQty } : i
+            ),
+          })
           return
         }
 
         set({
-          items: get().items.map((i) =>
-            i.id === id
-              ? {
-                  ...i,
-                  quantity,
-                }
-              : i
-          ),
+          items: get().items.map((i) => (i.id === id ? { ...i, quantity } : i)),
         })
       },
 
@@ -97,8 +107,7 @@ export const useCartStore = create<CartState>()(
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
 
-      getTotalItems: () =>
-        get().items.reduce((sum, item) => sum + item.quantity, 0),
+      getTotalItems: () => get().items.reduce((sum, item) => sum + item.quantity, 0),
 
       getSubtotal: () =>
         get().items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0),

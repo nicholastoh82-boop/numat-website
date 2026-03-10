@@ -4,6 +4,7 @@ export type ProductFamily =
   | 'nufloor'
   | 'nuwall'
   | 'nuslat'
+  | 'furniture'
   | 'other'
 
 export type ConfigOption = {
@@ -96,15 +97,19 @@ export function detectProductFamily(productName: string, category?: string | nul
   if (combined.includes('nuwall')) return 'nuwall'
   if (combined.includes('nuslat')) return 'nuslat'
   if (combined.includes('nubam')) return 'nubam-boards'
+  if (combined.includes('furniture')) return 'furniture'
 
   const slug = slugify(category || '')
   if (slug === 'nudoor' || slug === 'door') return 'nudoor'
   if (slug === 'nufloor' || slug === 'flooring') return 'nufloor'
-  if (slug === 'nuwall' || slug === 'wall-panelling' || slug === 'wall-paneling' || slug === 'wall')
+  if (slug === 'nuwall' || slug === 'wall-panelling' || slug === 'wall-paneling' || slug === 'wall') {
     return 'nuwall'
-  if (slug === 'nuslat' || slug === 'diy-project' || slug === 'diy-projects' || slug === 'diy')
+  }
+  if (slug === 'nuslat' || slug === 'diy-project' || slug === 'diy-projects' || slug === 'diy') {
     return 'nuslat'
+  }
   if (slug === 'nubam' || slug === 'nubam-boards' || slug === 'veneer') return 'nubam-boards'
+  if (slug === 'furniture') return 'furniture'
 
   return 'other'
 }
@@ -121,6 +126,8 @@ export function getFamilyLabel(family: ProductFamily) {
       return 'NuWall'
     case 'nuslat':
       return 'NuSlat'
+    case 'furniture':
+      return 'Furniture'
     default:
       return 'Product'
   }
@@ -204,7 +211,7 @@ export function resolveConfiguredVariant(args: {
   selectedPly?: string
   selectedModel?: string
   selectedLength?: string
-}) : ResolvedConfig {
+}): ResolvedConfig {
   const {
     family,
     productName,
@@ -298,6 +305,24 @@ export function resolveConfiguredVariant(args: {
     }
   }
 
+  if (family === 'furniture') {
+    return {
+      family,
+      productLabel: productName,
+      dimensions: 'Custom depending on product',
+      thickness: '—',
+      ply: '—',
+      coreType: '—',
+      model: '',
+      length: '',
+      unit: 'pc',
+      moq: 1,
+      priceUsd: null,
+      inStock: false,
+      stockMessage: 'Request Quote',
+    }
+  }
+
   return {
     family,
     productLabel: productName,
@@ -335,6 +360,10 @@ export function validateConfiguredQuantity(family: ProductFamily, quantity: numb
 
   if (family === 'nuslat') {
     if (quantity < 500) return 'Minimum order quantity is 500.'
+  }
+
+  if (family === 'furniture') {
+    if (quantity < 1) return 'Minimum order quantity is 1.'
   }
 
   return ''

@@ -3,15 +3,17 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
-import { Menu, X, ShoppingCart } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useCartStore } from '@/lib/cart-store'
 import { cn } from '@/lib/utils'
 import CountrySelector from '@/components/country-selector'
 import { useCurrency } from '@/components/providers/currency-provider'
 
 const navigation = [
   { name: 'Products', href: '/products' },
+  { name: 'Applications', href: '/applications' },
+  { name: 'Technical Resources', href: '/technical-resources' },
+  { name: 'Certifications', href: '/testing' },
   { name: 'ESG', href: '/esg' },
   { name: 'About', href: '/about' },
   { name: 'Contact', href: '/contact' },
@@ -19,106 +21,111 @@ const navigation = [
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { items, openCart } = useCartStore()
   const { selectedCountry } = useCurrency()
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 lg:px-8">
-        <Link href="/" className="flex items-center gap-2 group select-none">
-          <div className="relative h-10 w-40 sm:h-12 sm:w-48 transition-transform duration-300 group-hover:opacity-90">
-            <Image
-              src="/logo.png"
-              alt="Brand Logo"
-              fill
-              className="object-contain object-left"
-              priority
-              sizes="(max-width: 768px) 160px, 192px"
-            />
-          </div>
-        </Link>
+    <header className="sticky top-0 z-50 border-b border-black/5 bg-[#f7f1e7]/92 backdrop-blur-xl">
+      <nav className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-4 lg:px-8">
+        <div className="flex items-center gap-10">
+          <Link href="/" className="group select-none">
+            <div className="relative h-10 w-[170px] sm:h-11 sm:w-[190px]">
+              <Image
+                src="/logo.png"
+                alt="NUMAT logo"
+                fill
+                priority
+                sizes="(max-width: 768px) 170px, 190px"
+                className="object-contain object-left transition-opacity duration-300 group-hover:opacity-90"
+              />
+            </div>
+          </Link>
 
-        <div className="hidden lg:flex lg:gap-x-8">
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="relative text-sm font-medium text-muted-foreground transition-colors hover:text-primary after:absolute after:bottom-[-4px] after:left-0 after:h-[2px] after:w-0 after:bg-primary after:transition-all hover:after:w-full"
-            >
-              {item.name}
-            </Link>
-          ))}
+          <div className="hidden lg:flex lg:items-center lg:gap-8">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+              >
+                {item.name}
+              </Link>
+            ))}
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden md:block">
             <CountrySelector />
           </div>
 
-          <div className="hidden xl:block rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
+          <div className="hidden xl:flex items-center rounded-full border border-black/8 bg-white/75 px-3.5 py-2 text-xs font-medium text-foreground/65 shadow-sm">
             {selectedCountry.name} · {selectedCountry.currency}
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative hover:bg-muted"
-            onClick={openCart}
-            aria-label="Open cart"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {itemCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-sm animate-in zoom-in">
-                {itemCount > 99 ? '99+' : itemCount}
-              </span>
-            )}
-          </Button>
+          <Link href="/request-samples" className="hidden sm:block">
+            <Button
+              variant="outline"
+              className="h-10 rounded-full border-black/10 bg-white/80 px-5 hover:bg-white"
+            >
+              Order Samples
+            </Button>
+          </Link>
 
-          <Link href="/cart" className="hidden sm:block">
-            <Button className="bg-primary text-primary-foreground shadow-md transition-transform hover:-translate-y-0.5 hover:bg-primary/90">
-              Get Quote
+          <Link href="/request-quote" className="hidden sm:block">
+            <Button className="h-10 rounded-full bg-[#16361f] px-5 text-primary-foreground shadow-sm hover:bg-[#204a2b]">
+              Request Quote
             </Button>
           </Link>
 
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="h-10 w-10 rounded-full border border-black/8 bg-white/75 hover:bg-white lg:hidden"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
       </nav>
 
       <div
         className={cn(
-          'overflow-hidden border-b border-border/50 transition-all duration-300 ease-in-out lg:hidden',
-          mobileMenuOpen ? 'max-h-[32rem] opacity-100' : 'max-h-0 opacity-0'
+          'overflow-hidden transition-all duration-300 ease-in-out lg:hidden',
+          mobileMenuOpen ? 'max-h-[44rem] opacity-100' : 'max-h-0 opacity-0'
         )}
       >
-        <div className="space-y-1 bg-background/95 px-4 pb-6 backdrop-blur">
-          <div className="px-2 py-3">
+        <div className="border-t border-black/5 bg-[#f7f1e7]/98 px-4 pb-6 pt-3 backdrop-blur-xl">
+          <div className="mb-3 px-1">
             <CountrySelector />
           </div>
 
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="block rounded-lg px-4 py-3 text-base font-medium text-foreground transition-colors hover:bg-muted hover:text-primary"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              {item.name}
-            </Link>
-          ))}
+          <div className="space-y-1">
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className="block rounded-2xl px-4 py-3 text-base font-medium text-foreground/80 transition-colors hover:bg-white/80 hover:text-foreground"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </div>
 
-          <div className="px-2 pt-4">
-            <Link href="/cart" onClick={() => setMobileMenuOpen(false)}>
-              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                Get Quote
+          <div className="grid gap-3 px-1 pt-4">
+            <Link href="/request-samples" onClick={() => setMobileMenuOpen(false)}>
+              <Button
+                variant="outline"
+                className="w-full rounded-full border-black/10 bg-white/80 hover:bg-white"
+              >
+                Order Samples
+              </Button>
+            </Link>
+
+            <Link href="/request-quote" onClick={() => setMobileMenuOpen(false)}>
+              <Button className="w-full rounded-full bg-[#16361f] text-primary-foreground hover:bg-[#204a2b]">
+                Request Quote
               </Button>
             </Link>
           </div>

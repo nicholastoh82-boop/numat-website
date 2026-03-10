@@ -103,11 +103,10 @@ export default function ContactPage() {
                 <div className="mt-8 p-6 bg-primary/5 rounded-xl border border-primary/20">
                   <div className="flex items-center gap-3 mb-3">
                     <MessageCircle className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold text-foreground">Quick Quote via WhatsApp</h3>
+                    <h3 className="font-semibold text-foreground">Sales and Procurement Support</h3>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    For faster response, browse our products and request an instant quote 
-                    delivered directly to your WhatsApp or Viber.
+                    Talk to our team about technical documentation, product suitability, sampling, pricing, and export coordination.
                   </p>
                   <a 
                     href="/products"

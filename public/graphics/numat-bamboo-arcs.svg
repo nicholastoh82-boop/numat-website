@@ -1,0 +1,25 @@
+<svg width="1600" height="800" viewBox="0 0 1600 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="800" fill="transparent"/>
+  <g opacity="0.18" stroke="url(#arcGrad)" stroke-width="2">
+    <path d="M-120 690C170 460 385 345 720 345C1055 345 1295 470 1720 760"/>
+    <path d="M-160 640C140 420 390 300 720 300C1085 300 1340 450 1760 710"/>
+    <path d="M-210 585C110 365 395 250 720 250C1115 250 1390 420 1810 660"/>
+    <path d="M-260 525C70 315 395 195 720 195C1140 195 1435 380 1860 600"/>
+  </g>
+  <g opacity="0.22" stroke="#8ABF3A" stroke-width="1.5">
+    <path d="M160 720V0"/>
+    <path d="M360 720V40"/>
+    <path d="M560 720V90"/>
+    <path d="M760 720V140"/>
+    <path d="M960 720V210"/>
+    <path d="M1160 720V300"/>
+    <path d="M1360 720V390"/>
+  </g>
+  <defs>
+    <linearGradient id="arcGrad" x1="0" y1="100" x2="1600" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8ABF3A"/>
+      <stop offset="0.55" stop-color="#3D8BD2"/>
+      <stop offset="1" stop-color="#D6E36A"/>
+    </linearGradient>
+  </defs>
+</svg>

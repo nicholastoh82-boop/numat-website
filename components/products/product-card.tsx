@@ -1,9 +1,17 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Eye, Plus, Minus, ShoppingCart, Leaf, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Eye,
+  Plus,
+  Minus,
+  ShoppingCart,
+  Leaf,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCartStore } from '@/lib/cart-store'
 import { useToast } from '@/hooks/use-toast'
@@ -46,7 +54,11 @@ function slugify(input: string) {
 
 function getCategoryName(product: ProductCardProps['product']) {
   if (typeof product.category === 'string') return product.category
-  if (product.category && typeof product.category === 'object' && typeof product.category.name === 'string') {
+  if (
+    product.category &&
+    typeof product.category === 'object' &&
+    typeof product.category.name === 'string'
+  ) {
     return product.category.name
   }
   if (typeof product.categories?.name === 'string') return product.categories.name
@@ -75,10 +87,10 @@ function getFallbackImageByCategory(categoryName: string) {
     nubam: '/Bamboo-Board.png',
     'nubam-boards': '/Bamboo-Board.png',
 
-    diy: '/Bamboo-Slat.png',
-    'diy-project': '/Bamboo-Slat.png',
-    'diy-projects': '/Bamboo-Slat.png',
-    nuslat: '/Bamboo-Slat.png',
+    diy: '/placeholder-product.jpg',
+    'diy-project': '/placeholder-product.jpg',
+    'diy-projects': '/placeholder-product.jpg',
+    nuslat: '/placeholder-product.jpg',
   }
 
   return map[slug] || '/placeholder.svg'
@@ -121,6 +133,12 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
   const hasMultipleImages = productImages.length > 1
   const displayUsdPrice = product.starting_price_usd ?? product.base_price_usd ?? null
 
+  const [imageSrc, setImageSrc] = useState(currentImage?.image_url || categoryFallbackImage)
+
+  useEffect(() => {
+    setImageSrc(currentImage?.image_url || categoryFallbackImage)
+  }, [currentImage, categoryFallbackImage])
+
   const handlePrevImage = (e: React.MouseEvent) => {
     e.preventDefault()
     setCurrentImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1))
@@ -149,7 +167,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
       unitPrice: displayUsdPrice ?? 0,
       minOrderQty: minQty,
       unit: product.unit || 'pcs',
-      imageUrl: currentImage?.image_url || categoryFallbackImage,
+      imageUrl: imageSrc || categoryFallbackImage,
     })
 
     toast({
@@ -167,21 +185,14 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
     <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:border-primary/50 hover:shadow-xl">
       <div className="relative h-72 w-full overflow-hidden bg-gradient-to-br from-muted to-muted/50">
         <Link href={`/products/${product.id}`} className="block h-full w-full">
-          {currentImage?.image_url ? (
-            <Image
-              src={currentImage.image_url}
-              alt={currentImage.alt_text || product.name || 'Product image'}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              className="object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
-                <Leaf className="h-12 w-12 text-primary/40" />
-              </div>
-            </div>
-          )}
+          <Image
+            src={imageSrc || categoryFallbackImage}
+            alt={currentImage?.alt_text || product.name || 'Product image'}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-110"
+            onError={() => setImageSrc(categoryFallbackImage)}
+          />
         </Link>
 
         {hasMultipleImages && (
@@ -193,6 +204,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
+
             <button
               onClick={handleNextImage}
               className="absolute right-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 opacity-0 backdrop-blur-sm transition-all duration-300 hover:bg-background group-hover:opacity-100"
@@ -298,9 +310,11 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
               >
                 <Minus className="h-3 w-3" />
               </Button>
+
               <span className="w-10 text-center text-xs font-bold text-foreground">
                 {quantity}
               </span>
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -320,8 +334,6 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
             <ShoppingCart className="h-4 w-4" />
             Add to Quote
           </Button>
-
-          
         </div>
       </div>
     </div>

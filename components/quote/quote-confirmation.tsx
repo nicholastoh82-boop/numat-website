@@ -61,9 +61,13 @@ export function QuoteConfirmation() {
     )
   }
 
-  const deliveryChannel = quote.delivery_method
+  const deliveryChannel =
+    (quote as any).delivery_method ?? (quote as any).delivery_channel ?? (quote as any).deliveryMethod
   const validUntil = quote.valid_until ? new Date(quote.valid_until) : null
   const daysValid = validUntil ? Math.ceil((validUntil.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 14
+
+  const displayedQuoteNumber =
+    (quote as any).quote_number ?? (quote as any).quoteNumber ?? quoteNumber ?? '—'
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 lg:px-8 lg:py-16">
@@ -87,7 +91,7 @@ export function QuoteConfirmation() {
         <div className="bg-primary/5 border-b border-border px-6 py-4 flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Quote Number</p>
-            <p className="font-mono font-semibold text-foreground">{quote.quote_number}</p>
+            <p className="font-mono font-semibold text-foreground">{displayedQuoteNumber}</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
@@ -112,7 +116,7 @@ export function QuoteConfirmation() {
             <div className="bg-muted/50 rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground">Total Amount</p>
               <p className="font-serif text-2xl text-foreground mt-1">
-                PHP {quote.total.toLocaleString()}
+                PHP {(quote.total ?? 0).toLocaleString()}
               </p>
               <p className="text-xs text-muted-foreground mt-1">excl. VAT</p>
             </div>
@@ -146,16 +150,18 @@ export function QuoteConfirmation() {
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-foreground">PHP {item.total_price.toLocaleString()}</p>
+                      <p className="font-medium text-foreground">
+                        PHP {((item as any).total_price ?? (item.quantity ?? 0) * ((item as any).unit_price ?? 0) ?? 0).toLocaleString()}
+                      </p>
                       <p className="text-sm text-muted-foreground">{item.quantity} pcs</p>
                     </div>
                   </div>
                 ))}
               </div>
-              {quote.discount_amount > 0 && (
+              {(quote as any).discount_amount > 0 && (
                 <div className="flex justify-between items-center py-2 mt-2 border-t border-border text-primary">
                   <span>Bulk Discount</span>
-                  <span className="font-medium">-PHP {quote.discount_amount.toLocaleString()}</span>
+                  <span className="font-medium">-PHP {(quote as any).discount_amount.toLocaleString()}</span>
                 </div>
               )}
             </div>

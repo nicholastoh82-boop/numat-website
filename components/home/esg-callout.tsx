@@ -1,103 +1,119 @@
 import Link from 'next/link'
-import { ArrowRight, Leaf, Award, TrendingDown } from 'lucide-react'
+import Image from 'next/image'
+import { ArrowRight, Award, Leaf, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+
+const points = [
+  {
+    title: 'A renewable material narrative',
+    description:
+      'Engineered bamboo supports a more responsible material story for buyers who care about sourcing and long-term relevance.',
+    icon: Leaf,
+  },
+  {
+    title: 'Design warmth with material honesty',
+    description:
+      'Natural grain, warmth, and texture help the product feel more tactile and differentiated in premium interiors.',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Stronger sustainability positioning',
+    description:
+      'Useful for commercial, residential, and brand-led projects where material choice matters to the overall story.',
+    icon: Award,
+  },
+]
 
 export function ESGCallout() {
   return (
-    <section className="py-20 bg-primary/5">
+    <section className="bg-white py-20 lg:py-24">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Content */}
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-              <Award className="w-4 h-4" />
-              <span>Wavemaker Impact Partner</span>
+        <div className="grid items-center gap-12 lg:grid-cols-[0.92fr_1.08fr]">
+          <div className="max-w-xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-black/8 bg-[#f7f1e7] px-4 py-1.5 text-sm font-medium text-primary">
+              <Award className="h-4 w-4" />
+              Sustainability and material relevance
             </div>
 
-            <h2 className="font-serif text-3xl sm:text-4xl text-foreground">
-              Building a Greener Future with Every Board
+            <h2 className="mt-6 font-serif text-3xl text-foreground sm:text-4xl lg:text-5xl">
+              A premium material story shaped by design, renewability, and long-term appeal.
             </h2>
 
-            <p className="mt-6 text-muted-foreground leading-relaxed">
-              NUMAT is proud to be a Wavemaker Impact portfolio company. Our NuBam engineered bamboo 
-              products are FSC-certified and verified carbon-negative, meaning they sequester more CO2 
-              than they emit throughout their entire lifecycle from growth to delivery.
+            <p className="mt-6 text-lg leading-8 text-foreground/65">
+              NUMAT works best when bamboo is presented not only as a sustainable
+              option, but as a refined, design-ready material for better interiors,
+              cleaner specification conversations, and more thoughtful project choices.
             </p>
 
-            <div className="mt-8 grid sm:grid-cols-3 gap-6">
-              <div className="text-center sm:text-left">
-                <div className="text-3xl font-serif text-primary">-2.5</div>
-                <p className="text-sm text-muted-foreground mt-1">tons CO2 per m3</p>
-              </div>
-              <div className="text-center sm:text-left">
-                <div className="text-3xl font-serif text-primary">100%</div>
-                <p className="text-sm text-muted-foreground mt-1">FSC Certified</p>
-              </div>
-              <div className="text-center sm:text-left">
-                <div className="text-3xl font-serif text-primary">3-5</div>
-                <p className="text-sm text-muted-foreground mt-1">year harvest cycle</p>
-              </div>
+            <div className="mt-10 space-y-6">
+              {points.map(({ title, description, icon: Icon }) => (
+                <div
+                  key={title}
+                  className="flex gap-4 border-t border-black/8 pt-6 first:border-t-0 first:pt-0"
+                >
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-[#f7f1e7]">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground">{title}</h3>
+                    <p className="mt-2 text-sm leading-7 text-foreground/65">
+                      {description}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <Link href="/esg" className="mt-8 inline-block">
-              <Button variant="outline" className="gap-2 bg-transparent">
-                Learn about our ESG commitment
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
+            <div className="mt-8">
+              <Link href="/esg">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="rounded-full border-black/10 bg-transparent px-6"
+                >
+                  Explore sustainability
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
 
-          {/* Visual */}
-          <div className="relative">
-            <div className="bg-card rounded-2xl border border-border p-8 shadow-lg">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Leaf className="w-7 h-7 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Carbon Impact</p>
-                  <p className="font-serif text-2xl text-foreground">Carbon Negative</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <TrendingDown className="w-5 h-5 text-primary" />
-                    <span className="text-sm text-foreground">Bamboo Growth</span>
-                  </div>
-                  <span className="font-medium text-primary">-3.0 t CO2</span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-muted-foreground/30" />
-                    <span className="text-sm text-foreground">Processing</span>
-                  </div>
-                  <span className="font-medium text-muted-foreground">+0.3 t CO2</span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-muted-foreground/30" />
-                    <span className="text-sm text-foreground">Transport</span>
-                  </div>
-                  <span className="font-medium text-muted-foreground">+0.2 t CO2</span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/20">
-                  <span className="font-medium text-foreground">Net Impact</span>
-                  <span className="font-bold text-lg text-primary">-2.5 t CO2</span>
-                </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="relative min-h-[420px] overflow-hidden rounded-[34px] border border-black/8 bg-card shadow-lg sm:col-span-2 lg:min-h-[520px]">
+              <Image
+                src="/Bamboo-Flooring.png"
+                alt="Bamboo flooring material"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/8 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-6 text-white lg:p-8">
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/75">
+                  Material perspective
+                </p>
+                <h3 className="mt-3 max-w-md font-serif text-2xl leading-tight sm:text-3xl">
+                  Designed to feel warm, natural, and more enduring than purely synthetic finishes.
+                </h3>
               </div>
             </div>
 
-            {/* Badge */}
-            <div className="absolute -top-4 -right-4 bg-card rounded-xl shadow-lg border border-border p-4">
-              <div className="flex items-center gap-2">
-                <Award className="w-8 h-8 text-primary" />
-                <div className="text-xs">
-                  <p className="font-medium text-foreground">Wavemaker</p>
-                  <p className="text-muted-foreground">Impact Verified</p>
-                </div>
-              </div>
+            <div className="rounded-[28px] border border-black/8 bg-[#faf6ef] p-6">
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
+                Application range
+              </p>
+              <p className="mt-3 text-sm leading-7 text-foreground/68">
+                Suitable across boards, doors, flooring, walls, slats, and furniture applications.
+              </p>
+            </div>
+
+            <div className="rounded-[28px] border border-black/8 bg-[#faf6ef] p-6">
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
+                Brand context
+              </p>
+              <p className="mt-3 text-sm leading-7 text-foreground/68">
+                A stronger sustainability message helps frame NUMAT as a more considered alternative to conventional material suppliers.
+              </p>
             </div>
           </div>
         </div>

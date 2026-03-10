@@ -20,33 +20,37 @@ const dmSerif = DM_Serif_Display({
 })
 
 export const metadata: Metadata = {
-  title: 'NUMAT | Premium NuBam Engineered Bamboo Products Worldwide',
+  title: 'NUMAT Bamboo | Engineered Bamboo Boards for Furniture, Interiors, and Projects',
   description:
-    'Premium NuBam engineered bamboo boards for furniture, flooring, doors, and structural applications. Get instant quotes via WhatsApp or Viber. FSC-certified, sustainable, and carbon-negative bamboo products.',
+    'FSC-certified engineered bamboo boards for furniture, cabinetry, interiors, doors, wall systems, and commercial applications. Technical documentation, sample support, and export-ready supply.',
   keywords: [
+    'engineered bamboo boards',
     'bamboo boards',
-    'engineered bamboo',
-    'sustainable materials',
-    'bamboo furniture',
+    'FSC-certified bamboo',
+    'bamboo furniture boards',
+    'bamboo wall panels',
+    'bamboo doors',
     'bamboo flooring',
-    'eco-friendly construction',
-    'NuBam boards',
+    'sustainable building materials',
+    'commercial bamboo supply',
   ],
   authors: [{ name: 'NUMAT' }],
   openGraph: {
-    title: 'NUMAT | Premium NuBam Engineered Bamboo Products',
+    title: 'NUMAT Bamboo | Engineered Bamboo Boards for Commercial and Interior Applications',
     description:
-      'Premium NuBam engineered bamboo boards for furniture, flooring, doors, and structural applications worldwide.',
+      'FSC-certified engineered bamboo boards with technical documentation, sample support, and export-ready supply.',
     type: 'website',
     locale: 'en_US',
   },
-  generator: 'v0.app',
+  generator: 'Next.js',
+
 }
 
 export const viewport: Viewport = {
-  themeColor: '#4a7c59',
+  themeColor: '#16361f',
   width: 'device-width',
   initialScale: 1,
+
 }
 
 export default function RootLayout({

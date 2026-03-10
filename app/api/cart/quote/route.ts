@@ -15,7 +15,7 @@ interface QuoteContact {
 }
 
 interface QuoteItem {
-  product_id: string
+  product_id: string | null
   product_name: string
   product_specs: string
   quantity: number
@@ -44,32 +44,6 @@ function generateQuoteNumber(): string {
   const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '')
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
   return `NB-${dateStr}-${random}`
-}
-
-/**
- * Helper to extract strict schema requirements from a specs string.
- * Schema requires: size (text), thickness_mm (numeric), ply (text).
- * If we can't parse them, we provide defaults to prevent database errors.
- */
-function parseSpecs(specs: string | undefined | null) {
-  if (!specs) return { size: 'Standard', thickness_mm: 0, ply: 'N/A' }
-
-  // Simple heuristic parsing (adjust regex based on your actual specs format)
-  // Example spec: "4'x8' x 18mm x 1ply"
-
-  // Try to find mm
-  const mmMatch = specs.match(/(\d+(\.\d+)?)mm/i)
-  const thickness_mm = mmMatch ? parseFloat(mmMatch[1]) : 0
-
-  // Try to find size (e.g., 4x8 or 1220x2440)
-  // This is just a fallback; ideal is if 'size' was passed explicitly.
-  const size = specs.includes("4'x8'") ? "4'x8'" : (specs.split('x')[0] || "Standard").trim()
-
-  // Try to find ply
-  const plyMatch = specs.match(/(\d+)\s*ply/i)
-  const ply = plyMatch ? `${plyMatch[1]} Ply` : 'N/A'
-
-  return { size, thickness_mm, ply }
 }
 
 export async function POST(request: NextRequest) {
@@ -118,55 +92,6 @@ export async function POST(request: NextRequest) {
     }
     const formattedPhone = phoneNumber.number
 
-    let customerId: string | null = null
-
-    // 1. Customer Upsert
-    // Schema mapping: preferred_channel (not channel), consent_marketing (not consent)
-    const { data: existingCustomer } = await supabase
-      .from('customers')
-      .select('id')
-      .eq('email', contact.email)
-      .single()
-
-    const customerData = {
-      name: sanitizeInput(contact.name),
-      email: sanitizeInput(contact.email),
-      phone: formattedPhone,
-      company: contact.company ? sanitizeInput(contact.company) : null,
-      company_name: contact.company ? sanitizeInput(contact.company) : null, // Filling both to be safe due to schema ambiguity
-      preferred_channel: contact.channel,
-      consent_marketing: contact.consent,
-      // Map channel to specific columns if needed by your business logic, though 'preferred_channel' covers it
-      whatsapp: contact.channel === 'whatsapp' ? formattedPhone : null,
-      viber: contact.channel === 'viber' ? formattedPhone : null,
-      updated_at: new Date().toISOString(),
-    }
-
-    if (existingCustomer) {
-      customerId = existingCustomer.id
-      const { error: updateError } = await supabase
-        .from('customers')
-        .update(customerData)
-        .eq('id', customerId)
-
-      if (updateError) {
-        console.error('Customer Update Error:', updateError)
-        return NextResponse.json({ ok: false, error: 'Failed to update customer', details: updateError.message }, { status: 500 })
-      }
-    } else {
-      const { data: newCustomer, error: customerError } = await supabase
-        .from('customers')
-        .insert(customerData)
-        .select('id')
-        .single()
-
-      if (customerError) {
-        console.error('Customer Create Error:', customerError)
-        return NextResponse.json({ ok: false, error: 'Failed to create customer record', details: customerError.message }, { status: 500 })
-      }
-      customerId = newCustomer.id
-    }
-
     // 2. Calculations
     const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
 
@@ -186,79 +111,100 @@ export async function POST(request: NextRequest) {
     const validUntil = new Date()
     validUntil.setDate(validUntil.getDate() + 14)
 
-    // 3. Create Quote
-    // Schema mapping: delivery_channel (not delivery_method), status='pending'
+    // 3. Create Quote (use the most compatible schema: matches /api/quote/create)
+    const notes = sanitizeInput(
+      [
+        `Preferred channel: ${contact.channel}`,
+        `Application: ${contact.application}`,
+        contact.notes ? contact.notes : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    )
+
     const { data: quote, error: quoteError } = await supabase
       .from('quotes')
       .insert({
-        quote_number: quoteNumber,
-        customer_id: customerId,
-        status: 'pending',
-        delivery_channel: contact.channel,
-        application: sanitizeInput(contact.application),
-        subtotal,
-        discount_percent: discountPercent,
-        discount_amount: discountAmount,
-        total,
-        notes: contact.notes ? sanitizeInput(contact.notes) : null,
-        valid_until: validUntil.toISOString(),
-      })
-      .select('id')
+        customer_name: sanitizeInput(contact.name),
+        company: contact.company ? sanitizeInput(contact.company) : null,
+        email: sanitizeInput(contact.email),
+        phone: formattedPhone,
+        notes,
+      } as any)
+      .select('id, quote_number')
       .single()
 
-    if (quoteError) {
+    if (quoteError || !quote?.id) {
       console.error('Quote Create Error:', quoteError)
       return NextResponse.json(
-        { ok: false, error: 'Failed to create quote record', details: quoteError.message },
+        { ok: false, error: 'Failed to create quote record', details: quoteError?.message },
         { status: 500 }
       )
     }
 
-    // 4. Create Quote Items
-    // CRITICAL: Schema requires 'title', 'size', 'thickness_mm', 'ply', 'line_total' to be NOT NULL
-    const quoteItems = items.map(item => {
-      const parsed = parseSpecs(item.product_specs)
+    const quoteId = quote.id as string
+    const createdQuoteNumber = (quote as any).quote_number ?? quoteNumber
 
-      return {
-        quote_id: quote.id,
+    // 4. Create Quote Items (compatible with both schemas)
+    const quoteItems = items.map((item) => ({
+      quote_id: quoteId,
+      product_id: item.product_id || null,
+      product_name: item.product_name,
+      product_specs: item.product_specs,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_price: item.quantity * item.unit_price,
+    }))
+
+    let { error: itemsError } = await supabase.from('quote_items').insert(quoteItems as any)
+
+    // If some optional columns don't exist in the current DB schema, retry with a minimal payload.
+    if (itemsError?.message?.includes('Could not find the') && itemsError.message.includes('quote_items')) {
+      const minimalItems = items.map((item) => ({
+        quote_id: quoteId,
         product_id: item.product_id || null,
-        sku: item.sku || null,
-
-        // Mapped fields
-        title: item.product_name, // Maps to 'title'
-        product_name: item.product_name, // Also save to product_name if schema has it (redundancy)
-        product_specs: item.product_specs,
-
-        // Parsed fields (Required NOT NULL by schema)
-        size: parsed.size,
-        thickness_mm: parsed.thickness_mm,
-        ply: parsed.ply,
-
+        product_name: item.product_name,
         quantity: item.quantity,
         unit_price: item.unit_price,
-        line_total: item.quantity * item.unit_price, // Maps to 'line_total'
-        total_price: item.quantity * item.unit_price, // Redundancy
-      }
-    })
-
-    const { error: itemsError } = await supabase
-      .from('quote_items')
-      .insert(quoteItems)
+      }))
+      ;({ error: itemsError } = await supabase.from('quote_items').insert(minimalItems as any))
+    }
 
     if (itemsError) {
       console.error('Quote Items Error:', itemsError)
-      // Attempt cleanup
-      await supabase.from('quotes').delete().eq('id', quote.id)
+      await supabase.from('quotes').delete().eq('id', quoteId)
       return NextResponse.json(
         { ok: false, error: 'Failed to add items', details: itemsError.message },
         { status: 500 }
       )
     }
 
+    // 5. Optionally send the quote immediately via email (server-side system call)
+    if (contact.channel === 'email') {
+      try {
+        const origin = request.nextUrl.origin
+        await fetch(`${origin}/api/admin/send-quote`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': 'automated-system-call',
+          },
+          body: JSON.stringify({
+            quoteId,
+            type: 'send',
+            channel: 'email',
+          }),
+        })
+      } catch (err) {
+        // Non-blocking: quote is created; email can be sent later by admin.
+        console.warn('Quote created but email send failed:', err)
+      }
+    }
+
     return NextResponse.json({
       ok: true,
-      quoteId: quote.id,
-      quoteNumber,
+      quoteId,
+      quoteNumber: createdQuoteNumber,
       total,
       message: `Quote created successfully`,
     })
@@ -283,17 +229,23 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient()
 
-  let query = supabase
-    .from('quotes')
-    .select(`*, customers(*), quote_items(*)`)
+  try {
+    let query = supabase.from('quotes').select(`*, customers(*), quote_items(*)`)
+    if (quoteId) query = query.eq('id', quoteId)
+    else if (quoteNumber) query = query.eq('quote_number', quoteNumber)
 
-  if (quoteId) query = query.eq('id', quoteId)
-  else if (quoteNumber) query = query.eq('quote_number', quoteNumber)
+    const { data, error } = await query.single()
+    if (error) throw error
+    if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return NextResponse.json(data)
+  } catch (err: any) {
+    // Fallback for schemas without customers relation/table
+    let query = supabase.from('quotes').select(`*, quote_items(*)`)
+    if (quoteId) query = query.eq('id', quoteId)
+    else if (quoteNumber) query = query.eq('quote_number', quoteNumber)
 
-  const { data, error } = await query.single()
-
-  if (error || !data) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    const { data, error } = await query.single()
+    if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return NextResponse.json(data)
   }
-  return NextResponse.json(data)
 }
