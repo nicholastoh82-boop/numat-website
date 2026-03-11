@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { useCartStore } from '@/lib/cart-store'
 import { useToast } from '@/hooks/use-toast'
 import { useCurrency } from '@/components/providers/currency-provider'
+import { getCategoryName, getFallbackImageByCategory } from '@/lib/product-image'
 
 interface ProductCardProps {
   product: {
@@ -40,60 +41,6 @@ interface ProductCardProps {
     starting_price_usd?: number | null
   }
   onQuickView: () => void
-}
-
-function slugify(input: string) {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/['"]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-}
-
-function getCategoryName(product: ProductCardProps['product']) {
-  if (typeof product.category === 'string') return product.category
-  if (
-    product.category &&
-    typeof product.category === 'object' &&
-    typeof product.category.name === 'string'
-  ) {
-    return product.category.name
-  }
-  if (typeof product.categories?.name === 'string') return product.categories.name
-  return ''
-}
-
-function getFallbackImageByCategory(categoryName: string) {
-  const slug = slugify(categoryName)
-
-  const map: Record<string, string> = {
-    furniture: '/Bamboo-Furniture.png',
-
-    door: '/Bamboo-Door.png',
-    nudoor: '/Bamboo-Door.png',
-
-    flooring: '/Bamboo-Flooring.png',
-    floor: '/Bamboo-Flooring.png',
-    nufloor: '/Bamboo-Flooring.png',
-
-    wall: '/Bamboo-Wall.png',
-    'wall-panelling': '/Bamboo-Wall.png',
-    'wall-paneling': '/Bamboo-Wall.png',
-    nuwall: '/Bamboo-Wall.png',
-
-    veneer: '/Bamboo-Board.png',
-    nubam: '/Bamboo-Board.png',
-    'nubam-boards': '/Bamboo-Board.png',
-
-    diy: '/placeholder-product.jpg',
-    'diy-project': '/placeholder-product.jpg',
-    'diy-projects': '/placeholder-product.jpg',
-    nuslat: '/placeholder-product.jpg',
-  }
-
-  return map[slug] || '/placeholder.svg'
 }
 
 export function ProductCard({ product, onQuickView }: ProductCardProps) {
@@ -133,10 +80,12 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
   const hasMultipleImages = productImages.length > 1
   const displayUsdPrice = product.starting_price_usd ?? product.base_price_usd ?? null
 
-  const [imageSrc, setImageSrc] = useState(currentImage?.image_url || categoryFallbackImage)
+  const [imageSrc, setImageSrc] = useState(
+    currentImage?.image_url || categoryFallbackImage || ''
+  )
 
   useEffect(() => {
-    setImageSrc(currentImage?.image_url || categoryFallbackImage)
+    setImageSrc(currentImage?.image_url || categoryFallbackImage || '')
   }, [currentImage, categoryFallbackImage])
 
   const handlePrevImage = (e: React.MouseEvent) => {
@@ -185,17 +134,35 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
     <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:border-primary/50 hover:shadow-xl">
       <div className="relative h-72 w-full overflow-hidden bg-gradient-to-br from-muted to-muted/50">
         <Link href={`/products/${product.id}`} className="block h-full w-full">
-          <Image
-            src={imageSrc || categoryFallbackImage}
-            alt={currentImage?.alt_text || product.name || 'Product image'}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
-            onError={() => setImageSrc(categoryFallbackImage)}
-          />
+          {imageSrc ? (
+            <Image
+              src={imageSrc}
+              alt={currentImage?.alt_text || product.name || 'Product image'}
+              fill
+              unoptimized
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              onError={() => {
+                if (imageSrc !== categoryFallbackImage) {
+                  setImageSrc(categoryFallbackImage)
+                } else {
+                  setImageSrc('')
+                }
+              }}
+            />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted text-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+                <Leaf className="h-10 w-10 text-primary/40" />
+              </div>
+              <p className="mt-4 text-sm font-medium text-muted-foreground">
+                Image coming soon
+              </p>
+            </div>
+          )}
         </Link>
 
-        {hasMultipleImages && (
+        {hasMultipleImages && imageSrc && (
           <>
             <button
               onClick={handlePrevImage}
@@ -230,7 +197,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
         {product.is_featured && (
           <div className="absolute right-3 top-3 z-20">
             <span className="flex items-center gap-1 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white">
-              ⭐ Featured
+              Featured
             </span>
           </div>
         )}

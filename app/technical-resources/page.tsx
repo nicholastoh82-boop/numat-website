@@ -1,42 +1,22 @@
+import Link from 'next/link'
+import {
+  FileText,
+  Ruler,
+  ShieldCheck,
+  Wrench,
+  ArrowRight,
+} from 'lucide-react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { FileText, Ruler, ShieldCheck, Wrench } from 'lucide-react'
+import { technicalResourceDetails } from '@/lib/technical-resources-content'
 
-export const metadata = {
-  title: 'Technical Resources | NUMAT',
-  description:
-    'Technical resources for NUMAT engineered bamboo boards, including specs, certifications, and application guidance.',
+const iconMap = {
+  'technical-data-sheets': FileText,
+  'dimensions-and-thicknesses': Ruler,
+  certifications: ShieldCheck,
+  'installation-and-care-guidance': Wrench,
 }
-
-const resources = [
-  {
-    title: 'Technical Data Sheets',
-    description:
-      'Product specifications, board properties, and technical reference information.',
-    icon: FileText,
-  },
-  {
-    title: 'Dimensions and Thicknesses',
-    description:
-      'Standard sizing information and board thickness options by application.',
-    icon: Ruler,
-  },
-  {
-    title: 'Certifications',
-    description:
-      'Support for FSC-certified sourcing and sustainability-related documentation.',
-    icon: ShieldCheck,
-  },
-  {
-    title: 'Installation and Care Guidance',
-    description:
-      'Helpful reference for handling, application suitability, and maintenance guidance.',
-    icon: Wrench,
-  },
-]
 
 export default function TechnicalResourcesPage() {
   return (
@@ -44,63 +24,54 @@ export default function TechnicalResourcesPage() {
       <Header />
       <CartDrawer />
 
-      <main className="flex-1 bg-background">
-        <section className="bg-secondary py-16 lg:py-20">
-          <div className="mx-auto max-w-7xl px-4 lg:px-8">
+      <main className="flex-1 bg-[#f6f1e8] text-stone-900">
+        <section className="border-b border-stone-200 bg-white">
+          <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-16">
             <div className="max-w-3xl">
-              <h1 className="font-serif text-4xl text-foreground sm:text-5xl">
-                Technical Resources
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">
+                Technical resources
+              </p>
+              <h1 className="mt-3 text-4xl font-semibold tracking-tight text-stone-950 sm:text-5xl">
+                Technical Information for Buyers
               </h1>
-              <p className="mt-6 text-lg leading-8 text-muted-foreground">
-                Access the technical information buyers, designers, and project
-                teams need before requesting samples or quotations.
+              <p className="mt-4 text-lg leading-8 text-stone-700">
+                Explore product specifications, sizing references, certifications,
+                and handling guidance to support commercial evaluation.
               </p>
             </div>
           </div>
         </section>
 
-        <section className="py-16 lg:py-20">
-          <div className="mx-auto max-w-7xl px-4 lg:px-8">
-            <div className="grid gap-6 md:grid-cols-2">
-              {resources.map((item) => {
-                const Icon = item.icon
-                return (
-                  <div
-                    key={item.title}
-                    className="rounded-2xl border border-border bg-card p-6 shadow-sm"
-                  >
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                      <Icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-foreground">
-                      {item.title}
-                    </h2>
-                    <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                      {item.description}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
+        <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-16">
+          <div className="grid gap-6 md:grid-cols-2">
+            {technicalResourceDetails.map((item) => {
+              const Icon = iconMap[item.slug as keyof typeof iconMap] || FileText
 
-            <div className="mt-12 rounded-3xl border border-border bg-card p-8 shadow-sm">
-              <h2 className="text-2xl font-semibold text-foreground">
-                Need specific technical documents?
-              </h2>
-              <p className="mt-4 max-w-2xl text-muted-foreground leading-7">
-                Until the full document library is live, contact our team for
-                technical data sheets, certification support, dimensions,
-                application guidance, and quotation documents.
-              </p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/contact">
-                  <Button>Contact Sales</Button>
+              return (
+                <Link
+                  key={item.slug}
+                  href={`/technical-resources/${item.slug}`}
+                  className="group rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
+                    <Icon className="h-7 w-7" />
+                  </div>
+
+                  <h2 className="mt-6 text-2xl font-semibold text-stone-950">
+                    {item.title}
+                  </h2>
+
+                  <p className="mt-4 text-lg leading-8 text-stone-700">
+                    {item.cardDescription}
+                  </p>
+
+                  <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                    View details
+                    <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                  </div>
                 </Link>
-                <Link href="/request-samples">
-                  <Button variant="outline">Request Samples</Button>
-                </Link>
-              </div>
-            </div>
+              )
+            })}
           </div>
         </section>
       </main>

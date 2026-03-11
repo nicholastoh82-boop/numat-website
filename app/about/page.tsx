@@ -50,9 +50,7 @@ export default function AboutPage() {
                     that meet international quality standards while supporting local communities.
                   </p>
                   <p>
-                    Today, we serve furniture makers, contractors, architects, and DIY 
-                    enthusiasts worldwide, providing them 
-                    with materials that are as beautiful as they are sustainable.
+                    Today, we support furniture manufacturers, architects, contractors, developers, and sourcing teams with engineered bamboo materials for commercial and interior applications.
                   </p>
                 </div>
               </div>
@@ -112,8 +110,7 @@ export default function AboutPage() {
                 </div>
                 <h3 className="font-semibold text-foreground mb-2">Mission</h3>
                 <p className="text-sm text-muted-foreground">
-                  To make sustainable bamboo products accessible and affordable for 
-                  every builder and creator in the Philippines.
+                  To provide procurement-ready engineered bamboo materials that help commercial buyers choose lower-impact alternatives without compromising performance, finish, or supply support.
                 </p>
               </div>
               <div className="bg-card rounded-xl border border-border p-6 text-center">

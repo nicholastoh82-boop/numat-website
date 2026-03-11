@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { getCategoryName, getFallbackImageByCategory } from '@/lib/product-image'
 
+
 interface ProductDetailImageProps {
   product: {
     name: string

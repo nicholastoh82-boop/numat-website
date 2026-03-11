@@ -1,98 +1,101 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import {
+  ArrowRight,
+  FileText,
+  Leaf,
+  PackageCheck,
+  ShieldCheck,
+} from 'lucide-react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
 
 export default function NumatBambooHomepageRevamp() {
   const trustPoints = [
-    'FSC-certified materials',
-    'Carbon-negative positioning',
+    'FSC-certified',
     'MOQ from 10 boards',
-    'Fast quote turnaround',
     'Export-ready supply',
+    'Fast quote turnaround',
+    'DOST / ASTM D1037 tested',
   ]
 
   const productFamilies = [
     {
       title: 'Furniture Boards',
-      description:
-        'For tables, shelving, cabinetry, and custom furniture manufacturing.',
+      subtitle: 'Cabinetry, tables, shelving',
       image: '/Bamboo-Furniture.png',
+      href: '/products?category=furniture',
     },
     {
-      title: 'Wall and Ceiling Panels',
-      description:
-        'For interior surfacing, decorative applications, and architectural finishes.',
+      title: 'Wall Panels',
+      subtitle: 'Interior surfaces, feature walls',
       image: '/Bamboo-Wall.png',
+      href: '/products?category=nuwall',
     },
     {
-      title: 'Doors and Cabinet Components',
-      description:
-        'For doors, fronts, panels, and interior joinery.',
+      title: 'Doors & Joinery',
+      subtitle: 'Panels, doors, components',
       image: '/Bamboo-Door.png',
+      href: '/products?category=nudoor',
     },
     {
-      title: 'Flooring and Interior Surfaces',
-      description:
-        'For durable interior applications requiring a premium natural finish.',
+      title: 'Flooring',
+      subtitle: 'Interior surfaces, premium finish',
       image: '/Bamboo-Flooring.png',
+      href: '/products?category=nufloor',
     },
     {
-      title: 'Construction and Fit-Out Boards',
-      description:
-        'For selected structural and project-based applications.',
+      title: 'Fit-Out Boards',
+      subtitle: 'Project and board applications',
       image: '/Bamboo-Board.png',
+      href: '/products?category=nubam-boards',
     },
   ]
 
-  const valueCards = [
+  const applicationGallery = [
+    { title: 'Interior Fit-Outs', image: '/Bamboo-Wall.png' },
+    { title: 'Furniture Manufacturing', image: '/Bamboo-Furniture.png' },
+    { title: 'Doors & Panels', image: '/Bamboo-Door.png' },
+    { title: 'Cabinetry & Joinery', image: '/Bamboo-DIY.png' },
+    { title: 'Flooring Surfaces', image: '/Bamboo-Flooring.png' },
+  ]
+
+  const testingCards = [
+    { label: 'MOR', value: '22.77–69.44 MPa' },
+    { label: 'MOE', value: '2211.82–10256.71 MPa' },
+    { label: 'Compression', value: '25.19–30.46 MPa' },
+    { label: 'Hardness', value: '3918.33–7377.33 N' },
+  ]
+
+  const resourceCards = [
     {
-      title: 'Technical-grade boards',
-      description:
-        'Engineered for furniture, cabinetry, interiors, and fit-out applications with specifications tailored for commercial use.',
+      title: 'Data Sheets',
+      href: '/technical-resources',
+      icon: FileText,
     },
     {
-      title: 'Verified sustainability',
-      description:
-        'FSC-certified sourcing and carbon-conscious production to support lower-impact material selection.',
+      title: 'Dimensions',
+      href: '/technical-resources',
+      icon: PackageCheck,
     },
     {
-      title: 'Flexible order support',
-      description:
-        'Suitable for both project-based requirements and ongoing production needs, with MOQ from 10 boards.',
+      title: 'Certifications',
+      href: '/testing',
+      icon: ShieldCheck,
     },
     {
-      title: 'Fast commercial response',
-      description:
-        'Clear quotation support, product guidance, and export-ready coordination for serious buyers.',
+      title: 'Applications',
+      href: '/technical-resources',
+      icon: Leaf,
     },
   ]
 
-  const resourceLinks = [
-    'Technical Data Sheets',
-    'Dimensions and thicknesses',
-    'Finishes and applications',
-    'Certifications',
-    'Installation and care guidance',
-  ]
-
-  const applications = [
-    'Furniture manufacturing',
-    'Cabinetry and joinery',
-    'Hospitality interiors',
-    'Residential fit-outs',
-    'Retail and commercial spaces',
-    'Architectural detailing',
-  ]
-
-  const credibilityItems = [
-    'Manufacturing photos and process visuals',
-    'Packaging, pallet, and shipment readiness',
-    'Sample kit presentation',
-    'Client, partner, or project logos',
-    'Export market coverage',
-    'Response-time commitment for buyer inquiries',
+  const visualTrust = [
+    { title: 'FSC-Certified Sourcing', image: '/Bamboo-Wall.png' },
+    { title: 'Project-Ready Boards', image: '/Bamboo-Board.png' },
+    { title: 'Commercial Support', image: '/Bamboo-Door.png' },
+    { title: 'Interior-Focused Finish', image: '/Bamboo-Flooring.png' },
   ]
 
   return (
@@ -100,102 +103,96 @@ export default function NumatBambooHomepageRevamp() {
       <Header />
       <CartDrawer />
 
-      <main className="flex-1 bg-stone-50 text-stone-900">
-        <section className="border-b border-stone-200 bg-white">
-          <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 lg:grid-cols-2 lg:px-8 lg:py-24">
+      <main className="flex-1 bg-[#f6f1e8] text-stone-900">
+        <section className="border-b border-stone-200 bg-[linear-gradient(to_bottom,_#f8f3ea,_#f4ede2)]">
+          <div className="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-14">
             <div className="flex flex-col justify-center">
-              <div className="mb-4 inline-flex w-fit rounded-full border border-emerald-700/20 bg-emerald-700/5 px-3 py-1 text-sm font-medium text-emerald-800">
-                Engineered bamboo boards for commercial use
+              <div className="mb-4 inline-flex w-fit rounded-full border border-emerald-900/10 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-900 shadow-sm">
+                Engineered bamboo boards
               </div>
 
               <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-stone-950 sm:text-5xl lg:text-6xl">
-                Engineered Bamboo Boards for Commercial Projects and Manufacturing
+                Premium Bamboo Boards for Interiors, Furniture, and Projects
               </h1>
 
-              <p className="mt-6 max-w-xl text-lg leading-8 text-stone-700">
-                FSC-certified bamboo boards for furniture, interiors, cabinetry,
-                fit-outs, and architectural applications — backed by technical
-                documentation, fast quotation support, and export-ready supply.
+              <p className="mt-5 max-w-xl text-base leading-7 text-stone-700 sm:text-lg">
+                Built for buyers sourcing boards for cabinetry, fit-outs, doors,
+                wall finishes, flooring, and commercial applications.
               </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link
                   href="/request-quote"
-                  className="inline-flex items-center justify-center rounded-2xl bg-stone-950 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-stone-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-stone-900"
                 >
                   Request Quote
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
 
                 <Link
                   href="/request-samples"
-                  className="inline-flex items-center justify-center rounded-2xl border border-stone-300 bg-white px-6 py-3 text-sm font-semibold text-stone-900 transition hover:bg-stone-100"
+                  className="inline-flex items-center justify-center rounded-2xl border border-stone-300 bg-white px-6 py-3.5 text-sm font-semibold text-stone-900 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-100"
                 >
                   Order Samples
                 </Link>
-
-                <Link
-                  href="/technical-resources"
-                  className="inline-flex items-center justify-center rounded-2xl border border-emerald-700/20 bg-emerald-700/5 px-6 py-3 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-700/10"
-                >
-                  View Certifications
-                </Link>
-              </div>
-
-              <p className="mt-4 text-sm text-stone-600">
-                Available in multiple thicknesses for commercial, manufacturing,
-                and project use.
-              </p>
-
-              <div className="mt-6 flex flex-wrap gap-2">
-                <span className="rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">
-                  Technical data available
-                </span>
-                <span className="rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">
-                  Certification support
-                </span>
-                <span className="rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">
-                  Buyer documentation
-                </span>
               </div>
             </div>
 
-            <div className="grid gap-4">
-              <div className="rounded-3xl border border-stone-200 bg-stone-200 p-4 shadow-sm">
-                <div className="relative h-72 overflow-hidden rounded-2xl">
+            <div className="grid gap-4 lg:grid-cols-2 lg:grid-rows-[1.1fr_0.9fr]">
+              <div className="group relative overflow-hidden rounded-[2rem] border border-stone-200 bg-white p-3 shadow-lg lg:col-span-2">
+                <div className="relative h-[320px] overflow-hidden rounded-[1.5rem] sm:h-[420px]">
                   <Image
                     src="/Bamboo-DIY.png"
-                    alt="Engineered bamboo boards for commercial applications"
+                    alt="Engineered bamboo boards for commercial interiors and projects"
                     fill
                     priority
-                    className="object-cover object-center"
+                    className="object-cover transition duration-700 group-hover:scale-[1.04]"
                   />
-                  <div className="absolute inset-0 bg-black/10" />
-                  <div className="absolute bottom-6 left-6 rounded-2xl bg-white/92 p-4 shadow-lg backdrop-blur">
-                    <p className="text-sm font-medium text-stone-700">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                  <div className="absolute bottom-5 left-5 right-5 rounded-[1.5rem] border border-white/20 bg-white/88 p-5 shadow-xl backdrop-blur">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-600">
                       Procurement-ready support
                     </p>
-                    <p className="mt-1 text-xl font-semibold text-stone-950">
-                      Specs, samples, and fast quotations
+                    <p className="mt-1 text-xl font-semibold leading-tight text-stone-950 sm:text-2xl">
+                      Specs, sampling, and commercial guidance for serious buyers
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-                  <p className="text-sm font-medium text-stone-600">Use cases</p>
-                  <p className="mt-2 text-lg font-semibold text-stone-950">
-                    Furniture, interiors, doors, fit-outs
-                  </p>
+              <div className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+                <div className="relative h-52">
+                  <Image
+                    src="/Bamboo-Furniture.png"
+                    alt="Furniture and cabinetry applications"
+                    fill
+                    className="object-cover transition duration-700 group-hover:scale-[1.05]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <p className="text-sm font-medium text-white/80">Application</p>
+                    <p className="mt-1 text-lg font-semibold text-white">
+                      Furniture & cabinetry
+                    </p>
+                  </div>
                 </div>
+              </div>
 
-                <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-                  <p className="text-sm font-medium text-stone-600">
-                    Commercial support
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-stone-950">
-                    Export-ready coordination and buyer documentation
-                  </p>
+              <div className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+                <div className="relative h-52">
+                  <Image
+                    src="/Bamboo-Board.png"
+                    alt="Export-ready bamboo board supply"
+                    fill
+                    className="object-cover transition duration-700 group-hover:scale-[1.05]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <p className="text-sm font-medium text-white/80">Commercial</p>
+                    <p className="mt-1 text-lg font-semibold text-white">
+                      Export-ready supply
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -203,12 +200,12 @@ export default function NumatBambooHomepageRevamp() {
         </section>
 
         <section className="border-b border-stone-200 bg-stone-950 text-white">
-          <div className="mx-auto max-w-7xl px-6 py-5 lg:px-8">
+          <div className="mx-auto max-w-7xl px-6 py-4 lg:px-8">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {trustPoints.map((point) => (
                 <div
                   key={point}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium"
+                  className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-medium transition duration-300 hover:bg-white/[0.10]"
                 >
                   {point}
                 </div>
@@ -217,327 +214,137 @@ export default function NumatBambooHomepageRevamp() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-24">
-  <div className="max-w-3xl">
-    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">
-      Testing & performance
-    </p>
-    <h2 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-      DOST Testing Results Compared with Typical Plywood
-    </h2>
-    <p className="mt-4 text-lg leading-8 text-stone-700">
-      NUMAT engineered bamboo boards have undergone ASTM D1037 mechanical
-      testing. The table below compares the tested bamboo range against typical
-      plywood reference values to help buyers evaluate structural and commercial
-      suitability.
-    </p>
-  </div>
+        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+              Product Families
+            </h2>
 
-  <div className="mt-10 overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm">
-    <div className="border-b border-stone-200 bg-stone-950 px-6 py-5 text-white">
-      <h3 className="text-xl font-semibold">Mechanical Performance Comparison</h3>
-      <p className="mt-1 text-sm text-stone-300">
-        ASTM D1037 / DOST test results versus common plywood reference ranges.
-      </p>
-    </div>
+            <Link
+              href="/products"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900"
+            >
+              View all
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
 
-    <div className="overflow-x-auto">
-      <table className="min-w-full border-collapse">
-        <thead className="bg-stone-100">
-          <tr>
-            <th className="border-b border-stone-200 px-6 py-4 text-left text-sm font-semibold text-stone-900">
-              Metric
-            </th>
-            <th className="border-b border-stone-200 px-6 py-4 text-left text-sm font-semibold text-stone-900">
-              NUMAT Engineered Bamboo
-            </th>
-            <th className="border-b border-stone-200 px-6 py-4 text-left text-sm font-semibold text-stone-900">
-              Typical Plywood
-            </th>
-            <th className="border-b border-stone-200 px-6 py-4 text-left text-sm font-semibold text-stone-900">
-              Commercial Reading
-            </th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr className="align-top">
-            <td className="border-b border-stone-200 px-6 py-5 text-sm font-medium text-stone-900">
-              MOR
-            </td>
-            <td className="border-b border-stone-200 px-6 py-5 text-sm text-stone-700">
-              22.77–69.44 MPa
-            </td>
-            <td className="border-b border-stone-200 px-6 py-5 text-sm text-stone-700">
-              ~30–60 MPa
-            </td>
-            <td className="border-b border-stone-200 px-6 py-5 text-sm leading-7 text-stone-700">
-              Bending strength range shows NUMAT can compete with or exceed
-              typical plywood depending on configuration.
-            </td>
-          </tr>
-
-          <tr className="align-top bg-stone-50/70">
-            <td className="border-b border-stone-200 px-6 py-5 text-sm font-medium text-stone-900">
-              MOE
-            </td>
-            <td className="border-b border-stone-200 px-6 py-5 text-sm text-stone-700">
-              2211.82–10256.71 MPa
-            </td>
-            <td className="border-b border-stone-200 px-6 py-5 text-sm text-stone-700">
-              ~4000–9000 MPa
-            </td>
-            <td className="border-b border-stone-200 px-6 py-5 text-sm leading-7 text-stone-700">
-              Stiffness varies by sample and configuration, with upper-end
-              results outperforming typical plywood references.
-            </td>
-          </tr>
-
-          <tr className="align-top">
-            <td className="border-b border-stone-200 px-6 py-5 text-sm font-medium text-stone-900">
-              Compression Strength
-            </td>
-            <td className="border-b border-stone-200 px-6 py-5 text-sm text-stone-700">
-              25.19–30.46 MPa
-            </td>
-            <td className="border-b border-stone-200 px-6 py-5 text-sm text-stone-700">
-              ~20–35 MPa
-            </td>
-            <td className="border-b border-stone-200 px-6 py-5 text-sm leading-7 text-stone-700">
-              Compressive performance is within the range expected for commercial
-              plywood boards.
-            </td>
-          </tr>
-
-          <tr className="align-top bg-stone-50/70">
-            <td className="px-6 py-5 text-sm font-medium text-stone-900">
-              Hardness
-            </td>
-            <td className="px-6 py-5 text-sm text-stone-700">
-              3918.33–7377.33 N
-            </td>
-            <td className="px-6 py-5 text-sm text-stone-700">
-              Typically lower and more variable
-            </td>
-            <td className="px-6 py-5 text-sm leading-7 text-stone-700">
-              Useful for surface durability and wear resistance in interior and
-              exposed applications.
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div className="mt-6 rounded-3xl border border-stone-200 bg-stone-50 p-6">
-  <p className="text-sm leading-7 text-stone-700">
-    Results apply to the specific samples submitted for testing and are shown
-    as reference values. Actual performance may vary depending on thickness,
-    configuration, moisture content, ply arrangement, and manufacturing lot.
-  </p>
-
-  <div className="mt-4 flex flex-wrap gap-3">
-    <Link
-      href="/testing"
-      className="inline-flex items-center justify-center rounded-2xl bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-    >
-      View Full Testing Page
-    </Link>
-
-    <Link
-      href="/contact"
-      className="inline-flex items-center justify-center rounded-2xl border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-900 transition hover:bg-stone-100"
-    >
-      Contact Sales for Full Results
-    </Link>
-    </div>
-  </div>
-</section>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {productFamilies.map((item) => (
+              <Link
+                key={item.title}
+                href={item.href}
+                className="group overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-xl"
+              >
+                <div className="relative h-72 overflow-hidden">
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    fill
+                    className="object-cover transition duration-700 group-hover:scale-[1.05]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <h3 className="text-2xl font-semibold text-white">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-white/85">{item.subtitle}</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         <section className="border-y border-stone-200 bg-white">
-          <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-24">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">
-                  Product families
-                </p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-                  Explore Product Families
-                </h2>
-                <p className="mt-4 text-lg leading-8 text-stone-700">
-                  Browse engineered bamboo boards by end use and application.
-                </p>
-              </div>
-
-              <Link
-                href="/products"
-                className="inline-flex items-center justify-center rounded-2xl border border-stone-300 bg-stone-100 px-5 py-3 text-sm font-semibold text-stone-900 transition hover:bg-stone-200"
-              >
-                View All Products
-              </Link>
+          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+            <div className="mb-8">
+              <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+                Visual Applications
+              </h2>
             </div>
 
-            <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {productFamilies.map((item, index) => (
-                <div
-                  key={item.title}
-                  className="overflow-hidden rounded-3xl border border-stone-200 bg-stone-50 shadow-sm"
-                >
-                  <div className="relative h-48">
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-
-                  <div className="p-6">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500">
-                      0{index + 1}
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-12">
+              <div className="group relative overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm xl:col-span-5">
+                <div className="relative h-[420px]">
+                  <Image
+                    src={applicationGallery[0].image}
+                    alt={applicationGallery[0].title}
+                    fill
+                    className="object-cover transition duration-700 group-hover:scale-[1.05]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  <div className="absolute bottom-5 left-5">
+                    <p className="text-2xl font-semibold text-white">
+                      {applicationGallery[0].title}
                     </p>
-
-                    <h3 className="mt-2 text-xl font-semibold text-stone-950">
-                      {item.title}
-                    </h3>
-
-                    <p className="mt-3 text-sm leading-7 text-stone-700">
-                      {item.description}
-                    </p>
-
-                    <Link
-                      href="/products"
-                      className="mt-5 inline-flex text-sm font-semibold text-emerald-800"
-                    >
-                      View Products →
-                    </Link>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              <div className="grid gap-4 xl:col-span-7 xl:grid-cols-2">
+                {applicationGallery.slice(1).map((item) => (
+                  <div
+                    key={item.title}
+                    className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <div className="relative h-[200px]">
+                      <Image
+                        src={item.image}
+                        alt={item.title}
+                        fill
+                        className="object-cover transition duration-700 group-hover:scale-[1.05]"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <p className="text-lg font-semibold text-white">{item.title}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-24">
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">
-                Technical resources
+        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+          <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+            <div className="rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+                Testing highlights
               </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-                Technical Information for Buyers
+                Performance at a Glance
               </h2>
-              <p className="mt-4 max-w-2xl text-lg leading-8 text-stone-700">
-                Get the documents and specifications you need before requesting a
-                quote.
+              <p className="mt-4 text-base leading-7 text-stone-700">
+                DOST / ASTM D1037 mechanical testing supports commercial evaluation.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  href="/technical-resources"
-                  className="inline-flex items-center justify-center rounded-2xl bg-stone-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+                  href="/testing"
+                  className="inline-flex items-center justify-center rounded-2xl bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-stone-900"
                 >
-                  Download Specs
+                  View Testing
                 </Link>
 
                 <Link
-                  href="/technical-resources"
-                  className="inline-flex items-center justify-center rounded-2xl border border-emerald-700/20 bg-emerald-700/5 px-5 py-3 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-700/10"
+                  href="/contact"
+                  className="inline-flex items-center justify-center rounded-2xl border border-stone-300 bg-stone-50 px-5 py-3 text-sm font-semibold text-stone-900 transition duration-300 hover:bg-stone-100"
                 >
-                  Certifications
-                </Link>
-
-                <Link
-                  href="/request-samples"
-                  className="inline-flex items-center justify-center rounded-2xl border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-900 transition hover:bg-stone-100"
-                >
-                  Request Samples
+                  Contact Sales
                 </Link>
               </div>
             </div>
 
-            <div className="grid gap-4">
-              {resourceLinks.map((resource) => (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {testingCards.map((item) => (
                 <div
-                  key={resource}
-                  className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm"
+                  key={item.label}
+                  className="rounded-[1.75rem] border border-stone-200 bg-stone-950 p-6 text-white shadow-sm"
                 >
-                  <p className="text-base font-semibold text-stone-950">
-                    {resource}
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                    {item.label}
                   </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="border-y border-stone-200 bg-stone-100">
-          <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-24">
-            <div className="max-w-3xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">
-                Applications
-              </p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-                Built for Real-World Applications
-              </h2>
-              <p className="mt-4 text-lg leading-8 text-stone-700">
-                From interiors to production environments, Numat boards are
-                designed for practical use across commercial and design-led
-                projects.
-              </p>
-            </div>
-
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {applications.map((application) => (
-                <div
-                  key={application}
-                  className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm"
-                >
-                  <p className="text-lg font-semibold text-stone-950">
-                    {application}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-24">
-          <div className="grid gap-10 lg:grid-cols-2">
-            <div className="rounded-[2rem] border border-emerald-900/10 bg-emerald-900 p-8 text-white shadow-sm lg:p-10">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">
-                ESG
-              </p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Sustainability That Supports Procurement Goals
-              </h2>
-              <p className="mt-4 text-lg leading-8 text-emerald-50/90">
-                Numat’s sustainability story is designed to do more than inspire.
-                It helps buyers source materials aligned with responsible
-                procurement, green building goals, and lower-impact project
-                requirements.
-              </p>
-
-              <Link
-                href="/esg"
-                className="mt-8 inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-50"
-              >
-                View ESG Details
-              </Link>
-            </div>
-
-            <div className="grid gap-4">
-              {[
-                'FSC-certified sourcing',
-                'Carbon-negative positioning',
-                'Lifecycle-based methodology',
-                'Documentation available for review',
-              ].map((point) => (
-                <div
-                  key={point}
-                  className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm"
-                >
-                  <p className="text-lg font-semibold text-stone-950">{point}</p>
+                  <p className="mt-3 text-2xl font-semibold leading-tight">{item.value}</p>
                 </div>
               ))}
             </div>
@@ -545,67 +352,113 @@ export default function NumatBambooHomepageRevamp() {
         </section>
 
         <section className="border-y border-stone-200 bg-white">
-          <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-24">
-            <div className="max-w-3xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">
-                Operational credibility
-              </p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-                Built to Support Commercial Buyers
+          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+            <div className="mb-8 flex items-end justify-between gap-4">
+              <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+                Technical Resources
               </h2>
-              <p className="mt-4 text-lg leading-8 text-stone-700">
-                Numat supports buyers with product guidance, documentation, and
-                practical commercial coordination from inquiry to shipment.
-              </p>
+
+              <Link
+                href="/technical-resources"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900"
+              >
+                View all
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
 
-            <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {credibilityItems.map((item) => (
-                <div
-                  key={item}
-                  className="rounded-3xl border border-stone-200 bg-stone-50 p-6 shadow-sm"
-                >
-                  <p className="text-base font-semibold text-stone-950">{item}</p>
-                </div>
-              ))}
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {resourceCards.map((resource) => {
+                const Icon = resource.icon
+
+                return (
+                  <Link
+                    key={resource.title}
+                    href={resource.href}
+                    className="group rounded-[1.75rem] border border-stone-200 bg-stone-50 p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-md"
+                  >
+                    <div className="rounded-2xl bg-white p-3 shadow-sm w-fit">
+                      <Icon className="h-5 w-5 text-emerald-800" />
+                    </div>
+
+                    <p className="mt-4 text-lg font-semibold text-stone-950">
+                      {resource.title}
+                    </p>
+
+                    <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                      View
+                      <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-24">
-          <div className="rounded-[2rem] bg-stone-950 px-8 py-12 text-white shadow-sm lg:px-12 lg:py-16">
-            <div className="max-w-3xl">
+        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+          <div className="mb-8">
+            <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+              Trust & Credibility
+            </h2>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {visualTrust.map((item) => (
+              <div
+                key={item.title}
+                className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div className="relative h-64">
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    fill
+                    className="object-cover transition duration-700 group-hover:scale-[1.05]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <p className="text-xl font-semibold text-white">{item.title}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+          <div className="relative overflow-hidden rounded-[2rem] border border-stone-900/10 bg-stone-950 px-8 py-12 text-white shadow-xl lg:px-12 lg:py-16">
+            <div className="absolute inset-0 opacity-35">
+              <Image
+                src="/Bamboo-Board.png"
+                alt="Premium engineered bamboo board"
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-black/70" />
+
+            <div className="relative max-w-3xl">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
                 Next step
               </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Ready to Source Bamboo Boards for Your Next Project or Production Run?
+                Ready to Source Bamboo Boards for Your Next Project?
               </h2>
-              <p className="mt-4 text-lg leading-8 text-stone-300">
-                Talk to our team about specifications, availability, sampling, and
-                commercial quotations.
-              </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link
                   href="/request-quote"
-                  className="inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-stone-950 transition hover:bg-stone-100"
+                  className="inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-stone-950 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-100"
                 >
                   Request Quote
                 </Link>
 
                 <Link
                   href="/request-samples"
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-white/10"
                 >
                   Order Samples
-                </Link>
-
-                <Link
-                  href="/contact"
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-                >
-                  Contact Sales
                 </Link>
               </div>
             </div>
