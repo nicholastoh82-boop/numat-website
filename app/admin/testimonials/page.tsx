@@ -1,436 +1,392 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
-import useSWR from 'swr'
-import {
-  Plus,
-  Search,
-  Edit2,
-  Trash2,
-  Loader2,
-  Save,
-  MessageSquareQuote,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Switch } from '@/components/ui/switch'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { useToast } from '@/hooks/use-toast'
-import { cn } from '@/lib/utils'
+import { useEffect, useState } from 'react'
 
 type Testimonial = {
-  id?: string
+  id: string
   name: string
-  location: string
+  location: string | null
   testimonial: string
+  sort_order: number | null
   is_active: boolean
-  sort_order?: number
-  created_at?: string
-  updated_at?: string
+  created_at?: string | null
 }
 
-const INITIAL_TESTIMONIAL: Testimonial = {
+const emptyForm = {
   name: '',
   location: '',
   testimonial: '',
-  is_active: true,
   sort_order: 0,
+  is_active: true,
 }
 
-const fetcher = async (url: string) => {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error('Failed to fetch data')
-  return res.json()
+async function parseJsonSafely(response: Response) {
+  const text = await response.text()
+
+  if (!text) return null
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
 }
 
 export default function AdminTestimonialsPage() {
-  const { toast } = useToast()
-  const {
-    data: testimonialsData,
-    isLoading,
-    mutate,
-  } = useSWR<Testimonial[]>('/api/admin/testimonials', fetcher)
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [form, setForm] = useState(emptyForm)
 
-  const testimonials = Array.isArray(testimonialsData) ? testimonialsData : []
+  useEffect(() => {
+    fetchTestimonials()
+  }, [])
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [currentTestimonial, setCurrentTestimonial] =
-    useState<Testimonial>(INITIAL_TESTIMONIAL)
-  const [testimonialToDelete, setTestimonialToDelete] = useState<string | null>(null)
-
-  const filteredTestimonials = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    if (!q) return testimonials
-
-    return testimonials.filter((item) => {
-      return (
-        item.name?.toLowerCase().includes(q) ||
-        item.location?.toLowerCase().includes(q) ||
-        item.testimonial?.toLowerCase().includes(q)
-      )
-    })
-  }, [testimonials, searchQuery])
-
-  const handleOpenAdd = () => {
-    setCurrentTestimonial(INITIAL_TESTIMONIAL)
-    setIsModalOpen(true)
-  }
-
-  const handleOpenEdit = (item: Testimonial) => {
-    setCurrentTestimonial({
-      id: item.id,
-      name: item.name || '',
-      location: item.location || '',
-      testimonial: item.testimonial || '',
-      is_active: item.is_active ?? true,
-      sort_order: item.sort_order ?? 0,
-    })
-    setIsModalOpen(true)
-  }
-
-  const handleOpenDelete = (id: string) => {
-    setTestimonialToDelete(id)
-    setIsDeleteAlertOpen(true)
-  }
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSaving(true)
-
+  async function fetchTestimonials() {
     try {
-      const isEditing = Boolean(currentTestimonial.id)
-      const method = isEditing ? 'PATCH' : 'POST'
+      setLoading(true)
+      setError('')
 
-      const res = await fetch('/api/admin/testimonials', {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(currentTestimonial),
+      const response = await fetch('/api/admin/testimonials', {
+        cache: 'no-store',
       })
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null)
-        throw new Error(errorData?.error || 'Failed to save testimonial')
+      const data = await parseJsonSafely(response)
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to fetch testimonials')
       }
 
-      await mutate()
-      setIsModalOpen(false)
-      setCurrentTestimonial(INITIAL_TESTIMONIAL)
-
-      toast({
-        title: 'Success',
-        description: `Testimonial ${isEditing ? 'updated' : 'created'} successfully.`,
-      })
+      setTestimonials(Array.isArray(data) ? data : [])
     } catch (error) {
-      toast({
-        title: 'Error',
-        description:
-          error instanceof Error ? error.message : 'Something went wrong.',
-        variant: 'destructive',
-      })
+      console.error(error)
+      setTestimonials([])
+      setError(
+        error instanceof Error ? error.message : 'Failed to fetch testimonials'
+      )
     } finally {
-      setIsSaving(false)
+      setLoading(false)
     }
   }
 
-  const handleDeleteConfirm = async () => {
-    if (!testimonialToDelete) return
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
+    const target = e.target as HTMLInputElement
+    const { name, value, type } = target
+
+    if (type === 'checkbox') {
+      setForm((prev) => ({
+        ...prev,
+        [name]: target.checked,
+      }))
+      return
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: name === 'sort_order' ? Number(value) : value,
+    }))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
 
     try {
-      const res = await fetch(`/api/admin/testimonials?id=${testimonialToDelete}`, {
+      setSubmitting(true)
+      setError('')
+      setSuccess('')
+
+      const response = await fetch('/api/admin/testimonials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form),
+      })
+
+      const data = await parseJsonSafely(response)
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to add testimonial')
+      }
+
+      if (data) {
+        setTestimonials((prev) => {
+          const next = [data, ...prev]
+          return next.sort((a, b) => {
+            const aOrder = a.sort_order ?? 0
+            const bOrder = b.sort_order ?? 0
+            if (aOrder !== bOrder) return aOrder - bOrder
+            return 0
+          })
+        })
+      }
+
+      setForm(emptyForm)
+      setSuccess('Testimonial added successfully.')
+    } catch (error) {
+      console.error(error)
+      setError(
+        error instanceof Error ? error.message : 'Failed to add testimonial'
+      )
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this testimonial?'
+    )
+
+    if (!confirmed) return
+
+    try {
+      setDeletingId(id)
+      setError('')
+      setSuccess('')
+
+      const response = await fetch(`/api/admin/testimonials?id=${id}`, {
         method: 'DELETE',
       })
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null)
-        throw new Error(errorData?.error || 'Failed to delete testimonial')
+      const data = await parseJsonSafely(response)
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to delete testimonial')
       }
 
-      await mutate()
-
-      toast({
-        title: 'Deleted',
-        description: 'Testimonial removed successfully.',
-      })
+      setTestimonials((prev) => prev.filter((item) => item.id !== id))
+      setSuccess('Testimonial deleted successfully.')
     } catch (error) {
-      toast({
-        title: 'Error',
-        description:
-          error instanceof Error ? error.message : 'Could not delete testimonial.',
-        variant: 'destructive',
-      })
+      console.error(error)
+      setError(
+        error instanceof Error ? error.message : 'Failed to delete testimonial'
+      )
     } finally {
-      setIsDeleteAlertOpen(false)
-      setTestimonialToDelete(null)
+      setDeletingId(null)
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="font-serif text-2xl text-foreground">Testimonials</h1>
-          <p className="mt-1 text-muted-foreground">
-            Manage customer testimonials shown on the website.
+    <div className="min-h-screen bg-neutral-50">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">
+            Testimonials
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-neutral-600">
+            Add and remove testimonials shown on the homepage.
           </p>
         </div>
 
-        <Button
-          onClick={handleOpenAdd}
-          className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          Add Testimonial
-        </Button>
-      </div>
-
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search by name, location, or testimonial..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        {isLoading ? (
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
-        ) : filteredTestimonials.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-10 text-center">
-            <MessageSquareQuote className="mb-3 h-10 w-10 text-muted-foreground" />
-            <p className="font-medium text-foreground">No testimonials found</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Add your first testimonial or adjust your search.
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {filteredTestimonials.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-base font-semibold text-foreground">
-                      {item.name || 'Unnamed'}
-                    </p>
-                    <span
-                      className={cn(
-                        'rounded-full px-2 py-0.5 text-xs',
-                        item.is_active
-                          ? 'bg-primary/10 text-primary'
-                          : 'bg-muted text-muted-foreground'
-                      )}
-                    >
-                      {item.is_active ? 'Active' : 'Hidden'}
-                    </span>
-                  </div>
-
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {item.location || 'No location'}
-                  </p>
-
-                  <p className="mt-3 max-w-3xl whitespace-pre-line text-sm leading-6 text-foreground">
-                    {item.testimonial}
-                  </p>
-
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    Sort order: {item.sort_order ?? 0}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleOpenEdit(item)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
-                    onClick={() => item.id && handleOpenDelete(item.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+        {(error || success) && (
+          <div className="mb-6 space-y-3">
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
               </div>
-            ))}
+            )}
+            {success && (
+              <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                {success}
+              </div>
+            )}
           </div>
         )}
-      </div>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {currentTestimonial.id ? 'Edit Testimonial' : 'Add Testimonial'}
-            </DialogTitle>
-            <DialogDescription>
-              Update the testimonial content shown on the website.
-            </DialogDescription>
-          </DialogHeader>
+        <div className="grid gap-8 lg:grid-cols-[420px_minmax(0,1fr)]">
+          <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <div className="mb-5">
+              <h2 className="text-lg font-semibold text-neutral-900">
+                Add testimonial
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Keep entries polished and credible.
+              </p>
+            </div>
 
-          <form onSubmit={handleSave} className="grid gap-4 py-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="name"
+                  className="mb-2 block text-sm font-medium text-neutral-700"
+                >
+                  Name
+                </label>
+                <input
                   id="name"
-                  value={currentTestimonial.name}
-                  onChange={(e) =>
-                    setCurrentTestimonial((prev) => ({
-                      ...prev,
-                      name: e.target.value,
-                    }))
-                  }
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Client name"
                   required
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="location">Location *</Label>
-                <Input
+              <div>
+                <label
+                  htmlFor="location"
+                  className="mb-2 block text-sm font-medium text-neutral-700"
+                >
+                  Location
+                </label>
+                <input
                   id="location"
-                  value={currentTestimonial.location}
-                  onChange={(e) =>
-                    setCurrentTestimonial((prev) => ({
-                      ...prev,
-                      location: e.target.value,
-                    }))
-                  }
+                  name="location"
+                  value={form.location}
+                  onChange={handleChange}
+                  placeholder="City / Country"
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="testimonial"
+                  className="mb-2 block text-sm font-medium text-neutral-700"
+                >
+                  Testimonial
+                </label>
+                <textarea
+                  id="testimonial"
+                  name="testimonial"
+                  value={form.testimonial}
+                  onChange={handleChange}
+                  placeholder="Write the testimonial here"
                   required
+                  rows={6}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="testimonial">Testimonial *</Label>
-              <Textarea
-                id="testimonial"
-                rows={6}
-                value={currentTestimonial.testimonial}
-                onChange={(e) =>
-                  setCurrentTestimonial((prev) => ({
-                    ...prev,
-                    testimonial: e.target.value,
-                  }))
-                }
-                required
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="sort_order">Sort Order</Label>
-                <Input
+              <div>
+                <label
+                  htmlFor="sort_order"
+                  className="mb-2 block text-sm font-medium text-neutral-700"
+                >
+                  Sort order
+                </label>
+                <input
                   id="sort_order"
+                  name="sort_order"
                   type="number"
-                  value={currentTestimonial.sort_order ?? 0}
-                  onChange={(e) =>
-                    setCurrentTestimonial((prev) => ({
-                      ...prev,
-                      sort_order: Number(e.target.value) || 0,
-                    }))
-                  }
+                  value={form.sort_order}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
                 />
               </div>
 
-              <div className="flex items-center space-x-2 pt-8">
-                <Switch
-                  id="is_active"
-                  checked={currentTestimonial.is_active}
-                  onCheckedChange={(checked) =>
-                    setCurrentTestimonial((prev) => ({
-                      ...prev,
-                      is_active: checked,
-                    }))
-                  }
+              <label className="flex items-center gap-3 rounded-lg border border-neutral-200 px-3 py-3 text-sm text-neutral-700">
+                <input
+                  type="checkbox"
+                  name="is_active"
+                  checked={form.is_active}
+                  onChange={handleChange}
+                  className="h-4 w-4"
                 />
-                <Label htmlFor="is_active">Visible on website</Label>
+                Active on homepage
+              </label>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex w-full items-center justify-center rounded-lg bg-neutral-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? 'Saving...' : 'Add testimonial'}
+              </button>
+            </form>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-neutral-900">
+                  Existing testimonials
+                </h2>
+                <p className="mt-1 text-sm text-neutral-500">
+                  Remove test or outdated entries from the live site.
+                </p>
               </div>
+
+              <button
+                type="button"
+                onClick={fetchTestimonials}
+                className="inline-flex items-center justify-center rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+              >
+                Refresh
+              </button>
             </div>
 
-            <DialogFooter className="pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsModalOpen(false)}
-              >
-                Cancel
-              </Button>
+            {loading ? (
+              <div className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500">
+                Loading testimonials...
+              </div>
+            ) : testimonials.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500">
+                No testimonials found yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {testimonials.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-xl border border-neutral-200 bg-neutral-50 p-5"
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <h3 className="text-base font-semibold text-neutral-900">
+                            {item.name}
+                          </h3>
 
-              <Button type="submit" disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Testimonial
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+                          {item.location && (
+                            <span className="text-sm text-neutral-600">
+                              {item.location}
+                            </span>
+                          )}
 
-      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this testimonial?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove the testimonial from your admin list and website output.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+                          {item.is_active ? (
+                            <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                              Active
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-neutral-200 px-2.5 py-1 text-xs font-medium text-neutral-600">
+                              Inactive
+                            </span>
+                          )}
+                        </div>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                        <p className="mt-2 text-xs uppercase tracking-[0.14em] text-neutral-400">
+                          Sort order: {item.sort_order ?? 0}
+                        </p>
+
+                        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-neutral-700">
+                          “{item.testimonial}”
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(item.id)}
+                        disabled={deletingId === item.id}
+                        className="inline-flex shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {deletingId === item.id ? 'Removing...' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
