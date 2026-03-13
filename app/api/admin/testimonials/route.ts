@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -17,11 +20,21 @@ export async function GET() {
       console.error('Admin testimonials GET error:', error)
       return NextResponse.json(
         { error: error.message || 'Failed to fetch testimonials' },
-        { status: 500 }
+        {
+          status: 500,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          },
+        }
       )
     }
 
-    return NextResponse.json(data ?? [], { status: 200 })
+    return NextResponse.json(data ?? [], {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      },
+    })
   } catch (error) {
     console.error('Admin testimonials GET exception:', error)
     return NextResponse.json(
@@ -31,7 +44,12 @@ export async function GET() {
             ? error.message
             : 'Failed to fetch testimonials',
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        },
+      }
     )
   }
 }
@@ -110,20 +128,70 @@ export async function DELETE(request: Request) {
       )
     }
 
-    const { error } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('testimonials')
-      .delete()
+      .select('id')
       .eq('id', id)
+      .maybeSingle()
 
-    if (error) {
-      console.error('Admin testimonials DELETE error:', error)
+    if (existingError) {
+      console.error('Admin testimonials DELETE existing check error:', existingError)
       return NextResponse.json(
-        { error: error.message || 'Failed to delete testimonial' },
+        { error: existingError.message || 'Failed to verify testimonial' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ success: true }, { status: 200 })
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Testimonial not found' },
+        { status: 404 }
+      )
+    }
+
+    const { error: deleteError } = await supabase
+      .from('testimonials')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) {
+      console.error('Admin testimonials DELETE error:', deleteError)
+      return NextResponse.json(
+        { error: deleteError.message || 'Failed to delete testimonial' },
+        { status: 500 }
+      )
+    }
+
+    const { data: verifyStillExists, error: verifyError } = await supabase
+      .from('testimonials')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (verifyError) {
+      console.error('Admin testimonials DELETE verify error:', verifyError)
+      return NextResponse.json(
+        { error: verifyError.message || 'Failed to verify deletion' },
+        { status: 500 }
+      )
+    }
+
+    if (verifyStillExists) {
+      return NextResponse.json(
+        { error: 'Delete request completed but row still exists' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(
+      { success: true, deletedId: id },
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        },
+      }
+    )
   } catch (error) {
     console.error('Admin testimonials DELETE exception:', error)
     return NextResponse.json(
