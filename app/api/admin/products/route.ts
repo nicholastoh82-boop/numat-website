@@ -2,16 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 async function checkAdminAuth(supabase: any) {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized', status: 401 }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const { data: adminProfile } = await supabase
+  if (!user) {
+    return { error: 'Unauthorized', status: 401 }
+  }
+
+  const { data: adminProfile, error: adminError } = await supabase
     .from('admin_profiles')
     .select('role')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
-  if (!adminProfile) return { error: 'Forbidden', status: 403 }
+  if (adminError) {
+    return { error: adminError.message, status: 500 }
+  }
+
+  if (!adminProfile) {
+    return { error: 'Forbidden', status: 403 }
+  }
+
   return { user, adminProfile }
 }
 
@@ -23,7 +35,10 @@ export async function GET(request: NextRequest) {
 
   const authCheck = await checkAdminAuth(supabase)
   if ('error' in authCheck) {
-    return NextResponse.json({ error: authCheck.error }, { status: authCheck.status })
+    return NextResponse.json(
+      { error: authCheck.error },
+      { status: authCheck.status }
+    )
   }
 
   let query = supabase
@@ -41,7 +56,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json(products)
+  return NextResponse.json(products ?? [])
 }
 
 export async function POST(request: NextRequest) {
@@ -49,66 +64,46 @@ export async function POST(request: NextRequest) {
 
   const authCheck = await checkAdminAuth(supabase)
   if ('error' in authCheck) {
-    return NextResponse.json({ error: authCheck.error }, { status: authCheck.status })
+    return NextResponse.json(
+      { error: authCheck.error },
+      { status: authCheck.status }
+    )
   }
 
   const body = await request.json()
 
-  const {
-    sku,
-    title,
-    size,
-    thickness_mm,
-    ply,
-    price,
-    base_price,
-    moq,
-    lead_time_days,
-    category,
-    category_id,
-    description,
-    image, // This is the URL string from the frontend
-    is_active,
-    is_featured,
-    specifications
-  } = body
+  const { sku, title, description, image, is_active, category_id } = body
 
-  if (!sku || !title || !price) {
-    return NextResponse.json({ error: 'Missing required fields (sku, title, price)' }, { status: 400 })
+  if (!sku || !title) {
+    return NextResponse.json(
+      { error: 'Missing required fields (sku, title)' },
+      { status: 400 }
+    )
   }
 
-  // NOTE: We map 'image' from the body to the 'image' column in the DB.
-  // We also map 'title' to 'name' in case your schema requires 'name'.
-  // If you get an error about 'name' column missing, remove the "name: title," line.
+  const payload = {
+    sku,
+    name: title,
+    slug: body.slug || sku.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    description: description || '',
+    image: image || null,
+    image_url: image || null,
+    category_id: category_id || null,
+    is_active: is_active !== false,
+  }
 
   const { data: product, error } = await supabase
     .from('products')
-    .insert({
-      sku,
-      title,
-      name: title, // Keep this if your table has a 'name' column. If not, remove it.
-      slug: body.slug || sku.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      size,
-      thickness_mm: thickness_mm ? parseFloat(thickness_mm) : null,
-      ply,
-      price: parseFloat(price),
-      base_price: base_price ? parseFloat(base_price) : parseFloat(price),
-      moq: moq || 10,
-      lead_time_days: lead_time_days || 10,
-      category: category || 'General',
-      category_id: category_id || null,
-      description,
-      image: image, // FIXED: Changed from 'image_url' to 'image' to match your DB column
-      is_active: is_active !== false,
-      is_featured: is_featured || false,
-      specifications
-    })
+    .insert(payload)
     .select()
     .single()
 
   if (error) {
     console.error('Product Creation Error:', error)
-    return NextResponse.json({ error: error.message, code: error.code }, { status: 500 })
+    return NextResponse.json(
+      { error: error.message, code: error.code },
+      { status: 500 }
+    )
   }
 
   return NextResponse.json(product, { status: 201 })
@@ -119,25 +114,43 @@ export async function PATCH(request: NextRequest) {
 
   const authCheck = await checkAdminAuth(supabase)
   if ('error' in authCheck) {
-    return NextResponse.json({ error: authCheck.error }, { status: authCheck.status })
+    return NextResponse.json(
+      { error: authCheck.error },
+      { status: authCheck.status }
+    )
   }
 
   const body = await request.json()
-  const { id, image, ...updates } = body // Destructure image specifically
+  const { id, title, image, description, is_active, category_id } = body
 
   if (!id) {
-    return NextResponse.json({ error: 'Product ID is required' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Product ID is required' },
+      { status: 400 }
+    )
   }
 
-  // Build the update object
-  const updateData: any = {
-    ...updates,
-    updated_at: new Date().toISOString(),
+  const updateData: Record<string, any> = {}
+
+  if (title !== undefined) {
+    updateData.name = title
   }
 
-  // If image is being updated, map it to the correct column name
-  if (image) {
-    updateData.image = image
+  if (description !== undefined) {
+    updateData.description = description
+  }
+
+  if (image !== undefined) {
+    updateData.image = image || null
+    updateData.image_url = image || null
+  }
+
+  if (is_active !== undefined) {
+    updateData.is_active = is_active
+  }
+
+  if (category_id !== undefined) {
+    updateData.category_id = category_id || null
   }
 
   const { data: product, error } = await supabase
@@ -159,19 +172,27 @@ export async function DELETE(request: NextRequest) {
   const id = searchParams.get('id')
 
   if (!id) {
-    return NextResponse.json({ error: 'Product ID is required' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Product ID is required' },
+      { status: 400 }
+    )
   }
 
   const supabase = await createClient()
 
   const authCheck = await checkAdminAuth(supabase)
   if ('error' in authCheck) {
-    return NextResponse.json({ error: authCheck.error }, { status: authCheck.status })
+    return NextResponse.json(
+      { error: authCheck.error },
+      { status: authCheck.status }
+    )
   }
 
   const { error } = await supabase
     .from('products')
-    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .update({
+      is_active: false,
+    })
     .eq('id', id)
 
   if (error) {

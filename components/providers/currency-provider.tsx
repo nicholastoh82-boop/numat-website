@@ -29,6 +29,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY)
     const country = getCountryByCode(stored)
+
     setSelectedCountry(country)
     setShowCountryModal(!stored)
     setHasHydrated(true)
@@ -44,7 +45,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        const res = await fetch(`/api/exchange-rates?currency=${selectedCountry.currency}`, {
+        const res = await fetch(`/api/exchange-rate?currency=${selectedCountry.currency}`, {
           cache: 'no-store',
         })
 

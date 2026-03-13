@@ -30,10 +30,10 @@ export function getFallbackImageByCategory(categoryName: string) {
     nubam: '/Bamboo-Board.png',
     'nubam-boards': '/Bamboo-Board.png',
 
-    diy: '/placeholder-product.jpg',
-    'diy-project': '/placeholder-product.jpg',
-    'diy-projects': '/placeholder-product.jpg',
-    nuslat: '/placeholder-product.jpg',
+    diy: '/bamboo-slats.png',
+    'diy-project': '/bamboo-slats.png',
+    'diy-projects': '/bamboo-slats.png',
+    nuslat: '/bamboo-slats.png',
   }
 
   return map[slug] || '/Bamboo-Board.png'

@@ -113,7 +113,7 @@ export async function GET() {
         name: product.name,
         slug: product.slug ?? '',
         description: product.description ?? '',
-        image_url: product.image_url ?? null,
+        image_url: product.image_url ?? product.image ?? null,
         is_featured: product.is_featured ?? false,
         base_price_usd: product.base_price_usd ?? null,
         starting_price_usd: startingPriceUsd,
