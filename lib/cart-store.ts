@@ -50,7 +50,9 @@ function calculateDiscountPercent(totalQuantity: number): number {
   return 0
 }
 
-export function getCartItemKey(item: Pick<CartItem, 'id' | 'specs' | 'unitPrice' | 'unit' | 'isPriceOnRequest'>) {
+export function getCartItemKey(
+  item: Pick<CartItem, 'id' | 'specs' | 'unitPrice' | 'unit' | 'isPriceOnRequest'>
+) {
   return [
     item.id,
     item.specs || '',
