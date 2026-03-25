@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { X, Plus, Minus, Trash2, ShoppingCart, Leaf } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useCartStore } from '@/lib/cart-store'
+import { getCartItemKey, useCartStore } from '@/lib/cart-store'
 import { cn } from '@/lib/utils'
 import { useCurrency } from '@/components/providers/currency-provider'
 
@@ -50,6 +50,8 @@ export default function CartDrawer() {
   const total = getTotal()
   const discountPercent = getDiscountPercent()
   const itemsUntilDiscount = Math.max(0, DISCOUNT_THRESHOLD - totalItems)
+  const hasPricedItems = items.some((item) => typeof item.unitPrice === 'number' && item.unitPrice > 0)
+  const hasPriceOnRequestItems = items.some((item) => item.isPriceOnRequest || item.unitPrice == null)
 
   return (
     <>
@@ -89,7 +91,7 @@ export default function CartDrawer() {
             </div>
           ) : (
             <div className="space-y-4">
-              {itemsUntilDiscount > 0 && (
+              {itemsUntilDiscount > 0 && hasPricedItems && (
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                   <p className="text-sm text-foreground">
                     Add <span className="font-semibold text-primary">{itemsUntilDiscount} more items</span> to get{' '}
@@ -104,78 +106,85 @@ export default function CartDrawer() {
                 </div>
               )}
 
-              {items.map((item) => (
-                <div key={item.id} className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex gap-3">
-                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-                      {item.imageUrl ? (
-                        <Image
-  src={item.imageUrl || '/placeholder.svg'}
-  alt={item.name || 'Product image'}
-  width={64}
-  height={64}
-  className="h-full w-full object-cover"
-/>  
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <Leaf className="h-6 w-6 text-primary/40" />
-                        </div>
-                      )}
-                    </div>
+              {items.map((item) => {
+                const itemKey = getCartItemKey(item)
+                const hasPrice = typeof item.unitPrice === 'number' && item.unitPrice > 0
 
-                    <div className="min-w-0 flex-1">
-                      <h3 className="line-clamp-1 text-sm font-medium leading-tight text-foreground">
-                        {item.name}
-                      </h3>
-                      <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                        {item.specs}
-                      </p>
-                      <p className="mt-1 text-sm font-medium text-primary">
-                        {formatConvertedFromUsd(item.unitPrice)} / {item.unit}
-                      </p>
-                    </div>
+                return (
+                  <div key={itemKey} className="rounded-lg border border-border bg-card p-4">
+                    <div className="flex gap-3">
+                      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                        {item.imageUrl ? (
+                          <Image
+                            src={item.imageUrl || '/placeholder.svg'}
+                            alt={item.name || 'Product image'}
+                            width={64}
+                            height={64}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Leaf className="h-6 w-6 text-primary/40" />
+                          </div>
+                        )}
+                      </div>
 
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeItem(item.id)}
-                      aria-label={`Remove ${item.name}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="line-clamp-1 text-sm font-medium leading-tight text-foreground">
+                          {item.name}
+                        </h3>
+                        <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                          {item.specs}
+                        </p>
+                        <p className="mt-1 text-sm font-medium text-primary">
+                          {hasPrice
+                            ? `${formatConvertedFromUsd(item.unitPrice!)} / ${item.unit}`
+                            : 'Price on request'}
+                        </p>
+                      </div>
 
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
-                        className="h-8 w-8 bg-transparent"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        aria-label="Decrease quantity"
+                        className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeItem(itemKey)}
+                        aria-label={`Remove ${item.name}`}
                       >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-12 text-center font-medium text-foreground">
-                        {item.quantity}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 bg-transparent"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        aria-label="Increase quantity"
-                      >
-                        <Plus className="h-3 w-3" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    <p className="font-semibold text-foreground">
-                      {formatConvertedFromUsd(item.quantity * item.unitPrice)}
-                    </p>
+
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 bg-transparent"
+                          onClick={() => updateQuantity(itemKey, item.quantity - 1)}
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-12 text-center font-medium text-foreground">
+                          {item.quantity}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 bg-transparent"
+                          onClick={() => updateQuantity(itemKey, item.quantity + 1)}
+                          aria-label="Increase quantity"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <p className="font-semibold text-foreground">
+                        {hasPrice ? formatConvertedFromUsd(item.quantity * item.unitPrice!) : '—'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -186,21 +195,36 @@ export default function CartDrawer() {
               <span className="text-muted-foreground">Total Items</span>
               <span className="font-medium text-foreground">{totalItems}</span>
             </div>
+
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium text-foreground">{formatConvertedFromUsd(subtotal)}</span>
+              <span className="font-medium text-foreground">
+                {hasPricedItems ? formatConvertedFromUsd(subtotal) : 'Price on request'}
+              </span>
             </div>
-            {discountPercent > 0 && (
+
+            {discountPercent > 0 && hasPricedItems && (
               <div className="flex justify-between text-sm">
                 <span className="text-primary">Bulk Discount ({discountPercent}%)</span>
                 <span className="font-medium text-primary">-{formatConvertedFromUsd(discount)}</span>
               </div>
             )}
+
             <div className="flex justify-between border-t border-border pt-2 text-sm">
               <span className="font-semibold text-foreground">Total (excl. VAT)</span>
-              <span className="text-lg font-bold text-foreground">{formatConvertedFromUsd(total)}</span>
+              <span className="text-lg font-bold text-foreground">
+                {hasPricedItems ? formatConvertedFromUsd(total) : 'Price on request'}
+              </span>
             </div>
+
+            {hasPriceOnRequestItems && (
+              <p className="text-xs text-muted-foreground">
+                Some items are marked price on request and are excluded from the computed total.
+              </p>
+            )}
+
             <p className="text-center text-xs text-muted-foreground">Shipping estimate to follow</p>
+
             <Link href="/cart" onClick={closeCart} className="block">
               <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
                 Request Quote
