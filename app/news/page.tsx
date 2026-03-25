@@ -37,9 +37,6 @@ export default async function NewsPage() {
 
   const newsItems: NewsItem[] = items ?? []
   const featuredItem = newsItems.find((item) => item.featured) || null
-  const remainingItems = featuredItem
-    ? newsItems.filter((item) => item.id !== featuredItem.id)
-    : newsItems
 
   return (
     <>
@@ -142,13 +139,13 @@ export default async function NewsPage() {
             </Link>
           </div>
 
-          {remainingItems.length === 0 && !featuredItem ? (
+          {newsItems.length === 0 ? (
             <div className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground">
               No news updates have been published yet.
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {remainingItems.map((item) => (
+              {newsItems.map((item) => (
                 <Link
                   key={item.id}
                   href={`/news/${item.slug}`}
@@ -165,11 +162,19 @@ export default async function NewsPage() {
                   )}
 
                   <div className="p-6">
-                    {item.published_at && (
-                      <p className="mb-3 text-sm text-muted-foreground">
-                        {new Date(item.published_at).toLocaleDateString()}
-                      </p>
-                    )}
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      {item.published_at && (
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(item.published_at).toLocaleDateString()}
+                        </p>
+                      )}
+
+                      {item.featured && (
+                        <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                          Featured
+                        </span>
+                      )}
+                    </div>
 
                     <h3 className="text-xl font-semibold tracking-tight">{item.title}</h3>
 
