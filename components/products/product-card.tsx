@@ -78,7 +78,14 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
 
   const currentImage = productImages[currentImageIndex]
   const hasMultipleImages = productImages.length > 1
-  const displayUsdPrice = product.starting_price_usd ?? product.base_price_usd ?? null
+
+  const displayUsdPrice = useMemo(() => {
+    const candidatePrices = [product.starting_price_usd, product.base_price_usd].filter(
+      (value): value is number => typeof value === 'number' && !Number.isNaN(value) && value > 0
+    )
+
+    return candidatePrices.length > 0 ? candidatePrices[0] : null
+  }, [product.starting_price_usd, product.base_price_usd])
 
   const [imageSrc, setImageSrc] = useState(
     currentImage?.image_url || categoryFallbackImage || ''
@@ -108,12 +115,21 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
       return
     }
 
+    if (!displayUsdPrice || displayUsdPrice <= 0) {
+      toast({
+        title: 'Price unavailable',
+        description: `${product.name} does not yet have a valid price set in the product listing data.`,
+        variant: 'destructive',
+      })
+      return
+    }
+
     addItem({
       id: product.id,
       name: product.name,
       specs: `${product.thickness || ''} ${product.width || ''} ${product.length || ''} ${product.color || ''} ${product.finish || ''}`.trim(),
       quantity,
-      unitPrice: displayUsdPrice ?? 0,
+      unitPrice: displayUsdPrice,
       minOrderQty: minQty,
       unit: product.unit || 'pcs',
       imageUrl: imageSrc || categoryFallbackImage,
@@ -250,7 +266,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
         <div className="flex-grow" />
 
         <div className="border-t border-border pt-2">
-          {displayUsdPrice ? (
+          {displayUsdPrice !== null ? (
             <div>
               <p className="mb-0.5 text-xs text-muted-foreground">Starting at</p>
               <p className="text-2xl font-bold text-primary">
