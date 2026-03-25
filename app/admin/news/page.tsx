@@ -1,7 +1,10 @@
-'use client'
-
-import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { createClient } from '@supabase/supabase-js'
+import Header from '@/components/header'
+import Footer from '@/components/footer'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 type NewsItem = {
   id: string
@@ -12,188 +15,183 @@ type NewsItem = {
   featured: boolean
   cover_image_url: string | null
   published_at: string | null
-  created_at: string
-  updated_at: string
 }
 
-type FilterValue = 'all' | 'draft' | 'published' | 'featured'
-
-export default function AdminNewsPage() {
-  const [items, setItems] = useState<NewsItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [filter, setFilter] = useState<FilterValue>('all')
-
-  async function loadNews() {
-    try {
-      setLoading(true)
-      setError('')
-
-      let url = '/api/admin/news'
-
-      if (filter === 'draft') {
-        url = '/api/admin/news?status=draft'
-      } else if (filter === 'published') {
-        url = '/api/admin/news?status=published'
-      } else if (filter === 'featured') {
-        url = '/api/admin/news?featured=true'
-      }
-
-      const response = await fetch(url, { cache: 'no-store' })
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to load news.')
-      }
-
-      setItems(result.items ?? [])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load news.')
-    } finally {
-      setLoading(false)
-    }
+export default async function NewsPage() {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    throw new Error('Missing Supabase environment variables.')
   }
 
-  useEffect(() => {
-    loadNews()
-  }, [filter])
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
-  const emptyMessage = useMemo(() => {
-    if (filter === 'draft') return 'No draft news posts found.'
-    if (filter === 'published') return 'No published news posts found.'
-    if (filter === 'featured') return 'No featured news posts found.'
-    return 'No news posts found.'
-  }, [filter])
+  const { data: items, error } = await supabase
+    .from('news')
+    .select('id, title, slug, excerpt, status, featured, cover_image_url, published_at')
+    .eq('status', 'published')
+    .order('featured', { ascending: false })
+    .order('published_at', { ascending: false, nullsFirst: false })
+
+  if (error) {
+    console.error('Error loading public news:', error)
+  }
+
+  const newsItems: NewsItem[] = items ?? []
+  const featuredItem = newsItems.find((item) => item.featured) || null
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">News</h1>
-          <p className="text-sm text-muted-foreground">
-            Create, manage, and publish company news and activity updates.
-          </p>
-        </div>
+    <>
+      <Header />
 
-        <Link
-          href="/admin/news/new"
-          className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-        >
-          New Post
-        </Link>
-      </div>
+      <main className="min-h-screen bg-background">
+        <section className="border-b bg-muted/30">
+          <div className="container mx-auto px-4 py-16 md:px-6 lg:px-8">
+            <div className="max-w-3xl space-y-4">
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">
+                News
+              </p>
+              <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
+                NUMAT News & Activities
+              </h1>
+              <p className="text-base text-muted-foreground md:text-lg">
+                Updates on projects, product developments, events, partnerships, and company
+                activities across NUMAT Bamboo.
+              </p>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setFilter('all')}
-          className={`rounded-lg px-3 py-2 text-sm font-medium border ${
-            filter === 'all'
-              ? 'bg-primary text-primary-foreground border-primary'
-              : 'bg-background text-foreground border-border'
-          }`}
-        >
-          All
-        </button>
+              <div className="pt-2">
+                <Link
+                  href="/news/archive"
+                  className="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                >
+                  Browse News Archive
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <button
-          type="button"
-          onClick={() => setFilter('draft')}
-          className={`rounded-lg px-3 py-2 text-sm font-medium border ${
-            filter === 'draft'
-              ? 'bg-primary text-primary-foreground border-primary'
-              : 'bg-background text-foreground border-border'
-          }`}
-        >
-          Drafts
-        </button>
+        <section className="container mx-auto px-4 py-12 md:px-6 lg:px-8">
+          {featuredItem && (
+            <article className="mb-10 overflow-hidden rounded-2xl border bg-card">
+              {featuredItem.cover_image_url && (
+                <div className="aspect-[16/7] w-full overflow-hidden bg-muted">
+                  <img
+                    src={featuredItem.cover_image_url}
+                    alt={featuredItem.title}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              )}
 
-        <button
-          type="button"
-          onClick={() => setFilter('published')}
-          className={`rounded-lg px-3 py-2 text-sm font-medium border ${
-            filter === 'published'
-              ? 'bg-primary text-primary-foreground border-primary'
-              : 'bg-background text-foreground border-border'
-          }`}
-        >
-          Published
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setFilter('featured')}
-          className={`rounded-lg px-3 py-2 text-sm font-medium border ${
-            filter === 'featured'
-              ? 'bg-primary text-primary-foreground border-primary'
-              : 'bg-background text-foreground border-border'
-          }`}
-        >
-          Featured
-        </button>
-      </div>
-
-      <div className="rounded-xl border bg-card">
-        {loading ? (
-          <div className="p-6 text-sm text-muted-foreground">Loading news posts...</div>
-        ) : error ? (
-          <div className="p-6 text-sm text-red-600">{error}</div>
-        ) : items.length === 0 ? (
-          <div className="p-6 text-sm text-muted-foreground">{emptyMessage}</div>
-        ) : (
-          <div className="divide-y">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-col gap-4 p-5 lg:flex-row lg:items-start lg:justify-between"
-              >
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-base font-semibold">{item.title}</h2>
-
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                        item.status === 'published'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}
-                    >
-                      {item.status}
+              <div className="p-6 md:p-8">
+                <div className="mb-3 flex flex-wrap items-center gap-3">
+                  <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    Featured
+                  </span>
+                  {featuredItem.published_at && (
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(featuredItem.published_at).toLocaleDateString()}
                     </span>
-
-                    {item.featured && (
-                      <span className="inline-flex rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
-                        Featured
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-sm text-muted-foreground">/{item.slug}</p>
-
-                  {item.excerpt && (
-                    <p className="max-w-3xl text-sm text-muted-foreground">{item.excerpt}</p>
                   )}
-
-                  <div className="text-xs text-muted-foreground">
-                    {item.published_at
-                      ? `Published: ${new Date(item.published_at).toLocaleDateString()}`
-                      : 'Not yet published'}
-                  </div>
                 </div>
 
-                <div className="flex gap-2">
+                <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
+                  {featuredItem.title}
+                </h2>
+
+                {featuredItem.excerpt && (
+                  <p className="mt-4 max-w-3xl text-muted-foreground">
+                    {featuredItem.excerpt}
+                  </p>
+                )}
+
+                <div className="mt-6 flex flex-wrap gap-3">
                   <Link
-                    href={`/admin/news/${item.id}`}
-                    className="inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition hover:bg-muted"
+                    href={`/news/${featuredItem.slug}`}
+                    className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
                   >
-                    Edit
+                    Read Update
+                  </Link>
+
+                  <Link
+                    href="/news/archive"
+                    className="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                  >
+                    View Archive
                   </Link>
                 </div>
               </div>
-            ))}
+            </article>
+          )}
+
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight">Latest Updates</h2>
+              <p className="text-sm text-muted-foreground">
+                Recent NUMAT announcements and activity highlights.
+              </p>
+            </div>
+
+            <Link
+              href="/news/archive"
+              className="hidden rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted md:inline-flex"
+            >
+              View Archive
+            </Link>
           </div>
-        )}
-      </div>
-    </div>
+
+          {newsItems.length === 0 ? (
+            <div className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground">
+              No news updates have been published yet.
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {newsItems.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/news/${item.slug}`}
+                  className="overflow-hidden rounded-2xl border bg-card transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  {item.cover_image_url && (
+                    <div className="aspect-[16/10] w-full overflow-hidden bg-muted">
+                      <img
+                        src={item.cover_image_url}
+                        alt={item.title}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
+
+                  <div className="p-6">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      {item.published_at && (
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(item.published_at).toLocaleDateString()}
+                        </p>
+                      )}
+
+                      {item.featured && (
+                        <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                          Featured
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="text-xl font-semibold tracking-tight">{item.title}</h3>
+
+                    {item.excerpt && (
+                      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                        {item.excerpt}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+
+      <Footer />
+    </>
   )
 }
