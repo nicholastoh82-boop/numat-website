@@ -4,6 +4,9 @@ import { createClient } from '@supabase/supabase-js'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
