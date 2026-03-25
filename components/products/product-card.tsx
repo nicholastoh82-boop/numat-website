@@ -87,6 +87,8 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
     return candidatePrices.length > 0 ? candidatePrices[0] : null
   }, [product.starting_price_usd, product.base_price_usd])
 
+  const isPriceOnRequest = displayUsdPrice === null
+
   const [imageSrc, setImageSrc] = useState(
     currentImage?.image_url || categoryFallbackImage || ''
   )
@@ -106,42 +108,38 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
   }
 
   const handleAddToCart = () => {
-    if (quantity < minQty) {
-      toast({
-        title: 'Minimum Order Quantity',
-        description: `Minimum order quantity is ${minQty} ${product.unit || 'pcs'}.`,
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (!displayUsdPrice || displayUsdPrice <= 0) {
-      toast({
-        title: 'Price unavailable',
-        description: `${product.name} does not yet have a valid price set in the product listing data.`,
-        variant: 'destructive',
-      })
-      return
-    }
-
-    addItem({
-      id: product.id,
-      name: product.name,
-      specs: `${product.thickness || ''} ${product.width || ''} ${product.length || ''} ${product.color || ''} ${product.finish || ''}`.trim(),
-      quantity,
-      unitPrice: displayUsdPrice,
-      minOrderQty: minQty,
-      unit: product.unit || 'pcs',
-      imageUrl: imageSrc || categoryFallbackImage,
-    })
-
+  if (quantity < minQty) {
     toast({
-      title: 'Added to Cart',
-      description: `${quantity}x ${product.name} added to your cart.`,
+      title: 'Minimum Order Quantity',
+      description: `Minimum order quantity is ${minQty} ${product.unit || 'pcs'}.`,
+      variant: 'destructive',
     })
-
-    openCart()
+    return
   }
+
+  const isPriceOnRequest = displayUsdPrice === null
+
+  addItem({
+    id: product.id,
+    name: product.name,
+    specs: `${product.thickness || ''} ${product.width || ''} ${product.length || ''} ${product.color || ''} ${product.finish || ''}`.trim(),
+    quantity,
+    unitPrice: displayUsdPrice,
+    minOrderQty: minQty,
+    unit: product.unit || 'pcs',
+    imageUrl: imageSrc || categoryFallbackImage,
+    isPriceOnRequest,
+  })
+
+  toast({
+    title: 'Added to Quote',
+    description: isPriceOnRequest
+      ? `${quantity}x ${product.name} added as a price-on-request item.`
+      : `${quantity}x ${product.name} added to your cart.`,
+  })
+
+  openCart()
+}
 
   const incrementQty = () => setQuantity((q) => q + 1)
   const decrementQty = () => setQuantity((q) => Math.max(minQty, q - 1))
@@ -275,7 +273,10 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
               <p className="text-xs text-muted-foreground">per {product.unit || 'sheet'}</p>
             </div>
           ) : (
-            <p className="text-lg font-bold text-primary">Request Quote</p>
+            <div>
+              <p className="text-lg font-bold text-primary">Request Quote</p>
+              <p className="text-xs text-muted-foreground">Price on request</p>
+            </div>
           )}
         </div>
 
