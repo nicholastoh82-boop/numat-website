@@ -9,6 +9,7 @@ import {
   Inbox,
   Settings,
   MessageSquareQuote,
+  Newspaper,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -36,6 +37,11 @@ export default function AdminSidebar() {
       <Link href="/admin/products" className={linkClass('/admin/products')}>
         <Package className="w-5 h-5" />
         Products
+      </Link>
+
+      <Link href="/admin/news" className={linkClass('/admin/news')}>
+        <Newspaper className="w-5 h-5" />
+        News
       </Link>
 
       <Link href="/admin/testimonials" className={linkClass('/admin/testimonials')}>

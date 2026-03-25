@@ -21,63 +21,115 @@ const CurrencyContext = createContext<CurrencyContextValue | null>(null)
 const STORAGE_KEY = 'numat-selected-country'
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
-  const [selectedCountry, setSelectedCountry] = useState(DEFAULT_COUNTRY)
+  const [selectedCountry, setSelectedCountry] = useState<CountryOption>(DEFAULT_COUNTRY)
   const [hasHydrated, setHasHydrated] = useState(false)
   const [showCountryModal, setShowCountryModal] = useState(false)
   const [exchangeRate, setExchangeRate] = useState(1)
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    const country = getCountryByCode(stored)
+    try {
+      const stored = window.localStorage.getItem(STORAGE_KEY)
+      const country = getCountryByCode(stored)
 
-    setSelectedCountry(country)
-    setShowCountryModal(!stored)
-    setHasHydrated(true)
+      setSelectedCountry(country)
+      setShowCountryModal(!stored)
+    } catch (error) {
+      console.error('Currency provider hydration error:', error)
+      setSelectedCountry(DEFAULT_COUNTRY)
+      setShowCountryModal(true)
+    } finally {
+      setHasHydrated(true)
+    }
   }, [])
 
   useEffect(() => {
     if (!hasHydrated) return
 
+    const controller = new AbortController()
+
     async function fetchRate() {
+      if (selectedCountry.currency === 'USD') {
+        setExchangeRate(1)
+        return
+      }
+
       try {
-        if (selectedCountry.currency === 'USD') {
+        const res = await fetch(`/api/exchange-rate?currency=${encodeURIComponent(selectedCountry.currency)}`, {
+          cache: 'no-store',
+          signal: controller.signal,
+          headers: {
+            Accept: 'application/json',
+          },
+        })
+
+        if (!res.ok) {
+          console.warn(
+            `Exchange rate fetch failed for ${selectedCountry.currency}. Status: ${res.status}. Falling back to 1.`
+          )
           setExchangeRate(1)
           return
         }
 
-        const res = await fetch(`/api/exchange-rate?currency=${selectedCountry.currency}`, {
-          cache: 'no-store',
-        })
+        let data: unknown = null
 
-        if (!res.ok) {
-          throw new Error('Failed to fetch exchange rate')
+        try {
+          data = await res.json()
+        } catch (jsonError) {
+          console.warn('Exchange rate response was not valid JSON. Falling back to 1.', jsonError)
+          setExchangeRate(1)
+          return
         }
 
-        const data = await res.json()
-        setExchangeRate(typeof data.rate === 'number' ? data.rate : 1)
+        const rate =
+          typeof data === 'object' &&
+          data !== null &&
+          'rate' in data &&
+          typeof (data as { rate?: unknown }).rate === 'number' &&
+          Number.isFinite((data as { rate: number }).rate) &&
+          (data as { rate: number }).rate > 0
+            ? (data as { rate: number }).rate
+            : 1
+
+        if (rate === 1) {
+          console.warn(`Exchange rate missing/invalid for ${selectedCountry.currency}. Using fallback rate 1.`)
+        }
+
+        setExchangeRate(rate)
       } catch (error) {
+        if (controller.signal.aborted) return
+
         console.error('Exchange rate error:', error)
         setExchangeRate(1)
       }
     }
 
     fetchRate()
+
+    return () => controller.abort()
   }, [selectedCountry.currency, hasHydrated])
 
   const setSelectedCountryCode = (code: string) => {
     const country = getCountryByCode(code)
+
     setSelectedCountry(country)
-    window.localStorage.setItem(STORAGE_KEY, country.code)
+
+    try {
+      window.localStorage.setItem(STORAGE_KEY, country.code)
+    } catch (error) {
+      console.error('Failed to persist selected country:', error)
+    }
+
     setShowCountryModal(false)
   }
 
   const convertFromUsd = (usdAmount: number | null | undefined) => {
-    if (usdAmount == null || Number.isNaN(usdAmount)) return null
+    if (usdAmount == null || !Number.isFinite(usdAmount)) return null
     return usdAmount * exchangeRate
   }
 
   const formatConvertedFromUsd = (usdAmount: number | null | undefined) => {
     const converted = convertFromUsd(usdAmount)
+
     if (converted == null) return 'Request Quote'
 
     try {

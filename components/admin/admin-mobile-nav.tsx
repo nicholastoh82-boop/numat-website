@@ -8,12 +8,14 @@ import {
   FileText,
   Inbox,
   MessageSquareQuote,
+  Newspaper,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Products', icon: Package },
+  { href: '/admin/news', label: 'News', icon: Newspaper },
   { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquareQuote },
   { href: '/admin/quotes', label: 'Quotes', icon: FileText },
   { href: '/admin/inquiries', label: 'Inquiries', icon: Inbox },

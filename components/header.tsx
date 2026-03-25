@@ -12,6 +12,7 @@ const navLinks = [
   { label: 'Products', href: '/products' },
   { label: 'Applications', href: '/applications' },
   { label: 'Technical Resources', href: '/technical-resources' },
+  { label: 'News', href: '/news' },
   { label: 'Certifications', href: '/testing' },
   { label: 'ESG', href: '/esg' },
   { label: 'About', href: '/about' },
