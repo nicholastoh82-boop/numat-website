@@ -1,6 +1,21 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+function parsePrice(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed
+    }
+  }
+
+  return null
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -87,7 +102,7 @@ export async function GET(
       variant.length_mm && variant.width_mm
         ? `${variant.length_mm}mm x ${variant.width_mm}mm`
         : null,
-    base_price_usd: variant.base_price_usd ?? null,
+    base_price_usd: parsePrice(variant.base_price_usd),
     unit: variant.unit ?? 'sheet',
     min_order_qty: variant.moq ?? 1,
     core_type: variant.core_type ?? null,
@@ -103,7 +118,7 @@ export async function GET(
     description: product.description ?? '',
     image_url: product.image_url ?? '/placeholder-product.jpg',
     category: categoryName,
-    base_price_usd: product.base_price_usd ?? null,
+    base_price_usd: parsePrice(product.base_price_usd),
     sku: mappedVariants[0]?.sku ?? product.sku ?? '',
     thickness_mm: mappedVariants[0]?.thickness_mm ?? null,
     ply_count: mappedVariants[0]?.ply_count ?? null,
