@@ -74,10 +74,6 @@ function slugify(input: string): string {
     .replace(/^-|-$/g, '')
 }
 
-/**
- * Alias map:
- * lets old DB category names and new branded UI names point to the same filter bucket
- */
 function normalizeCategorySlug(input: string): string {
   const raw = slugify(input)
 
@@ -242,14 +238,19 @@ export function ProductsContent() {
   }, [products, selectedCategory, searchQuery, sortBy])
 
   const allCategories = useMemo(() => {
-    const source = categories ?? []
     const dedupedMap = new Map<string, Category>()
 
-    for (const category of source) {
+    for (const category of categories ?? []) {
       if (category.is_active === false) continue
 
-      const normalizedSlug = normalizeCategorySlug(category.slug || category.name)
-      const normalizedName = normalizeCategoryName(category.name)
+      const rawName = (category.name || '').trim()
+      const rawSlug = (category.slug || rawName || '').trim()
+      if (!rawName && !rawSlug) continue
+
+      const normalizedSlug = normalizeCategorySlug(rawSlug)
+      if (!normalizedSlug) continue
+
+      const normalizedName = normalizeCategoryName(rawName || rawSlug)
 
       if (!dedupedMap.has(normalizedSlug)) {
         dedupedMap.set(normalizedSlug, {
@@ -260,13 +261,35 @@ export function ProductsContent() {
       }
     }
 
+    if (dedupedMap.size === 0) {
+      for (const product of products ?? []) {
+        const rawCategory = getProductCategoryName(product).trim()
+        if (!rawCategory) continue
+
+        const normalizedSlug = normalizeCategorySlug(rawCategory)
+        if (!normalizedSlug) continue
+
+        const normalizedName = normalizeCategoryName(rawCategory)
+
+        if (!dedupedMap.has(normalizedSlug)) {
+          dedupedMap.set(normalizedSlug, {
+            id: normalizedSlug,
+            name: normalizedName,
+            slug: normalizedSlug,
+            is_active: true,
+            display_order: null,
+          })
+        }
+      }
+    }
+
     return Array.from(dedupedMap.values()).sort((a, b) => {
       const ao = a.display_order ?? 999999
       const bo = b.display_order ?? 999999
       if (ao !== bo) return ao - bo
       return a.name.localeCompare(b.name)
     })
-  }, [categories])
+  }, [categories, products])
 
   const selectedCategoryName =
     allCategories.find((c) => normalizeCategorySlug(c.slug || c.name) === selectedCategory)?.name ||
