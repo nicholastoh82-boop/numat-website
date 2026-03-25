@@ -10,6 +10,21 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+function parsePrice(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed
+    }
+  }
+
+  return null
+}
+
 export async function GET() {
   try {
     const { data: products, error: productsError } = await supabase
@@ -96,15 +111,15 @@ export async function GET() {
       const productVariants = variantsMap.get(product.id) ?? []
 
       const variantUsdPrices = productVariants
-        .map((variant) => variant.base_price_usd)
-        .filter((price) => typeof price === 'number')
+        .map((variant) => parsePrice(variant.base_price_usd))
+        .filter((price): price is number => price !== null)
+
+      const productBasePriceUsd = parsePrice(product.base_price_usd)
 
       const startingPriceUsd =
         variantUsdPrices.length > 0
           ? Math.min(...variantUsdPrices)
-          : typeof product.base_price_usd === 'number'
-          ? product.base_price_usd
-          : null
+          : productBasePriceUsd
 
       const firstVariant = productVariants[0] ?? null
 
@@ -115,7 +130,7 @@ export async function GET() {
         description: product.description ?? '',
         image_url: product.image_url ?? product.image ?? null,
         is_featured: product.is_featured ?? false,
-        base_price_usd: product.base_price_usd ?? null,
+        base_price_usd: productBasePriceUsd,
         starting_price_usd: startingPriceUsd,
         min_order_qty: product.min_order_qty ?? firstVariant?.moq ?? 1,
         unit: product.unit ?? firstVariant?.unit ?? 'sheet',
@@ -134,7 +149,7 @@ export async function GET() {
           ply_count: variant.ply_count ?? null,
           unit: variant.unit ?? 'sheet',
           moq: variant.moq ?? 1,
-          base_price_usd: variant.base_price_usd ?? null,
+          base_price_usd: parsePrice(variant.base_price_usd),
           is_price_on_request: variant.is_price_on_request ?? false,
           price_notes: variant.price_notes ?? null,
           is_active: variant.is_active ?? true,
