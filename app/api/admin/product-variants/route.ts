@@ -162,6 +162,7 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       )
     }
+    updateData.base_price_usd = value
     updateData.unit_price = value
   }
 
@@ -176,6 +177,7 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       )
     }
+    updateData.old_price_usd = value
     updateData.unit_price_old = value
   }
 
