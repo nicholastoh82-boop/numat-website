@@ -469,45 +469,59 @@ export default function ProductDetailPage() {
 
   const options = useMemo(() => getConfiguratorOptions(family), [family])
 
+  const pricedVariants = useMemo(
+    () =>
+      (product?.variants ?? []).filter(
+        (variant) =>
+          !variant.is_price_on_request &&
+          typeof variant.base_price_usd === 'number' &&
+          Number.isFinite(variant.base_price_usd) &&
+          variant.base_price_usd > 0
+      ),
+    [product?.variants]
+  )
+
   const useVariantDrivenConfig =
-    !!product?.variants?.length &&
+    pricedVariants.length > 0 &&
     (
       family === 'nubam-boards' ||
       family === 'nuwall' ||
-      family === 'nufloor' ||
-      family === 'nudoor'
+      family === 'nuslat'
     )
 
   const variantCoreTypeOptions = useMemo(() => {
-    if (!useVariantDrivenConfig || !product?.variants) return []
-    return getUniqueOptions(product.variants.map((v) => v.core_type))
-  }, [useVariantDrivenConfig, product?.variants])
+    if (!useVariantDrivenConfig) return []
+    return getUniqueOptions(pricedVariants.map((v) => v.core_type))
+  }, [useVariantDrivenConfig, pricedVariants])
 
   const variantThicknessOptions = useMemo(() => {
-    if (!useVariantDrivenConfig || !product?.variants) return []
+    if (!useVariantDrivenConfig) return []
 
-    if (family === 'nudoor') {
-      return getUniqueOptions(product.variants.map((v) => formatThicknessLabel(v.thickness_mm)))
+    if (family === 'nuslat') {
+      return getUniqueOptions(pricedVariants.map((v) => formatThicknessLabel(v.thickness_mm)))
     }
 
     const scoped =
       family === 'nubam-boards' || family === 'nuwall'
-        ? product.variants.filter((v) =>
+        ? pricedVariants.filter((v) =>
             selectedCoreType ? normalizeValue(v.core_type) === normalizeValue(selectedCoreType) : true
           )
-        : product.variants
+        : pricedVariants
 
     return getUniqueOptions(scoped.map((v) => formatThicknessLabel(v.thickness_mm)))
-  }, [useVariantDrivenConfig, product?.variants, family, selectedCoreType])
+  }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType])
 
   const variantPlyOptions = useMemo(() => {
-    if (!useVariantDrivenConfig || !product?.variants) return []
+    if (!useVariantDrivenConfig) return []
 
-    if (family === 'nudoor') {
-      return getUniqueOptions(product.variants.map((v) => formatPlyLabel(v.ply_count)))
-    }
+    const scoped = pricedVariants.filter((v) => {
+      if (family === 'nuslat') {
+        const thicknessMatch = selectedThickness
+          ? formatThicknessLabel(v.thickness_mm) === selectedThickness
+          : true
+        return thicknessMatch
+      }
 
-    const scoped = product.variants.filter((v) => {
       const coreMatch =
         family === 'nubam-boards' || family === 'nuwall'
           ? selectedCoreType
@@ -523,15 +537,15 @@ export default function ProductDetailPage() {
     })
 
     return getUniqueOptions(scoped.map((v) => formatPlyLabel(v.ply_count)))
-  }, [useVariantDrivenConfig, product?.variants, family, selectedCoreType, selectedThickness])
+  }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType, selectedThickness])
 
-  const variantModelOptions = useMemo(() => {
-    if (!useVariantDrivenConfig || !product?.variants || family !== 'nudoor') return []
-    return getUniqueOptions(product.variants.map((v) => v.size_label))
-  }, [useVariantDrivenConfig, product?.variants, family])
+  const variantLengthOptions = useMemo(() => {
+    if (!useVariantDrivenConfig || family !== 'nuslat') return []
+    return getUniqueOptions(pricedVariants.map((v) => v.size_label))
+  }, [useVariantDrivenConfig, pricedVariants, family])
 
   const coreTypeOptions: SelectOption[] =
-    useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall' || family === 'nudoor')
+    useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')
       ? variantCoreTypeOptions
       : 'coreTypes' in options
       ? options.coreTypes ?? []
@@ -552,48 +566,45 @@ export default function ProductDetailPage() {
       : []
 
   const floorThicknessOptions: SelectOption[] =
-    useVariantDrivenConfig && family === 'nufloor'
+    'thicknesses' in options && Array.isArray(options.thicknesses)
+      ? options.thicknesses ?? []
+      : []
+
+  const modelOptions: SelectOption[] =
+    'models' in options ? options.models ?? [] : []
+
+  const slatThicknessOptions: SelectOption[] =
+    useVariantDrivenConfig && family === 'nuslat'
       ? variantThicknessOptions
       : 'thicknesses' in options && Array.isArray(options.thicknesses)
       ? options.thicknesses ?? []
       : []
 
-  const modelOptions: SelectOption[] =
-    useVariantDrivenConfig && family === 'nudoor'
-      ? variantModelOptions
-      : 'models' in options
-      ? options.models ?? []
-      : []
-
-  const slatThicknessOptions: SelectOption[] =
-    'thicknesses' in options && Array.isArray(options.thicknesses)
-      ? options.thicknesses ?? []
-      : []
-
   const slatLengthOptions: SelectOption[] =
-    'lengths' in options ? options.lengths ?? [] : []
+    useVariantDrivenConfig && family === 'nuslat'
+      ? variantLengthOptions
+      : 'lengths' in options
+      ? options.lengths ?? []
+      : []
 
   useEffect(() => {
     if (useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')) {
       const firstCore = coreTypeOptions[0]?.value ?? ''
-      if (!selectedCoreType && firstCore) setSelectedCoreType(firstCore)
-
       const firstThickness = thicknessOptionsForBoards[0]?.value ?? ''
-      if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
-      return
-    }
+      const firstPly = plyOptionsForBoards[0]?.value ?? ''
 
-    if (useVariantDrivenConfig && family === 'nudoor') {
-      const firstModel = modelOptions[0]?.value ?? ''
-      const firstCore = coreTypeOptions[0]?.value ?? ''
-      const firstThickness = variantThicknessOptions[0]?.value ?? ''
-      const firstPly = variantPlyOptions[0]?.value ?? ''
-
-      if (!selectedModel && firstModel) setSelectedModel(firstModel)
       if (!selectedCoreType && firstCore) setSelectedCoreType(firstCore)
       if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
       if (!selectedPly && firstPly) setSelectedPly(firstPly)
-      if (!selectedLength) setSelectedLength('8ft')
+      return
+    }
+
+    if (useVariantDrivenConfig && family === 'nuslat') {
+      const firstThickness = slatThicknessOptions[0]?.value ?? ''
+      const firstLength = slatLengthOptions[0]?.value ?? ''
+
+      if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
+      if (!selectedLength && firstLength) setSelectedLength(firstLength)
       return
     }
 
@@ -612,14 +623,13 @@ export default function ProductDetailPage() {
     selectedCoreType,
     selectedThickness,
     selectedPly,
-    selectedModel,
     selectedLength,
     coreTypeOptions,
     thicknessOptionsForBoards,
+    plyOptionsForBoards,
     floorThicknessOptions,
-    modelOptions,
-    variantThicknessOptions,
-    variantPlyOptions,
+    slatThicknessOptions,
+    slatLengthOptions,
   ])
 
   useEffect(() => {
@@ -631,30 +641,14 @@ export default function ProductDetailPage() {
       return
     }
 
-    if (useVariantDrivenConfig && family === 'nudoor') {
-      const firstPly = variantPlyOptions[0]?.value ?? ''
-      if (firstPly && !variantPlyOptions.find((p) => p.value === selectedPly)) {
-        setSelectedPly(firstPly)
-      }
-      return
-    }
-
     if (family === 'nufloor') {
-      const firstPly =
-        product?.variants?.find((v) =>
-          selectedThickness ? formatThicknessLabel(v.thickness_mm) === selectedThickness : true
-        )?.ply_count ?? 3
-
-      setSelectedPly(`${firstPly} Ply`)
+      setSelectedPly('3 Ply')
     }
   }, [
     useVariantDrivenConfig,
     family,
     plyOptionsForBoards,
-    variantPlyOptions,
     selectedPly,
-    product?.variants,
-    selectedThickness,
   ])
 
   useEffect(() => {
@@ -666,28 +660,20 @@ export default function ProductDetailPage() {
   }, [family])
 
   const selectedVariant = useMemo(() => {
-    if (!useVariantDrivenConfig || !product?.variants?.length) return null
+    if (!useVariantDrivenConfig) return null
 
     return (
-      product.variants.find((variant) => {
-        if (family === 'nudoor') {
-          const modelMatch = selectedModel
-            ? normalizeValue(variant.size_label) === normalizeValue(selectedModel)
-            : true
-
-          const coreMatch = selectedCoreType
-            ? normalizeValue(variant.core_type) === normalizeValue(selectedCoreType)
-            : true
-
+      pricedVariants.find((variant) => {
+        if (family === 'nuslat') {
           const thicknessMatch = selectedThickness
             ? formatThicknessLabel(variant.thickness_mm) === selectedThickness
             : true
 
-          const plyMatch = selectedPly
-            ? formatPlyLabel(variant.ply_count) === selectedPly
+          const lengthMatch = selectedLength
+            ? normalizeValue(variant.size_label) === normalizeValue(selectedLength)
             : true
 
-          return modelMatch && coreMatch && thicknessMatch && plyMatch
+          return thicknessMatch && lengthMatch
         }
 
         if (
@@ -711,102 +697,69 @@ export default function ProductDetailPage() {
     )
   }, [
     useVariantDrivenConfig,
-    product?.variants,
+    pricedVariants,
     family,
     selectedCoreType,
     selectedThickness,
     selectedPly,
-    selectedModel,
+    selectedLength,
   ])
 
   const fallbackResolved = useMemo((): ResolvedQuoteState => {
     return {
       productLabel: product?.name || '',
-      model: selectedModel || '',
-      coreType: selectedCoreType || '',
-      thickness: selectedThickness || '',
-      ply: selectedPly || '',
+      model:
+        family === 'nudoor'
+          ? product?.dimensions || selectedModel || ''
+          : selectedModel || '',
+      coreType:
+        family === 'nudoor'
+          ? 'Horizontal'
+          : selectedCoreType || '',
+      thickness:
+        family === 'nufloor'
+          ? selectedThickness || '—'
+          : selectedThickness || '',
+      ply:
+        family === 'nufloor'
+          ? '3 Ply'
+          : selectedPly || '',
       length: selectedLength || '',
-      dimensions: product?.dimensions || '',
+      dimensions: product?.dimensions || '2440mm x 1220mm',
       moq: product?.min_order_qty || 1,
       unit: product?.unit || 'sheet',
       priceUsd: product?.base_price_usd ?? null,
       inStock: true,
-      stockMessage: '',
+      stockMessage: product?.base_price_usd != null ? '' : 'Request Quote',
       sku: product?.sku || '',
       variantId: null,
       isPriceOnRequest: product?.base_price_usd == null,
     }
-  }, [product, selectedModel, selectedCoreType, selectedThickness, selectedPly, selectedLength])
+  }, [product, family, selectedModel, selectedCoreType, selectedThickness, selectedPly, selectedLength])
 
   const resolved: ResolvedQuoteState = useMemo(() => {
-    if (useVariantDrivenConfig) {
-      if (!selectedVariant) {
-        return {
-          productLabel: product?.name || '',
-          model: selectedModel || '',
-          coreType: selectedCoreType || '',
-          thickness: selectedThickness || '',
-          ply: selectedPly || '',
-          length: selectedLength || '',
-          dimensions: product?.dimensions || '—',
-          moq: product?.min_order_qty || 1,
-          unit: product?.unit || 'sheet',
-          priceUsd: null,
-          inStock: false,
-          stockMessage: 'Please select a valid configuration',
-          sku: '',
-          variantId: null,
-          isPriceOnRequest: false,
-        }
-      }
-
+    if (useVariantDrivenConfig && selectedVariant) {
       return {
         productLabel: product?.name || '',
-        model:
-          family === 'nudoor'
-            ? selectedVariant.size_label || selectedModel || ''
-            : selectedVariant.size_label || '',
-        coreType: selectedVariant.core_type || selectedCoreType || '',
-        thickness:
-          family === 'nudoor'
-            ? formatThicknessLabel(selectedVariant.thickness_mm) || selectedThickness || '—'
-            : formatThicknessLabel(selectedVariant.thickness_mm) || '—',
-        ply:
-          family === 'nudoor'
-            ? formatPlyLabel(selectedVariant.ply_count) || selectedPly || '—'
-            : formatPlyLabel(selectedVariant.ply_count) || '—',
-        length: family === 'nudoor' ? selectedLength || '' : '',
+        model: selectedVariant.size_label || '',
+        coreType: selectedVariant.core_type || '',
+        thickness: formatThicknessLabel(selectedVariant.thickness_mm) || '—',
+        ply: formatPlyLabel(selectedVariant.ply_count) || '—',
+        length: family === 'nuslat' ? selectedVariant.size_label || selectedLength || '' : '',
         dimensions: selectedVariant.dimensions || product?.dimensions || '—',
         moq: selectedVariant.min_order_qty || product?.min_order_qty || 1,
         unit: selectedVariant.unit || product?.unit || 'sheet',
-        priceUsd:
-          selectedVariant.is_price_on_request || selectedVariant.base_price_usd == null
-            ? null
-            : selectedVariant.base_price_usd,
+        priceUsd: selectedVariant.base_price_usd,
         inStock: true,
-        stockMessage: selectedVariant.is_price_on_request
-          ? selectedVariant.price_notes || 'Price on request'
-          : '',
+        stockMessage: '',
         sku: selectedVariant.sku || product?.sku || '',
         variantId: selectedVariant.id,
-        isPriceOnRequest: selectedVariant.is_price_on_request,
+        isPriceOnRequest: false,
       }
     }
 
     return fallbackResolved
-  }, [
-    useVariantDrivenConfig,
-    selectedVariant,
-    product,
-    family,
-    selectedModel,
-    selectedCoreType,
-    selectedThickness,
-    selectedPly,
-    selectedLength,
-    fallbackResolved,
-  ])
+  }, [useVariantDrivenConfig, selectedVariant, product, family, selectedLength, fallbackResolved])
 
   const totalUsd = resolved.priceUsd != null ? resolved.priceUsd * quantity : null
   const familyQuantityError = validateConfiguredQuantity(family, quantity)
@@ -888,18 +841,6 @@ export default function ProductDetailPage() {
 
   function handleAddToQuote() {
     if (!product) return
-
-    if (useVariantDrivenConfig && !resolved.variantId) {
-      toast({
-        title: 'Select configuration first',
-        description:
-          family === 'nudoor'
-            ? 'Please select model, core type, thickness, and ply before adding to quote.'
-            : 'Please select thickness, ply, and core type before adding to quote.',
-        variant: 'destructive',
-      })
-      return
-    }
 
     if (quantityError) {
       toast({
@@ -1230,35 +1171,30 @@ export default function ProductDetailPage() {
                   )}
 
                   {family === 'nudoor' && (
-                    <>
-                      <OptionPills
-                        label="Model"
-                        value={selectedModel}
-                        onChange={setSelectedModel}
-                        options={modelOptions}
-                      />
-
-                      <OptionPills
-                        label="Core Type"
-                        value={selectedCoreType}
-                        onChange={setSelectedCoreType}
-                        options={coreTypeOptions}
-                      />
-
-                      <OptionPills
-                        label="Thickness"
-                        value={selectedThickness}
-                        onChange={setSelectedThickness}
-                        options={variantThicknessOptions}
-                      />
-
-                      <OptionPills
-                        label="Ply"
-                        value={selectedPly}
-                        onChange={setSelectedPly}
-                        options={variantPlyOptions}
-                      />
-                    </>
+                    <div>
+                      <label className="mb-3 block text-sm font-medium text-foreground">
+                        Model
+                      </label>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        {modelOptions.map((opt) => {
+                          const isActive = selectedModel === opt.value
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setSelectedModel(opt.value)}
+                              className={`rounded-[24px] border p-4 text-left transition ${
+                                isActive
+                                  ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
+                                  : 'border-black/10 bg-white hover:border-black/20 hover:bg-stone-50'
+                              }`}
+                            >
+                              <p className="text-sm font-semibold">{opt.label}</p>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
                   )}
 
                   {family === 'nufloor' && (
@@ -1296,12 +1232,6 @@ export default function ProductDetailPage() {
                         onChange={setSelectedLength}
                         options={slatLengthOptions}
                       />
-
-                      {!resolved.inStock && (
-                        <div className="rounded-[24px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                          No stock. Only 5mm at 8ft is currently available.
-                        </div>
-                      )}
                     </>
                   )}
 
@@ -1481,7 +1411,7 @@ export default function ProductDetailPage() {
                   <button
                     type="button"
                     onClick={handleAddToQuote}
-                    disabled={(useVariantDrivenConfig && !resolved.variantId) || !!quantityError}
+                    disabled={!!quantityError}
                     className="mt-2 w-full rounded-full bg-white px-4 py-3.5 font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Add to Quote
@@ -1511,7 +1441,7 @@ export default function ProductDetailPage() {
             <button
               type="button"
               onClick={handleAddToQuote}
-              disabled={(useVariantDrivenConfig && !resolved.variantId) || !!quantityError}
+              disabled={!!quantityError}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-[#16361f] px-5 py-3 font-semibold text-white transition hover:bg-[#204a2b] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ShoppingBag className="h-4 w-4" />
