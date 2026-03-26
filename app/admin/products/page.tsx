@@ -110,6 +110,7 @@ type RawVariant = {
   unit_price?: number | null
   unit_price_old?: number | null
   base_price_usd?: number | null
+  old_price_usd?: number | null
   is_active?: boolean | null
   is_price_on_request?: boolean | null
   price_notes?: string | null
@@ -229,6 +230,12 @@ function normalizeProduct(raw: RawProduct): Product {
 }
 
 function normalizeVariant(raw: RawVariant): Variant {
+  const normalizedUnitPrice =
+    raw.unit_price ?? raw.base_price_usd ?? null
+
+  const normalizedOldPrice =
+    raw.unit_price_old ?? raw.old_price_usd ?? null
+
   return {
     id: raw.id || '',
     product_id: raw.product_id || raw.product || '',
@@ -251,13 +258,13 @@ function normalizeVariant(raw: RawVariant): Variant {
     moq: raw.moq === null || raw.moq === undefined ? null : Number(raw.moq),
     currency: raw.currency || 'USD',
     unit_price:
-      raw.unit_price === null || raw.unit_price === undefined
+      normalizedUnitPrice === null || normalizedUnitPrice === undefined
         ? null
-        : Number(raw.unit_price),
+        : Number(normalizedUnitPrice),
     unit_price_old:
-      raw.unit_price_old === null || raw.unit_price_old === undefined
+      normalizedOldPrice === null || normalizedOldPrice === undefined
         ? null
-        : Number(raw.unit_price_old),
+        : Number(normalizedOldPrice),
     is_active: raw.is_active ?? true,
     is_price_on_request: raw.is_price_on_request ?? false,
     price_notes: raw.price_notes || '',
@@ -624,7 +631,7 @@ export default function AdminProductsPage() {
     try {
       const payload = {
         id: currentVariant.id,
-        product: currentVariant.product_id,
+        product_id: currentVariant.product_id,
         sku: currentVariant.sku,
         thickness_mm: currentVariant.thickness_mm,
         length_mm: currentVariant.length_mm,
@@ -634,10 +641,10 @@ export default function AdminProductsPage() {
         unit: currentVariant.unit,
         moq: currentVariant.moq,
         currency: 'USD',
-        unit_price: currentVariant.is_price_on_request
+        base_price_usd: currentVariant.is_price_on_request
           ? null
           : currentVariant.unit_price,
-        unit_price_old: currentVariant.unit_price_old,
+        old_price_usd: currentVariant.unit_price_old,
         is_active: currentVariant.is_active,
         is_price_on_request: currentVariant.is_price_on_request,
         price_notes: currentVariant.price_notes,
@@ -656,7 +663,28 @@ export default function AdminProductsPage() {
         throw new Error(savedVariant?.error || 'Failed to save variant')
       }
 
-      await mutateVariants()
+      const normalizedSavedVariant = normalizeVariant(savedVariant)
+
+      await mutateVariants(
+        (current) => {
+          if (!Array.isArray(current)) return current
+          return current.map((variant) =>
+            variant.id === normalizedSavedVariant.id
+              ? {
+                  ...variant,
+                  ...savedVariant,
+                  unit_price: normalizedSavedVariant.unit_price,
+                  unit_price_old: normalizedSavedVariant.unit_price_old,
+                  base_price_usd: normalizedSavedVariant.unit_price,
+                  old_price_usd: normalizedSavedVariant.unit_price_old,
+                }
+              : variant
+          )
+        },
+        { revalidate: true }
+      )
+
+      setCurrentVariant(normalizedSavedVariant)
       setIsVariantModalOpen(false)
       setCurrentVariant(INITIAL_VARIANT)
 
