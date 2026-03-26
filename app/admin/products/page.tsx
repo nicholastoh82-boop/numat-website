@@ -136,6 +136,15 @@ type Variant = {
   core_type: string
 }
 
+type GroupedProduct = Product & {
+  groupKey: string
+  groupLabel: string
+  groupSku: string
+  groupedChildren: Product[]
+  isGroupedParent: boolean
+  sourceProductIds: string[]
+}
+
 const INITIAL_PRODUCT: Product = {
   sku: '',
   title: '',
@@ -270,6 +279,57 @@ function formatVariantSize(variant: Variant) {
   return size || thickness || '-'
 }
 
+function isNuDoorProduct(product: Product) {
+  const sku = product.sku.toLowerCase()
+  const title = product.title.toLowerCase()
+
+  return (
+    sku === 'nudoor-light' ||
+    sku === 'nudoor-composite' ||
+    sku === 'nudoor-premium' ||
+    title === 'nudoor light' ||
+    title === 'nudoor composite' ||
+    title === 'nudoor premium'
+  )
+}
+
+function buildGroupedProducts(products: Product[]): GroupedProduct[] {
+  const nudoorChildren = products.filter(isNuDoorProduct)
+  const otherProducts = products.filter((product) => !isNuDoorProduct(product))
+
+  const groupedOthers: GroupedProduct[] = otherProducts.map((product) => ({
+    ...product,
+    groupKey: product.id || product.sku,
+    groupLabel: product.title,
+    groupSku: product.sku,
+    groupedChildren: [],
+    isGroupedParent: false,
+    sourceProductIds: product.id ? [product.id] : [],
+  }))
+
+  if (nudoorChildren.length === 0) {
+    return groupedOthers
+  }
+
+  const nudoorBase =
+    nudoorChildren.find((product) => product.sku.toLowerCase() === 'nudoor-light') ||
+    nudoorChildren[0]
+
+  const nudoorGrouped: GroupedProduct = {
+    ...nudoorBase,
+    groupKey: 'nudoor-group',
+    groupLabel: 'NuDoor',
+    groupSku: 'nudoor',
+    groupedChildren: nudoorChildren,
+    isGroupedParent: true,
+    sourceProductIds: nudoorChildren
+      .map((product) => product.id)
+      .filter((id): id is string => Boolean(id)),
+  }
+
+  return [nudoorGrouped, ...groupedOthers]
+}
+
 export default function AdminProductsPage() {
   const { toast } = useToast()
 
@@ -324,6 +384,10 @@ export default function AdminProductsPage() {
     return Array.isArray(variantsData) ? variantsData.map(normalizeVariant) : []
   }, [variantsData])
 
+  const groupedProducts = useMemo(() => {
+    return buildGroupedProducts(products)
+  }, [products])
+
   const variantsByProductId = useMemo(() => {
     const grouped: Record<string, Variant[]> = {}
 
@@ -338,34 +402,42 @@ export default function AdminProductsPage() {
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
-    if (!q) return products
+    if (!q) return groupedProducts
 
-    return products.filter((product) => {
-      const ownMatch =
-        product.title.toLowerCase().includes(q) ||
-        product.sku.toLowerCase().includes(q) ||
-        product.category.toLowerCase().includes(q)
+    return groupedProducts.filter((product) => {
+      const selfMatch =
+        product.groupLabel.toLowerCase().includes(q) ||
+        product.groupSku.toLowerCase().includes(q) ||
+        product.category.toLowerCase().includes(q) ||
+        product.title.toLowerCase().includes(q)
 
-      const productVariants = product.id ? variantsByProductId[product.id] || [] : []
-
-      const variantMatch = productVariants.some((variant) => {
+      const childMatch = product.groupedChildren.some((child) => {
         return (
-          variant.sku.toLowerCase().includes(q) ||
-          variant.core_type.toLowerCase().includes(q) ||
-          variant.finish.toLowerCase().includes(q) ||
-          variant.grade.toLowerCase().includes(q)
+          child.title.toLowerCase().includes(q) ||
+          child.sku.toLowerCase().includes(q)
         )
       })
 
-      return ownMatch || variantMatch
-    })
-  }, [products, searchQuery, variantsByProductId])
+      const variantMatch = product.sourceProductIds.some((productId) => {
+        const productVariants = variantsByProductId[productId] || []
+        return productVariants.some((variant) => {
+          return (
+            variant.sku.toLowerCase().includes(q) ||
+            variant.core_type.toLowerCase().includes(q) ||
+            variant.finish.toLowerCase().includes(q) ||
+            variant.grade.toLowerCase().includes(q)
+          )
+        })
+      })
 
-  const toggleExpanded = (productId?: string) => {
-    if (!productId) return
+      return selfMatch || childMatch || variantMatch
+    })
+  }, [groupedProducts, searchQuery, variantsByProductId])
+
+  const toggleExpanded = (groupKey: string) => {
     setExpandedProducts((prev) => ({
       ...prev,
-      [productId]: !prev[productId],
+      [groupKey]: !prev[groupKey],
     }))
   }
 
@@ -555,26 +627,26 @@ export default function AdminProductsPage() {
 
     try {
       const payload = {
-  id: currentVariant.id,
-  product: currentVariant.product_id,
-  sku: currentVariant.sku,
-  thickness_mm: currentVariant.thickness_mm,
-  length_mm: currentVariant.length_mm,
-  width_mm: currentVariant.width_mm,
-  finish: currentVariant.finish,
-  grade: currentVariant.grade,
-  unit: currentVariant.unit,
-  moq: currentVariant.moq,
-  currency: 'USD',
-  unit_price: currentVariant.is_price_on_request
-    ? null
-    : currentVariant.unit_price,
-  unit_price_old: currentVariant.unit_price_old,
-  is_active: currentVariant.is_active,
-  is_price_on_request: currentVariant.is_price_on_request,
-  price_notes: currentVariant.price_notes,
-  core_type: currentVariant.core_type,
-}
+        id: currentVariant.id,
+        product: currentVariant.product_id,
+        sku: currentVariant.sku,
+        thickness_mm: currentVariant.thickness_mm,
+        length_mm: currentVariant.length_mm,
+        width_mm: currentVariant.width_mm,
+        finish: currentVariant.finish,
+        grade: currentVariant.grade,
+        unit: currentVariant.unit,
+        moq: currentVariant.moq,
+        currency: 'USD',
+        unit_price: currentVariant.is_price_on_request
+          ? null
+          : currentVariant.unit_price,
+        unit_price_old: currentVariant.unit_price_old,
+        is_active: currentVariant.is_active,
+        is_price_on_request: currentVariant.is_price_on_request,
+        price_notes: currentVariant.price_notes,
+        core_type: currentVariant.core_type,
+      }
 
       const res = await fetch('/api/admin/product-variants', {
         method: 'PATCH',
@@ -650,7 +722,7 @@ export default function AdminProductsPage() {
         <div>
           <h1 className="font-serif text-2xl text-foreground">Products</h1>
           <p className="mt-1 text-muted-foreground">
-            {products.length} products · {variants.length} variants
+            {filteredProducts.length} grouped products · {variants.length} variants
           </p>
         </div>
 
@@ -713,23 +785,26 @@ export default function AdminProductsPage() {
 
               <tbody className="divide-y divide-border">
                 {filteredProducts.map((product, index) => {
-                  const productVariants = product.id
-                    ? variantsByProductId[product.id] || []
-                    : []
-                  const expanded = product.id ? !!expandedProducts[product.id] : false
+                  const allProductVariants = product.sourceProductIds.flatMap(
+                    (productId) => variantsByProductId[productId] || []
+                  )
+
+                  const expanded = !!expandedProducts[product.groupKey]
+                  const hasExpandableContent =
+                    product.groupedChildren.length > 0 || allProductVariants.length > 0
 
                   return (
-                    <React.Fragment key={product.id || `${product.sku}-${index}`}>
+                    <React.Fragment key={product.groupKey || `${product.sku}-${index}`}>
                       <tr className="transition-colors hover:bg-muted/30">
                         <td className="px-4 py-3 text-sm font-mono text-foreground">
                           <div className="flex items-center gap-2">
-                            {product.id && productVariants.length > 0 ? (
+                            {hasExpandableContent ? (
                               <button
                                 type="button"
-                                onClick={() => toggleExpanded(product.id)}
+                                onClick={() => toggleExpanded(product.groupKey)}
                                 className="rounded p-0.5 hover:bg-muted"
                                 aria-label={
-                                  expanded ? 'Collapse variants' : 'Expand variants'
+                                  expanded ? 'Collapse item' : 'Expand item'
                                 }
                               >
                                 {expanded ? (
@@ -741,7 +816,8 @@ export default function AdminProductsPage() {
                             ) : (
                               <span className="inline-block w-5" />
                             )}
-                            <span>{product.sku || '-'}</span>
+
+                            <span>{product.groupSku || product.sku || '-'}</span>
                           </div>
                         </td>
 
@@ -750,7 +826,7 @@ export default function AdminProductsPage() {
                             {product.image ? (
                               <img
                                 src={product.image}
-                                alt={product.title}
+                                alt={product.groupLabel}
                                 className="h-10 w-10 rounded border border-border object-cover"
                               />
                             ) : (
@@ -761,15 +837,30 @@ export default function AdminProductsPage() {
 
                             <div>
                               <p className="text-sm font-medium text-foreground">
-                                {product.title || 'Untitled product'}
+                                {product.groupLabel || product.title || 'Untitled product'}
                               </p>
-                              <p className="text-xs text-muted-foreground">
-                                {productVariants.length > 0
-                                  ? `${productVariants.length} variation${
-                                      productVariants.length === 1 ? '' : 's'
-                                    }`
-                                  : product.size || 'No variants'}
-                              </p>
+
+                              {product.isGroupedParent &&
+                              product.groupedChildren.length > 0 ? (
+                                <p className="text-xs text-muted-foreground">
+                                  {product.groupedChildren
+                                    .map((child) => child.title)
+                                    .join(' • ')}
+                                </p>
+                              ) : allProductVariants.length > 0 ? (
+                                <p className="text-xs text-muted-foreground">
+                                  {allProductVariants.length} variation
+                                  {allProductVariants.length === 1 ? '' : 's'}
+                                </p>
+                              ) : product.size ? (
+                                <p className="text-xs text-muted-foreground">
+                                  {product.size}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">
+                                  No variants
+                                </p>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -808,23 +899,94 @@ export default function AdminProductsPage() {
                               <Edit2 className="h-4 w-4" />
                             </Button>
 
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => product.id && handleOpenDelete(product.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {!product.isGroupedParent && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                onClick={() => product.id && handleOpenDelete(product.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
 
                       {expanded &&
-                        productVariants.map((variant) => (
+                        product.isGroupedParent &&
+                        product.groupedChildren.map((child) => (
+                          <tr
+                            key={`child-${child.id || child.sku}`}
+                            className="border-t border-border bg-muted/10"
+                          >
+                            <td className="px-4 py-3 text-sm font-mono text-muted-foreground">
+                              <span className="ml-7">{child.sku || '-'}</span>
+                            </td>
+
+                            <td className="px-4 py-3">
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium text-foreground">
+                                  {child.title}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  NuDoor model
+                                </p>
+                              </div>
+                            </td>
+
+                            <td className="hidden px-4 py-3 text-sm text-muted-foreground sm:table-cell">
+                              {child.categories?.name || child.category || '-'}
+                            </td>
+
+                            <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
+                              {child.price > 0
+                                ? `USD ${child.price.toLocaleString()}`
+                                : 'Quote'}
+                            </td>
+
+                            <td className="hidden px-4 py-3 text-center md:table-cell">
+                              <span
+                                className={cn(
+                                  'rounded-full px-2 py-0.5 text-xs',
+                                  child.is_active
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'bg-muted text-muted-foreground'
+                                )}
+                              >
+                                {child.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleOpenEdit(child)}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive"
+                                  onClick={() => child.id && handleOpenDelete(child.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+
+                      {expanded &&
+                        allProductVariants.map((variant) => (
                           <tr
                             key={variant.id}
-                            className="bg-muted/20 border-t border-border"
+                            className="border-t border-border bg-muted/20"
                           >
                             <td className="px-4 py-3 text-sm font-mono text-muted-foreground">
                               <span className="ml-7">{variant.sku || '-'}</span>
