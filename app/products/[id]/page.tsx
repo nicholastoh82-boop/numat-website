@@ -211,6 +211,16 @@ function getDisplayProductName(name: string, family: ProductFamily) {
   return name
 }
 
+function getNuDoorModelLabel(name: string) {
+  const raw = name.trim().toLowerCase()
+
+  if (raw === 'nudoor light') return 'NuDoor Light'
+  if (raw === 'nudoor composite') return 'NuDoor Composite'
+  if (raw === 'nudoor premium') return 'NuDoor Premium'
+
+  return name
+}
+
 function splitDescriptionContent(
   description: string | null,
   productName: string,
@@ -499,25 +509,25 @@ export default function ProductDetailPage() {
     (family === 'nubam-boards' || family === 'nuwall' || family === 'nuslat')
 
   const nudoorModelProducts = useMemo(() => {
-  if (family !== 'nudoor') return []
+    if (family !== 'nudoor') return []
 
-  return (allProducts ?? [])
-    .filter((item) => getProductCategorySlugFromListItem(item) === 'nudoor')
-    .filter((item) => {
-      const name = item.name.trim().toLowerCase()
-      return name !== 'nudoor premium'
-    })
-    .sort((a, b) => {
-      const aLabel = getDisplayProductName(a.name, 'nudoor')
-      const bLabel = getDisplayProductName(b.name, 'nudoor')
+    return (allProducts ?? [])
+      .filter((item) => getProductCategorySlugFromListItem(item) === 'nudoor')
+      .sort((a, b) => {
+        const orderMap: Record<string, number> = {
+          'nudoor light': 0,
+          'nudoor composite': 1,
+          'nudoor premium': 2,
+        }
 
-      const aRank = aLabel.toLowerCase() === 'nudoor' ? 0 : 1
-      const bRank = bLabel.toLowerCase() === 'nudoor' ? 0 : 1
+        const aOrder = orderMap[a.name.trim().toLowerCase()] ?? 999
+        const bOrder = orderMap[b.name.trim().toLowerCase()] ?? 999
 
-      if (aRank !== bRank) return aRank - bRank
-      return aLabel.localeCompare(bLabel)
-    })
-}, [allProducts, family])
+        if (aOrder !== bOrder) return aOrder - bOrder
+
+        return getNuDoorModelLabel(a.name).localeCompare(getNuDoorModelLabel(b.name))
+      })
+  }, [allProducts, family])
 
   const variantCoreTypeOptions = useMemo(() => {
     if (!useVariantDrivenConfig) return []
@@ -609,9 +619,6 @@ export default function ProductDetailPage() {
           (a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', ''))
         )
       : []
-
-  const modelOptions: SelectOption[] =
-    'models' in options ? options.models ?? [] : []
 
   const slatThicknessOptions: SelectOption[] =
     useVariantDrivenConfig && family === 'nuslat'
@@ -749,12 +756,12 @@ export default function ProductDetailPage() {
       productLabel: displayProductName || '',
       model:
         family === 'nudoor'
-          ? product?.dimensions || displayProductName || ''
+          ? getNuDoorModelLabel(product?.name || '')
           : selectedModel || '',
       coreType: family === 'nudoor' ? 'Horizontal' : selectedCoreType || '',
       thickness: family === 'nufloor' ? selectedThickness || '—' : selectedThickness || '',
       ply: family === 'nufloor' ? '3 Ply' : selectedPly || '',
-      length: selectedLength || '',
+      length: family === 'nudoor' ? '8ft' : selectedLength || '',
       dimensions: product?.dimensions || '2440mm x 1220mm',
       moq: product?.min_order_qty || 1,
       unit: product?.unit || 'sheet',
@@ -1201,34 +1208,33 @@ export default function ProductDetailPage() {
                   )}
 
                   {family === 'nudoor' && nudoorModelProducts.length > 0 && (
-  <div>
-    <label className="mb-3 block text-sm font-medium text-foreground">
-      Model
-    </label>
-    <div className="grid gap-3 sm:grid-cols-2">
-      {nudoorModelProducts.map((item) => {
-        const label = getDisplayProductName(item.name, 'nudoor')
-        const isActive =
-          getDisplayProductName(product.name, 'nudoor').toLowerCase() === label.toLowerCase()
+                    <div>
+                      <label className="mb-3 block text-sm font-medium text-foreground">
+                        Model
+                      </label>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        {nudoorModelProducts.map((item) => {
+                          const label = getNuDoorModelLabel(item.name)
+                          const isActive = item.id === product.id
 
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => router.push(`/products/${item.id}`)}
-            className={`rounded-[24px] border p-4 text-left transition ${
-              isActive
-                ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
-                : 'border-black/10 bg-white hover:border-black/20 hover:bg-stone-50'
-            }`}
-          >
-            <p className="text-sm font-semibold">{label}</p>
-          </button>
-        )
-      })}
-    </div>
-  </div>
-)}
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => router.push(`/products/${item.id}`)}
+                              className={`rounded-[24px] border p-4 text-left transition ${
+                                isActive
+                                  ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
+                                  : 'border-black/10 bg-white hover:border-black/20 hover:bg-stone-50'
+                              }`}
+                            >
+                              <p className="text-sm font-semibold">{label}</p>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {family === 'nufloor' && (
                     <>
