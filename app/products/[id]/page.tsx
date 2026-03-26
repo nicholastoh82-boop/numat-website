@@ -499,22 +499,25 @@ export default function ProductDetailPage() {
     (family === 'nubam-boards' || family === 'nuwall' || family === 'nuslat')
 
   const nudoorModelProducts = useMemo(() => {
-    if (family !== 'nudoor') return []
+  if (family !== 'nudoor') return []
 
-    return (allProducts ?? [])
-      .filter((item) => getProductCategorySlugFromListItem(item) === 'nudoor')
-      .filter((item) => item.name.trim().toLowerCase() !== 'nudoor premium')
-      .sort((a, b) => {
-        const an =
-          getDisplayProductName(a.name, 'nudoor').toLowerCase() === 'nudoor' ? 0 : 1
-        const bn =
-          getDisplayProductName(b.name, 'nudoor').toLowerCase() === 'nudoor' ? 0 : 1
-        if (an !== bn) return an - bn
-        return getDisplayProductName(a.name, 'nudoor').localeCompare(
-          getDisplayProductName(b.name, 'nudoor')
-        )
-      })
-  }, [allProducts, family])
+  return (allProducts ?? [])
+    .filter((item) => getProductCategorySlugFromListItem(item) === 'nudoor')
+    .filter((item) => {
+      const name = item.name.trim().toLowerCase()
+      return name !== 'nudoor premium'
+    })
+    .sort((a, b) => {
+      const aLabel = getDisplayProductName(a.name, 'nudoor')
+      const bLabel = getDisplayProductName(b.name, 'nudoor')
+
+      const aRank = aLabel.toLowerCase() === 'nudoor' ? 0 : 1
+      const bRank = bLabel.toLowerCase() === 'nudoor' ? 0 : 1
+
+      if (aRank !== bRank) return aRank - bRank
+      return aLabel.localeCompare(bLabel)
+    })
+}, [allProducts, family])
 
   const variantCoreTypeOptions = useMemo(() => {
     if (!useVariantDrivenConfig) return []
@@ -1197,34 +1200,35 @@ export default function ProductDetailPage() {
                     </>
                   )}
 
-                  {family === 'nudoor' && (
-                    <div>
-                      <label className="mb-3 block text-sm font-medium text-foreground">
-                        Model
-                      </label>
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        {nudoorModelProducts.map((item) => {
-                          const isActive = item.id === product.id
-                          const label = getDisplayProductName(item.name, 'nudoor')
+                  {family === 'nudoor' && nudoorModelProducts.length > 0 && (
+  <div>
+    <label className="mb-3 block text-sm font-medium text-foreground">
+      Model
+    </label>
+    <div className="grid gap-3 sm:grid-cols-2">
+      {nudoorModelProducts.map((item) => {
+        const label = getDisplayProductName(item.name, 'nudoor')
+        const isActive =
+          getDisplayProductName(product.name, 'nudoor').toLowerCase() === label.toLowerCase()
 
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => router.push(`/products/${item.id}`)}
-                              className={`rounded-[24px] border p-4 text-left transition ${
-                                isActive
-                                  ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
-                                  : 'border-black/10 bg-white hover:border-black/20 hover:bg-stone-50'
-                              }`}
-                            >
-                              <p className="text-sm font-semibold">{label}</p>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => router.push(`/products/${item.id}`)}
+            className={`rounded-[24px] border p-4 text-left transition ${
+              isActive
+                ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
+                : 'border-black/10 bg-white hover:border-black/20 hover:bg-stone-50'
+            }`}
+          >
+            <p className="text-sm font-semibold">{label}</p>
+          </button>
+        )
+      })}
+    </div>
+  </div>
+)}
 
                   {family === 'nufloor' && (
                     <>
