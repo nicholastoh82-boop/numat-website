@@ -95,11 +95,13 @@ type Product = {
 
 type RawVariant = {
   id?: string
+  product?: string | null
   product_id?: string | null
   sku?: string | null
   thickness_mm?: number | null
   length_mm?: number | null
   width_mm?: number | null
+  size_label?: string | null
   finish?: string | null
   grade?: string | null
   unit?: string | null
@@ -107,6 +109,7 @@ type RawVariant = {
   currency?: string | null
   unit_price?: number | null
   unit_price_old?: number | null
+  base_price_usd?: number | null
   is_active?: boolean | null
   is_price_on_request?: boolean | null
   price_notes?: string | null
@@ -220,7 +223,7 @@ function normalizeProduct(raw: RawProduct): Product {
 function normalizeVariant(raw: RawVariant): Variant {
   return {
     id: raw.id || '',
-    product_id: raw.product_id || '',
+    product_id: raw.product_id || raw.product || '',
     sku: raw.sku || '',
     thickness_mm:
       raw.thickness_mm === null || raw.thickness_mm === undefined
@@ -552,25 +555,26 @@ export default function AdminProductsPage() {
 
     try {
       const payload = {
-        id: currentVariant.id,
-        sku: currentVariant.sku,
-        thickness_mm: currentVariant.thickness_mm,
-        length_mm: currentVariant.length_mm,
-        width_mm: currentVariant.width_mm,
-        finish: currentVariant.finish,
-        grade: currentVariant.grade,
-        unit: currentVariant.unit,
-        moq: currentVariant.moq,
-        currency: 'USD',
-        unit_price: currentVariant.is_price_on_request
-          ? null
-          : currentVariant.unit_price,
-        unit_price_old: currentVariant.unit_price_old,
-        is_active: currentVariant.is_active,
-        is_price_on_request: currentVariant.is_price_on_request,
-        price_notes: currentVariant.price_notes,
-        core_type: currentVariant.core_type,
-      }
+  id: currentVariant.id,
+  product: currentVariant.product_id,
+  sku: currentVariant.sku,
+  thickness_mm: currentVariant.thickness_mm,
+  length_mm: currentVariant.length_mm,
+  width_mm: currentVariant.width_mm,
+  finish: currentVariant.finish,
+  grade: currentVariant.grade,
+  unit: currentVariant.unit,
+  moq: currentVariant.moq,
+  currency: 'USD',
+  unit_price: currentVariant.is_price_on_request
+    ? null
+    : currentVariant.unit_price,
+  unit_price_old: currentVariant.unit_price_old,
+  is_active: currentVariant.is_active,
+  is_price_on_request: currentVariant.is_price_on_request,
+  price_notes: currentVariant.price_notes,
+  core_type: currentVariant.core_type,
+}
 
       const res = await fetch('/api/admin/product-variants', {
         method: 'PATCH',
