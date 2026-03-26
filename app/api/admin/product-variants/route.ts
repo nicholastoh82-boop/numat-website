@@ -183,15 +183,30 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { data, error } = await supabase
+  const { error: updateError } = await supabase
     .from('product_variants')
     .update(updateData)
     .eq('id', id)
-    .select()
-    .single()
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 })
+  }
+
+  const { data, error: fetchError } = await supabase
+    .from('product_variants')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (fetchError) {
+    return NextResponse.json({ error: fetchError.message }, { status: 500 })
+  }
+
+  if (!data) {
+    return NextResponse.json(
+      { error: 'Variant not found after update' },
+      { status: 404 }
+    )
   }
 
   return NextResponse.json(data)
