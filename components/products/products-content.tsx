@@ -129,6 +129,17 @@ function getProductCategoryName(product: ProductApiItem): string {
   return ''
 }
 
+function shouldHideFromProductsListing(product: ProductApiItem): boolean {
+  const name = (product.name || '').trim().toLowerCase()
+  return name === 'nudoor premium' || name === 'nudoor composite'
+}
+
+function getListingDisplayName(product: ProductApiItem): string {
+  const name = (product.name || '').trim().toLowerCase()
+  if (name === 'nudoor light') return 'NuDoor'
+  return product.name
+}
+
 export function ProductsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -180,7 +191,7 @@ export function ProductsContent() {
   const filteredProducts = useMemo(() => {
     if (!products) return []
 
-    let filtered = [...products]
+    let filtered = [...products].filter((p) => !shouldHideFromProductsListing(p))
 
     if (selectedCategory !== 'all') {
       filtered = filtered.filter((p) => {
@@ -194,8 +205,10 @@ export function ProductsContent() {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter((p) => {
         const categoryName = normalizeCategoryName(getProductCategoryName(p)).toLowerCase()
+        const displayName = getListingDisplayName(p).toLowerCase()
 
         return (
+          displayName.includes(query) ||
           p.name?.toLowerCase().includes(query) ||
           p.slug?.toLowerCase().includes(query) ||
           p.description?.toLowerCase().includes(query) ||
@@ -230,7 +243,9 @@ export function ProductsContent() {
         filtered.sort((a, b) => (b.starting_price_usd || 0) - (a.starting_price_usd || 0))
         break
       case 'name':
-        filtered.sort((a, b) => a.name.localeCompare(b.name))
+        filtered.sort((a, b) =>
+          getListingDisplayName(a).localeCompare(getListingDisplayName(b))
+        )
         break
     }
 
@@ -238,19 +253,14 @@ export function ProductsContent() {
   }, [products, selectedCategory, searchQuery, sortBy])
 
   const allCategories = useMemo(() => {
+    const source = categories ?? []
     const dedupedMap = new Map<string, Category>()
 
-    for (const category of categories ?? []) {
+    for (const category of source) {
       if (category.is_active === false) continue
 
-      const rawName = (category.name || '').trim()
-      const rawSlug = (category.slug || rawName || '').trim()
-      if (!rawName && !rawSlug) continue
-
-      const normalizedSlug = normalizeCategorySlug(rawSlug)
-      if (!normalizedSlug) continue
-
-      const normalizedName = normalizeCategoryName(rawName || rawSlug)
+      const normalizedSlug = normalizeCategorySlug(category.slug || category.name)
+      const normalizedName = normalizeCategoryName(category.name)
 
       if (!dedupedMap.has(normalizedSlug)) {
         dedupedMap.set(normalizedSlug, {
@@ -261,35 +271,13 @@ export function ProductsContent() {
       }
     }
 
-    if (dedupedMap.size === 0) {
-      for (const product of products ?? []) {
-        const rawCategory = getProductCategoryName(product).trim()
-        if (!rawCategory) continue
-
-        const normalizedSlug = normalizeCategorySlug(rawCategory)
-        if (!normalizedSlug) continue
-
-        const normalizedName = normalizeCategoryName(rawCategory)
-
-        if (!dedupedMap.has(normalizedSlug)) {
-          dedupedMap.set(normalizedSlug, {
-            id: normalizedSlug,
-            name: normalizedName,
-            slug: normalizedSlug,
-            is_active: true,
-            display_order: null,
-          })
-        }
-      }
-    }
-
     return Array.from(dedupedMap.values()).sort((a, b) => {
       const ao = a.display_order ?? 999999
       const bo = b.display_order ?? 999999
       if (ao !== bo) return ao - bo
       return a.name.localeCompare(b.name)
     })
-  }, [categories, products])
+  }, [categories])
 
   const selectedCategoryName =
     allCategories.find((c) => normalizeCategorySlug(c.slug || c.name) === selectedCategory)?.name ||
@@ -414,8 +402,16 @@ export function ProductsContent() {
                 {filteredProducts.map((product) => (
                   <ProductCard
                     key={product.id}
-                    product={product as any}
-                    onQuickView={() => setQuickViewProduct(product)}
+                    product={{
+                      ...product,
+                      name: getListingDisplayName(product),
+                    } as any}
+                    onQuickView={() =>
+                      setQuickViewProduct({
+                        ...product,
+                        name: getListingDisplayName(product),
+                      })
+                    }
                   />
                 ))}
               </div>
