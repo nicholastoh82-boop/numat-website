@@ -193,7 +193,10 @@ const CATEGORY_OPTIONS = [
 ]
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url)
+  const res = await fetch(url, {
+    cache: 'no-store',
+  })
+
   const data = await res.json().catch(() => null)
 
   if (!res.ok) {
@@ -350,15 +353,14 @@ export default function AdminProductsPage() {
     fetcher
   )
 
+  const variantsApiUrl = '/api/admin/product-variants?includeInactive=true'
+
   const {
     data: variantsData,
     isLoading: isLoadingVariants,
     error: variantsError,
     mutate: mutateVariants,
-  } = useSWR<RawVariant[]>(
-    '/api/admin/product-variants?includeInactive=true',
-    fetcher
-  )
+  } = useSWR<RawVariant[]>(variantsApiUrl, fetcher)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>(
@@ -396,16 +398,40 @@ export default function AdminProductsPage() {
   }, [products])
 
   const variantsByProductId = useMemo(() => {
-    const grouped: Record<string, Variant[]> = {}
+  const grouped: Record<string, Variant[]> = {}
 
-    for (const variant of variants) {
-      if (!variant.product_id) continue
-      if (!grouped[variant.product_id]) grouped[variant.product_id] = []
-      grouped[variant.product_id].push(variant)
-    }
+  const getCoreRank = (variant: Variant) => {
+    const core = (variant.core_type || '').toLowerCase()
 
-    return grouped
-  }, [variants])
+    if (core.includes('horizontal')) return 0
+    if (core.includes('vertical')) return 1
+    return 2
+  }
+
+  const getThickness = (variant: Variant) => {
+    return variant.thickness_mm ?? Number.POSITIVE_INFINITY
+  }
+
+  for (const variant of variants) {
+    if (!variant.product_id) continue
+    if (!grouped[variant.product_id]) grouped[variant.product_id] = []
+    grouped[variant.product_id].push(variant)
+  }
+
+  for (const productId of Object.keys(grouped)) {
+    grouped[productId] = grouped[productId].sort((a, b) => {
+      const coreRankDiff = getCoreRank(a) - getCoreRank(b)
+      if (coreRankDiff !== 0) return coreRankDiff
+
+      const thicknessDiff = getThickness(a) - getThickness(b)
+      if (thicknessDiff !== 0) return thicknessDiff
+
+      return a.sku.localeCompare(b.sku)
+    })
+  }
+
+  return grouped
+}, [variants])
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
@@ -627,7 +653,7 @@ export default function AdminProductsPage() {
     }
   }
 
-  const handleSaveVariant = async (e: React.FormEvent) => {
+    const handleSaveVariant = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsVariantSaving(true)
 
@@ -658,6 +684,7 @@ export default function AdminProductsPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        cache: 'no-store',
       })
 
       const savedVariant = await res.json().catch(() => null)
@@ -666,7 +693,19 @@ export default function AdminProductsPage() {
         throw new Error(savedVariant?.error || 'Failed to save variant')
       }
 
+      await mutateVariants(
+        (current) => {
+          if (!Array.isArray(current)) return current
+
+          return current.map((variant) =>
+            variant.id === savedVariant.id ? savedVariant : variant
+          )
+        },
+        false
+      )
+
       await mutateVariants()
+
       setIsVariantModalOpen(false)
       setCurrentVariant(INITIAL_VARIANT)
 

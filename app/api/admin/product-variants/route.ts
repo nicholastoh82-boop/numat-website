@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 async function checkAdminAuth(supabase: any) {
   const {
     data: { user },
@@ -73,7 +76,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json(data ?? [])
+  return NextResponse.json(data ?? [], {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+    },
+  })
 }
 
 export async function PATCH(request: NextRequest) {
@@ -88,11 +97,11 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { id } = body
+  const { id, sku } = body
 
-  if (!id) {
+  if (!id && !sku) {
     return NextResponse.json(
-      { error: 'Variant ID is required' },
+      { error: 'Variant ID or SKU is required' },
       { status: 400 }
     )
   }
@@ -166,18 +175,16 @@ export async function PATCH(request: NextRequest) {
     updateData.unit_price = value
   }
 
-  const incomingOldPrice =
-    body.old_price_usd !== undefined ? body.old_price_usd : body.unit_price_old
+  const incomingOldPrice = body.unit_price_old
 
   if (incomingOldPrice !== undefined) {
     const value = parseNullableNumber(incomingOldPrice)
     if (Number.isNaN(value)) {
       return NextResponse.json(
-        { error: 'old_price_usd must be a valid number' },
+        { error: 'unit_price_old must be a valid number' },
         { status: 400 }
       )
     }
-    updateData.old_price_usd = value
     updateData.unit_price_old = value
   }
 
@@ -191,31 +198,49 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { error: updateError } = await supabase
-    .from('product_variants')
-    .update(updateData)
-    .eq('id', id)
+  let updatedVariant: any = null
+  let updateError: any = null
+
+  if (id) {
+    const result = await supabase
+      .from('product_variants')
+      .update(updateData)
+      .eq('id', id)
+      .select('*')
+      .maybeSingle()
+
+    updatedVariant = result.data
+    updateError = result.error
+  }
+
+  if (!updatedVariant && !updateError && sku) {
+    const result = await supabase
+      .from('product_variants')
+      .update(updateData)
+      .eq('sku', sku)
+      .select('*')
+      .maybeSingle()
+
+    updatedVariant = result.data
+    updateError = result.error
+  }
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
-  const { data, error: fetchError } = await supabase
-    .from('product_variants')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle()
-
-  if (fetchError) {
-    return NextResponse.json({ error: fetchError.message }, { status: 500 })
-  }
-
-  if (!data) {
+  if (!updatedVariant) {
     return NextResponse.json(
-      { error: 'Variant not found after update' },
+      { error: 'Variant not found by id or sku' },
       { status: 404 }
     )
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json(updatedVariant, {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+    },
+  })
 }
