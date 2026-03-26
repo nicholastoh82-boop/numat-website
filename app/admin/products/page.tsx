@@ -110,7 +110,6 @@ type RawVariant = {
   unit_price?: number | null
   unit_price_old?: number | null
   base_price_usd?: number | null
-  old_price_usd?: number | null
   is_active?: boolean | null
   is_price_on_request?: boolean | null
   price_notes?: string | null
@@ -230,12 +229,6 @@ function normalizeProduct(raw: RawProduct): Product {
 }
 
 function normalizeVariant(raw: RawVariant): Variant {
-  const normalizedUnitPrice =
-    raw.unit_price ?? raw.base_price_usd ?? null
-
-  const normalizedOldPrice =
-    raw.unit_price_old ?? raw.old_price_usd ?? null
-
   return {
     id: raw.id || '',
     product_id: raw.product_id || raw.product || '',
@@ -258,13 +251,13 @@ function normalizeVariant(raw: RawVariant): Variant {
     moq: raw.moq === null || raw.moq === undefined ? null : Number(raw.moq),
     currency: raw.currency || 'USD',
     unit_price:
-      normalizedUnitPrice === null || normalizedUnitPrice === undefined
+      raw.unit_price === null || raw.unit_price === undefined
         ? null
-        : Number(normalizedUnitPrice),
+        : Number(raw.unit_price),
     unit_price_old:
-      normalizedOldPrice === null || normalizedOldPrice === undefined
+      raw.unit_price_old === null || raw.unit_price_old === undefined
         ? null
-        : Number(normalizedOldPrice),
+        : Number(raw.unit_price_old),
     is_active: raw.is_active ?? true,
     is_price_on_request: raw.is_price_on_request ?? false,
     price_notes: raw.price_notes || '',
@@ -297,6 +290,16 @@ function isNuDoorProduct(product: Product) {
     title === 'nudoor composite' ||
     title === 'nudoor premium'
   )
+}
+
+function canDeleteProduct(
+  product: Product,
+  options?: { isGroupedRow?: boolean }
+) {
+  if (!product.id) return false
+  if (options?.isGroupedRow) return false
+  if (isNuDoorProduct(product)) return false
+  return true
 }
 
 function buildDisplayProducts(products: Product[]): DisplayProduct[] {
@@ -631,7 +634,7 @@ export default function AdminProductsPage() {
     try {
       const payload = {
         id: currentVariant.id,
-        product_id: currentVariant.product_id,
+        product: currentVariant.product_id,
         sku: currentVariant.sku,
         thickness_mm: currentVariant.thickness_mm,
         length_mm: currentVariant.length_mm,
@@ -641,10 +644,10 @@ export default function AdminProductsPage() {
         unit: currentVariant.unit,
         moq: currentVariant.moq,
         currency: 'USD',
-        base_price_usd: currentVariant.is_price_on_request
+        unit_price: currentVariant.is_price_on_request
           ? null
           : currentVariant.unit_price,
-        old_price_usd: currentVariant.unit_price_old,
+        unit_price_old: currentVariant.unit_price_old,
         is_active: currentVariant.is_active,
         is_price_on_request: currentVariant.is_price_on_request,
         price_notes: currentVariant.price_notes,
@@ -663,28 +666,7 @@ export default function AdminProductsPage() {
         throw new Error(savedVariant?.error || 'Failed to save variant')
       }
 
-      const normalizedSavedVariant = normalizeVariant(savedVariant)
-
-      await mutateVariants(
-        (current) => {
-          if (!Array.isArray(current)) return current
-          return current.map((variant) =>
-            variant.id === normalizedSavedVariant.id
-              ? {
-                  ...variant,
-                  ...savedVariant,
-                  unit_price: normalizedSavedVariant.unit_price,
-                  unit_price_old: normalizedSavedVariant.unit_price_old,
-                  base_price_usd: normalizedSavedVariant.unit_price,
-                  old_price_usd: normalizedSavedVariant.unit_price_old,
-                }
-              : variant
-          )
-        },
-        { revalidate: true }
-      )
-
-      setCurrentVariant(normalizedSavedVariant)
+      await mutateVariants()
       setIsVariantModalOpen(false)
       setCurrentVariant(INITIAL_VARIANT)
 
@@ -923,7 +905,7 @@ export default function AdminProductsPage() {
                               </Button>
                             )}
 
-                            {!isNuDoorGroup && product.id && (
+                            {canDeleteProduct(product, { isGroupedRow: isNuDoorGroup }) && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -995,7 +977,7 @@ export default function AdminProductsPage() {
                                   </Button>
                                 )}
 
-                                {child.id && (
+                                {canDeleteProduct(child) && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
