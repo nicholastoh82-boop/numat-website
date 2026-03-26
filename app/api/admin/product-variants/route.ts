@@ -151,22 +151,28 @@ export async function PATCH(request: NextRequest) {
     updateData.moq = value
   }
 
-  if (body.unit_price !== undefined) {
-    const value = parseNullableNumber(body.unit_price)
+  const incomingBasePrice =
+    body.base_price_usd !== undefined ? body.base_price_usd : body.unit_price
+
+  if (incomingBasePrice !== undefined) {
+    const value = parseNullableNumber(incomingBasePrice)
     if (Number.isNaN(value)) {
       return NextResponse.json(
-        { error: 'unit_price must be a valid number' },
+        { error: 'base_price_usd must be a valid number' },
         { status: 400 }
       )
     }
     updateData.unit_price = value
   }
 
-  if (body.unit_price_old !== undefined) {
-    const value = parseNullableNumber(body.unit_price_old)
+  const incomingOldPrice =
+    body.old_price_usd !== undefined ? body.old_price_usd : body.unit_price_old
+
+  if (incomingOldPrice !== undefined) {
+    const value = parseNullableNumber(incomingOldPrice)
     if (Number.isNaN(value)) {
       return NextResponse.json(
-        { error: 'unit_price_old must be a valid number' },
+        { error: 'old_price_usd must be a valid number' },
         { status: 400 }
       )
     }
