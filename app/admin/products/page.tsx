@@ -8,8 +8,6 @@ import {
   Search,
   Edit2,
   Trash2,
-  ChevronDown,
-  ChevronUp,
   Loader2,
   X,
   ImageIcon,
@@ -133,6 +131,10 @@ const fetcher = async (url: string) => {
 }
 
 function normalizeProduct(raw: RawProduct): Product {
+  const usdPrice = Number(
+    raw.price ?? raw.unit_price ?? raw.base_price ?? raw.base_price_usd ?? 0
+  )
+
   return {
     id: raw.id,
     sku: raw.sku || raw.slug || raw.id || '',
@@ -140,16 +142,8 @@ function normalizeProduct(raw: RawProduct): Product {
     size: raw.size || '',
     thickness_mm: Number(raw.thickness_mm ?? 0),
     ply: raw.ply || '',
-    price: Number(
-      raw.price ??
-        raw.unit_price ??
-        raw.base_price ??
-        raw.base_price_usd ??
-        0
-    ),
-    base_price: Number(
-      raw.base_price ?? raw.unit_price ?? raw.base_price_usd ?? raw.price ?? 0
-    ),
+    price: usdPrice,
+    base_price: usdPrice,
     moq: Number(raw.moq ?? raw.min_order_qty ?? 1),
     lead_time_days: Number(raw.lead_time_days ?? 10),
     category: raw.category || raw.categories?.name || 'General',
@@ -174,7 +168,6 @@ export default function AdminProductsPage() {
   )
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [expandedProduct, setExpandedProduct] = useState<string | null>(null)
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -323,6 +316,8 @@ export default function AdminProductsPage() {
       const productToSave = {
         ...currentProduct,
         image: imageUrl,
+        // Canonical price saved by admin is always USD base price
+        price: currentProduct.price,
       }
 
       const isEditing = !!currentProduct.id
@@ -468,7 +463,7 @@ export default function AdminProductsPage() {
                     Category
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Price
+                    Base Price
                   </th>
                   <th className="hidden px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
                     Status
@@ -480,90 +475,100 @@ export default function AdminProductsPage() {
               </thead>
 
               <tbody className="divide-y divide-border">
-  {filteredProducts.map((product, index) => (
-    <tr key={product.id || `${product.sku}-${index}`} className="hover:bg-muted/30 transition-colors">
-      <td className="px-4 py-3 text-sm font-mono text-foreground">
-        {product.sku || '-'}
-      </td>
+                {filteredProducts.map((product, index) => (
+                  <tr
+                    key={product.id || `${product.sku}-${index}`}
+                    className="transition-colors hover:bg-muted/30"
+                  >
+                    <td className="px-4 py-3 text-sm font-mono text-foreground">
+                      {product.sku || '-'}
+                    </td>
 
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
-          {product.image ? (
-            <img
-              src={product.image}
-              alt={product.title}
-              className="h-10 w-10 rounded border border-border object-cover"
-            />
-          ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded border border-border bg-muted">
-              <ImageIcon className="h-4 w-4 text-muted-foreground" />
-            </div>
-          )}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {product.image ? (
+                          <img
+                            src={product.image}
+                            alt={product.title}
+                            className="h-10 w-10 rounded border border-border object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded border border-border bg-muted">
+                            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
 
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              {product.title || 'Untitled product'}
-            </p>
-            {product.size ? (
-              <p className="text-xs text-muted-foreground">{product.size}</p>
-            ) : null}
-          </div>
-        </div>
-      </td>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            {product.title || 'Untitled product'}
+                          </p>
+                          {product.size ? (
+                            <p className="text-xs text-muted-foreground">
+                              {product.size}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </td>
 
-      <td className="hidden px-4 py-3 text-sm text-muted-foreground sm:table-cell">
-        {product.categories?.name || product.category || '-'}
-      </td>
+                    <td className="hidden px-4 py-3 text-sm text-muted-foreground sm:table-cell">
+                      {product.categories?.name || product.category || '-'}
+                    </td>
 
-      <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
-        {product.price > 0 ? `PHP ${product.price.toLocaleString()}` : 'Quote'}
-      </td>
+                    <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
+                      {product.price > 0
+                        ? `USD ${product.price.toLocaleString()}`
+                        : 'Quote'}
+                    </td>
 
-      <td className="hidden px-4 py-3 text-center md:table-cell">
-        <span
-          className={cn(
-            'rounded-full px-2 py-0.5 text-xs',
-            product.is_active
-              ? 'bg-primary/10 text-primary'
-              : 'bg-muted text-muted-foreground'
-          )}
-        >
-          {product.is_active ? 'Active' : 'Inactive'}
-        </span>
-      </td>
+                    <td className="hidden px-4 py-3 text-center md:table-cell">
+                      <span
+                        className={cn(
+                          'rounded-full px-2 py-0.5 text-xs',
+                          product.is_active
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {product.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
 
-      <td className="px-4 py-3 text-right">
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => handleOpenEdit(product)}
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleOpenEdit(product)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive"
-            onClick={() => product.id && handleOpenDelete(product.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </td>
-    </tr>
-  ))}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => product.id && handleOpenDelete(product.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
 
-  {!isLoading && filteredProducts.length === 0 && (
-    <tr>
-      <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
-        No products found.
-      </td>
-    </tr>
-  )}
-</tbody>
+                {!isLoading && filteredProducts.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-4 py-10 text-center text-sm text-muted-foreground"
+                    >
+                      No products found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
             </table>
           </div>
         )}
@@ -673,11 +678,12 @@ export default function AdminProductsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="price">Price (PHP) *</Label>
+                <Label htmlFor="price">Base Price (USD) *</Label>
                 <Input
                   id="price"
                   type="number"
                   min="0"
+                  step="0.01"
                   value={currentProduct.price}
                   onChange={(e) =>
                     setCurrentProduct({
@@ -687,6 +693,10 @@ export default function AdminProductsPage() {
                   }
                   required
                 />
+                <p className="text-xs text-muted-foreground">
+                  This is the base USD price. Other currencies are calculated
+                  automatically on the website.
+                </p>
               </div>
             </div>
 

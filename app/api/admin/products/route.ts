@@ -27,6 +27,15 @@ async function checkAdminAuth(supabase: any) {
   return { user, adminProfile }
 }
 
+function parseUsdPrice(value: unknown) {
+  if (value === null || value === undefined || value === '') return null
+
+  const num = Number(value)
+  if (!Number.isFinite(num) || num < 0) return NaN
+
+  return num
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const includeInactive = searchParams.get('includeInactive') === 'true'
@@ -72,11 +81,33 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json()
 
-  const { sku, title, description, image, is_active, category_id } = body
+  const {
+    sku,
+    title,
+    description,
+    image,
+    is_active,
+    category_id,
+    size,
+    thickness_mm,
+    ply,
+    moq,
+    lead_time_days,
+    is_featured,
+  } = body
 
   if (!sku || !title) {
     return NextResponse.json(
       { error: 'Missing required fields (sku, title)' },
+      { status: 400 }
+    )
+  }
+
+  const parsedPrice = parseUsdPrice(body.price)
+
+  if (Number.isNaN(parsedPrice)) {
+    return NextResponse.json(
+      { error: 'Price must be a valid non-negative USD amount' },
       { status: 400 }
     )
   }
@@ -89,7 +120,24 @@ export async function POST(request: NextRequest) {
     image: image || null,
     image_url: image || null,
     category_id: category_id || null,
+    size: size || null,
+    thickness_mm:
+      thickness_mm === '' || thickness_mm === undefined || thickness_mm === null
+        ? null
+        : Number(thickness_mm),
+    ply: ply || null,
+    moq: moq === '' || moq === undefined || moq === null ? null : Number(moq),
+    lead_time_days:
+      lead_time_days === '' ||
+      lead_time_days === undefined ||
+      lead_time_days === null
+        ? null
+        : Number(lead_time_days),
+    is_featured: is_featured === true,
     is_active: is_active !== false,
+
+    // Canonical stored price: base USD
+    price: parsedPrice,
   }
 
   const { data: product, error } = await supabase
@@ -121,7 +169,20 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { id, title, image, description, is_active, category_id } = body
+  const {
+    id,
+    title,
+    image,
+    description,
+    is_active,
+    category_id,
+    size,
+    thickness_mm,
+    ply,
+    moq,
+    lead_time_days,
+    is_featured,
+  } = body
 
   if (!id) {
     return NextResponse.json(
@@ -151,6 +212,50 @@ export async function PATCH(request: NextRequest) {
 
   if (category_id !== undefined) {
     updateData.category_id = category_id || null
+  }
+
+  if (size !== undefined) {
+    updateData.size = size || null
+  }
+
+  if (thickness_mm !== undefined) {
+    updateData.thickness_mm =
+      thickness_mm === '' || thickness_mm === null
+        ? null
+        : Number(thickness_mm)
+  }
+
+  if (ply !== undefined) {
+    updateData.ply = ply || null
+  }
+
+  if (moq !== undefined) {
+    updateData.moq = moq === '' || moq === null ? null : Number(moq)
+  }
+
+  if (lead_time_days !== undefined) {
+    updateData.lead_time_days =
+      lead_time_days === '' || lead_time_days === null
+        ? null
+        : Number(lead_time_days)
+  }
+
+  if (is_featured !== undefined) {
+    updateData.is_featured = is_featured
+  }
+
+  if (body.price !== undefined) {
+    const parsedPrice = parseUsdPrice(body.price)
+
+    if (Number.isNaN(parsedPrice)) {
+      return NextResponse.json(
+        { error: 'Price must be a valid non-negative USD amount' },
+        { status: 400 }
+      )
+    }
+
+    // Canonical stored price: base USD
+    updateData.price = parsedPrice
   }
 
   const { data: product, error } = await supabase
