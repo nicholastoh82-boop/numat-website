@@ -136,12 +136,11 @@ type Variant = {
   core_type: string
 }
 
-type GroupedProduct = Product & {
-  groupKey: string
-  groupLabel: string
-  groupSku: string
-  groupedChildren: Product[]
-  isGroupedParent: boolean
+type DisplayProduct = Product & {
+  displayId: string
+  displaySku: string
+  displayTitle: string
+  childProducts: Product[]
   sourceProductIds: string[]
 }
 
@@ -293,41 +292,39 @@ function isNuDoorProduct(product: Product) {
   )
 }
 
-function buildGroupedProducts(products: Product[]): GroupedProduct[] {
-  const nudoorChildren = products.filter(isNuDoorProduct)
+function buildDisplayProducts(products: Product[]): DisplayProduct[] {
+  const nudoorProducts = products.filter(isNuDoorProduct)
   const otherProducts = products.filter((product) => !isNuDoorProduct(product))
 
-  const groupedOthers: GroupedProduct[] = otherProducts.map((product) => ({
+  const mappedOthers: DisplayProduct[] = otherProducts.map((product) => ({
     ...product,
-    groupKey: product.id || product.sku,
-    groupLabel: product.title,
-    groupSku: product.sku,
-    groupedChildren: [],
-    isGroupedParent: false,
+    displayId: product.id || product.sku,
+    displaySku: product.sku,
+    displayTitle: product.title,
+    childProducts: [],
     sourceProductIds: product.id ? [product.id] : [],
   }))
 
-  if (nudoorChildren.length === 0) {
-    return groupedOthers
+  if (nudoorProducts.length === 0) {
+    return mappedOthers
   }
 
   const nudoorBase =
-    nudoorChildren.find((product) => product.sku.toLowerCase() === 'nudoor-light') ||
-    nudoorChildren[0]
+    nudoorProducts.find((product) => product.sku.toLowerCase() === 'nudoor-light') ||
+    nudoorProducts[0]
 
-  const nudoorGrouped: GroupedProduct = {
+  const nudoorGroup: DisplayProduct = {
     ...nudoorBase,
-    groupKey: 'nudoor-group',
-    groupLabel: 'NuDoor',
-    groupSku: 'nudoor',
-    groupedChildren: nudoorChildren,
-    isGroupedParent: true,
-    sourceProductIds: nudoorChildren
+    displayId: 'nudoor-group',
+    displaySku: 'nudoor',
+    displayTitle: 'NuDoor',
+    childProducts: nudoorProducts,
+    sourceProductIds: nudoorProducts
       .map((product) => product.id)
       .filter((id): id is string => Boolean(id)),
   }
 
-  return [nudoorGrouped, ...groupedOthers]
+  return [nudoorGroup, ...mappedOthers]
 }
 
 export default function AdminProductsPage() {
@@ -384,8 +381,8 @@ export default function AdminProductsPage() {
     return Array.isArray(variantsData) ? variantsData.map(normalizeVariant) : []
   }, [variantsData])
 
-  const groupedProducts = useMemo(() => {
-    return buildGroupedProducts(products)
+  const displayProducts = useMemo(() => {
+    return buildDisplayProducts(products)
   }, [products])
 
   const variantsByProductId = useMemo(() => {
@@ -402,16 +399,15 @@ export default function AdminProductsPage() {
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
-    if (!q) return groupedProducts
+    if (!q) return displayProducts
 
-    return groupedProducts.filter((product) => {
+    return displayProducts.filter((product) => {
       const selfMatch =
-        product.groupLabel.toLowerCase().includes(q) ||
-        product.groupSku.toLowerCase().includes(q) ||
-        product.category.toLowerCase().includes(q) ||
-        product.title.toLowerCase().includes(q)
+        product.displayTitle.toLowerCase().includes(q) ||
+        product.displaySku.toLowerCase().includes(q) ||
+        product.category.toLowerCase().includes(q)
 
-      const childMatch = product.groupedChildren.some((child) => {
+      const childMatch = product.childProducts.some((child) => {
         return (
           child.title.toLowerCase().includes(q) ||
           child.sku.toLowerCase().includes(q)
@@ -432,12 +428,12 @@ export default function AdminProductsPage() {
 
       return selfMatch || childMatch || variantMatch
     })
-  }, [groupedProducts, searchQuery, variantsByProductId])
+  }, [displayProducts, searchQuery, variantsByProductId])
 
-  const toggleExpanded = (groupKey: string) => {
+  const toggleExpanded = (displayId: string) => {
     setExpandedProducts((prev) => ({
       ...prev,
-      [groupKey]: !prev[groupKey],
+      [displayId]: !prev[displayId],
     }))
   }
 
@@ -722,7 +718,7 @@ export default function AdminProductsPage() {
         <div>
           <h1 className="font-serif text-2xl text-foreground">Products</h1>
           <p className="mt-1 text-muted-foreground">
-            {filteredProducts.length} grouped products · {variants.length} variants
+            {filteredProducts.length} products · {variants.length} variants
           </p>
         </div>
 
@@ -789,19 +785,20 @@ export default function AdminProductsPage() {
                     (productId) => variantsByProductId[productId] || []
                   )
 
-                  const expanded = !!expandedProducts[product.groupKey]
+                  const expanded = !!expandedProducts[product.displayId]
                   const hasExpandableContent =
-                    product.groupedChildren.length > 0 || allProductVariants.length > 0
+                    product.childProducts.length > 0 || allProductVariants.length > 0
+                  const isNuDoorGroup = product.displayId === 'nudoor-group'
 
                   return (
-                    <React.Fragment key={product.groupKey || `${product.sku}-${index}`}>
+                    <React.Fragment key={product.displayId || `${product.sku}-${index}`}>
                       <tr className="transition-colors hover:bg-muted/30">
                         <td className="px-4 py-3 text-sm font-mono text-foreground">
                           <div className="flex items-center gap-2">
                             {hasExpandableContent ? (
                               <button
                                 type="button"
-                                onClick={() => toggleExpanded(product.groupKey)}
+                                onClick={() => toggleExpanded(product.displayId)}
                                 className="rounded p-0.5 hover:bg-muted"
                                 aria-label={
                                   expanded ? 'Collapse item' : 'Expand item'
@@ -817,7 +814,7 @@ export default function AdminProductsPage() {
                               <span className="inline-block w-5" />
                             )}
 
-                            <span>{product.groupSku || product.sku || '-'}</span>
+                            <span>{product.displaySku || '-'}</span>
                           </div>
                         </td>
 
@@ -826,7 +823,7 @@ export default function AdminProductsPage() {
                             {product.image ? (
                               <img
                                 src={product.image}
-                                alt={product.groupLabel}
+                                alt={product.displayTitle}
                                 className="h-10 w-10 rounded border border-border object-cover"
                               />
                             ) : (
@@ -837,15 +834,12 @@ export default function AdminProductsPage() {
 
                             <div>
                               <p className="text-sm font-medium text-foreground">
-                                {product.groupLabel || product.title || 'Untitled product'}
+                                {product.displayTitle || 'Untitled product'}
                               </p>
 
-                              {product.isGroupedParent &&
-                              product.groupedChildren.length > 0 ? (
+                              {isNuDoorGroup ? (
                                 <p className="text-xs text-muted-foreground">
-                                  {product.groupedChildren
-                                    .map((child) => child.title)
-                                    .join(' • ')}
+                                  NuDoor Light • NuDoor Composite • NuDoor Premium
                                 </p>
                               ) : allProductVariants.length > 0 ? (
                                 <p className="text-xs text-muted-foreground">
@@ -890,21 +884,23 @@ export default function AdminProductsPage() {
 
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleOpenEdit(product)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
+                            {product.id && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleOpenEdit(product)}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                            )}
 
-                            {!product.isGroupedParent && (
+                            {!isNuDoorGroup && product.id && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-destructive"
-                                onClick={() => product.id && handleOpenDelete(product.id)}
+                                onClick={() => handleOpenDelete(product.id!)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -914,8 +910,8 @@ export default function AdminProductsPage() {
                       </tr>
 
                       {expanded &&
-                        product.isGroupedParent &&
-                        product.groupedChildren.map((child) => (
+                        isNuDoorGroup &&
+                        product.childProducts.map((child) => (
                           <tr
                             key={`child-${child.id || child.sku}`}
                             className="border-t border-border bg-muted/10"
@@ -960,23 +956,27 @@ export default function AdminProductsPage() {
 
                             <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => handleOpenEdit(child)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
+                                {child.id && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handleOpenEdit(child)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                )}
 
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive"
-                                  onClick={() => child.id && handleOpenDelete(child.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                {child.id && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive"
+                                    onClick={() => handleOpenDelete(child.id!)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>
