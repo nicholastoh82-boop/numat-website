@@ -35,22 +35,33 @@ export const metadata: Metadata = {
     'commercial bamboo supply',
   ],
   authors: [{ name: 'NUMAT' }],
+  generator: 'Next.js',
+  icons: {
+    icon: '/icon.png',
+    shortcut: '/favicon.ico',
+    apple: '/icon.png',
+  },
   openGraph: {
     title: 'NUMAT Bamboo | Engineered Bamboo Boards for Commercial and Interior Applications',
     description:
       'FSC-certified engineered bamboo boards with technical documentation, sample support, and export-ready supply.',
     type: 'website',
     locale: 'en_US',
+    images: [
+      {
+        url: '/icon.png',
+        width: 192,
+        height: 192,
+        alt: 'NUMAT logo',
+      },
+    ],
   },
-  generator: 'Next.js',
-
 }
 
 export const viewport: Viewport = {
   themeColor: '#16361f',
   width: 'device-width',
   initialScale: 1,
-
 }
 
 export default function RootLayout({

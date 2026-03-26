@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useCartStore } from '@/lib/cart-store'
 import { useToast } from '@/hooks/use-toast'
@@ -39,11 +40,28 @@ interface ProductCardProps {
     unit?: string | null
     base_price_usd?: number | null
     starting_price_usd?: number | null
+    variants?: Array<{
+      id: string
+      sku?: string
+      size_label?: string
+      length_mm?: number | null
+      width_mm?: number | null
+      thickness_mm?: number | null
+      core_type?: string | null
+      ply_count?: number | null
+      unit?: string | null
+      moq?: number | null
+      base_price_usd?: number | null
+      is_price_on_request?: boolean
+      is_active?: boolean
+      sort_order?: number | null
+    }>
   }
   onQuickView: () => void
 }
 
 export function ProductCard({ product, onQuickView }: ProductCardProps) {
+  const router = useRouter()
   const minQty = product.min_order_qty ?? 1
   const [quantity, setQuantity] = useState(minQty)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -83,11 +101,13 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
     const candidatePrices = [product.starting_price_usd, product.base_price_usd].filter(
       (value): value is number => typeof value === 'number' && !Number.isNaN(value) && value > 0
     )
-
     return candidatePrices.length > 0 ? candidatePrices[0] : null
   }, [product.starting_price_usd, product.base_price_usd])
 
-  const isPriceOnRequest = displayUsdPrice === null
+  const hasConfigurableVariants = useMemo(() => {
+    const variants = product.variants ?? []
+    return variants.length > 0
+  }, [product.variants])
 
   const [imageSrc, setImageSrc] = useState(
     currentImage?.image_url || categoryFallbackImage || ''
@@ -108,38 +128,48 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
   }
 
   const handleAddToCart = () => {
-  if (quantity < minQty) {
-    toast({
-      title: 'Minimum Order Quantity',
-      description: `Minimum order quantity is ${minQty} ${product.unit || 'pcs'}.`,
-      variant: 'destructive',
+    if (quantity < minQty) {
+      toast({
+        title: 'Minimum Order Quantity',
+        description: `Minimum order quantity is ${minQty} ${product.unit || 'pcs'}.`,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (hasConfigurableVariants) {
+      toast({
+        title: 'Select configuration first',
+        description: 'Please select thickness, ply, size, or variant on the product page first.',
+        variant: 'destructive',
+      })
+      router.push(`/products/${product.id}`)
+      return
+    }
+
+    const isPriceOnRequest = displayUsdPrice === null
+
+    addItem({
+      id: product.id,
+      name: product.name,
+      specs: `${product.thickness || ''} ${product.width || ''} ${product.length || ''} ${product.color || ''} ${product.finish || ''}`.trim(),
+      quantity,
+      unitPrice: displayUsdPrice,
+      minOrderQty: minQty,
+      unit: product.unit || 'pcs',
+      imageUrl: imageSrc || categoryFallbackImage,
+      isPriceOnRequest,
     })
-    return
+
+    toast({
+      title: 'Added to Quote',
+      description: isPriceOnRequest
+        ? `${quantity}x ${product.name} added as a price-on-request item.`
+        : `${quantity}x ${product.name} added to your cart.`,
+    })
+
+    openCart()
   }
-
-  const isPriceOnRequest = displayUsdPrice === null
-
-  addItem({
-    id: product.id,
-    name: product.name,
-    specs: `${product.thickness || ''} ${product.width || ''} ${product.length || ''} ${product.color || ''} ${product.finish || ''}`.trim(),
-    quantity,
-    unitPrice: displayUsdPrice,
-    minOrderQty: minQty,
-    unit: product.unit || 'pcs',
-    imageUrl: imageSrc || categoryFallbackImage,
-    isPriceOnRequest,
-  })
-
-  toast({
-    title: 'Added to Quote',
-    description: isPriceOnRequest
-      ? `${quantity}x ${product.name} added as a price-on-request item.`
-      : `${quantity}x ${product.name} added to your cart.`,
-  })
-
-  openCart()
-}
 
   const incrementQty = () => setQuantity((q) => q + 1)
   const decrementQty = () => setQuantity((q) => Math.max(minQty, q - 1))
@@ -275,7 +305,9 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
           ) : (
             <div>
               <p className="text-lg font-bold text-primary">Request Quote</p>
-              <p className="text-xs text-muted-foreground">Price on request</p>
+              <p className="text-xs text-muted-foreground">
+                {hasConfigurableVariants ? 'Select configuration for pricing' : 'Price on request'}
+              </p>
             </div>
           )}
         </div>
@@ -316,7 +348,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
             className="w-full gap-2 bg-gradient-to-r from-primary to-primary/90 font-semibold text-primary-foreground shadow-md transition-all duration-300 hover:from-primary/90 hover:to-primary/80 hover:shadow-lg"
           >
             <ShoppingCart className="h-4 w-4" />
-            Add to Quote
+            {hasConfigurableVariants ? 'Select Configuration' : 'Add to Quote'}
           </Button>
         </div>
       </div>
