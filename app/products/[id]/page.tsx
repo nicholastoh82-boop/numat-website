@@ -471,7 +471,12 @@ export default function ProductDetailPage() {
 
   const useVariantDrivenConfig =
     !!product?.variants?.length &&
-    (family === 'nubam-boards' || family === 'nuwall' || family === 'nufloor')
+    (
+      family === 'nubam-boards' ||
+      family === 'nuwall' ||
+      family === 'nufloor' ||
+      family === 'nudoor'
+    )
 
   const variantCoreTypeOptions = useMemo(() => {
     if (!useVariantDrivenConfig || !product?.variants) return []
@@ -480,6 +485,11 @@ export default function ProductDetailPage() {
 
   const variantThicknessOptions = useMemo(() => {
     if (!useVariantDrivenConfig || !product?.variants) return []
+
+    if (family === 'nudoor') {
+      return getUniqueOptions(product.variants.map((v) => formatThicknessLabel(v.thickness_mm)))
+    }
+
     const scoped =
       family === 'nubam-boards' || family === 'nuwall'
         ? product.variants.filter((v) =>
@@ -492,6 +502,11 @@ export default function ProductDetailPage() {
 
   const variantPlyOptions = useMemo(() => {
     if (!useVariantDrivenConfig || !product?.variants) return []
+
+    if (family === 'nudoor') {
+      return getUniqueOptions(product.variants.map((v) => formatPlyLabel(v.ply_count)))
+    }
+
     const scoped = product.variants.filter((v) => {
       const coreMatch =
         family === 'nubam-boards' || family === 'nuwall'
@@ -510,8 +525,13 @@ export default function ProductDetailPage() {
     return getUniqueOptions(scoped.map((v) => formatPlyLabel(v.ply_count)))
   }, [useVariantDrivenConfig, product?.variants, family, selectedCoreType, selectedThickness])
 
+  const variantModelOptions = useMemo(() => {
+    if (!useVariantDrivenConfig || !product?.variants || family !== 'nudoor') return []
+    return getUniqueOptions(product.variants.map((v) => v.size_label))
+  }, [useVariantDrivenConfig, product?.variants, family])
+
   const coreTypeOptions: SelectOption[] =
-    useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')
+    useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall' || family === 'nudoor')
       ? variantCoreTypeOptions
       : 'coreTypes' in options
       ? options.coreTypes ?? []
@@ -538,14 +558,20 @@ export default function ProductDetailPage() {
       ? options.thicknesses ?? []
       : []
 
-  const modelOptions: SelectOption[] = 'models' in options ? options.models ?? [] : []
+  const modelOptions: SelectOption[] =
+    useVariantDrivenConfig && family === 'nudoor'
+      ? variantModelOptions
+      : 'models' in options
+      ? options.models ?? []
+      : []
 
   const slatThicknessOptions: SelectOption[] =
     'thicknesses' in options && Array.isArray(options.thicknesses)
       ? options.thicknesses ?? []
       : []
 
-  const slatLengthOptions: SelectOption[] = 'lengths' in options ? options.lengths ?? [] : []
+  const slatLengthOptions: SelectOption[] =
+    'lengths' in options ? options.lengths ?? [] : []
 
   useEffect(() => {
     if (useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')) {
@@ -554,6 +580,20 @@ export default function ProductDetailPage() {
 
       const firstThickness = thicknessOptionsForBoards[0]?.value ?? ''
       if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
+      return
+    }
+
+    if (useVariantDrivenConfig && family === 'nudoor') {
+      const firstModel = modelOptions[0]?.value ?? ''
+      const firstCore = coreTypeOptions[0]?.value ?? ''
+      const firstThickness = variantThicknessOptions[0]?.value ?? ''
+      const firstPly = variantPlyOptions[0]?.value ?? ''
+
+      if (!selectedModel && firstModel) setSelectedModel(firstModel)
+      if (!selectedCoreType && firstCore) setSelectedCoreType(firstCore)
+      if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
+      if (!selectedPly && firstPly) setSelectedPly(firstPly)
+      if (!selectedLength) setSelectedLength('8ft')
       return
     }
 
@@ -571,16 +611,29 @@ export default function ProductDetailPage() {
     family,
     selectedCoreType,
     selectedThickness,
+    selectedPly,
+    selectedModel,
     selectedLength,
     coreTypeOptions,
     thicknessOptionsForBoards,
     floorThicknessOptions,
+    modelOptions,
+    variantThicknessOptions,
+    variantPlyOptions,
   ])
 
   useEffect(() => {
     if (useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')) {
       const firstPly = plyOptionsForBoards[0]?.value ?? ''
       if (firstPly && !plyOptionsForBoards.find((p) => p.value === selectedPly)) {
+        setSelectedPly(firstPly)
+      }
+      return
+    }
+
+    if (useVariantDrivenConfig && family === 'nudoor') {
+      const firstPly = variantPlyOptions[0]?.value ?? ''
+      if (firstPly && !variantPlyOptions.find((p) => p.value === selectedPly)) {
         setSelectedPly(firstPly)
       }
       return
@@ -594,7 +647,15 @@ export default function ProductDetailPage() {
 
       setSelectedPly(`${firstPly} Ply`)
     }
-  }, [useVariantDrivenConfig, family, plyOptionsForBoards, selectedPly, product?.variants, selectedThickness])
+  }, [
+    useVariantDrivenConfig,
+    family,
+    plyOptionsForBoards,
+    variantPlyOptions,
+    selectedPly,
+    product?.variants,
+    selectedThickness,
+  ])
 
   useEffect(() => {
     if (family === 'nubam-boards' || family === 'nuwall') setQuantity(10)
@@ -609,6 +670,26 @@ export default function ProductDetailPage() {
 
     return (
       product.variants.find((variant) => {
+        if (family === 'nudoor') {
+          const modelMatch = selectedModel
+            ? normalizeValue(variant.size_label) === normalizeValue(selectedModel)
+            : true
+
+          const coreMatch = selectedCoreType
+            ? normalizeValue(variant.core_type) === normalizeValue(selectedCoreType)
+            : true
+
+          const thicknessMatch = selectedThickness
+            ? formatThicknessLabel(variant.thickness_mm) === selectedThickness
+            : true
+
+          const plyMatch = selectedPly
+            ? formatPlyLabel(variant.ply_count) === selectedPly
+            : true
+
+          return modelMatch && coreMatch && thicknessMatch && plyMatch
+        }
+
         if (
           (family === 'nubam-boards' || family === 'nuwall') &&
           selectedCoreType &&
@@ -635,6 +716,7 @@ export default function ProductDetailPage() {
     selectedCoreType,
     selectedThickness,
     selectedPly,
+    selectedModel,
   ])
 
   const fallbackResolved = useMemo((): ResolvedQuoteState => {
@@ -662,11 +744,11 @@ export default function ProductDetailPage() {
       if (!selectedVariant) {
         return {
           productLabel: product?.name || '',
-          model: '',
+          model: selectedModel || '',
           coreType: selectedCoreType || '',
           thickness: selectedThickness || '',
           ply: selectedPly || '',
-          length: '',
+          length: selectedLength || '',
           dimensions: product?.dimensions || '—',
           moq: product?.min_order_qty || 1,
           unit: product?.unit || 'sheet',
@@ -681,11 +763,20 @@ export default function ProductDetailPage() {
 
       return {
         productLabel: product?.name || '',
-        model: selectedVariant.size_label || '',
-        coreType: selectedVariant.core_type || '',
-        thickness: formatThicknessLabel(selectedVariant.thickness_mm) || '—',
-        ply: formatPlyLabel(selectedVariant.ply_count) || '—',
-        length: '',
+        model:
+          family === 'nudoor'
+            ? selectedVariant.size_label || selectedModel || ''
+            : selectedVariant.size_label || '',
+        coreType: selectedVariant.core_type || selectedCoreType || '',
+        thickness:
+          family === 'nudoor'
+            ? formatThicknessLabel(selectedVariant.thickness_mm) || selectedThickness || '—'
+            : formatThicknessLabel(selectedVariant.thickness_mm) || '—',
+        ply:
+          family === 'nudoor'
+            ? formatPlyLabel(selectedVariant.ply_count) || selectedPly || '—'
+            : formatPlyLabel(selectedVariant.ply_count) || '—',
+        length: family === 'nudoor' ? selectedLength || '' : '',
         dimensions: selectedVariant.dimensions || product?.dimensions || '—',
         moq: selectedVariant.min_order_qty || product?.min_order_qty || 1,
         unit: selectedVariant.unit || product?.unit || 'sheet',
@@ -708,9 +799,12 @@ export default function ProductDetailPage() {
     useVariantDrivenConfig,
     selectedVariant,
     product,
+    family,
+    selectedModel,
     selectedCoreType,
     selectedThickness,
     selectedPly,
+    selectedLength,
     fallbackResolved,
   ])
 
@@ -798,7 +892,10 @@ export default function ProductDetailPage() {
     if (useVariantDrivenConfig && !resolved.variantId) {
       toast({
         title: 'Select configuration first',
-        description: 'Please select thickness, ply, and core type before adding to quote.',
+        description:
+          family === 'nudoor'
+            ? 'Please select model, core type, thickness, and ply before adding to quote.'
+            : 'Please select thickness, ply, and core type before adding to quote.',
         variant: 'destructive',
       })
       return
@@ -1133,30 +1230,35 @@ export default function ProductDetailPage() {
                   )}
 
                   {family === 'nudoor' && (
-                    <div>
-                      <label className="mb-3 block text-sm font-medium text-foreground">
-                        Model
-                      </label>
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        {modelOptions.map((opt) => {
-                          const isActive = selectedModel === opt.value
-                          return (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => setSelectedModel(opt.value)}
-                              className={`rounded-[24px] border p-4 text-left transition ${
-                                isActive
-                                  ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
-                                  : 'border-black/10 bg-white hover:border-black/20 hover:bg-stone-50'
-                              }`}
-                            >
-                              <p className="text-sm font-semibold">{opt.label}</p>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
+                    <>
+                      <OptionPills
+                        label="Model"
+                        value={selectedModel}
+                        onChange={setSelectedModel}
+                        options={modelOptions}
+                      />
+
+                      <OptionPills
+                        label="Core Type"
+                        value={selectedCoreType}
+                        onChange={setSelectedCoreType}
+                        options={coreTypeOptions}
+                      />
+
+                      <OptionPills
+                        label="Thickness"
+                        value={selectedThickness}
+                        onChange={setSelectedThickness}
+                        options={variantThicknessOptions}
+                      />
+
+                      <OptionPills
+                        label="Ply"
+                        value={selectedPly}
+                        onChange={setSelectedPly}
+                        options={variantPlyOptions}
+                      />
+                    </>
                   )}
 
                   {family === 'nufloor' && (
