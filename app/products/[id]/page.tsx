@@ -1078,38 +1078,7 @@ export default function ProductDetailPage() {
                       ))}
                     </div>
 
-                    <div className="mt-8 rounded-[26px] border border-black/8 bg-[#faf6ef] p-5">
-                      <div className="space-y-4">
-                        <div className="flex items-start justify-between gap-6 border-b border-black/8 pb-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                            MOQ
-                          </p>
-                          <p className="text-right text-base font-semibold text-foreground">
-                            {resolved.moq} {resolved.unit}
-                          </p>
-                        </div>
-
-                        <div className="flex items-start justify-between gap-6 border-b border-black/8 pb-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                            Dimensions
-                          </p>
-                          <p className="max-w-[220px] text-right text-base font-semibold leading-7 text-foreground">
-                            {formatDimensions(resolved.dimensions)}
-                          </p>
-                        </div>
-
-                        <div className="flex items-start justify-between gap-6">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                            Unit Price
-                          </p>
-                          <p className="text-right text-base font-semibold text-foreground">
-                            {resolved.priceUsd != null
-                              ? formatConvertedFromUsd(resolved.priceUsd)
-                              : resolved.stockMessage || 'Request Quote'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    
                   </div>
                 </div>
               </div>
