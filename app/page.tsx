@@ -482,12 +482,17 @@ export default function NumatBambooHomepageRevamp() {
               })}
             </div>
           </div>
-          <div className="mt-6 text-center">
+          <div className="mt-8 rounded-[2rem] border border-emerald-200 bg-emerald-50 px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold text-emerald-900">Not sure which material is right for your project?</p>
+                <p className="mt-1 text-sm text-emerald-700">See how NuBam stacks up against plywood, MDF, and solid wood across strength, sustainability, and cost.</p>
+              </div>
               <Link
                 href="/compare"
-                className="inline-flex items-center gap-2 rounded-2xl border border-stone-300 bg-white px-5 py-2.5 text-sm font-bold text-stone-900 transition hover:-translate-y-0.5 hover:bg-stone-50"
+                className="shrink-0 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-emerald-900"
               >
-                Compare NuBam vs Plywood vs MDF →
+                Compare Materials
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
         </section>
