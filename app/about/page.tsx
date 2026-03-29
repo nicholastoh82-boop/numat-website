@@ -65,8 +65,8 @@ export default function AboutPage() {
               <div className="group relative overflow-hidden rounded-[2rem] border border-stone-200 shadow-lg">
                 <div className="relative h-[420px]">
                   <Image
-                    src="/Bamboo-Board.png"
-                    alt="NUMAT engineered bamboo boards"
+                    src="/about-us.jpg"
+                    alt="Numat sustainable harvesting"
                     fill
                     className="object-cover transition duration-700 group-hover:scale-[1.04]"
                   />
@@ -88,7 +88,7 @@ export default function AboutPage() {
               {[
                 { value: '50+', label: 'Local Bamboo Farmers', icon: Users },
                 { value: 'Singapore', label: 'Headquarters', icon: Globe },
-                { value: 'FSC', label: 'Certified Sourcing', icon: ShieldCheck },
+                { value: 'FSC', label: 'Sustainable Sourcing', icon: ShieldCheck },
                 { value: 'Carbon−', label: 'Negative Products', icon: Leaf },
               ].map((stat) => (
                 <div key={stat.label} className="rounded-[1.75rem] border border-stone-200 bg-white px-6 py-5 shadow-sm">
@@ -195,8 +195,8 @@ export default function AboutPage() {
               },
               {
                 icon: Leaf,
-                title: 'FSC-Certified & Carbon-Negative',
-                body: 'All products sourced from FSC-certified plantations. Carbon-negative lifecycle verified by Wavemaker Impact.',
+                title: 'SUstainable Sourcing & Carbon-Negative',
+                body: 'All products sourced from sustainable plantations. Carbon-negative lifecycle verified by Wavemaker Impact.',
               },
               {
                 icon: Award,
@@ -252,7 +252,7 @@ export default function AboutPage() {
                 {
                   icon: Leaf,
                   title: 'Sustainability',
-                  body: 'Every decision we make prioritizes environmental impact. Our products are certified carbon-negative and sourced from FSC-certified plantations.',
+                  body: 'Every decision we make prioritizes environmental impact. Our products are certified carbon-negative and sourced from sustainable plantations.',
                   color: 'bg-emerald-50',
                   iconColor: 'text-emerald-700',
                 },
