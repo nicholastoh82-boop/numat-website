@@ -43,7 +43,7 @@ export default function Footer() {
             </Link>
 
             <p className="mt-6 max-w-md text-sm leading-7 text-white/68">
-              FSC-certified engineered bamboo boards for furniture manufacturing,
+              Engineered bamboo boards for furniture manufacturing,
               cabinetry, wall systems, doors, flooring, and commercial interior applications.
             </p>
 
@@ -61,8 +61,8 @@ export default function Footer() {
 
             <div className="mt-6 space-y-2 text-sm text-white/68">
               <p>Sales: sales@numat.ph</p>
-              <p>WhatsApp: +60 11 3959 3956</p>
-              <p>Viber: +63 962 812 7829</p>
+              <p>WhatsApp: +60162958983</p>
+              <p>Viber: +60162958983</p>
             </div>
           </div>
 
