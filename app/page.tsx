@@ -167,7 +167,7 @@ export default function NumatBambooHomepageRevamp() {
                 wall finishes, flooring, and commercial applications.
               </p>
 
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
                 <Link
                   href="/request-quote"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-stone-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-stone-900"
@@ -175,13 +175,7 @@ export default function NumatBambooHomepageRevamp() {
                   Request Quote
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-
-                <Link
-                  href="/request-samples"
-                  className="inline-flex items-center justify-center rounded-2xl border border-stone-300 bg-white px-6 py-3.5 text-sm font-semibold text-stone-900 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-100"
-                >
-                  Order Samples
-                </Link>
+                <p className="text-sm text-stone-500">Get a quote in 24 hours — no commitment needed.</p>
               </div>
 
               <div className="mt-7 grid max-w-xl grid-cols-2 gap-3">
@@ -633,20 +627,15 @@ export default function NumatBambooHomepageRevamp() {
                 Ready to Source Bamboo Boards for Your Next Project?
               </h2>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
                 <Link
                   href="/request-quote"
-                  className="inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-stone-950 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-100"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-stone-950 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-100"
                 >
                   Request Quote
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
-
-                <Link
-                  href="/request-samples"
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-white/10"
-                >
-                  Order Samples
-                </Link>
+                <p className="text-sm text-white/60">Get a quote in 24 hours — no commitment needed.</p>
               </div>
             </div>
           </div>
