@@ -216,7 +216,7 @@ export function CartContent() {
 
                       <div className="flex items-center gap-4">
                         <p className="font-bold text-stone-950">
-                          {formatConvertedFromUsd(item.quantity * item.unitPrice)}
+                          {formatConvertedFromUsd(item.quantity * (item.unitPrice ?? 0))}
                         </p>
                         <button
                           className="flex h-8 w-8 items-center justify-center rounded-xl text-stone-400 transition hover:bg-red-50 hover:text-red-500"
