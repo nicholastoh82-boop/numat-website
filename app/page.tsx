@@ -175,7 +175,7 @@ export default function NumatBambooHomepageRevamp() {
                   Request Quote
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <p className="text-sm text-stone-500">Get a quote in 24 hours — no commitment needed.</p>
+                <p className="text-sm font-semibold text-emerald-700 animate-[subtlePulse_2.5s_ease-in-out_infinite]">✦ Get a quote in 24 hours — no commitment needed.</p>
               </div>
 
               <div className="mt-7 grid max-w-xl grid-cols-2 gap-3">
@@ -635,7 +635,7 @@ export default function NumatBambooHomepageRevamp() {
                   Request Quote
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <p className="text-sm text-white/60">Get a quote in 24 hours — no commitment needed.</p>
+                <p className="text-sm font-semibold text-emerald-300 animate-[subtlePulse_2.5s_ease-in-out_infinite]">✦ Get a quote in 24 hours — no commitment needed.</p>
               </div>
             </div>
           </div>
@@ -645,6 +645,9 @@ export default function NumatBambooHomepageRevamp() {
       <Footer />
 
       <style jsx global>{`
+      @keyframes subtlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
         @keyframes fadeUp {
           from {
             opacity: 0;
