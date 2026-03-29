@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
 
     // Send email notification via Resend
     try {
-      await fetch('https://api.resend.com/emails', {
+      const emailRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,9 +186,10 @@ export async function POST(request: NextRequest) {
           }),
         }),
       })
+      const emailData = await emailRes.json()
+      console.log('[Inquiry Email] Status:', emailRes.status, JSON.stringify(emailData))
     } catch (emailError) {
-      console.error('Inquiry notification email failed:', emailError)
-      // Don't fail the request if email fails
+      console.error('[Inquiry Email] Failed:', emailError)
     }
 
     return NextResponse.json({
