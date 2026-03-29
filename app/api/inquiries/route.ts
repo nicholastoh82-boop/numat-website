@@ -57,8 +57,8 @@ function generateInquiryNotificationHTML(data: {
             </td>
           </tr>
           <tr>
-            <td style="background-color:#4caf50;padding:14px 32px;">
-              <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">📬 New Contact Form Inquiry</p>
+            <td style="background-color:${data.subject === 'Sample Request' ? '#2e7d32' : '#4caf50'};padding:14px 32px;">
+              <p style="margin:0;color:#ffffff;font-size:16px;font-weight:700;">${data.subject === 'Sample Request' ? '📦 New Sample Request' : '📬 New Contact Form Inquiry'}</p>
             </td>
           </tr>
           <tr>
