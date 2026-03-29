@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       phone: contact.phone,
       message: contact.notes || '',
     })
-    
+
     if (spamResult.isLikelySpam) {
       console.warn('[Anti-Spam] Quote submission detected as spam', {
         email: contact.email,
@@ -93,9 +93,8 @@ export async function POST(request: NextRequest) {
     const formattedPhone = phoneNumber.number
 
     // 2. Calculations
-    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
+    const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0)
 
-    // Volume Discount Logic
     const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
     let discountPercent = 0
     if (totalQuantity >= 500) discountPercent = 15
@@ -108,10 +107,7 @@ export async function POST(request: NextRequest) {
     const total = subtotal - discountAmount
     const quoteNumber = generateQuoteNumber()
 
-    const validUntil = new Date()
-    validUntil.setDate(validUntil.getDate() + 14)
-
-    // 3. Create Quote (use the most compatible schema: matches /api/quote/create)
+    // 3. Create Quote
     const notes = sanitizeInput(
       [
         `Preferred channel: ${contact.channel}`,
@@ -135,9 +131,15 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (quoteError || !quote?.id) {
-      console.error('Quote Create Error:', quoteError)
+      console.error('Quote Create Error:', JSON.stringify(quoteError))
       return NextResponse.json(
-        { ok: false, error: 'Failed to create quote record', details: quoteError?.message },
+        {
+          ok: false,
+          error: 'Failed to create quote record',
+          details: quoteError?.message,
+          hint: quoteError?.hint,
+          code: quoteError?.code,
+        },
         { status: 500 }
       )
     }
@@ -145,7 +147,7 @@ export async function POST(request: NextRequest) {
     const quoteId = quote.id as string
     const createdQuoteNumber = (quote as any).quote_number ?? quoteNumber
 
-    // 4. Create Quote Items (compatible with both schemas)
+    // 4. Create Quote Items — try full payload first
     const quoteItems = items.map((item) => ({
       quote_id: quoteId,
       product_id: item.product_id || null,
@@ -156,10 +158,13 @@ export async function POST(request: NextRequest) {
       total_price: item.quantity * item.unit_price,
     }))
 
+    console.log('[Quote Items] Attempting insert:', JSON.stringify(quoteItems))
+
     let { error: itemsError } = await supabase.from('quote_items').insert(quoteItems as any)
 
-    // If some optional columns don't exist in the current DB schema, retry with a minimal payload.
-    if (itemsError?.message?.includes('Could not find the') && itemsError.message.includes('quote_items')) {
+    // Retry with minimal payload if column mismatch
+    if (itemsError) {
+      console.warn('[Quote Items] Full insert failed, retrying minimal:', JSON.stringify(itemsError))
       const minimalItems = items.map((item) => ({
         quote_id: quoteId,
         product_id: item.product_id || null,
@@ -171,15 +176,21 @@ export async function POST(request: NextRequest) {
     }
 
     if (itemsError) {
-      console.error('Quote Items Error:', itemsError)
+      console.error('Quote Items Final Error:', JSON.stringify(itemsError))
       await supabase.from('quotes').delete().eq('id', quoteId)
       return NextResponse.json(
-        { ok: false, error: 'Failed to add items', details: itemsError.message },
+        {
+          ok: false,
+          error: 'Failed to add items',
+          details: itemsError.message,
+          hint: (itemsError as any).hint,
+          code: (itemsError as any).code,
+        },
         { status: 500 }
       )
     }
 
-    // 5. Optionally send the quote immediately via email (server-side system call)
+    // 5. Optionally send email
     if (contact.channel === 'email') {
       try {
         const origin = request.nextUrl.origin
@@ -196,7 +207,6 @@ export async function POST(request: NextRequest) {
           }),
         })
       } catch (err) {
-        // Non-blocking: quote is created; email can be sent later by admin.
         console.warn('Quote created but email send failed:', err)
       }
     }
@@ -208,7 +218,6 @@ export async function POST(request: NextRequest) {
       total,
       message: `Quote created successfully`,
     })
-
   } catch (error) {
     console.error('Unexpected Error:', error)
     return NextResponse.json(
@@ -239,7 +248,6 @@ export async function GET(request: NextRequest) {
     if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(data)
   } catch (err: any) {
-    // Fallback for schemas without customers relation/table
     let query = supabase.from('quotes').select(`*, quote_items(*)`)
     if (quoteId) query = query.eq('id', quoteId)
     else if (quoteNumber) query = query.eq('quote_number', quoteNumber)
