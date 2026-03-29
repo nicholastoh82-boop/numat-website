@@ -45,7 +45,7 @@ export default function Header() {
             />
           </Link>
 
-          <nav className="hidden items-center gap-5 lg:flex xl:gap-7">
+          <nav className="hidden items-center gap-4 lg:flex xl:gap-6">
             {navLinks.map((link) => {
               const isActive =
                 pathname === link.href ||
@@ -56,7 +56,7 @@ export default function Header() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    'text-sm font-medium tracking-[0.01em] transition-colors',
+                    'text-[13px] font-medium tracking-[0.01em] transition-colors xl:text-sm',
                     isActive
                       ? 'text-stone-900'
                       : 'text-stone-700 hover:text-stone-900'
@@ -72,17 +72,19 @@ export default function Header() {
         {/* Desktop right side */}
         <div className="hidden items-center gap-3 lg:flex">
           {/* Request Samples button */}
+          {/* Request Samples button */}
           <Link
             href="/request-samples"
             className={cn(
-              'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition duration-200 hover:-translate-y-0.5',
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition duration-200 hover:-translate-y-0.5 xl:px-4 xl:text-sm',
               pathname === '/request-samples'
                 ? 'border-emerald-700 bg-emerald-700 text-white'
                 : 'border-emerald-800 bg-white text-emerald-800 hover:bg-emerald-50'
             )}
           >
-            <PackageCheck className="h-4 w-4" />
-            Request Samples
+            <PackageCheck className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
+            <span className="hidden xl:inline">Request Samples</span>
+            <span className="xl:hidden">Samples</span>
           </Link>
 
           {/* Currency selector */}
