@@ -1,10 +1,13 @@
 import { renderToBuffer } from '@react-pdf/renderer'
 import React from 'react'
+import fs from 'fs'
+import path from 'path'
 import {
   Document,
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
 } from '@react-pdf/renderer'
 
@@ -19,12 +22,10 @@ export interface QuoteData {
   total?: number
   display_currency?: string
   display_total?: number
-  // Direct fields on quotes row
   customer_name?: string
   company?: string | null
   email?: string
   phone?: string
-  // Legacy joined customers object
   customers?: {
     name: string
     company_name: string | null
@@ -51,16 +52,22 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#333',
   },
-  // Header band
   headerBand: {
-    backgroundColor: blue,
+    backgroundColor: '#ffffff',
     padding: '20 40 0 40',
+    borderBottomWidth: 3,
+    borderBottomColor: blue,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingBottom: 16,
+  },
+  logoImage: {
+    width: 160,
+    height: 50,
+    objectFit: 'contain',
   },
   logoText: {
     fontSize: 28,
@@ -79,10 +86,9 @@ const styles = StyleSheet.create({
   },
   headerContactText: {
     fontSize: 9,
-    color: '#c5cae9',
+    color: '#333333',
     marginBottom: 3,
   },
-  // Green address band
   addressBand: {
     backgroundColor: green,
     padding: '6 40',
@@ -91,11 +97,9 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: '#ffffff',
   },
-  // Content area
   content: {
     padding: '24 40',
   },
-  // Quote title row
   quoteTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -121,7 +125,6 @@ const styles = StyleSheet.create({
     marginBottom: 3,
     textAlign: 'right',
   },
-  // Bill to section
   billToSection: {
     backgroundColor: lightBlue,
     padding: '10 14',
@@ -141,12 +144,10 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 2,
   },
-  // Table
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: blue,
     padding: '8 6',
-    marginBottom: 0,
   },
   tableHeaderText: {
     color: '#ffffff',
@@ -173,7 +174,6 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: '#777',
   },
-  // Totals
   totalsSection: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -217,7 +217,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica-Bold',
     color: '#ffffff',
   },
-  // Terms
   termsBox: {
     backgroundColor: '#fff8e1',
     borderLeftWidth: 3,
@@ -237,7 +236,6 @@ const styles = StyleSheet.create({
     color: '#7a5c00',
     lineHeight: 1.6,
   },
-  // Footer
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -254,8 +252,20 @@ const styles = StyleSheet.create({
   },
 })
 
-const QuoteDocument = ({ quote }: { quote: QuoteData }) => {
-  // Resolve customer info from either direct fields or joined customers object
+function getLogoBase64(): string | null {
+  try {
+    const logoPath = path.join(process.cwd(), 'public', 'numat-logo.png')
+    if (fs.existsSync(logoPath)) {
+      const data = fs.readFileSync(logoPath)
+      return `data:image/png;base64,${data.toString('base64')}`
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+const QuoteDocument = ({ quote, logoBase64 }: { quote: QuoteData; logoBase64: string | null }) => {
   const customerName = quote.customer_name || quote.customers?.name || 'Valued Customer'
   const customerCompany = quote.company || quote.customers?.company_name || null
   const customerEmail = quote.email || quote.customers?.email || ''
@@ -274,9 +284,14 @@ const QuoteDocument = ({ quote }: { quote: QuoteData }) => {
     ? new Date(quote.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
     : new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
 
-  const validUntilDate = quote.valid_until && quote.valid_until !== 'Invalid Date'
-    ? new Date(quote.valid_until).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
-    : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+  const validUntilDate =
+    quote.valid_until && quote.valid_until !== 'Invalid Date'
+      ? new Date(quote.valid_until).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+      : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('en-PH', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
 
   return (
     <Document>
@@ -286,8 +301,14 @@ const QuoteDocument = ({ quote }: { quote: QuoteData }) => {
         <View style={styles.headerBand}>
           <View style={styles.headerRow}>
             <View>
-              <Text style={styles.logoText}>NUMAT</Text>
-              <Text style={styles.logoTagline}>FROM NATURE, FOR NATURE</Text>
+              {logoBase64 ? (
+                <Image src={logoBase64} style={styles.logoImage} />
+              ) : (
+                <>
+                  <Text style={styles.logoText}>NUMAT</Text>
+                  <Text style={styles.logoTagline}>FROM NATURE, FOR NATURE</Text>
+                </>
+              )}
             </View>
             <View style={styles.headerContact}>
               <Text style={styles.headerContactText}>+60162958983</Text>
@@ -398,7 +419,8 @@ const QuoteDocument = ({ quote }: { quote: QuoteData }) => {
 
 export async function generateQuotePDF(quote: QuoteData): Promise<Buffer> {
   try {
-    const buffer = await renderToBuffer(<QuoteDocument quote={quote} />)
+    const logoBase64 = getLogoBase64()
+    const buffer = await renderToBuffer(<QuoteDocument quote={quote} logoBase64={logoBase64} />)
     return buffer
   } catch (error) {
     console.error('PDF Generation Error:', error)
