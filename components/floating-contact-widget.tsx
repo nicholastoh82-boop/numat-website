@@ -17,10 +17,10 @@ export default function FloatingContactWidget() {
       <Link
         href="/request-samples"
         aria-label="Request Samples"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-800 sm:h-auto sm:w-auto sm:gap-3 sm:px-4 sm:py-3"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-800 text-white sm:h-auto sm:w-auto sm:gap-3 sm:px-4 sm:py-3"
       >
-        <PackageCheck className="h-5 w-5" />
-        <span className="hidden text-sm font-semibold sm:inline">Request Samples</span>
+        <PackageCheck className="h-5 w-5 text-white" />
+        <span className="hidden text-sm font-semibold text-white sm:inline">Request Samples</span>
       </Link>
 
       
@@ -32,8 +32,8 @@ export default function FloatingContactWidget() {
         aria-label="Chat on WhatsApp"
         className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-800 sm:h-auto sm:w-auto sm:gap-3 sm:px-4 sm:py-3"
       >
-        <MessageCircleMore className="h-5 w-5" />
-        <span className="hidden text-sm font-semibold sm:inline">WhatsApp Sales</span>
+        <MessageCircleMore className="h-5 w-5 text-white" />
+        <span className="hidden text-sm font-semibold text-white sm:inline">WhatsApp Sales</span>
       </a>
 
       <a
@@ -43,8 +43,8 @@ export default function FloatingContactWidget() {
         aria-label="Chat on Viber"
         className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-800 sm:h-auto sm:w-auto sm:gap-3 sm:px-4 sm:py-3"
       >
-        <PhoneCall className="h-5 w-5" />
-        <span className="hidden text-sm font-semibold sm:inline">Viber Sales</span>
+        <PhoneCall className="h-5 w-5 text-white" />
+        <span className="hidden text-sm font-semibold text-white sm:inline">Viber Sales</span>
       </a>
     </div>
   )
