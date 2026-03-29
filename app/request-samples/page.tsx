@@ -39,13 +39,18 @@ export default function RequestSamplesPage() {
   const [step, setStep] = useState<Step>(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const searchParams = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search)
+    : null
+  const prefilledProduct = searchParams?.get('product') || ''
+
   const [form, setForm] = useState({
     name: '',
     email: '',
     phone: '',
     company: '',
     application: '',
-    products: [] as string[],
+    products: prefilledProduct ? [prefilledProduct] : [] as string[],
     thicknesses: [] as string[],
     notes: '',
   })
@@ -117,7 +122,7 @@ export default function RequestSamplesPage() {
                   {[
                     { icon: PackageCheck, text: 'Physical samples of your chosen product and thickness' },
                     { icon: Clock, text: 'Sample lead time typically 5–10 working days' },
-                    { icon: Truck, text: 'Shipped to your location — terms confirmed by our team' },
+                    { icon: Truck, text: 'Shipped to your location — delivery charges quoted within 3 business days' },
                     { icon: Star, text: 'Technical data sheet included with every sample pack' },
                   ].map((item) => (
                     <div key={item.text} className="flex items-center gap-3">
@@ -138,7 +143,8 @@ export default function RequestSamplesPage() {
                     { n: '1', title: 'Tell us what you need', body: 'Select your product, thickness, and application.' },
                     { n: '2', title: 'Add your contact details', body: 'Name, email and we\'ll confirm availability.' },
                     { n: '3', title: 'We prepare your pack', body: 'Samples cut, labelled, and shipped with data sheets.' },
-                    { n: '4', title: 'Evaluate and order', body: 'Approve the sample, request a formal quote.' },
+                    { n: '4', title: 'Delivery cost confirmation', body: 'Delivery charges are borne by the customer. We will notify you of the exact amount within 3 business days once we have a quotation from our delivery providers.' },
+                    { n: '5', title: 'Evaluate and order', body: 'Approve the sample, request a formal quote.' },
                   ].map((s, i) => (
                     <div key={s.n} className="flex gap-4">
                       <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-sm font-extrabold ${
@@ -176,8 +182,7 @@ export default function RequestSamplesPage() {
               </div>
               <h2 className="text-2xl font-bold text-stone-950">Sample Request Received!</h2>
               <p className="mx-auto mt-3 max-w-md text-base text-stone-500">
-                Our team will review your request and follow up within 24 hours
-                to confirm availability, lead time, and shipment details.
+                Our team will review your request and follow up within 24 hours to confirm availability and lead time. Delivery charges are borne by the customer — we will notify you of the exact amount within 3 business days once we have a quotation from our delivery providers.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
                 <Link
@@ -369,7 +374,12 @@ export default function RequestSamplesPage() {
                   </div>
                 </div>
               </div>
-
+<div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+                <p className="text-sm font-semibold text-amber-800">Delivery charges notice</p>
+                <p className="mt-1 text-sm text-amber-700">
+                  All delivery charges are borne by the customer. We will notify you of the exact delivery cost within 3 business days of receiving your request, once we have a quotation from our delivery service providers.
+                </p>
+              </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
