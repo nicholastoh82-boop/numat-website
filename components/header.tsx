@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, Menu, X } from 'lucide-react'
+import { ChevronDown, Menu, X, PackageCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useCurrency } from '@/components/providers/currency-provider'
 import { COUNTRY_OPTIONS } from '@/lib/currency'
@@ -69,7 +69,23 @@ export default function Header() {
           </nav>
         </div>
 
-        <div className="hidden items-center lg:flex">
+        {/* Desktop right side */}
+        <div className="hidden items-center gap-3 lg:flex">
+          {/* Request Samples button */}
+          <Link
+            href="/request-samples"
+            className={cn(
+              'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition duration-200 hover:-translate-y-0.5',
+              pathname === '/request-samples'
+                ? 'border-emerald-700 bg-emerald-700 text-white'
+                : 'border-emerald-800 bg-white text-emerald-800 hover:bg-emerald-50'
+            )}
+          >
+            <PackageCheck className="h-4 w-4" />
+            Request Samples
+          </Link>
+
+          {/* Currency selector */}
           <div className="relative flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 shadow-sm">
             <Image
               src={selectedCountry.flagSrc}
@@ -78,7 +94,6 @@ export default function Header() {
               height={18}
               className="h-[18px] w-[18px] rounded-full object-cover"
             />
-
             <select
               aria-label="Select country and currency"
               value={selectedCountry.code}
@@ -91,11 +106,11 @@ export default function Header() {
                 </option>
               ))}
             </select>
-
             <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-500" />
           </div>
         </div>
 
+        {/* Mobile menu toggle */}
         <button
           type="button"
           aria-label="Toggle menu"
@@ -106,9 +121,12 @@ export default function Header() {
         </button>
       </div>
 
+      {/* Mobile menu */}
       {mobileMenuOpen && (
         <div className="border-t border-stone-200 bg-[#e7e1d8] lg:hidden">
           <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+
+            {/* Currency selector */}
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-stone-300 bg-white px-3 py-3 shadow-sm">
               <Image
                 src={selectedCountry.flagSrc}
@@ -117,7 +135,6 @@ export default function Header() {
                 height={18}
                 className="h-[18px] w-[18px] rounded-full object-cover"
               />
-
               <div className="relative w-full">
                 <select
                   aria-label="Select country and currency"
@@ -131,11 +148,21 @@ export default function Header() {
                     </option>
                   ))}
                 </select>
-
                 <ChevronDown className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-500" />
               </div>
             </div>
 
+            {/* Request Samples button — mobile */}
+            <Link
+              href="/request-samples"
+              onClick={() => setMobileMenuOpen(false)}
+              className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-800 bg-white px-4 py-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50"
+            >
+              <PackageCheck className="h-4 w-4" />
+              Request Samples
+            </Link>
+
+            {/* Nav links */}
             <nav className="flex flex-col">
               {navLinks.map((link) => {
                 const isActive =
