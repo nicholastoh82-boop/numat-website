@@ -19,12 +19,49 @@ const iconMap = {
   'installation-and-care-guidance': Wrench,
 }
 
-const accentMap: Record<string, { bg: string; text: string; border: string; tag: string }> = {
-  'technical-data-sheets':       { bg: 'bg-blue-50',    text: 'text-blue-800',    border: 'border-blue-100',    tag: 'bg-blue-100 text-blue-700' },
-  'dimensions-and-thicknesses':  { bg: 'bg-amber-50',   text: 'text-amber-800',   border: 'border-amber-100',   tag: 'bg-amber-100 text-amber-700' },
-  'certifications':              { bg: 'bg-emerald-50',  text: 'text-emerald-800', border: 'border-emerald-100', tag: 'bg-emerald-100 text-emerald-700' },
-  'installation-and-care-guidance': { bg: 'bg-stone-100', text: 'text-stone-700', border: 'border-stone-200',   tag: 'bg-stone-200 text-stone-600' },
+const accentMap: Record<string, {
+  gradient: string
+  iconBg: string
+  iconText: string
+  tag: string
+  tagText: string
+  titleText: string
+}> = {
+  'technical-data-sheets': {
+    gradient: 'from-blue-900 to-blue-700',
+    iconBg: 'bg-blue-800',
+    iconText: 'text-white',
+    tag: 'bg-blue-800',
+    tagText: 'text-blue-100',
+    titleText: 'text-white',
+  },
+  'dimensions-and-thicknesses': {
+    gradient: 'from-amber-800 to-amber-600',
+    iconBg: 'bg-amber-700',
+    iconText: 'text-white',
+    tag: 'bg-amber-700',
+    tagText: 'text-amber-100',
+    titleText: 'text-white',
+  },
+  certifications: {
+    gradient: 'from-emerald-900 to-emerald-700',
+    iconBg: 'bg-emerald-800',
+    iconText: 'text-white',
+    tag: 'bg-emerald-800',
+    tagText: 'text-emerald-100',
+    titleText: 'text-white',
+  },
+  'installation-and-care-guidance': {
+    gradient: 'from-stone-800 to-stone-600',
+    iconBg: 'bg-stone-700',
+    iconText: 'text-white',
+    tag: 'bg-stone-700',
+    tagText: 'text-stone-100',
+    titleText: 'text-white',
+  },
 }
+
+const labels = ['Specs', 'Sizing', 'Docs', 'Guidance']
 
 export default function TechnicalResourcesPage() {
   return (
@@ -66,38 +103,37 @@ export default function TechnicalResourcesPage() {
                   href={`/technical-resources/${item.slug}`}
                   className="group block overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-xl"
                 >
-                  {/* Top bar — bold header block */}
-                  <div className={`relative overflow-hidden px-7 pt-7 pb-6 ${accent.bg}`}>
-                    {/* decorative circle */}
-                    <div className={`pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full opacity-20 ${accent.text} bg-current`} />
+                  {/* Gradient header */}
+                  <div className={`relative overflow-hidden bg-gradient-to-br ${accent.gradient} px-7 pt-7 pb-8`}>
+                    {/* decorative blobs */}
+                    <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-white/10" />
+                    <div className="pointer-events-none absolute -bottom-6 -left-4 h-24 w-24 rounded-full bg-black/10" />
 
                     <div className="relative flex items-start justify-between gap-4">
-                      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ${accent.text}`}>
-                        <Icon className="h-6 w-6" />
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${accent.iconBg} shadow-md`}>
+                        <Icon className={`h-6 w-6 ${accent.iconText}`} />
                       </div>
-                      <span className={`mt-1 rounded-full px-3 py-1 text-xs font-semibold ${accent.tag}`}>
-                        {i === 0 ? 'Specs' : i === 1 ? 'Sizing' : i === 2 ? 'Docs' : 'Guidance'}
+                      <span className={`mt-1 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-widest ${accent.tag} ${accent.tagText}`}>
+                        {labels[i]}
                       </span>
                     </div>
 
-                    <h2 className={`mt-4 text-2xl font-bold tracking-tight ${accent.text}`}>
+                    <h2 className={`relative mt-5 text-2xl font-extrabold tracking-tight ${accent.titleText}`}>
                       {item.title}
                     </h2>
-                    <p className="mt-1.5 text-sm leading-6 text-stone-500">
+                    <p className="relative mt-2 text-sm leading-6 text-white/70">
                       {item.cardDescription}
                     </p>
                   </div>
 
                   {/* Content */}
                   <div className="px-7 py-6">
-
-                    {/* Preview bullets from first section */}
                     {firstSection && (
-                      <div className="mt-5 space-y-1.5">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
                           {firstSection.title}
                         </p>
-                        <ul className="space-y-1">
+                        <ul className="space-y-1.5">
                           {firstSection.body.slice(0, 3).map((point) => (
                             <li key={point} className="flex items-start gap-2 text-sm text-stone-600">
                               <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
@@ -108,7 +144,7 @@ export default function TechnicalResourcesPage() {
                       </div>
                     )}
 
-                    <div className={`mt-6 inline-flex items-center gap-2 text-sm font-semibold ${accent.text}`}>
+                    <div className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-stone-900">
                       View details
                       <ArrowRight className="h-4 w-4 transition duration-300 group-hover:translate-x-1" />
                     </div>
@@ -126,7 +162,7 @@ export default function TechnicalResourcesPage() {
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
                 Need more detail?
               </p>
-              <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">
+              <h2 className="mt-3 text-2xl font-bold sm:text-3xl">
                 Full data sheets and documentation available on request.
               </h2>
               <p className="mt-3 max-w-xl text-base text-white/70">
@@ -135,14 +171,14 @@ export default function TechnicalResourcesPage() {
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link
                   href="/contact"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-stone-950 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-100"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-bold text-stone-950 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-100"
                 >
                   Contact Sales
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/request-quote"
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-white/10"
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-bold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-white/10"
                 >
                   Request Quote
                 </Link>
