@@ -249,7 +249,7 @@ export function generateReminderEmailHTML(data: QuoteEmailData): string {
       <td align="center">
         <table width="620" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
           <tr>
-            <td style="background-color:#1a237e;padding:24px 32px;">
+            <td style="background-color:#ffffff;padding:24px 32px;border-bottom:3px solid #1a237e;">
               <img src="https://numatbamboo.com/numat-logo.png" alt="NUMAT" width="160" style="display:block;" />
             </td>
           </tr>
