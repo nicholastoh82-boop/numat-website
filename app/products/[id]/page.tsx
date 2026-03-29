@@ -908,13 +908,7 @@ export default function ProductDetailPage() {
       stockMessage: resolved.stockMessage,
     })
 
-    toast({
-      title: 'Added to quote',
-      description:
-        resolved.priceUsd != null
-          ? `${quantity} × ${resolved.productLabel} added to your quote cart.`
-          : `${quantity} × ${resolved.productLabel} added as a price-on-request item.`,
-    })
+    
 
     openCart()
   }
