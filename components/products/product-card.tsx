@@ -161,12 +161,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
       isPriceOnRequest,
     })
 
-    toast({
-      title: 'Added to Quote',
-      description: isPriceOnRequest
-        ? `${quantity}x ${product.name} added as a price-on-request item.`
-        : `${quantity}x ${product.name} added to your cart.`,
-    })
+    
 
     openCart()
   }
