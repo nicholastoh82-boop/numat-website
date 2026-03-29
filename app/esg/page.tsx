@@ -60,7 +60,7 @@ export default function ESGPage() {
               </h1>
               <p className="mt-6 text-lg leading-8 text-stone-600">
                 At NUMAT, sustainability is measurable and verified. Our engineered bamboo
-                products are FSC-certified and verified carbon-negative by Wavemaker Impact.
+                products are sustainably harvested and verified carbon-negative by Wavemaker Impact.
               </p>
             </div>
           </div>
