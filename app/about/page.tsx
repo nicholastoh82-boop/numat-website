@@ -65,7 +65,7 @@ export default function AboutPage() {
               <div className="group relative overflow-hidden rounded-[2rem] border border-stone-200 shadow-lg">
                 <div className="relative h-[420px]">
                   <Image
-                    src="/about-us.jpg"
+                    src="/about-us.JPG"
                     alt="Numat sustainable harvesting"
                     fill
                     className="object-cover transition duration-700 group-hover:scale-[1.04]"
