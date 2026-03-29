@@ -2,8 +2,8 @@
 
 import { MessageCircleMore, PhoneCall } from 'lucide-react'
 
-const whatsappNumber = '601139593956'
-const viberNumber = '639628127829'
+const whatsappNumber = '+60162958983'
+const viberNumber = '+60162958983'
 
 const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
   'Hello NUMAT, I would like to request product information and a quotation.'
