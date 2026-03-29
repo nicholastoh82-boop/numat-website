@@ -13,6 +13,7 @@ import {
   Star,
   ChevronRight,
   Loader2,
+  ChevronDown,
 } from 'lucide-react'
 
 const THICKNESS_OPTIONS = ['7mm', '12mm', '18mm', '20mm', '25mm', 'Not sure yet']
@@ -32,8 +33,29 @@ const PRODUCT_OPTIONS = [
   { id: 'nudoor', label: 'NuDoor', sub: 'Door components' },
   { id: 'notsure', label: 'Not Sure', sub: 'Help me choose' },
 ]
-
-type Step = 1 | 2 | 3 | 'success'
+const DIAL_CODES = [
+  { code: '+63', flag: '🇵🇭', country: 'Philippines' },
+  { code: '+65', flag: '🇸🇬', country: 'Singapore' },
+  { code: '+60', flag: '🇲🇾', country: 'Malaysia' },
+  { code: '+62', flag: '🇮🇩', country: 'Indonesia' },
+  { code: '+66', flag: '🇹🇭', country: 'Thailand' },
+  { code: '+84', flag: '🇻🇳', country: 'Vietnam' },
+  { code: '+852', flag: '🇭🇰', country: 'Hong Kong' },
+  { code: '+886', flag: '🇹🇼', country: 'Taiwan' },
+  { code: '+81', flag: '🇯🇵', country: 'Japan' },
+  { code: '+82', flag: '🇰🇷', country: 'South Korea' },
+  { code: '+86', flag: '🇨🇳', country: 'China' },
+  { code: '+91', flag: '🇮🇳', country: 'India' },
+  { code: '+61', flag: '🇦🇺', country: 'Australia' },
+  { code: '+64', flag: '🇳🇿', country: 'New Zealand' },
+  { code: '+44', flag: '🇬🇧', country: 'United Kingdom' },
+  { code: '+1', flag: '🇺🇸', country: 'United States' },
+  { code: '+971', flag: '🇦🇪', country: 'UAE' },
+  { code: '+966', flag: '🇸🇦', country: 'Saudi Arabia' },
+  { code: '+49', flag: '🇩🇪', country: 'Germany' },
+  { code: '+33', flag: '🇫🇷', country: 'France' },
+]
+type Step = 1 | 2 | 'success'
 
 export default function RequestSamplesPage() {
   const [step, setStep] = useState<Step>(1)
@@ -58,6 +80,8 @@ export default function RequestSamplesPage() {
     thicknesses: [] as string[],
     notes: '',
   })
+
+  const [dialCode, setDialCode] = useState('+63')
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   function validateForm() {
@@ -66,11 +90,21 @@ export default function RequestSamplesPage() {
     if (!form.email.trim()) errors.email = 'Email is required'
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errors.email = 'Enter a valid email address'
     if (!form.phone.trim()) errors.phone = 'Mobile number is required'
-    else if (!/^\+?[\d\s\-().]{7,20}$/.test(form.phone.trim())) errors.phone = 'Enter a valid phone number'
+    else if (!/^[\d\s\-().]{6,15}$/.test(form.phone.trim())) errors.phone = 'Enter a valid mobile number (digits only, no country code)'
     if (!form.address.trim()) errors.address = 'Delivery address is required'
     if (!form.city.trim()) errors.city = 'City is required'
     if (!form.country.trim()) errors.country = 'Country is required'
     setFormErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      const firstErrorKey = Object.keys(errors)[0]
+      const el = document.getElementById(`sample-field-${firstErrorKey}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setTimeout(() => el.focus(), 400)
+      }
+    }
+
     return Object.keys(errors).length === 0
   }
 
@@ -90,9 +124,9 @@ export default function RequestSamplesPage() {
       const fullAddress = [form.address, form.city, form.state, form.country].filter(Boolean).join(', ')
       const message = [
         `Sample Request`,
-        `Application: ${form.application}`,
-        `Products: ${form.products.join(', ')}`,
-        `Thicknesses: ${form.thicknesses.join(', ')}`,
+        `Application: ${form.application || 'Not specified'}`,
+        `Products: ${form.products.map(p => PRODUCT_OPTIONS.find(o => o.id === p)?.label || p).join(', ')}`,
+        `Thicknesses: ${form.thicknesses.join(', ') || 'Not specified'}`,
         `Delivery Address: ${fullAddress}`,
         form.notes ? `Notes: ${form.notes}` : '',
       ].filter(Boolean).join('\n')
@@ -103,7 +137,7 @@ export default function RequestSamplesPage() {
         body: JSON.stringify({
           name: form.name,
           email: form.email,
-          phone: form.phone || null,
+          phone: form.phone ? `${dialCode} ${form.phone.trim()}` : null,
           company: form.company || null,
           subject: 'Sample Request',
           message,
@@ -117,6 +151,14 @@ export default function RequestSamplesPage() {
       setIsSubmitting(false)
     }
   }
+
+  const howItWorks = [
+    { n: '1', title: 'Tell us what you need', body: 'Select your product, thickness, and application.' },
+    { n: '2', title: 'Add your contact details', body: 'Name, email, phone and delivery address.' },
+    { n: '3', title: 'We prepare your pack', body: 'Samples cut, labelled, and shipped with data sheets. Sample size: 200mm × 200mm.' },
+    { n: '4', title: 'Delivery cost confirmation', body: 'Delivery charges are borne by the customer. We will notify you of the exact amount within 3 business days once we have a quotation from our delivery providers.' },
+    { n: '5', title: 'Evaluate and order', body: 'Approve the sample and request a formal quote.' },
+  ]
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -142,7 +184,7 @@ export default function RequestSamplesPage() {
 
                 <div className="mt-8 space-y-3">
                   {[
-                    { icon: PackageCheck, text: 'Physical samples of your chosen product and thickness' },
+                    { icon: PackageCheck, text: 'Physical samples — standard size 200mm × 200mm' },
                     { icon: Clock, text: 'Sample lead time typically 5–10 working days' },
                     { icon: Truck, text: 'Shipped to your location — delivery charges quoted within 3 business days' },
                     { icon: Star, text: 'Technical data sheet included with every sample pack' },
@@ -157,20 +199,16 @@ export default function RequestSamplesPage() {
                 </div>
               </div>
 
-              {/* Progress steps */}
+              {/* How it works */}
               <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-8">
                 <p className="mb-6 text-xs font-bold uppercase tracking-widest text-stone-400">How it works</p>
                 <div className="space-y-5">
-                  {[
-                    { n: '1', title: 'Tell us what you need', body: 'Select your product, thickness, and application.' },
-                    { n: '2', title: 'Add your contact details', body: 'Name, email and we\'ll confirm availability.' },
-                    { n: '3', title: 'We prepare your pack', body: 'Samples cut, labelled, and shipped with data sheets.' },
-                    { n: '4', title: 'Delivery cost confirmation', body: 'Delivery charges are borne by the customer. We will notify you of the exact amount within 3 business days once we have a quotation from our delivery providers.' },
-                    { n: '5', title: 'Evaluate and order', body: 'Approve the sample, request a formal quote.' },
-                  ].map((s, i) => (
+                  {howItWorks.map((s, i) => (
                     <div key={s.n} className="flex gap-4">
                       <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-sm font-extrabold ${
-                        step === 'success' || (typeof step === 'number' && step > i + 1)
+                        step === 'success'
+                          ? 'bg-emerald-600 text-white'
+                          : typeof step === 'number' && step > i + 1
                           ? 'bg-emerald-600 text-white'
                           : typeof step === 'number' && step === i + 1
                           ? 'bg-stone-950 text-white'
@@ -197,6 +235,7 @@ export default function RequestSamplesPage() {
         {/* Form steps */}
         <section className="mx-auto max-w-3xl px-6 py-12 lg:px-8 lg:py-16">
 
+          {/* Success */}
           {step === 'success' && (
             <div className="rounded-[2rem] border border-stone-200 bg-white p-10 text-center shadow-sm">
               <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
@@ -204,8 +243,14 @@ export default function RequestSamplesPage() {
               </div>
               <h2 className="text-2xl font-bold text-stone-950">Sample Request Received!</h2>
               <p className="mx-auto mt-3 max-w-md text-base text-stone-500">
-                Our team will review your request and follow up within 24 hours to confirm availability and lead time. Delivery charges are borne by the customer — we will notify you of the exact amount within 3 business days once we have a quotation from our delivery providers.
+                Our team will review your request and follow up within 24 hours to confirm availability and lead time.
               </p>
+              <div className="mx-auto mt-4 max-w-md rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-left">
+                <p className="text-sm font-semibold text-amber-800">Delivery charges notice</p>
+                <p className="mt-1 text-sm text-amber-700">
+                  Delivery charges are borne by the customer. We will notify you of the exact amount within 3 business days once we have a quotation from our delivery providers.
+                </p>
+              </div>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
                 <Link
                   href="/products"
@@ -224,6 +269,7 @@ export default function RequestSamplesPage() {
             </div>
           )}
 
+          {/* Step 1 */}
           {step === 1 && (
             <div className="space-y-6">
               <div>
@@ -307,7 +353,7 @@ export default function RequestSamplesPage() {
                   value={form.notes}
                   onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                   rows={3}
-                  placeholder="Project details, delivery location, special requirements..."
+                  placeholder="Project details, special requirements..."
                   className="w-full resize-none rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 />
               </div>
@@ -323,14 +369,15 @@ export default function RequestSamplesPage() {
             </div>
           )}
 
+          {/* Step 2 */}
           {step === 2 && (
             <div className="space-y-5">
               <div>
                 <h2 className="text-2xl font-bold text-stone-950">Your contact details</h2>
-                <p className="mt-1 text-sm text-stone-500">We'll use these to confirm your sample request.</p>
+                <p className="mt-1 text-sm text-stone-500">We'll use these to confirm and ship your sample request.</p>
               </div>
 
-              {/* Summary */}
+              {/* Selection summary */}
               <div className="rounded-2xl border border-stone-200 bg-stone-50 px-5 py-4">
                 <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Your selection</p>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -348,13 +395,17 @@ export default function RequestSamplesPage() {
                 </div>
               </div>
 
-              <div className="rounded-[1.75rem] border border-stone-200 bg-white p-7 space-y-4">
+              {/* Contact form */}
+              <div className="rounded-[1.75rem] border border-stone-200 bg-white p-7 space-y-5">
+
+                {/* Name + Email */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-sm font-bold text-stone-700">
                       Full Name <span className="text-red-500">*</span>
                     </label>
                     <input
+                      id="sample-field-name"
                       value={form.name}
                       onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                       placeholder="Your full name"
@@ -367,6 +418,7 @@ export default function RequestSamplesPage() {
                       Email <span className="text-red-500">*</span>
                     </label>
                     <input
+                      id="sample-field-email"
                       type="email"
                       value={form.email}
                       onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
@@ -377,22 +429,41 @@ export default function RequestSamplesPage() {
                   </div>
                 </div>
 
+                {/* Phone + Company */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-sm font-bold text-stone-700">
                       Mobile Number <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="tel"
-                      value={form.phone}
-                      onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                      placeholder="+63 912 345 6789"
-                      className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.phone ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
-                    />
+                    <div id="sample-field-phone" className={`mt-1.5 flex h-11 w-full overflow-hidden rounded-xl border text-sm focus-within:ring-2 focus-within:ring-emerald-600 ${formErrors.phone ? 'border-red-400 bg-red-50' : 'border-stone-200 bg-white'}`}>
+                      <div className="relative flex shrink-0 items-center">
+                        <select
+                          value={dialCode}
+                          onChange={(e) => setDialCode(e.target.value)}
+                          className="h-full appearance-none bg-stone-50 pl-3 pr-7 text-sm font-semibold text-stone-700 focus:outline-none border-r border-stone-200"
+                        >
+                          {DIAL_CODES.map((d) => (
+                            <option key={d.code + d.country} value={d.code}>
+                              {d.flag} {d.code}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-1.5 h-3.5 w-3.5 text-stone-400" />
+                      </div>
+                      <input
+                        type="tel"
+                        value={form.phone}
+                        onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                        placeholder="912 345 6789"
+                        className="flex-1 bg-transparent px-3 focus:outline-none"
+                      />
+                    </div>
                     {formErrors.phone && <p className="mt-1 text-xs text-red-500">{formErrors.phone}</p>}
                   </div>
                   <div>
-                    <label className="text-sm font-bold text-stone-700">Company</label>
+                    <label className="text-sm font-bold text-stone-700">
+                      Company <span className="font-normal text-stone-400">(optional)</span>
+                    </label>
                     <input
                       value={form.company}
                       onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
@@ -402,61 +473,71 @@ export default function RequestSamplesPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm font-bold text-stone-700">
+                {/* Delivery address */}
+                <div className="border-t border-stone-100 pt-5">
+                  <p className="mb-4 text-sm font-bold text-stone-700">
                     Delivery Address <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    value={form.address}
-                    onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                    placeholder="Street address, building, unit number"
-                    className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.address ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
-                  />
-                  {formErrors.address && <p className="mt-1 text-xs text-red-500">{formErrors.address}</p>}
-                </div>
+                  </p>
 
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <label className="text-sm font-bold text-stone-700">
-                      City <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      value={form.city}
-                      onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-                      placeholder="City"
-                      className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.city ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
-                    />
-                    {formErrors.city && <p className="mt-1 text-xs text-red-500">{formErrors.city}</p>}
-                  </div>
-                  <div>
-                    <label className="text-sm font-bold text-stone-700">State / Province</label>
-                    <input
-                      value={form.state}
-                      onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
-                      placeholder="State / Province"
-                      className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-bold text-stone-700">
-                      Country <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      value={form.country}
-                      onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
-                      placeholder="Country"
-                      className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.country ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
-                    />
-                    {formErrors.country && <p className="mt-1 text-xs text-red-500">{formErrors.country}</p>}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-semibold text-stone-500">Street Address</label>
+                      <input
+                        id="sample-field-address"
+                        value={form.address}
+                        onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                        placeholder="Street address, building, unit number"
+                        className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.address ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
+                      />
+                      {formErrors.address && <p className="mt-1 text-xs text-red-500">{formErrors.address}</p>}
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div>
+                        <label className="text-xs font-semibold text-stone-500">City <span className="text-red-500">*</span></label>
+                        <input
+                          id="sample-field-city"
+                          value={form.city}
+                          onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                          placeholder="City"
+                          className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.city ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
+                        />
+                        {formErrors.city && <p className="mt-1 text-xs text-red-500">{formErrors.city}</p>}
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-stone-500">State / Province</label>
+                        <input
+                          value={form.state}
+                          onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
+                          placeholder="State / Province"
+                          className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-stone-500">Country <span className="text-red-500">*</span></label>
+                        <input
+                          id="sample-field-country"
+                          value={form.country}
+                          onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+                          placeholder="Country"
+                          className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.country ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
+                        />
+                        {formErrors.country && <p className="mt-1 text-xs text-red-500">{formErrors.country}</p>}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-<div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+
+              {/* Delivery charges notice */}
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
                 <p className="text-sm font-semibold text-amber-800">Delivery charges notice</p>
                 <p className="mt-1 text-sm text-amber-700">
                   All delivery charges are borne by the customer. We will notify you of the exact delivery cost within 3 business days of receiving your request, once we have a quotation from our delivery service providers.
                 </p>
               </div>
+
+              {/* Buttons */}
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
