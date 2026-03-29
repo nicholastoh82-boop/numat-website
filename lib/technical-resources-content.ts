@@ -100,13 +100,7 @@ export const technicalResourceDetails: TechnicalResourceItem[] = [
           'Width and length tolerance: ±2.0 mm target',
         ],
       },
-      {
-        title: 'Target Tolerances',
-        body: [
-          'Thickness tolerance: ±0.5 mm target',
-          'Width and length tolerance: ±2.0 mm target',
-        ],
-      },
+      
       
     ],
     ctas: [
