@@ -19,6 +19,9 @@ const navLinks = [
   { label: 'Contact', href: '/contact' },
 ]
 
+const primaryNavLinks = navLinks.slice(0, 5)
+const moreNavLinks = navLinks.slice(5)
+
 const LOGO_SRC = '/logo.png'
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -45,27 +48,49 @@ export default function Header() {
             />
           </Link>
 
-          <nav className="hidden items-center gap-4 lg:flex xl:gap-6">
-            {navLinks.map((link) => {
+          <nav className="hidden items-center gap-4 lg:flex xl:gap-5">
+            {primaryNavLinks.map((link) => {
               const isActive =
                 pathname === link.href ||
                 (link.href !== '/' && pathname?.startsWith(link.href))
-
               return (
                 <Link
                   key={link.href}
                   href={link.href}
                   className={cn(
                     'text-[13px] font-medium tracking-[0.01em] transition-colors xl:text-sm',
-                    isActive
-                      ? 'text-stone-900'
-                      : 'text-stone-700 hover:text-stone-900'
+                    isActive ? 'text-stone-900' : 'text-stone-700 hover:text-stone-900'
                   )}
                 >
                   {link.label}
                 </Link>
               )
             })}
+
+            {/* More dropdown */}
+            <div className="relative group">
+              <button className="inline-flex items-center gap-1 text-[13px] font-medium text-stone-700 transition-colors hover:text-stone-900 xl:text-sm">
+                More
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+              <div className="absolute left-0 top-full z-50 mt-2 hidden min-w-[160px] overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-lg group-hover:block">
+                {moreNavLinks.map((link) => {
+                  const isActive = pathname === link.href || (link.href !== '/' && pathname?.startsWith(link.href))
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        'block px-4 py-3 text-sm font-medium transition-colors hover:bg-stone-50',
+                        isActive ? 'text-stone-900 bg-stone-50' : 'text-stone-700'
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
           </nav>
         </div>
 
