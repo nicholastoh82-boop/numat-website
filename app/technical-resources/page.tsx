@@ -66,24 +66,30 @@ export default function TechnicalResourcesPage() {
                   href={`/technical-resources/${item.slug}`}
                   className="group block overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-xl"
                 >
-                  {/* Top bar */}
-                  <div className={`flex items-center justify-between px-7 py-5 ${accent.bg} ${accent.border} border-b`}>
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ${accent.text}`}>
-                      <Icon className="h-6 w-6" />
+                  {/* Top bar — bold header block */}
+                  <div className={`relative overflow-hidden px-7 pt-7 pb-6 ${accent.bg}`}>
+                    {/* decorative circle */}
+                    <div className={`pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full opacity-20 ${accent.text} bg-current`} />
+
+                    <div className="relative flex items-start justify-between gap-4">
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ${accent.text}`}>
+                        <Icon className="h-6 w-6" />
+                      </div>
+                      <span className={`mt-1 rounded-full px-3 py-1 text-xs font-semibold ${accent.tag}`}>
+                        {i === 0 ? 'Specs' : i === 1 ? 'Sizing' : i === 2 ? 'Docs' : 'Guidance'}
+                      </span>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${accent.tag}`}>
-                      {i === 0 ? 'Specs' : i === 1 ? 'Sizing' : i === 2 ? 'Docs' : 'Guidance'}
-                    </span>
+
+                    <h2 className={`mt-4 text-2xl font-bold tracking-tight ${accent.text}`}>
+                      {item.title}
+                    </h2>
+                    <p className="mt-1.5 text-sm leading-6 text-stone-500">
+                      {item.cardDescription}
+                    </p>
                   </div>
 
                   {/* Content */}
                   <div className="px-7 py-6">
-                    <h2 className="text-xl font-semibold text-stone-950">
-                      {item.title}
-                    </h2>
-                    <p className="mt-2 text-sm leading-6 text-stone-500">
-                      {item.cardDescription}
-                    </p>
 
                     {/* Preview bullets from first section */}
                     {firstSection && (
