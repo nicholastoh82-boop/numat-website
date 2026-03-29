@@ -350,7 +350,7 @@ export default function ESGPage() {
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-base text-white/70">
                 Every board you order contributes to carbon reduction and supports
-                FSC-certified sustainable forestry. Use the calculator above to see your impact.
+                Local Sustainable Forestry. Use the calculator above to see your impact.
               </p>
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 <Link
