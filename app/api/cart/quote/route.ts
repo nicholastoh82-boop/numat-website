@@ -12,6 +12,8 @@ interface QuoteContact {
   application: string
   notes?: string | null
   consent: boolean
+  display_currency?: string
+  display_total?: number
 }
 
 interface QuoteItem {
@@ -128,6 +130,8 @@ export async function POST(request: NextRequest) {
         discount_amount: discountAmount,
         discount_percent: discountPercent,
         total,
+        display_currency: contact.display_currency ?? 'USD',
+        display_total: contact.display_total ?? total,
       } as any)
       .select('id, quote_number')
       .single()

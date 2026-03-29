@@ -21,7 +21,6 @@ export function QuoteConfirmation() {
 
   const handleDownload = () => {
     if (!quoteId) return
-    // Opens the download endpoint in a new tab which triggers the file download
     window.open(`/api/quote/pdf?id=${quoteId}`, '_blank')
   }
 
@@ -61,13 +60,40 @@ export function QuoteConfirmation() {
     )
   }
 
-  const deliveryChannel =
-    (quote as any).delivery_method ?? (quote as any).delivery_channel ?? (quote as any).deliveryMethod
-  const validUntil = quote.valid_until ? new Date(quote.valid_until) : null
-  const daysValid = validUntil ? Math.ceil((validUntil.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 14
+  const q = quote as any
 
-  const displayedQuoteNumber =
-    (quote as any).quote_number ?? (quote as any).quoteNumber ?? quoteNumber ?? '—'
+  const deliveryChannel = q.delivery_method ?? q.delivery_channel ?? q.deliveryMethod
+  const validUntil = quote.valid_until ? new Date(quote.valid_until) : null
+  const daysValid = validUntil
+    ? Math.ceil((validUntil.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : 14
+
+  const displayedQuoteNumber = q.quote_number ?? q.quoteNumber ?? quoteNumber ?? '—'
+
+  const displayCurrency: string = q.display_currency ?? 'USD'
+  const displayTotal: number = q.display_total ?? q.total ?? 0
+  const displayDiscountAmount: number = q.discount_amount ?? 0
+
+  // Format a number in the display currency
+  function formatAmount(amount: number) {
+    try {
+      return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: displayCurrency,
+        maximumFractionDigits: 0,
+      }).format(amount)
+    } catch {
+      return `${displayCurrency} ${Math.round(amount).toLocaleString()}`
+    }
+  }
+
+  // For line items: unit_price and total_price are stored in USD, convert using ratio
+  const usdTotal: number = q.total ?? 0
+  const conversionRatio = usdTotal > 0 ? displayTotal / usdTotal : 1
+
+  function formatItemAmount(usdAmount: number) {
+    return formatAmount(usdAmount * conversionRatio)
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 lg:px-8 lg:py-16">
@@ -103,7 +129,11 @@ export function QuoteConfirmation() {
                 <Mail className="w-4 h-4" />
               )}
               <span className="capitalize">
-                {quote.status === 'pending' ? 'Pending' : quote.status === 'processing' ? 'Processing' : quote.status}
+                {quote.status === 'pending'
+                  ? 'Pending'
+                  : quote.status === 'processing'
+                  ? 'Processing'
+                  : quote.status}
               </span>
             </span>
           </div>
@@ -116,7 +146,7 @@ export function QuoteConfirmation() {
             <div className="bg-muted/50 rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground">Total Amount</p>
               <p className="font-serif text-2xl text-foreground mt-1">
-                PHP {(quote.total ?? 0).toLocaleString()}
+                {formatAmount(displayTotal)}
               </p>
               <p className="text-xs text-muted-foreground mt-1">excl. VAT</p>
             </div>
@@ -141,27 +171,37 @@ export function QuoteConfirmation() {
             <div className="border-t border-border pt-6">
               <h3 className="font-semibold text-foreground mb-4">Quote Items</h3>
               <div className="space-y-3">
-                {quote.quote_items.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center py-2 border-b border-border last:border-0">
-                    <div>
-                      <p className="font-medium text-foreground">{item.product_name}</p>
-                      {item.product_specs && (
-                        <p className="text-sm text-muted-foreground">{item.product_specs}</p>
-                      )}
+                {quote.quote_items.map((item) => {
+                  const itemUsdTotal =
+                    (item as any).total_price ??
+                    (item.quantity ?? 0) * ((item as any).unit_price ?? 0)
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex justify-between items-center py-2 border-b border-border last:border-0"
+                    >
+                      <div>
+                        <p className="font-medium text-foreground">{item.product_name}</p>
+                        {item.product_specs && (
+                          <p className="text-sm text-muted-foreground">{item.product_specs}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-foreground">
+                          {formatItemAmount(itemUsdTotal)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{item.quantity} pcs</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium text-foreground">
-                        PHP {((item as any).total_price ?? (item.quantity ?? 0) * ((item as any).unit_price ?? 0) ?? 0).toLocaleString()}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{item.quantity} pcs</p>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
-              {(quote as any).discount_amount > 0 && (
+              {displayDiscountAmount > 0 && (
                 <div className="flex justify-between items-center py-2 mt-2 border-t border-border text-primary">
                   <span>Bulk Discount</span>
-                  <span className="font-medium">-PHP {(quote as any).discount_amount.toLocaleString()}</span>
+                  <span className="font-medium">
+                    -{formatAmount(displayDiscountAmount * conversionRatio)}
+                  </span>
                 </div>
               )}
             </div>
@@ -179,7 +219,12 @@ export function QuoteConfirmation() {
               )}
               <div>
                 <p className="font-medium text-foreground">
-                  {deliveryChannel === 'whatsapp' ? 'WhatsApp' : deliveryChannel === 'viber' ? 'Viber' : 'Email'} Delivery
+                  {deliveryChannel === 'whatsapp'
+                    ? 'WhatsApp'
+                    : deliveryChannel === 'viber'
+                    ? 'Viber'
+                    : 'Email'}{' '}
+                  Delivery
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   Your quote details will be sent to you shortly. Please check your messages.
@@ -199,7 +244,13 @@ export function QuoteConfirmation() {
                 <div>
                   <p className="font-medium text-foreground">Check your messages</p>
                   <p className="text-sm text-muted-foreground">
-                    You will receive a quote summary and PDF link via {deliveryChannel === 'whatsapp' ? 'WhatsApp' : deliveryChannel === 'viber' ? 'Viber' : 'Email'}.
+                    You will receive a quote summary and PDF link via{' '}
+                    {deliveryChannel === 'whatsapp'
+                      ? 'WhatsApp'
+                      : deliveryChannel === 'viber'
+                      ? 'Viber'
+                      : 'Email'}
+                    .
                   </p>
                 </div>
               </div>
@@ -230,10 +281,9 @@ export function QuoteConfirmation() {
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            {/* FIXED DOWNLOAD BUTTON */}
             <Button
               variant="outline"
-              className="flex-1 gap-2 bg-transparent border-primary/20 "
+              className="flex-1 gap-2 bg-transparent border-primary/20"
               onClick={handleDownload}
             >
               <Download className="w-4 h-4" />

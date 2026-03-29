@@ -42,7 +42,7 @@ function extractProductId(cartItemId: string) {
 export function QuoteForm({ onBack }: QuoteFormProps) {
   const router = useRouter()
   const { items, getDiscountPercent, getTotal, clearCart } = useCartStore()
-  const { formatConvertedFromUsd, selectedCountry } = useCurrency()
+  const { formatConvertedFromUsd, selectedCountry, exchangeRate } = useCurrency()
 
   const [phoneNumber, setPhoneNumber] = useState<Value>()
   const [formData, setFormData] = useState<{
@@ -140,13 +140,15 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
         body: JSON.stringify({
           contact: {
             name: formData.name.trim(),
-            email: formData.email.trim(),
-            phone: String(phoneNumber),
-            company: formData.company.trim() ? formData.company.trim() : null,
-            channel,
-            application: formData.application,
-            notes: formData.notes.trim() ? formData.notes.trim() : null,
-            consent: !!formData.consent,
+  email: formData.email.trim(),
+  phone: String(phoneNumber),
+  company: formData.company.trim() ? formData.company.trim() : null,
+  channel,
+  application: formData.application,
+  notes: formData.notes.trim() ? formData.notes.trim() : null,
+  consent: !!formData.consent,
+  display_currency: selectedCountry.currency,
+  display_total: total * exchangeRate,
           },
           items: items.map((item) => ({
             product_id: extractProductId(item.id),
