@@ -195,7 +195,7 @@ export default function AboutPage() {
               },
               {
                 icon: Leaf,
-                title: 'SUstainable Sourcing & Carbon-Negative',
+                title: 'Sustainable Sourcing & Carbon-Negative',
                 body: 'All products sourced from sustainable plantations. Carbon-negative lifecycle verified by Wavemaker Impact.',
               },
               {
