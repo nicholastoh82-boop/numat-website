@@ -34,11 +34,9 @@ const APPLICATION_OPTIONS = [
 ] as const
 
 function extractProductId(cartItemId: string) {
-  // product detail pages generate ids like "<productUuid>-<config...>"
-  // product cards/quick view use the product id directly
-  const first = cartItemId.split('-')[0]
-  if (first.length === 36) return first
-  return cartItemId
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+  const match = cartItemId.match(uuidRegex)
+  return match ? match[0] : null
 }
 
 export function QuoteForm({ onBack }: QuoteFormProps) {
@@ -47,7 +45,14 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
   const { formatConvertedFromUsd, selectedCountry } = useCurrency()
 
   const [phoneNumber, setPhoneNumber] = useState<Value>()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string
+    email: string
+    company: string
+    application: string
+    notes: string
+    consent: boolean
+  }>({
     name: '',
     email: '',
     company: '',
@@ -76,11 +81,12 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
 
     lines.push('Items:')
     items.forEach((item, index) => {
+      const unitPrice = item.unitPrice ?? 0
       lines.push(`${index + 1}. ${item.name}`)
       lines.push(`   ${item.specs}`)
       lines.push(`   Quantity: ${item.quantity} ${item.unit}`)
-      lines.push(`   Unit Price: ${formatConvertedFromUsd(item.unitPrice)}`)
-      lines.push(`   Line Total: ${formatConvertedFromUsd(item.unitPrice * item.quantity)}`)
+      lines.push(`   Unit Price: ${item.isPriceOnRequest ? 'Price on request' : formatConvertedFromUsd(unitPrice)}`)
+      lines.push(`   Line Total: ${item.isPriceOnRequest ? 'Price on request' : formatConvertedFromUsd(unitPrice * item.quantity)}`)
       lines.push('')
     })
 
@@ -147,7 +153,7 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
             product_name: item.name,
             product_specs: item.specs,
             quantity: item.quantity,
-            unit_price: item.unitPrice,
+            unit_price: item.unitPrice ?? 0,
             sku: null,
           })),
         }),
@@ -165,7 +171,6 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
         quoteNumber
       )}`
 
-      // Optional: open chat apps with a short message that includes the quote link
       if (channel === 'whatsapp') {
         const message = encodeURIComponent(
           `Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`
