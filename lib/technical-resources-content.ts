@@ -79,20 +79,19 @@ export const technicalResourceDetails: TechnicalResourceItem[] = [
       {
         title: 'Standard Thickness and Ply Combinations',
         body: [
-          'Horrizontal Core',
+          '**Horizontal Core**',
           '7 mm 2 PLY',
           '7 mm 3 PLY',
           '12 mm 2 PLY',
           '12 mm 3 PLY',
           '20 mm 3 PLY',
           '25 mm 5 PLY',
-          'Vertical Core',
+          '**Vertical Core**',
           '30 mm 3 PLY',
           '40 mm 5 PLY',
           '45 mm 5 PLY',
           '50 mm 5 PLY',
-
-        ],
+              ],
       },
       {
         title: 'Target Tolerances',
