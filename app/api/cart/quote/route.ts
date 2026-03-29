@@ -196,6 +196,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send email directly here — no separate API call needed
+    console.log('[Quote] Channel received:', contact.channel)
     if (contact.channel === 'email') {
       try {
         console.log('[Quote Email] Starting email send for quote:', createdQuoteNumber)
