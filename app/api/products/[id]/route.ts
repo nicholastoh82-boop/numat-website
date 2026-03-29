@@ -111,6 +111,18 @@ export async function GET(
     price_notes: variant.price_notes ?? null,
   }))
 
+  const firstPricedVariant =
+    mappedVariants.find(
+      (variant) =>
+        !variant.is_price_on_request &&
+        typeof variant.base_price_usd === 'number' &&
+        Number.isFinite(variant.base_price_usd) &&
+        variant.base_price_usd > 0
+    ) ?? null
+
+  const canonicalProductPrice = parsePrice(product.base_price_usd)
+  const resolvedBasePriceUsd = canonicalProductPrice ?? firstPricedVariant?.base_price_usd ?? null
+
   return NextResponse.json({
     id: product.id,
     name: product.name,
@@ -118,7 +130,7 @@ export async function GET(
     description: product.description ?? '',
     image_url: product.image_url ?? '/placeholder-product.jpg',
     category: categoryName,
-    base_price_usd: parsePrice(product.base_price_usd),
+    base_price_usd: resolvedBasePriceUsd,
     sku: mappedVariants[0]?.sku ?? product.sku ?? '',
     thickness_mm: mappedVariants[0]?.thickness_mm ?? null,
     ply_count: mappedVariants[0]?.ply_count ?? null,

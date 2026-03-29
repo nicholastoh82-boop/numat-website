@@ -22,7 +22,7 @@ const dmSerif = DM_Serif_Display({
 export const metadata: Metadata = {
   title: 'NUMAT Bamboo | Engineered Bamboo Boards for Furniture, Interiors, and Projects',
   description:
-    'FSC-certified engineered bamboo boards for furniture, cabinetry, interiors, doors, wall systems, and commercial applications. Technical documentation, sample support, and export-ready supply.',
+    'Engineered bamboo boards for furniture, cabinetry, interiors, doors, wall systems, and commercial applications. Technical documentation, sample support, and export-ready supply.',
   keywords: [
     'engineered bamboo boards',
     'bamboo boards',
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'NUMAT Bamboo | Engineered Bamboo Boards for Commercial and Interior Applications',
     description:
-      'FSC-certified engineered bamboo boards with technical documentation, sample support, and export-ready supply.',
+      'Engineered bamboo boards with technical documentation, sample support, and export-ready supply.',
     type: 'website',
     locale: 'en_US',
     images: [
