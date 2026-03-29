@@ -194,42 +194,120 @@ export default function ESGPage() {
               </div>
 
               {/* Animated bar chart */}
-              <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-8 shadow-sm">
-                <div className="mb-6 flex items-center gap-3">
-                  <BarChart3 className="h-5 w-5 text-emerald-800" />
-                  <h3 className="text-lg font-bold text-stone-950">Carbon Lifecycle Analysis</h3>
-                </div>
+              <div className="space-y-5">
+                {/* Lifecycle card */}
+                <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-8 shadow-sm">
+                  <div className="mb-6 flex items-center gap-3">
+                    <BarChart3 className="h-5 w-5 text-emerald-800" />
+                    <h3 className="text-lg font-bold text-stone-950">Carbon Lifecycle Analysis</h3>
+                  </div>
 
-                <div className="space-y-5">
-                  {lifecycleData.map((item) => {
-                    const maxVal = 3.0
-                    const pct = Math.abs(item.value) / maxVal * 100
-                    return (
-                      <div key={item.label}>
-                        <div className="mb-1.5 flex items-center justify-between">
-                          <span className="text-sm text-stone-700">{item.label}</span>
-                          <span className={`text-sm font-bold ${item.positive ? 'text-stone-500' : 'text-emerald-700'}`}>
-                            {item.positive ? '+' : ''}{item.value} t CO₂
-                          </span>
+                  <div className="space-y-5">
+                    {lifecycleData.map((item) => {
+                      const maxVal = 3.0
+                      const pct = Math.abs(item.value) / maxVal * 100
+                      return (
+                        <div key={item.label}>
+                          <div className="mb-1.5 flex items-center justify-between">
+                            <span className="text-sm text-stone-700">{item.label}</span>
+                            <span className={`text-sm font-bold ${item.positive ? 'text-stone-500' : 'text-emerald-700'}`}>
+                              {item.positive ? '+' : ''}{item.value} t CO₂
+                            </span>
+                          </div>
+                          <div className="h-3 w-full overflow-hidden rounded-full bg-stone-200">
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ${item.positive ? 'bg-stone-400' : 'bg-emerald-500'}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="h-3 w-full overflow-hidden rounded-full bg-stone-200">
-                          <div
-                            className={`h-full rounded-full transition-all duration-700 ${item.positive ? 'bg-stone-400' : 'bg-emerald-500'}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
+                      )
+                    })}
+
+                    <div className="mt-4 border-t border-stone-200 pt-4">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-stone-950">Net Carbon Impact</span>
+                        <span className="text-2xl font-extrabold text-emerald-700">-2.5 t CO₂</span>
                       </div>
-                    )
-                  })}
-
-                  <div className="mt-4 border-t border-stone-200 pt-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-stone-950">Net Carbon Impact</span>
-                      <span className="text-2xl font-extrabold text-emerald-700">-2.5 t CO₂</span>
+                      <p className="mt-1 text-xs text-stone-400">Per cubic meter of bamboo product</p>
                     </div>
-                    <p className="mt-1 text-xs text-stone-400">Per cubic meter of bamboo product</p>
                   </div>
                 </div>
+
+                {/* Comparison chart */}
+                <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-8 shadow-sm">
+                  <div className="mb-2 flex items-center gap-3">
+                    <TreePine className="h-5 w-5 text-emerald-800" />
+                    <h3 className="text-lg font-bold text-stone-950">Sequestration Comparison</h3>
+                  </div>
+                  <p className="mb-6 text-xs text-stone-500">CO₂ absorbed per m³ or equivalent volume — per year</p>
+
+                  {[
+                    {
+                      label: 'NUMAT Bamboo Board',
+                      value: 2.5,
+                      max: 2.5,
+                      color: 'bg-emerald-500',
+                      textColor: 'text-emerald-700',
+                      note: 'Sequesters & locks carbon permanently',
+                      highlight: true,
+                    },
+                    {
+                      label: 'Mature Tropical Forest',
+                      value: 0.7,
+                      max: 2.5,
+                      color: 'bg-teal-400',
+                      textColor: 'text-teal-700',
+                      note: '~0.7 t CO₂/m³/yr (standing forest)',
+                      highlight: false,
+                    },
+                    {
+                      label: 'Mixed Hardwood Trees',
+                      value: 0.3,
+                      max: 2.5,
+                      color: 'bg-amber-400',
+                      textColor: 'text-amber-700',
+                      note: '~0.3 t CO₂/m³/yr (growing trees)',
+                      highlight: false,
+                    },
+                    {
+                      label: 'Plywood (releases CO₂)',
+                      value: 1.2,
+                      max: 2.5,
+                      color: 'bg-red-400',
+                      textColor: 'text-red-600',
+                      note: '+1.2 t CO₂/m³ emitted in production',
+                      highlight: false,
+                      negative: true,
+                    },
+                  ].map((item) => (
+                    <div key={item.label} className={`mb-4 rounded-2xl p-4 ${item.highlight ? 'border border-emerald-200 bg-emerald-50' : 'border border-stone-100 bg-white'}`}>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <div>
+                          <p className={`text-sm font-bold ${item.highlight ? 'text-emerald-800' : 'text-stone-800'}`}>
+                            {item.highlight && '★ '}{item.label}
+                          </p>
+                          <p className="text-xs text-stone-400">{item.note}</p>
+                        </div>
+                        <span className={`shrink-0 text-base font-extrabold ${item.textColor}`}>
+                          {item.negative ? '+' : '-'}{item.value} t
+                        </span>
+                      </div>
+                      <div className="h-3 w-full overflow-hidden rounded-full bg-stone-200">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${item.color}`}
+                          style={{ width: `${(item.value / item.max) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  <p className="mt-2 text-xs text-stone-400">
+                    Sources: IPCC, FAO Forest Carbon estimates, peer-reviewed LCA studies.
+                    Bamboo figure represents net sequestration locked into product lifetime.
+                  </p>
+                </div>
+              
               </div>
             </div>
           </div>
