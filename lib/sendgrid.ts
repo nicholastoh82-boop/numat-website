@@ -1,6 +1,5 @@
 import { Resend } from 'resend'
 
-// Initialize Resend with API key
 const resendApiKey = process.env.RESEND_API_KEY
 
 if (!resendApiKey) {
@@ -8,6 +7,9 @@ if (!resendApiKey) {
 }
 
 const resend = new Resend(resendApiKey)
+
+// Internal recipients always CC'd on every quote email
+const INTERNAL_CC: string[] = ['sales@numat.ph', 'mohan@numat.ph']
 
 export interface SendEmailOptions {
   to: string
@@ -30,14 +32,15 @@ export async function sendEmail(options: SendEmailOptions) {
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@numat.ph'
     const replyToEmail = process.env.RESEND_REPLY_TO || 'sales@numat.ph'
 
-    // Convert attachments to Resend format
-    const attachments = options.attachments?.map((att) => ({
-      filename: att.filename,
-      content: Buffer.from(att.content, 'base64'),
-    })) || []
+    const attachments =
+      options.attachments?.map((att) => ({
+        filename: att.filename,
+        content: Buffer.from(att.content, 'base64'),
+      })) || []
 
     const response = await resend.emails.send({
       to: options.to,
+      cc: INTERNAL_CC,
       from: fromEmail,
       subject: options.subject,
       html: options.html,
