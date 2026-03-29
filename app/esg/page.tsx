@@ -21,13 +21,56 @@ import {
 const CO2_PER_M3 = 2.5
 const PLYWOOD_CO2_PER_M3 = 1.2
 const TREES_PER_TONNE_CO2 = 0.0417
-const BOARD_VOLUME_M3 = 0.0036 // ~2440x1220x12mm board
+const BOARD_VOLUME_M3 = 0.0036
 
 const lifecycleData = [
   { label: 'Bamboo Growth', value: -3.0, color: 'bg-emerald-500', positive: false },
   { label: 'Harvesting', value: 0.1, color: 'bg-stone-400', positive: true },
   { label: 'Processing', value: 0.25, color: 'bg-stone-400', positive: true },
   { label: 'Transportation', value: 0.15, color: 'bg-stone-400', positive: true },
+]
+
+const comparisonData = [
+  {
+    label: 'NUMAT Bamboo Board',
+    value: 2.5,
+    max: 2.5,
+    color: 'bg-emerald-500',
+    textColor: 'text-emerald-700',
+    note: 'Sequesters & locks carbon permanently',
+    highlight: true,
+    negative: false,
+  },
+  {
+    label: 'Mature Tropical Forest',
+    value: 0.7,
+    max: 2.5,
+    color: 'bg-teal-400',
+    textColor: 'text-teal-700',
+    note: '~0.7 t CO₂/m³/yr (standing forest)',
+    highlight: false,
+    negative: false,
+  },
+  {
+    label: 'Mixed Hardwood Trees',
+    value: 0.3,
+    max: 2.5,
+    color: 'bg-amber-400',
+    textColor: 'text-amber-700',
+    note: '~0.3 t CO₂/m³/yr (growing trees)',
+    highlight: false,
+    negative: false,
+  },
+  {
+    label: 'Plywood (releases CO₂)',
+    value: 1.2,
+    max: 2.5,
+    color: 'bg-red-400',
+    textColor: 'text-red-600',
+    note: '+1.2 t CO₂/m³ emitted in production',
+    highlight: false,
+    negative: true,
+  },
 ]
 
 export default function ESGPage() {
@@ -161,155 +204,120 @@ export default function ESGPage() {
           </div>
         </section>
 
-        {/* Carbon Lifecycle Chart */}
+        {/* Charts + Carbon Impact */}
         <section className="border-y border-stone-200 bg-white">
           <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-emerald-800">Carbon Science</p>
-                <h2 className="mt-3 text-3xl font-bold tracking-tight text-stone-950 sm:text-4xl">
-                  Our Carbon Impact
-                </h2>
-                <p className="mt-4 text-base leading-7 text-stone-600">
-                  Bamboo absorbs CO₂ at rates far exceeding most trees. Our engineered boards
-                  lock in this carbon for the product's lifetime — making every board a
-                  net-positive contribution.
-                </p>
 
-                <div className="mt-8 space-y-3">
-                  {[
-                    { icon: TrendingDown, label: '-2.5 tonnes CO₂ per cubic meter', sub: 'Net carbon sequestration' },
-                    { icon: TreePine, label: '3–5 year harvest cycle', sub: 'Sustainable regrowth without replanting' },
-                    { icon: Recycle, label: '100% natural materials', sub: 'Biodegradable at end of life' },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-stone-50 px-5 py-4">
-                      <item.icon className="h-6 w-6 shrink-0 text-emerald-700" />
-                      <div>
-                        <p className="text-sm font-semibold text-stone-950">{item.label}</p>
-                        <p className="text-xs text-stone-500">{item.sub}</p>
+            {/* Two charts side by side */}
+            <div className="grid gap-6 lg:grid-cols-2">
+
+              {/* Carbon Lifecycle */}
+              <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-8 shadow-sm">
+                <div className="mb-6 flex items-center gap-3">
+                  <BarChart3 className="h-5 w-5 text-emerald-800" />
+                  <h3 className="text-lg font-bold text-stone-950">Carbon Lifecycle Analysis</h3>
+                </div>
+
+                <div className="space-y-5">
+                  {lifecycleData.map((item) => {
+                    const maxVal = 3.0
+                    const pct = Math.abs(item.value) / maxVal * 100
+                    return (
+                      <div key={item.label}>
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <span className="text-sm text-stone-700">{item.label}</span>
+                          <span className={`text-sm font-bold ${item.positive ? 'text-stone-500' : 'text-emerald-700'}`}>
+                            {item.positive ? '+' : ''}{item.value} t CO₂
+                          </span>
+                        </div>
+                        <div className="h-3 w-full overflow-hidden rounded-full bg-stone-200">
+                          <div
+                            className={`h-full rounded-full transition-all duration-700 ${item.positive ? 'bg-stone-400' : 'bg-emerald-500'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
                       </div>
+                    )
+                  })}
+
+                  <div className="mt-4 border-t border-stone-200 pt-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-stone-950">Net Carbon Impact</span>
+                      <span className="text-2xl font-extrabold text-emerald-700">-2.5 t CO₂</span>
                     </div>
-                  ))}
+                    <p className="mt-1 text-xs text-stone-400">Per cubic meter of bamboo product</p>
+                  </div>
                 </div>
               </div>
 
-              {/* Animated bar chart */}
-              <div className="space-y-5">
-                {/* Lifecycle card */}
-                <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-8 shadow-sm">
-                  <div className="mb-6 flex items-center gap-3">
-                    <BarChart3 className="h-5 w-5 text-emerald-800" />
-                    <h3 className="text-lg font-bold text-stone-950">Carbon Lifecycle Analysis</h3>
-                  </div>
+              {/* Sequestration Comparison */}
+              <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-8 shadow-sm">
+                <div className="mb-2 flex items-center gap-3">
+                  <TreePine className="h-5 w-5 text-emerald-800" />
+                  <h3 className="text-lg font-bold text-stone-950">Sequestration Comparison</h3>
+                </div>
+                <p className="mb-6 text-xs text-stone-500">CO₂ absorbed per m³ or equivalent volume — per year</p>
 
-                  <div className="space-y-5">
-                    {lifecycleData.map((item) => {
-                      const maxVal = 3.0
-                      const pct = Math.abs(item.value) / maxVal * 100
-                      return (
-                        <div key={item.label}>
-                          <div className="mb-1.5 flex items-center justify-between">
-                            <span className="text-sm text-stone-700">{item.label}</span>
-                            <span className={`text-sm font-bold ${item.positive ? 'text-stone-500' : 'text-emerald-700'}`}>
-                              {item.positive ? '+' : ''}{item.value} t CO₂
-                            </span>
-                          </div>
-                          <div className="h-3 w-full overflow-hidden rounded-full bg-stone-200">
-                            <div
-                              className={`h-full rounded-full transition-all duration-700 ${item.positive ? 'bg-stone-400' : 'bg-emerald-500'}`}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-
-                    <div className="mt-4 border-t border-stone-200 pt-4">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-stone-950">Net Carbon Impact</span>
-                        <span className="text-2xl font-extrabold text-emerald-700">-2.5 t CO₂</span>
+                {comparisonData.map((item) => (
+                  <div
+                    key={item.label}
+                    className={`mb-4 rounded-2xl p-4 ${item.highlight ? 'border border-emerald-200 bg-emerald-50' : 'border border-stone-100 bg-white'}`}
+                  >
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <div>
+                        <p className={`text-sm font-bold ${item.highlight ? 'text-emerald-800' : 'text-stone-800'}`}>
+                          {item.highlight && '★ '}{item.label}
+                        </p>
+                        <p className="text-xs text-stone-400">{item.note}</p>
                       </div>
-                      <p className="mt-1 text-xs text-stone-400">Per cubic meter of bamboo product</p>
+                      <span className={`shrink-0 text-base font-extrabold ${item.textColor}`}>
+                        {item.negative ? '+' : '-'}{item.value} t
+                      </span>
+                    </div>
+                    <div className="h-3 w-full overflow-hidden rounded-full bg-stone-200">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${item.color}`}
+                        style={{ width: `${(item.value / item.max) * 100}%` }}
+                      />
                     </div>
                   </div>
-                </div>
+                ))}
 
-                {/* Comparison chart */}
-                <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-8 shadow-sm">
-                  <div className="mb-2 flex items-center gap-3">
-                    <TreePine className="h-5 w-5 text-emerald-800" />
-                    <h3 className="text-lg font-bold text-stone-950">Sequestration Comparison</h3>
-                  </div>
-                  <p className="mb-6 text-xs text-stone-500">CO₂ absorbed per m³ or equivalent volume — per year</p>
-
-                  {[
-                    {
-                      label: 'NUMAT Bamboo Board',
-                      value: 2.5,
-                      max: 2.5,
-                      color: 'bg-emerald-500',
-                      textColor: 'text-emerald-700',
-                      note: 'Sequesters & locks carbon permanently',
-                      highlight: true,
-                    },
-                    {
-                      label: 'Mature Tropical Forest',
-                      value: 0.7,
-                      max: 2.5,
-                      color: 'bg-teal-400',
-                      textColor: 'text-teal-700',
-                      note: '~0.7 t CO₂/m³/yr (standing forest)',
-                      highlight: false,
-                    },
-                    {
-                      label: 'Mixed Hardwood Trees',
-                      value: 0.3,
-                      max: 2.5,
-                      color: 'bg-amber-400',
-                      textColor: 'text-amber-700',
-                      note: '~0.3 t CO₂/m³/yr (growing trees)',
-                      highlight: false,
-                    },
-                    {
-                      label: 'Plywood (releases CO₂)',
-                      value: 1.2,
-                      max: 2.5,
-                      color: 'bg-red-400',
-                      textColor: 'text-red-600',
-                      note: '+1.2 t CO₂/m³ emitted in production',
-                      highlight: false,
-                      negative: true,
-                    },
-                  ].map((item) => (
-                    <div key={item.label} className={`mb-4 rounded-2xl p-4 ${item.highlight ? 'border border-emerald-200 bg-emerald-50' : 'border border-stone-100 bg-white'}`}>
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <div>
-                          <p className={`text-sm font-bold ${item.highlight ? 'text-emerald-800' : 'text-stone-800'}`}>
-                            {item.highlight && '★ '}{item.label}
-                          </p>
-                          <p className="text-xs text-stone-400">{item.note}</p>
-                        </div>
-                        <span className={`shrink-0 text-base font-extrabold ${item.textColor}`}>
-                          {item.negative ? '+' : '-'}{item.value} t
-                        </span>
-                      </div>
-                      <div className="h-3 w-full overflow-hidden rounded-full bg-stone-200">
-                        <div
-                          className={`h-full rounded-full transition-all duration-700 ${item.color}`}
-                          style={{ width: `${(item.value / item.max) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-
-                  <p className="mt-2 text-xs text-stone-400">
-                    Sources: IPCC, FAO Forest Carbon estimates, peer-reviewed LCA studies.
-                    Bamboo figure represents net sequestration locked into product lifetime.
-                  </p>
-                </div>
-              
+                <p className="mt-2 text-xs text-stone-400">
+                  Sources: IPCC, FAO Forest Carbon estimates, peer-reviewed LCA studies.
+                  Bamboo figure represents net sequestration locked into product lifetime.
+                </p>
               </div>
             </div>
+
+            {/* Our Carbon Impact — below both charts */}
+            <div className="mt-8 rounded-[2rem] border border-stone-200 bg-stone-50 p-8">
+              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-800">Carbon Science</p>
+              <h2 className="mt-3 text-2xl font-bold tracking-tight text-stone-950">
+                Our Carbon Impact
+              </h2>
+              <p className="mt-3 text-base leading-7 text-stone-600">
+                Bamboo absorbs CO₂ at rates far exceeding most trees. Our engineered boards
+                lock in this carbon for the product's lifetime — making every board a
+                net-positive contribution.
+              </p>
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                {[
+                  { icon: TrendingDown, label: '-2.5 tonnes CO₂ per cubic meter', sub: 'Net carbon sequestration' },
+                  { icon: TreePine, label: '3–5 year harvest cycle', sub: 'Sustainable regrowth without replanting' },
+                  { icon: Recycle, label: '100% natural materials', sub: 'Biodegradable at end of life' },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-white px-5 py-4">
+                    <item.icon className="h-6 w-6 shrink-0 text-emerald-700" />
+                    <div>
+                      <p className="text-sm font-semibold text-stone-950">{item.label}</p>
+                      <p className="text-xs text-stone-500">{item.sub}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         </section>
 
@@ -334,8 +342,8 @@ export default function ESGPage() {
 
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {[
-                { icon: Globe, title: 'Verified Impact', body: 'All carbon claims independently verified through Wavemaker\'s rigorous impact measurement framework.' },
-                { icon: Leaf, title: 'FSC-Certified Sourcing', body: 'Bamboo sourced exclusively from FSC-certified plantations prioritizing biodiversity and community welfare.' },
+                { icon: Globe, title: 'Verified Impact', body: "All carbon claims independently verified through Wavemaker's rigorous impact measurement framework." },
+                { icon: Leaf, title: 'Sustainable Sourcing', body: 'Bamboo sourced exclusively from plantations prioritizing biodiversity and community welfare.' },
                 { icon: TrendingDown, title: 'Continuous Improvement', body: 'Committed to reducing operational footprint through renewable energy and optimised logistics.' },
               ].map((item) => (
                 <div key={item.title} className="rounded-[1.75rem] border border-stone-200 bg-stone-50 p-6">
@@ -364,7 +372,7 @@ export default function ESGPage() {
                   items: [
                     'Carbon-negative product lifecycle',
                     'Zero deforestation supply chain',
-                    '100% FSC-certified materials',
+                    '100% Sustainbly harvested bamboo',
                     'Minimal water usage in processing',
                     'Renewable energy transition roadmap',
                     'Waste reduction and recycling programs',
@@ -428,7 +436,7 @@ export default function ESGPage() {
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-base text-white/70">
                 Every board you order contributes to carbon reduction and supports
-                Local Sustainable Forestry. Use the calculator above to see your impact.
+                Local sustainable forestry. Use the calculator above to see your impact.
               </p>
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 <Link
