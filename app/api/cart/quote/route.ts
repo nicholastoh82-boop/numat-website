@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js'
 import { detectSpam, sanitizeInput } from '@/lib/spam-detection'
+import { sendEmail } from '@/lib/sendgrid'
+import { generateQuoteEmailHTML } from '@/lib/email-templates'
 
 interface QuoteContact {
   name: string
@@ -117,7 +119,7 @@ export async function POST(request: NextRequest) {
         .join('\n')
     )
 
-    // Create quote — save all calculated totals
+    // Create quote
     const { data: quote, error: quoteError } = await supabase
       .from('quotes')
       .insert({
@@ -193,24 +195,52 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send email if channel is email
+    // Send email directly here — no separate API call needed
     if (contact.channel === 'email') {
       try {
-        const origin = request.nextUrl.origin
-        await fetch(`${origin}/api/admin/send-quote`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': 'automated-system-call',
-          },
-          body: JSON.stringify({
-            quoteId,
-            type: 'send',
-            channel: 'email',
-          }),
+        const displayCurrency = contact.display_currency ?? 'USD'
+        const displayTotal = contact.display_total ?? total
+        const conversionRatio = total > 0 ? displayTotal / total : 1
+
+        const quoteDate = new Date().toLocaleDateString('en-PH', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
         })
-      } catch (err) {
-        console.warn('Quote created but email send failed:', err)
+        const validUntil = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString(
+          'en-PH',
+          { year: 'numeric', month: 'long', day: 'numeric' }
+        )
+
+        const htmlContent = generateQuoteEmailHTML({
+          customerName: contact.name,
+          quoteNumber: createdQuoteNumber,
+          quoteDate,
+          validUntil,
+          subtotal: Math.round(subtotal * conversionRatio),
+          discountAmount: Math.round(discountAmount * conversionRatio),
+          discountPercent,
+          total: Math.round(displayTotal),
+          recipientEmail: contact.email,
+          items: items.map((item) => ({
+            productName: item.product_name,
+            quantity: item.quantity,
+            unitPrice: Math.round((item.unit_price ?? 0) * conversionRatio),
+            totalPrice: Math.round(item.quantity * (item.unit_price ?? 0) * conversionRatio),
+          })),
+        })
+
+        await sendEmail({
+          to: contact.email,
+          subject: `Your Quote #${createdQuoteNumber} from NUMAT Bamboo`,
+          html: htmlContent,
+          attachments: [],
+        })
+
+        console.log(`[Quote Email] Sent successfully to ${contact.email}`)
+      } catch (emailErr) {
+        console.error('[Quote Email] Failed to send:', emailErr)
+        // Non-blocking — quote is created, email can be resent manually
       }
     }
 
