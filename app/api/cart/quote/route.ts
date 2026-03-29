@@ -227,8 +227,9 @@ export async function POST(request: NextRequest) {
           total: Math.round(displayTotal),
           recipientEmail: contact.email,
           items: items.map((item) => ({
-            productName: item.product_name,
-            quantity: item.quantity,
+  productName: item.product_name,
+  productSpecs: item.product_specs,
+  quantity: item.quantity,
             unitPrice: Math.round((item.unit_price ?? 0) * conversionRatio),
             totalPrice: Math.round(item.quantity * (item.unit_price ?? 0) * conversionRatio),
           })),

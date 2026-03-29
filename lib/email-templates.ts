@@ -9,6 +9,7 @@ interface QuoteEmailData {
   validUntil?: string
   items: Array<{
     productName: string
+    productSpecs?: string
     quantity: number
     unitPrice: number
     totalPrice: number
@@ -28,7 +29,10 @@ export function generateQuoteEmailHTML(data: QuoteEmailData): string {
 
   const itemsHTML = data.items.map((item) => `
     <tr>
-      <td style="padding:12px 8px;border-bottom:1px solid #f0f0f0;text-align:left;font-size:14px;color:#333;">${item.productName}</td>
+      <td style="padding:12px 8px;border-bottom:1px solid #f0f0f0;text-align:left;font-size:14px;color:#333;">
+  ${item.productName}
+  ${item.productSpecs ? `<br><span style="font-size:11px;color:#888;">${item.productSpecs}</span>` : ''}
+</td>
       <td style="padding:12px 8px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:14px;color:#333;">${item.quantity}</td>
       <td style="padding:12px 8px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:14px;color:#333;">${item.unitPrice.toLocaleString()}</td>
       <td style="padding:12px 8px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:14px;font-weight:600;color:#1a237e;">${item.totalPrice.toLocaleString()}</td>
