@@ -109,6 +109,10 @@ export async function POST(request: NextRequest) {
     const total = subtotal - discountAmount
     const quoteNumber = generateQuoteNumber()
 
+    // Valid until = 14 days from now
+    const validUntil = new Date()
+    validUntil.setDate(validUntil.getDate() + 14)
+
     const notes = sanitizeInput(
       [
         `Preferred channel: ${contact.channel}`,
@@ -134,6 +138,7 @@ export async function POST(request: NextRequest) {
         total,
         display_currency: contact.display_currency ?? 'USD',
         display_total: contact.display_total ?? total,
+        valid_until: validUntil.toISOString(),
       } as any)
       .select('id, quote_number')
       .single()
@@ -195,13 +200,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send email directly here — no separate API call needed
-    console.log('[Quote] Channel received:', contact.channel)
+    // Send email directly
     if (contact.channel === 'email') {
       try {
-        console.log('[Quote Email] Starting email send for quote:', createdQuoteNumber)
-        console.log('[Quote Email] RESEND_API_KEY present:', !!process.env.RESEND_API_KEY)
-        console.log('[Quote Email] Sending to:', contact.email)
         const displayCurrency = contact.display_currency ?? 'USD'
         const displayTotal = contact.display_total ?? total
         const conversionRatio = total > 0 ? displayTotal / total : 1
@@ -211,25 +212,26 @@ export async function POST(request: NextRequest) {
           month: 'long',
           day: 'numeric',
         })
-        const validUntil = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString(
-          'en-PH',
-          { year: 'numeric', month: 'long', day: 'numeric' }
-        )
+        const validUntilFormatted = validUntil.toLocaleDateString('en-PH', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
 
         const htmlContent = generateQuoteEmailHTML({
           customerName: contact.name,
           quoteNumber: createdQuoteNumber,
           quoteDate,
-          validUntil,
+          validUntil: validUntilFormatted,
           subtotal: Math.round(subtotal * conversionRatio),
           discountAmount: Math.round(discountAmount * conversionRatio),
           discountPercent,
           total: Math.round(displayTotal),
           recipientEmail: contact.email,
           items: items.map((item) => ({
-  productName: item.product_name,
-  productSpecs: item.product_specs,
-  quantity: item.quantity,
+            productName: item.product_name,
+            productSpecs: item.product_specs,
+            quantity: item.quantity,
             unitPrice: Math.round((item.unit_price ?? 0) * conversionRatio),
             totalPrice: Math.round(item.quantity * (item.unit_price ?? 0) * conversionRatio),
           })),
@@ -245,7 +247,6 @@ export async function POST(request: NextRequest) {
         console.log(`[Quote Email] Sent successfully to ${contact.email}`)
       } catch (emailErr) {
         console.error('[Quote Email] Failed to send:', emailErr)
-        // Non-blocking — quote is created, email can be resent manually
       }
     }
 
