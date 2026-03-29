@@ -24,21 +24,28 @@ type Testimonial = {
   sort_order?: number
 }
 
+type NewsItem = {
+  id: string
+  title: string
+  slug: string
+  excerpt: string | null
+  cover_image_url: string | null
+  published_at: string | null
+  featured: boolean
+}
+
 const fetcher = async (url: string) => {
   const res = await fetch(url)
-  if (!res.ok) {
-    throw new Error('Failed to fetch')
-  }
+  if (!res.ok) throw new Error('Failed to fetch')
   return res.json()
 }
 
 export default function NumatBambooHomepageRevamp() {
-  const { data: testimonialsData } = useSWR<Testimonial[]>(
-    '/api/testimonials',
-    fetcher
-  )
-
+  const { data: testimonialsData } = useSWR<Testimonial[]>('/api/testimonials', fetcher)
   const testimonials = Array.isArray(testimonialsData) ? testimonialsData : []
+
+  const { data: newsData } = useSWR<NewsItem[]>('/api/news', fetcher)
+  const newsItems = Array.isArray(newsData) ? newsData.slice(0, 3) : []
 
   const trustPoints = [
     'Sustainably Harvested',
@@ -104,26 +111,10 @@ export default function NumatBambooHomepageRevamp() {
   ]
 
   const resourceCards = [
-    {
-      title: 'Data Sheets',
-      href: '/technical-resources',
-      icon: FileText,
-    },
-    {
-      title: 'Dimensions',
-      href: '/technical-resources',
-      icon: PackageCheck,
-    },
-    {
-      title: 'Certifications',
-      href: '/testing',
-      icon: ShieldCheck,
-    },
-    {
-      title: 'Applications',
-      href: '/technical-resources',
-      icon: Leaf,
-    },
+    { title: 'Data Sheets', href: '/technical-resources', icon: FileText },
+    { title: 'Dimensions', href: '/technical-resources', icon: PackageCheck },
+    { title: 'Certifications', href: '/testing', icon: ShieldCheck },
+    { title: 'Applications', href: '/technical-resources', icon: Leaf },
   ]
 
   const visualTrust = [
@@ -146,6 +137,8 @@ export default function NumatBambooHomepageRevamp() {
       <CartDrawer />
 
       <main className="flex-1 bg-[#f6f1e8] text-stone-900">
+
+        {/* Hero */}
         <section className="relative overflow-hidden border-b border-stone-200 bg-[linear-gradient(to_bottom,_#f8f3ea,_#f4ede2)]">
           <div className="pointer-events-none absolute inset-0 opacity-60">
             <div className="absolute left-0 top-0 h-72 w-72 rounded-full bg-emerald-900/10 blur-3xl" />
@@ -175,7 +168,9 @@ export default function NumatBambooHomepageRevamp() {
                   Request Quote
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <p className="text-sm font-semibold text-emerald-700 animate-[subtlePulse_2.5s_ease-in-out_infinite]">✦ Get a quote in 24 hours — no commitment needed.</p>
+                <p className="text-sm font-semibold text-emerald-700 animate-[subtlePulse_2.5s_ease-in-out_infinite]">
+                  ✦ Get a quote in 24 hours — no commitment needed.
+                </p>
               </div>
 
               <div className="mt-7 grid max-w-xl grid-cols-2 gap-3">
@@ -226,9 +221,7 @@ export default function NumatBambooHomepageRevamp() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
                     <p className="text-sm font-medium text-white/80">Application</p>
-                    <p className="mt-1 text-lg font-semibold text-white">
-                      Furniture & cabinetry
-                    </p>
+                    <p className="mt-1 text-lg font-semibold text-white">Furniture & cabinetry</p>
                   </div>
                 </div>
               </div>
@@ -244,9 +237,7 @@ export default function NumatBambooHomepageRevamp() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
                     <p className="text-sm font-medium text-white/80">Commercial</p>
-                    <p className="mt-1 text-lg font-semibold text-white">
-                      Export-ready supply
-                    </p>
+                    <p className="mt-1 text-lg font-semibold text-white">Export-ready supply</p>
                   </div>
                 </div>
               </div>
@@ -254,34 +245,32 @@ export default function NumatBambooHomepageRevamp() {
           </div>
         </section>
 
+        {/* Trust bar */}
         <section className="border-b border-stone-200 bg-[#f6f1e8]">
-  <div className="mx-auto max-w-7xl px-6 py-4 lg:px-8">
-    <div className="rounded-[2rem] bg-emerald-800 p-4 text-white">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {trustPoints.map((point) => (
-          <div
-            key={point}
-            className="flex items-center justify-between rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium transition duration-300 hover:bg-white/15"
-          >
-            <span>{point}</span>
-            <ShieldCheck className="ml-3 h-4 w-4 shrink-0 text-white" />
+          <div className="mx-auto max-w-7xl px-6 py-4 lg:px-8">
+            <div className="rounded-[2rem] bg-emerald-800 p-4 text-white">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                {trustPoints.map((point) => (
+                  <div
+                    key={point}
+                    className="flex items-center justify-between rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium transition duration-300 hover:bg-white/15"
+                  >
+                    <span>{point}</span>
+                    <ShieldCheck className="ml-3 h-4 w-4 shrink-0 text-white" />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
-    </div>
-  </div>
-</section>
+        </section>
 
+        {/* Product Families */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
           <div className="mb-8 flex items-end justify-between gap-4">
             <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
               Product Families
             </h2>
-
-            <Link
-              href="/products"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900"
-            >
+            <Link href="/products" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
               View all
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -295,12 +284,7 @@ export default function NumatBambooHomepageRevamp() {
                 className="group block overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-xl"
               >
                 <div className="relative h-72 overflow-hidden">
-                  <Image
-                    src={item.image}
-                    alt={item.title}
-                    fill
-                    className="object-cover transition duration-700 group-hover:scale-[1.07]"
-                  />
+                  <Image src={item.image} alt={item.title} fill className="object-cover transition duration-700 group-hover:scale-[1.07]" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
                   <div className="absolute bottom-5 left-5 right-5">
                     <h3 className="text-2xl font-semibold text-white">{item.title}</h3>
@@ -312,137 +296,99 @@ export default function NumatBambooHomepageRevamp() {
           </div>
         </section>
 
+        {/* Visual Applications */}
         <section className="border-y border-stone-200 bg-white">
-  <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-    <div className="mb-8">
-      <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-        Visual Applications
-      </h2>
-    </div>
+          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+            <div className="mb-8">
+              <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+                Visual Applications
+              </h2>
+            </div>
 
-    <div className="grid items-start gap-4 xl:grid-cols-12">
-      <div className="group relative self-start overflow-hidden rounded-[2rem] border border-stone-200 shadow-sm xl:col-span-5">
-        <div className="relative h-[652px]">
-          <Image
-            src="/Bamboo-Wall.png"
-            alt="Premium bamboo wall and interior surfaces"
-            fill
-            className="object-cover transition duration-700 group-hover:scale-[1.05]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-          <div className="absolute bottom-5 left-5 right-5">
-            <p className="text-2xl font-semibold text-white">
-              Interior Fit-Outs
-            </p>
-          </div>
-        </div>
-      </div>
+            <div className="grid items-start gap-4 xl:grid-cols-12">
+              <div className="group relative self-start overflow-hidden rounded-[2rem] border border-stone-200 shadow-sm xl:col-span-5">
+                <div className="relative h-[652px]">
+                  <Image src="/Bamboo-Wall.png" alt="Premium bamboo wall and interior surfaces" fill className="object-cover transition duration-700 group-hover:scale-[1.05]" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <p className="text-2xl font-semibold text-white">Interior Fit-Outs</p>
+                  </div>
+                </div>
+              </div>
 
-      <div className="grid gap-4 xl:col-span-7 xl:grid-cols-2">
-        {applicationGallery.slice(1, 5).map((item) => (
-          <div
-            key={item.title}
-            className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
-          >
-            <div className="relative h-[200px]">
-              <Image
-                src={item.image}
-                alt={item.title}
-                fill
-                className="object-cover transition duration-700 group-hover:scale-[1.06]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-              <div className="absolute bottom-4 left-4 right-4">
-                <p className="text-lg font-semibold text-white">{item.title}</p>
+              <div className="grid gap-4 xl:col-span-7 xl:grid-cols-2">
+                {applicationGallery.slice(1, 5).map((item) => (
+                  <div key={item.title} className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+                    <div className="relative h-[200px]">
+                      <Image src={item.image} alt={item.title} fill className="object-cover transition duration-700 group-hover:scale-[1.06]" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <p className="text-lg font-semibold text-white">{item.title}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg xl:col-span-2">
+                  <div className="relative h-[220px]">
+                    <Image src={applicationGallery[5].image} alt={applicationGallery[5].title} fill className="object-cover transition duration-700 group-hover:scale-[1.06]" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <p className="text-lg font-semibold text-white">{applicationGallery[5].title}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        ))}
+        </section>
 
-        <div className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg xl:col-span-2">
-          <div className="relative h-[220px]">
-            <Image
-              src={applicationGallery[5].image}
-              alt={applicationGallery[5].title}
-              fill
-              className="object-cover transition duration-700 group-hover:scale-[1.06]"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-            <div className="absolute bottom-4 left-4 right-4">
-              <p className="text-lg font-semibold text-white">
-                {applicationGallery[5].title}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-        
-
+        {/* Testing */}
         <section className="bg-[#f6f1e8]">
-  <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-    <div className="rounded-[2rem] bg-stone-950 p-6 text-white lg:p-8">
-      <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
-            Testing highlights
-          </p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Performance at a Glance
-          </h2>
-          <p className="mt-4 text-base leading-7 text-white/75">
-            DOST / ASTM D1037 mechanical testing supports commercial evaluation.
-          </p>
+          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+            <div className="rounded-[2rem] bg-stone-950 p-6 text-white lg:p-8">
+              <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+                <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                    Testing highlights
+                  </p>
+                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                    Performance at a Glance
+                  </h2>
+                  <p className="mt-4 text-base leading-7 text-white/75">
+                    DOST / ASTM D1037 mechanical testing supports commercial evaluation.
+                  </p>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <Link href="/testing" className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-stone-950 transition duration-300 hover:bg-stone-100">
+                      View Testing
+                    </Link>
+                    <Link href="/contact" className="inline-flex items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-white/10">
+                      Contact Sales
+                    </Link>
+                  </div>
+                </div>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/testing"
-              className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-stone-950 transition duration-300 hover:bg-stone-100"
-            >
-              View Testing
-            </Link>
-
-            <Link
-              href="/contact"
-              className="inline-flex items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-white/10"
-            >
-              Contact Sales
-            </Link>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          {testingCards.map((item) => (
-            <div
-              key={item.label}
-              className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:bg-white/[0.07]"
-            >
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
-                {item.label}
-              </p>
-              <p className="mt-3 text-2xl font-semibold leading-tight">{item.value}</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {testingCards.map((item) => (
+                    <div key={item.label} className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:bg-white/[0.07]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">{item.label}</p>
+                      <p className="mt-3 text-2xl font-semibold leading-tight">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+          </div>
+        </section>
 
+        {/* Technical Resources */}
         <section className="border-y border-stone-200 bg-white">
           <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
             <div className="mb-8 flex items-end justify-between gap-4">
               <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
                 Technical Resources
               </h2>
-
-              <Link
-                href="/technical-resources"
-                className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900"
-              >
+              <Link href="/technical-resources" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
                 View all
                 <ArrowRight className="h-4 w-4" />
               </Link>
@@ -451,21 +397,12 @@ export default function NumatBambooHomepageRevamp() {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {resourceCards.map((resource) => {
                 const Icon = resource.icon
-
                 return (
-                  <Link
-                    key={resource.title}
-                    href={resource.href}
-                    className="group block rounded-[1.75rem] border border-stone-200 bg-stone-50 p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-md"
-                  >
+                  <Link key={resource.title} href={resource.href} className="group block rounded-[1.75rem] border border-stone-200 bg-stone-50 p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-md">
                     <div className="w-fit rounded-2xl bg-white p-3 shadow-sm">
                       <Icon className="h-5 w-5 text-emerald-800" />
                     </div>
-
-                    <p className="mt-4 text-lg font-semibold text-stone-950">
-                      {resource.title}
-                    </p>
-
+                    <p className="mt-4 text-lg font-semibold text-stone-950">{resource.title}</p>
                     <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-800">
                       View
                       <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
@@ -477,6 +414,77 @@ export default function NumatBambooHomepageRevamp() {
           </div>
         </section>
 
+        {/* News & Activities */}
+        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+            <div className="mb-8 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+                  Latest updates
+                </p>
+                <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+                  News & Activities
+                </h2>
+              </div>
+              <Link href="/news" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                View all
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {newsItems.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/news/${item.slug}`}
+                  className="group block overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-xl"
+                >
+                  {item.cover_image_url ? (
+                    <div className="relative h-52 overflow-hidden">
+                      <img
+                        src={item.cover_image_url}
+                        alt={item.title}
+                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                      {item.featured && (
+                        <span className="absolute left-4 top-4 rounded-full bg-emerald-700 px-3 py-1 text-xs font-semibold text-white">
+                          Featured
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex h-52 items-center justify-center bg-stone-100">
+                      <FileText className="h-10 w-10 text-stone-300" />
+                    </div>
+                  )}
+
+                  <div className="p-6">
+                    {item.published_at && (
+                      <p className="text-xs font-medium text-stone-400">
+                        {new Date(item.published_at).toLocaleDateString('en-PH', {
+                          year: 'numeric', month: 'long', day: 'numeric',
+                        })}
+                      </p>
+                    )}
+                    <h3 className="mt-2 text-lg font-semibold leading-snug text-stone-950">
+                      {item.title}
+                    </h3>
+                    {item.excerpt && (
+                      <p className="mt-2 text-sm leading-6 text-stone-500 line-clamp-2">
+                        {item.excerpt}
+                      </p>
+                    )}
+                    <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                      Read more
+                      <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+
+        {/* Testimonials */}
         {testimonials.length > 0 && (
           <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
             <div className="mb-8 flex items-end justify-between gap-4">
@@ -492,10 +500,7 @@ export default function NumatBambooHomepageRevamp() {
 
             <div className="grid gap-4 lg:grid-cols-3">
               {testimonials.slice(0, 3).map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
-                >
+                <div key={item.id} className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
                       <Quote className="h-5 w-5" />
@@ -504,11 +509,7 @@ export default function NumatBambooHomepageRevamp() {
                       Verified feedback
                     </span>
                   </div>
-
-                  <p className="mt-5 text-base leading-7 text-stone-700">
-                    “{item.testimonial}”
-                  </p>
-
+                  <p className="mt-5 text-base leading-7 text-stone-700">"{item.testimonial}"</p>
                   <div className="mt-6 border-t border-stone-200 pt-4">
                     <p className="text-base font-semibold text-stone-950">{item.name}</p>
                     <p className="mt-1 text-sm text-stone-500">{item.location}</p>
@@ -519,26 +520,18 @@ export default function NumatBambooHomepageRevamp() {
           </section>
         )}
 
+        {/* Trust & Credibility */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
           <div className="mb-8">
             <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
               Trust & Credibility
             </h2>
           </div>
-
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {visualTrust.map((item) => (
-              <div
-                key={item.title}
-                className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
-              >
+              <div key={item.title} className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
                 <div className="relative h-64">
-                  <Image
-                    src={item.image}
-                    alt={item.title}
-                    fill
-                    className="object-cover transition duration-700 group-hover:scale-[1.06]"
-                  />
+                  <Image src={item.image} alt={item.title} fill className="object-cover transition duration-700 group-hover:scale-[1.06]" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
                     <p className="text-xl font-semibold text-white">{item.title}</p>
@@ -549,25 +542,17 @@ export default function NumatBambooHomepageRevamp() {
           </div>
         </section>
 
+        {/* Material gallery */}
         <section className="border-y border-stone-200 bg-[#efe7d9]">
           <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
             <div className="grid gap-4 lg:grid-cols-3">
               <div className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm lg:col-span-2">
                 <div className="relative h-[320px]">
-                  <Image
-                    src="/Bamboo-Furniture.png"
-                    alt="Premium bamboo furniture board visual"
-                    fill
-                    className="object-cover transition duration-700 group-hover:scale-[1.05]"
-                  />
+                  <Image src="/Bamboo-Furniture.png" alt="Premium bamboo furniture board visual" fill className="object-cover transition duration-700 group-hover:scale-[1.05]" />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/25 to-transparent" />
                   <div className="absolute bottom-5 left-5 max-w-lg">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
-                      Material appeal
-                    </p>
-                    <p className="mt-2 text-3xl font-semibold text-white">
-                      Premium natural finish for design-led interiors
-                    </p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Material appeal</p>
+                    <p className="mt-2 text-3xl font-semibold text-white">Premium natural finish for design-led interiors</p>
                   </div>
                 </div>
               </div>
@@ -575,12 +560,7 @@ export default function NumatBambooHomepageRevamp() {
               <div className="grid gap-4">
                 <div className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm">
                   <div className="relative h-[152px]">
-                    <Image
-                      src="/Bamboo-DIY.png"
-                      alt="Decorative use"
-                      fill
-                      className="object-cover transition duration-700 group-hover:scale-[1.06]"
-                    />
+                    <Image src="/Bamboo-DIY.png" alt="Decorative use" fill className="object-cover transition duration-700 group-hover:scale-[1.06]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
                     <div className="absolute bottom-4 left-4 right-4">
                       <p className="text-lg font-semibold text-white">Decorative use</p>
@@ -590,12 +570,7 @@ export default function NumatBambooHomepageRevamp() {
 
                 <div className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm">
                   <div className="relative h-[152px]">
-                    <Image
-                      src="/Bamboo-Board.png"
-                      alt="Project board supply"
-                      fill
-                      className="object-cover transition duration-700 group-hover:scale-[1.06]"
-                    />
+                    <Image src="/Bamboo-Board.png" alt="Project board supply" fill className="object-cover transition duration-700 group-hover:scale-[1.06]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
                     <div className="absolute bottom-4 left-4 right-4">
                       <p className="text-lg font-semibold text-white">Project board supply</p>
@@ -607,26 +582,19 @@ export default function NumatBambooHomepageRevamp() {
           </div>
         </section>
 
+        {/* Bottom CTA */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
           <div className="relative overflow-hidden rounded-[2rem] border border-stone-900/10 bg-stone-950 px-8 py-12 text-white shadow-xl lg:px-12 lg:py-16">
             <div className="absolute inset-0 opacity-35">
-              <Image
-                src="/Bamboo-Board.png"
-                alt="Premium engineered bamboo board"
-                fill
-                className="object-cover"
-              />
+              <Image src="/Bamboo-Board.png" alt="Premium engineered bamboo board" fill className="object-cover" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-black/70" />
 
             <div className="relative max-w-3xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
-                Next step
-              </p>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">Next step</p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
                 Ready to Source Bamboo Boards for Your Next Project?
               </h2>
-
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
                 <Link
                   href="/request-quote"
@@ -635,28 +603,26 @@ export default function NumatBambooHomepageRevamp() {
                   Request Quote
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <p className="text-sm font-semibold text-emerald-300 animate-[subtlePulse_2.5s_ease-in-out_infinite]">✦ Get a quote in 24 hours — no commitment needed.</p>
+                <p className="text-sm font-semibold text-emerald-300 animate-[subtlePulse_2.5s_ease-in-out_infinite]">
+                  ✦ Get a quote in 24 hours — no commitment needed.
+                </p>
               </div>
             </div>
           </div>
         </section>
+
       </main>
 
       <Footer />
 
       <style jsx global>{`
-      @keyframes subtlePulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+        @keyframes subtlePulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
         @keyframes fadeUp {
-          from {
-            opacity: 0;
-            transform: translateY(22px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(22px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </div>
