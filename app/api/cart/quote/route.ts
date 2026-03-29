@@ -58,12 +58,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Validation
     if (!contact.name || !contact.email || !contact.phone) {
       return NextResponse.json({ ok: false, error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Spam detection on contact info
     const spamResult = detectSpam({
       name: contact.name,
       email: contact.email,
@@ -92,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
     const formattedPhone = phoneNumber.number
 
-    // 2. Calculations
+    // Calculations
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0)
 
     const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
@@ -107,7 +105,6 @@ export async function POST(request: NextRequest) {
     const total = subtotal - discountAmount
     const quoteNumber = generateQuoteNumber()
 
-    // 3. Create Quote
     const notes = sanitizeInput(
       [
         `Preferred channel: ${contact.channel}`,
@@ -118,6 +115,7 @@ export async function POST(request: NextRequest) {
         .join('\n')
     )
 
+    // Create quote — save all calculated totals
     const { data: quote, error: quoteError } = await supabase
       .from('quotes')
       .insert({
@@ -126,6 +124,10 @@ export async function POST(request: NextRequest) {
         email: sanitizeInput(contact.email),
         phone: formattedPhone,
         notes,
+        subtotal,
+        discount_amount: discountAmount,
+        discount_percent: discountPercent,
+        total,
       } as any)
       .select('id, quote_number')
       .single()
@@ -147,7 +149,7 @@ export async function POST(request: NextRequest) {
     const quoteId = quote.id as string
     const createdQuoteNumber = (quote as any).quote_number ?? quoteNumber
 
-    // 4. Create Quote Items — try full payload first
+    // Create quote items
     const quoteItems = items.map((item) => ({
       quote_id: quoteId,
       product_id: item.product_id || null,
@@ -158,11 +160,8 @@ export async function POST(request: NextRequest) {
       total_price: item.quantity * item.unit_price,
     }))
 
-    console.log('[Quote Items] Attempting insert:', JSON.stringify(quoteItems))
-
     let { error: itemsError } = await supabase.from('quote_items').insert(quoteItems as any)
 
-    // Retry with minimal payload if column mismatch
     if (itemsError) {
       console.warn('[Quote Items] Full insert failed, retrying minimal:', JSON.stringify(itemsError))
       const minimalItems = items.map((item) => ({
@@ -190,7 +189,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 5. Optionally send email
+    // Send email if channel is email
     if (contact.channel === 'email') {
       try {
         const origin = request.nextUrl.origin
