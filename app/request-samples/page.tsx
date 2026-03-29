@@ -49,11 +49,30 @@ export default function RequestSamplesPage() {
     email: '',
     phone: '',
     company: '',
+    address: '',
+    city: '',
+    state: '',
+    country: '',
     application: '',
     products: prefilledProduct ? [prefilledProduct] : [] as string[],
     thicknesses: [] as string[],
     notes: '',
   })
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+
+  function validateForm() {
+    const errors: Record<string, string> = {}
+    if (!form.name.trim()) errors.name = 'Full name is required'
+    if (!form.email.trim()) errors.email = 'Email is required'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errors.email = 'Enter a valid email address'
+    if (!form.phone.trim()) errors.phone = 'Mobile number is required'
+    else if (!/^\+?[\d\s\-().]{7,20}$/.test(form.phone.trim())) errors.phone = 'Enter a valid phone number'
+    if (!form.address.trim()) errors.address = 'Delivery address is required'
+    if (!form.city.trim()) errors.city = 'City is required'
+    if (!form.country.trim()) errors.country = 'Country is required'
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
 
   function toggleArray(key: 'products' | 'thicknesses', val: string) {
     setForm((prev) => ({
@@ -65,13 +84,16 @@ export default function RequestSamplesPage() {
   }
 
   async function handleSubmit() {
+    if (!validateForm()) return
     setIsSubmitting(true)
     try {
+      const fullAddress = [form.address, form.city, form.state, form.country].filter(Boolean).join(', ')
       const message = [
         `Sample Request`,
         `Application: ${form.application}`,
         `Products: ${form.products.join(', ')}`,
         `Thicknesses: ${form.thicknesses.join(', ')}`,
+        `Delivery Address: ${fullAddress}`,
         form.notes ? `Notes: ${form.notes}` : '',
       ].filter(Boolean).join('\n')
 
@@ -336,8 +358,9 @@ export default function RequestSamplesPage() {
                       value={form.name}
                       onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                       placeholder="Your full name"
-                      className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.name ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
                     />
+                    {formErrors.name && <p className="mt-1 text-xs text-red-500">{formErrors.name}</p>}
                   </div>
                   <div>
                     <label className="text-sm font-bold text-stone-700">
@@ -348,20 +371,25 @@ export default function RequestSamplesPage() {
                       value={form.email}
                       onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                       placeholder="you@company.com"
-                      className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.email ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
                     />
+                    {formErrors.email && <p className="mt-1 text-xs text-red-500">{formErrors.email}</p>}
                   </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="text-sm font-bold text-stone-700">Phone</label>
+                    <label className="text-sm font-bold text-stone-700">
+                      Mobile Number <span className="text-red-500">*</span>
+                    </label>
                     <input
+                      type="tel"
                       value={form.phone}
                       onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                       placeholder="+63 912 345 6789"
-                      className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.phone ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
                     />
+                    {formErrors.phone && <p className="mt-1 text-xs text-red-500">{formErrors.phone}</p>}
                   </div>
                   <div>
                     <label className="text-sm font-bold text-stone-700">Company</label>
@@ -371,6 +399,55 @@ export default function RequestSamplesPage() {
                       placeholder="Company name"
                       className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-bold text-stone-700">
+                    Delivery Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    value={form.address}
+                    onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                    placeholder="Street address, building, unit number"
+                    className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.address ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
+                  />
+                  {formErrors.address && <p className="mt-1 text-xs text-red-500">{formErrors.address}</p>}
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label className="text-sm font-bold text-stone-700">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      value={form.city}
+                      onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                      placeholder="City"
+                      className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.city ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
+                    />
+                    {formErrors.city && <p className="mt-1 text-xs text-red-500">{formErrors.city}</p>}
+                  </div>
+                  <div>
+                    <label className="text-sm font-bold text-stone-700">State / Province</label>
+                    <input
+                      value={form.state}
+                      onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
+                      placeholder="State / Province"
+                      className="mt-1.5 h-11 w-full rounded-xl border border-stone-200 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-bold text-stone-700">
+                      Country <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      value={form.country}
+                      onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+                      placeholder="Country"
+                      className={`mt-1.5 h-11 w-full rounded-xl border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 ${formErrors.country ? 'border-red-400 bg-red-50' : 'border-stone-200'}`}
+                    />
+                    {formErrors.country && <p className="mt-1 text-xs text-red-500">{formErrors.country}</p>}
                   </div>
                 </div>
               </div>
@@ -389,7 +466,7 @@ export default function RequestSamplesPage() {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={isSubmitting || !form.name || !form.email}
+                  disabled={isSubmitting}
                   className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-stone-950 py-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-stone-900 disabled:opacity-40"
                 >
                   {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
