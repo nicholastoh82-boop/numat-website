@@ -82,12 +82,20 @@ export default async function TechnicalResourceDetailPage({ params }: PageProps)
                       {section.title}
                     </h2>
 
-                    <div className="mt-5 space-y-3">
-                      {section.body.map((line) => (
-                        <p key={line} className="text-lg leading-8 text-stone-700">
-                          {line}
-                        </p>
-                      ))}
+                    <div className="mt-5 space-y-2">
+                      {section.body.map((line) => {
+                        const isBold = line.startsWith('**') && line.endsWith('**')
+                        const text = isBold ? line.slice(2, -2) : line
+                        return isBold ? (
+                          <p key={line} className="pt-3 text-base font-extrabold uppercase tracking-widest text-stone-950">
+                            {text}
+                          </p>
+                        ) : (
+                          <p key={line} className="text-base leading-7 text-stone-600">
+                            {text}
+                          </p>
+                        )
+                      })}
                     </div>
                   </div>
                 ))}
