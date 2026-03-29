@@ -198,6 +198,9 @@ export async function POST(request: NextRequest) {
     // Send email directly here — no separate API call needed
     if (contact.channel === 'email') {
       try {
+        console.log('[Quote Email] Starting email send for quote:', createdQuoteNumber)
+        console.log('[Quote Email] RESEND_API_KEY present:', !!process.env.RESEND_API_KEY)
+        console.log('[Quote Email] Sending to:', contact.email)
         const displayCurrency = contact.display_currency ?? 'USD'
         const displayTotal = contact.display_total ?? total
         const conversionRatio = total > 0 ? displayTotal / total : 1
