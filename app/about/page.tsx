@@ -88,7 +88,7 @@ export default function AboutPage() {
               {[
                 { value: '50+', label: 'Local Bamboo Farmers', icon: Users },
                 { value: 'Singapore', label: 'Headquarters', icon: Globe },
-                { value: 'FSC', label: 'Sustainable Sourcing', icon: ShieldCheck },
+                { value: 'Sustainably Harvested', label: 'Certified plantation sourcing', icon: ShieldCheck },
                 { value: 'Carbon−', label: 'Negative Products', icon: Leaf },
               ].map((stat) => (
                 <div key={stat.label} className="rounded-[1.75rem] border border-stone-200 bg-white px-6 py-5 shadow-sm">
