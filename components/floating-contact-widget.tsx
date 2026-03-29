@@ -1,6 +1,7 @@
 'use client'
 
-import { MessageCircleMore, PhoneCall } from 'lucide-react'
+import Link from 'next/link'
+import { MessageCircleMore, PhoneCall, PackageCheck } from 'lucide-react'
 
 const whatsappNumber = '+60162958983'
 const viberNumber = '+60162958983'
@@ -13,6 +14,17 @@ const viberUrl = `viber://chat?number=%2B${viberNumber}`
 export default function FloatingContactWidget() {
   return (
     <div className="fixed bottom-20 right-5 z-[80] flex flex-col gap-3 sm:bottom-5">
+      <Link
+        href="/request-samples"
+        aria-label="Request Samples"
+        className="flex items-center gap-3 rounded-full bg-emerald-800 px-4 py-3 text-white shadow-xl transition hover:scale-[1.02] hover:bg-emerald-900"
+      >
+        <PackageCheck className="h-5 w-5" />
+        <span className="text-sm font-semibold">Request Samples</span>
+      </Link>
+
+      
+    
       <a
         href={whatsappUrl}
         target="_blank"
