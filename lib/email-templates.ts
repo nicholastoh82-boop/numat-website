@@ -63,7 +63,7 @@ export function generateQuoteEmailHTML(data: QuoteEmailData): string {
                   </td>
                   <td style="padding:24px 32px;text-align:right;vertical-align:middle;">
                     <p style="margin:0;color:#333333;font-size:13px;line-height:1.8;">
-                      📞 +639453444575<br>
+                      📞 +60162958983<br>
                       🌐 www.numatbamboo.com<br>
                       ✉️ sales@numat.ph
                     </p>
@@ -216,7 +216,7 @@ export function generateQuoteEmailHTML(data: QuoteEmailData): string {
                   <td style="text-align:right;vertical-align:top;">
                     <p style="margin:0;font-size:11px;color:#9fa8da;">
                       sales@numat.ph<br>
-                      +639453444575
+                      +60162958983
                     </p>
                   </td>
                 </tr>
