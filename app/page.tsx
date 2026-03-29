@@ -482,6 +482,14 @@ export default function NumatBambooHomepageRevamp() {
               })}
             </div>
           </div>
+          <div className="mt-6 text-center">
+              <Link
+                href="/compare"
+                className="inline-flex items-center gap-2 rounded-2xl border border-stone-300 bg-white px-5 py-2.5 text-sm font-bold text-stone-900 transition hover:-translate-y-0.5 hover:bg-stone-50"
+              >
+                Compare NuBam vs Plywood vs MDF →
+              </Link>
+            </div>
         </section>
 
         
