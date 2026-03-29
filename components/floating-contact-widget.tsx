@@ -17,10 +17,10 @@ export default function FloatingContactWidget() {
       <Link
         href="/request-samples"
         aria-label="Request Samples"
-        className="flex items-center gap-3 rounded-full bg-emerald-800 px-4 py-3 text-white shadow-xl transition hover:scale-[1.02] hover:bg-emerald-900"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-800 sm:h-auto sm:w-auto sm:gap-3 sm:px-4 sm:py-3"
       >
         <PackageCheck className="h-5 w-5" />
-        <span className="text-sm font-semibold">Request Samples</span>
+        <span className="hidden text-sm font-semibold sm:inline">Request Samples</span>
       </Link>
 
       
@@ -30,10 +30,10 @@ export default function FloatingContactWidget() {
         target="_blank"
         rel="noreferrer"
         aria-label="Chat on WhatsApp"
-        className="flex items-center gap-3 rounded-full bg-[#1f6f43] px-4 py-3 text-white shadow-xl transition hover:scale-[1.02] hover:bg-[#185a36]"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-800 sm:h-auto sm:w-auto sm:gap-3 sm:px-4 sm:py-3"
       >
         <MessageCircleMore className="h-5 w-5" />
-        <span className="text-sm font-semibold">WhatsApp Sales</span>
+        <span className="hidden text-sm font-semibold sm:inline">WhatsApp Sales</span>
       </a>
 
       <a
@@ -41,10 +41,10 @@ export default function FloatingContactWidget() {
         target="_blank"
         rel="noreferrer"
         aria-label="Chat on Viber"
-        className="flex items-center gap-3 rounded-full bg-[#6d43c1] px-4 py-3 text-white shadow-xl transition hover:scale-[1.02] hover:bg-[#5a35a6]"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-800 sm:h-auto sm:w-auto sm:gap-3 sm:px-4 sm:py-3"
       >
         <PhoneCall className="h-5 w-5" />
-        <span className="text-sm font-semibold">Viber Sales</span>
+        <span className="hidden text-sm font-semibold sm:inline">Viber Sales</span>
       </a>
     </div>
   )
