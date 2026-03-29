@@ -68,8 +68,8 @@ export const technicalResourceDetails: TechnicalResourceItem[] = [
     intro:
       'Review the standard board formats currently prepared for quotation and buyer evaluation.',
     sections: [
-      {
-        title: 'Standard Face Sizes',
+     {
+        title: 'Standard Board Sizes',
         body: [
           '2440 × 1220 mm (8 × 4 ft)',
           '3050 × 1220 mm (10 × 4 ft)',
@@ -79,13 +79,19 @@ export const technicalResourceDetails: TechnicalResourceItem[] = [
       {
         title: 'Standard Thickness and Ply Combinations',
         body: [
-          '6.35 mm — 1 ply',
-          '12.70 mm — 1 ply',
-          '12.70 mm — 2 ply',
-          '19.05 mm — 2 ply',
-          '19.05 mm — 3 ply',
-          '25.40 mm — 3 ply',
-          '25.40 mm — 4 ply',
+          'Horrizontal Core',
+          '7 mm 2 PLY',
+          '7 mm 3 PLY',
+          '12 mm 2 PLY',
+          '12 mm 3 PLY',
+          '20 mm 3 PLY',
+          '25 mm 5 PLY',
+          'Vertical Core',
+          '30 mm 3 PLY',
+          '40 mm 5 PLY',
+          '45 mm 5 PLY',
+          '50 mm 5 PLY',
+
         ],
       },
       {
@@ -96,12 +102,13 @@ export const technicalResourceDetails: TechnicalResourceItem[] = [
         ],
       },
       {
-        title: 'Ordering Reference',
+        title: 'Target Tolerances',
         body: [
-          'Format: NUM-PLY – T[mm] – PLY[n] – SZ[8×4/10×4] – FIN[S/RAW]',
-          'Example: NUM-PLY-12.7-PLY2-8×4-S',
+          'Thickness tolerance: ±0.5 mm target',
+          'Width and length tolerance: ±2.0 mm target',
         ],
       },
+      
     ],
     ctas: [
       { label: 'Request Full Size and Thickness Sheet', href: '/contact' },
