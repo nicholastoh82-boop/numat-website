@@ -16,15 +16,28 @@ import {
   CheckCircle2,
   BarChart3,
   Calculator,
+  FlaskConical,
 } from 'lucide-react'
 
+// D. asper (Dendrocalamus asper) specific figures
+// Source: Patricio & Dumago 2016 (Bukidnon, Philippines); Deepika et al. 2022 (IJECC)
 const CO2_PER_M3 = 2.5
 const PLYWOOD_CO2_PER_M3 = 1.2
 const TREES_PER_TONNE_CO2 = 0.0417
 const BOARD_VOLUME_M3 = 0.0036
 
+// D. asper plantation data (per hectare)
+const ASPER_ANNUAL_CO2 = 20      // tCO2/ha/yr — conservative (range: 17–25)
+const ASPER_CARBON_STOCK = 234   // t C/ha total (Mindanao, Philippines)
+const ASPER_BIOMASS = 264        // t/ha aboveground
+
+// Moso (Phyllostachys edulis) benchmark data for comparison
+const MOSO_ANNUAL_CO2 = 24       // tCO2/ha/yr — standard benchmark (INBAR)
+const MOSO_CARBON_STOCK = 120    // t C/ha total (upper range)
+const MOSO_BIOMASS = 150         // t/ha aboveground
+
 const lifecycleData = [
-  { label: 'Bamboo Growth', value: -3.0, color: 'bg-emerald-500', positive: false },
+  { label: 'Bamboo Growth (D. asper)', value: -3.0, color: 'bg-emerald-500', positive: false },
   { label: 'Harvesting', value: 0.1, color: 'bg-stone-400', positive: true },
   { label: 'Processing', value: 0.25, color: 'bg-stone-400', positive: true },
   { label: 'Transportation', value: 0.15, color: 'bg-stone-400', positive: true },
@@ -70,6 +83,98 @@ const comparisonData = [
     note: '+1.2 t CO₂/m³ emitted in production',
     highlight: false,
     negative: true,
+  },
+]
+
+const speciesRows = [
+  {
+    metric: 'Annual CO₂ sequestration',
+    asper: '17–20 tCO₂/ha/yr',
+    moso: '18–40 tCO₂/ha/yr',
+    winner: 'comparable' as const,
+    note: '* Moso upper range from 60yr managed Chinese plantations',
+  },
+  {
+    metric: 'Conservative benchmark',
+    asper: '17 tCO₂/ha/yr',
+    moso: '24 tCO₂/ha/yr',
+    winner: 'moso' as const,
+  },
+  {
+    metric: 'Total carbon stock',
+    asper: '234 t C/ha',
+    moso: '88–120 t C/ha',
+    winner: 'asper' as const,
+  },
+  {
+    metric: 'Aboveground biomass',
+    asper: '264 t/ha',
+    moso: '~150 t/ha',
+    winner: 'asper' as const,
+  },
+  {
+    metric: 'Carbon content of biomass',
+    asper: '52–54%',
+    moso: '~47%',
+    winner: 'asper' as const,
+  },
+  {
+    metric: 'Root system',
+    asper: 'Sympodial (clumping)',
+    moso: 'Monopodial (running)',
+    winner: 'asper' as const,
+  },
+  {
+    metric: 'Climate suitability',
+    asper: 'Tropical year-round',
+    moso: 'Subtropical/seasonal',
+    winner: 'asper' as const,
+  },
+  {
+    metric: 'Invasive risk',
+    asper: 'None',
+    moso: 'High',
+    winner: 'asper' as const,
+  },
+]
+
+type BarComparison = {
+  label: string
+  asperVal: number
+  mosoVal: number
+  asperLabel: string
+  mosoLabel: string
+  max: number
+  badge: string
+}
+
+const barComparisons: BarComparison[] = [
+  {
+    label: 'Annual CO₂ sequestration (tCO₂/ha/yr)',
+    asperVal: ASPER_ANNUAL_CO2,
+    mosoVal: MOSO_ANNUAL_CO2,
+    asperLabel: '17–20 t',
+    mosoLabel: '~24 t',
+    max: 40,
+    badge: 'Comparable',
+  },
+  {
+    label: 'Total carbon stock (t C/ha)',
+    asperVal: ASPER_CARBON_STOCK,
+    mosoVal: MOSO_CARBON_STOCK,
+    asperLabel: '234 t C',
+    mosoLabel: '~120 t C',
+    max: 240,
+    badge: 'Asper advantage',
+  },
+  {
+    label: 'Aboveground biomass (t/ha)',
+    asperVal: ASPER_BIOMASS,
+    mosoVal: MOSO_BIOMASS,
+    asperLabel: '264 t/ha',
+    mosoLabel: '~150 t/ha',
+    max: 270,
+    badge: 'Asper advantage',
   },
 ]
 
@@ -201,6 +306,11 @@ export default function ESGPage() {
                 <span>50t CO₂</span>
               </div>
             </div>
+
+            <p className="mt-6 text-xs text-white/30">
+              Based on D. asper (Giant Asper) plantation data: 20 tCO₂/ha/yr sequestration rate.
+              Source: Patricio &amp; Dumago (2016), Bukidnon, Philippines; Deepika et al. (2022) IJECC.
+            </p>
           </div>
         </section>
 
@@ -321,39 +431,170 @@ export default function ESGPage() {
           </div>
         </section>
 
-        {/* Wavemaker */}
+        {/* D. asper vs Moso Species Comparison */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-          <div className="rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm lg:p-12">
-            <div className="mx-auto max-w-2xl text-center">
-              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
-                <Award className="h-7 w-7 text-emerald-800" />
-              </div>
-              <h2 className="text-3xl font-bold tracking-tight text-stone-950">
-                Wavemaker Impact Partnership
-              </h2>
-              <p className="mt-4 text-base leading-7 text-stone-600">
-                NUMAT is a portfolio company of Wavemaker Impact, Southeast Asia's leading
-                climate-tech investor. All carbon claims are independently verified.{' '}
-                <a href="https://www.wavemakerimpact.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-700 hover:underline">
-                  Learn more →
-                </a>
-              </p>
+          <div className="mb-8 text-center">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
+              <FlaskConical className="h-4 w-4" />
+              Species Science
+            </div>
+            <h2 className="text-3xl font-bold tracking-tight text-stone-950">
+              Why Giant Asper Outperforms Moso
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-base text-stone-500">
+              Moso (<em>Phyllostachys edulis</em>) is the world's most studied bamboo — but our
+              Dendrocalamus asper stores nearly twice the total carbon per hectare and
+              is native to the Philippines' tropical climate.
+            </p>
+          </div>
+
+          {/* Bar comparisons */}
+          <div className="rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm">
+
+            {/* Legend */}
+            <div className="mb-8 flex flex-wrap gap-6 text-sm">
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-sm bg-emerald-600" />
+                <span className="font-semibold text-stone-900">D. asper — Giant Asper (NUMAT)</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-sm bg-sky-500" />
+                <span className="text-stone-600">Moso bamboo (P. edulis) — industry benchmark</span>
+              </span>
             </div>
 
-            <div className="mt-10 grid gap-5 md:grid-cols-3">
-              {[
-                { icon: Globe, title: 'Verified Impact', body: "All carbon claims independently verified through Wavemaker's rigorous impact measurement framework." },
-                { icon: Leaf, title: 'Sustainable Sourcing', body: 'Bamboo sourced exclusively from plantations prioritizing biodiversity and community welfare.' },
-                { icon: TrendingDown, title: 'Continuous Improvement', body: 'Committed to reducing operational footprint through renewable energy and optimised logistics.' },
-              ].map((item) => (
-                <div key={item.title} className="rounded-[1.75rem] border border-stone-200 bg-stone-50 p-6">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50">
-                    <item.icon className="h-5 w-5 text-emerald-800" />
+            <div className="space-y-8">
+              {barComparisons.map((item) => (
+                <div key={item.label}>
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-stone-800">{item.label}</p>
+                    <span className={`rounded-full px-3 py-0.5 text-xs font-semibold ${
+                      item.badge === 'Comparable'
+                        ? 'bg-stone-100 text-stone-600'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {item.badge}
+                    </span>
                   </div>
-                  <h3 className="mt-4 text-base font-bold text-stone-950">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-stone-500">{item.body}</p>
+
+                  {/* Asper bar */}
+                  <div className="mb-2 flex items-center gap-3">
+                    <span className="w-20 shrink-0 text-right text-xs font-semibold text-emerald-700">D. asper</span>
+                    <div className="flex-1 overflow-hidden rounded-full bg-stone-100" style={{ height: 28 }}>
+                      <div
+                        className="flex h-full items-center rounded-full bg-emerald-600 px-3 text-xs font-semibold text-emerald-50 transition-all duration-700"
+                        style={{ width: `${(item.asperVal / item.max) * 100}%` }}
+                      >
+                        {item.asperLabel}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Moso bar */}
+                  <div className="flex items-center gap-3">
+                    <span className="w-20 shrink-0 text-right text-xs text-stone-500">Moso</span>
+                    <div className="flex-1 overflow-hidden rounded-full bg-stone-100" style={{ height: 28 }}>
+                      <div
+                        className="flex h-full items-center rounded-full bg-sky-500 px-3 text-xs font-semibold text-sky-50 transition-all duration-700"
+                        style={{ width: `${(item.mosoVal / item.max) * 100}%` }}
+                      >
+                        {item.mosoLabel}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Full comparison table */}
+          <div className="mt-6 overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
+            <div className="border-b border-stone-100 px-8 py-5">
+              <h3 className="text-base font-bold text-stone-950">Full species comparison</h3>
+              <p className="text-xs text-stone-400 mt-0.5">
+                Sources: Patricio &amp; Dumago (2016) Bukidnon Philippines; Deepika et al. (2022) IJECC; Xu et al. (2018) PLOS One; INBAR/Yiping et al. (2010)
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-stone-100 bg-stone-50">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">Metric</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-emerald-700">D. asper (NUMAT)</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-sky-700">Moso bamboo</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">Advantage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {speciesRows.map((row, i) => (
+                    <tr key={row.metric} className={`border-b border-stone-100 ${i % 2 === 0 ? 'bg-white' : 'bg-stone-50/50'}`}>
+                      <td className="px-6 py-3.5 font-medium text-stone-700">
+                        {row.metric}
+                        {row.note && <span className="ml-1 text-xs text-stone-400">*</span>}
+                      </td>
+                      <td className="px-6 py-3.5 font-semibold text-emerald-700">{row.asper}</td>
+                      <td className="px-6 py-3.5 font-semibold text-sky-700">{row.moso}</td>
+                      <td className="px-6 py-3.5">
+                        {row.winner === 'asper' && (
+                          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">Asper</span>
+                        )}
+                        {row.winner === 'moso' && (
+                          <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">Moso</span>
+                        )}
+                        {row.winner === 'comparable' && (
+                          <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-semibold text-stone-600">Comparable</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-stone-100 px-8 py-4">
+              <p className="text-xs text-stone-400">
+                * Moso's upper range (40 tCO₂/ha/yr) reflects intensively managed Chinese plantations after 60+ years.
+                Early-stage Moso plantations (0–5 years) sequester as little as 1.86 tCO₂/ha/yr.
+                D. asper figures are from Philippine plantation studies — the same climate conditions as NUMAT's supply chain.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Wavemaker */}
+        <section className="border-t border-stone-200 bg-white">
+          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+            <div className="rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm lg:p-12">
+              <div className="mx-auto max-w-2xl text-center">
+                <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
+                  <Award className="h-7 w-7 text-emerald-800" />
+                </div>
+                <h2 className="text-3xl font-bold tracking-tight text-stone-950">
+                  Wavemaker Impact Partnership
+                </h2>
+                <p className="mt-4 text-base leading-7 text-stone-600">
+                  NUMAT is a portfolio company of Wavemaker Impact, Southeast Asia's leading
+                  climate-tech investor. All carbon claims are independently verified.{' '}
+                  <a href="https://www.wavemakerimpact.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-700 hover:underline">
+                    Learn more →
+                  </a>
+                </p>
+              </div>
+
+              <div className="mt-10 grid gap-5 md:grid-cols-3">
+                {[
+                  { icon: Globe, title: 'Verified Impact', body: "All carbon claims independently verified through Wavemaker's rigorous impact measurement framework." },
+                  { icon: Leaf, title: 'Sustainable Sourcing', body: 'Bamboo sourced exclusively from plantations prioritizing biodiversity and community welfare.' },
+                  { icon: TrendingDown, title: 'Continuous Improvement', body: 'Committed to reducing operational footprint through renewable energy and optimised logistics.' },
+                ].map((item) => (
+                  <div key={item.title} className="rounded-[1.75rem] border border-stone-200 bg-stone-50 p-6">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50">
+                      <item.icon className="h-5 w-5 text-emerald-800" />
+                    </div>
+                    <h3 className="mt-4 text-base font-bold text-stone-950">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-stone-500">{item.body}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -372,7 +613,7 @@ export default function ESGPage() {
                   items: [
                     'Carbon-negative product lifecycle',
                     'Zero deforestation supply chain',
-                    '100% Sustainbly harvested bamboo',
+                    '100% sustainably harvested bamboo',
                     'Minimal water usage in processing',
                     'Renewable energy transition roadmap',
                     'Waste reduction and recycling programs',
@@ -416,8 +657,9 @@ export default function ESGPage() {
           <div className="mx-auto max-w-3xl px-6 text-center lg:px-8">
             <p className="text-sm text-stone-500">
               Carbon calculations based on LCA methodology following ISO 14040/14044 standards,
-              reviewed and validated by Wavemaker Impact. For detailed methodology and
-              verification documents, please{' '}
+              reviewed and validated by Wavemaker Impact. D. asper sequestration figures sourced
+              from Philippine plantation studies (Patricio &amp; Dumago 2016; Deepika et al. 2022).
+              For detailed methodology and verification documents, please{' '}
               <Link href="/contact" className="font-semibold text-emerald-700 hover:underline">
                 contact us
               </Link>.
@@ -436,7 +678,7 @@ export default function ESGPage() {
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-base text-white/70">
                 Every board you order contributes to carbon reduction and supports
-                Local sustainable forestry. Use the calculator above to see your impact.
+                local sustainable forestry. Use the calculator above to see your impact.
               </p>
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 <Link
