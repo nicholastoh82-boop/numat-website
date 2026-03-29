@@ -19,6 +19,9 @@ const navLinks = [
   { label: 'Contact', href: '/contact' },
 ]
 
+const primaryNavLinks = navLinks.slice(0, 5)
+const moreNavLinks = navLinks.slice(5)
+
 const LOGO_SRC = '/logo.png'
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -45,32 +48,71 @@ export default function Header() {
             />
           </Link>
 
-          <nav className="hidden items-center gap-5 lg:flex xl:gap-7">
-            {navLinks.map((link) => {
+          <nav className="hidden items-center gap-4 lg:flex xl:gap-5">
+            {primaryNavLinks.map((link) => {
               const isActive =
                 pathname === link.href ||
                 (link.href !== '/' && pathname?.startsWith(link.href))
-
               return (
                 <Link
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    'text-sm font-medium tracking-[0.01em] transition-colors',
-                    isActive
-                      ? 'text-stone-900'
-                      : 'text-stone-700 hover:text-stone-900'
+                    'text-[13px] font-medium tracking-[0.01em] transition-colors xl:text-sm',
+                    isActive ? 'text-stone-900' : 'text-stone-700 hover:text-stone-900'
                   )}
                 >
                   {link.label}
                 </Link>
               )
             })}
+
+            {/* More dropdown */}
+            <div className="relative group">
+              <button className="inline-flex items-center gap-1 text-[13px] font-medium text-stone-700 transition-colors hover:text-stone-900 xl:text-sm">
+                More
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+              <div className="absolute left-0 top-full z-50 mt-2 hidden min-w-[160px] overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-lg group-hover:block">
+                {moreNavLinks.map((link) => {
+                  const isActive = pathname === link.href || (link.href !== '/' && pathname?.startsWith(link.href))
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        'block px-4 py-3 text-sm font-medium transition-colors hover:bg-stone-50',
+                        isActive ? 'text-stone-900 bg-stone-50' : 'text-stone-700'
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
           </nav>
         </div>
 
-        {/* Desktop right side — currency only */}
-        <div className="hidden items-center lg:flex">
+        {/* Desktop right side */}
+        <div className="hidden items-center gap-3 lg:flex">
+          {/* Request Samples button */}
+          {/* Request Samples button */}
+          <Link
+            href="/request-samples"
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-bold transition duration-200 hover:-translate-y-0.5 xl:px-4 xl:text-sm',
+              pathname === '/request-samples'
+                ? 'border-emerald-700 bg-emerald-700 text-white'
+                : 'border-emerald-800 bg-white text-emerald-800 hover:bg-emerald-50'
+            )}
+          >
+            <PackageCheck className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
+            <span className="hidden xl:inline">Request Samples</span>
+            <span className="xl:hidden">Samples</span>
+          </Link>
+
+          {/* Currency selector */}
           <div className="relative flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 shadow-sm">
             <Image
               src={selectedCountry.flagSrc}
@@ -137,7 +179,7 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Request Samples — mobile only */}
+            {/* Request Samples button — mobile */}
             <Link
               href="/request-samples"
               onClick={() => setMobileMenuOpen(false)}
