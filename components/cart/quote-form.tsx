@@ -2,8 +2,17 @@
 
 import React, { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, MessageCircle, Phone, AlertCircle, Mail, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import {
+  AlertCircle,
+  Mail,
+  Loader2,
+  MessageCircle,
+  Phone,
+  CheckCircle,
+  Clock,
+  ShieldCheck,
+  ArrowLeft,
+} from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -68,7 +77,6 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
 
   const quoteMessage = useMemo(() => {
     const lines: string[] = []
-
     lines.push('Hello NUMAT, I would like to request a quote.')
     lines.push('')
     lines.push(`Name: ${formData.name}`)
@@ -78,7 +86,6 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
     lines.push(`Application: ${formData.application}`)
     lines.push(`Preferred Currency: ${selectedCountry.currency}`)
     lines.push('')
-
     lines.push('Items:')
     items.forEach((item, index) => {
       const unitPrice = item.unitPrice ?? 0
@@ -89,19 +96,13 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
       lines.push(`   Line Total: ${item.isPriceOnRequest ? 'Price on request' : formatConvertedFromUsd(unitPrice * item.quantity)}`)
       lines.push('')
     })
-
-    if (discountPercent > 0) {
-      lines.push(`Bulk Discount: ${discountPercent}%`)
-    }
-
+    if (discountPercent > 0) lines.push(`Bulk Discount: ${discountPercent}%`)
     lines.push(`Total (excl. VAT): ${formatConvertedFromUsd(total)}`)
-
     if (formData.notes.trim()) {
       lines.push('')
       lines.push('Additional Notes:')
       lines.push(formData.notes.trim())
     }
-
     return lines.join('\n')
   }, [formData, phoneNumber, items, discountPercent, total, formatConvertedFromUsd, selectedCountry.currency])
 
@@ -109,10 +110,7 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
     const nextErrors: Record<string, string> = {}
     if (!formData.name.trim()) nextErrors.name = 'Required'
     if (!formData.email.trim()) nextErrors.email = 'Required'
-    if (formData.email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(formData.email.trim())) nextErrors.email = 'Invalid email'
-    }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) nextErrors.email = 'Invalid email'
     if (!phoneNumber) nextErrors.phone = 'Required'
     if (!formData.application) nextErrors.application = 'Required'
     if (!formData.consent) nextErrors.consent = 'Required'
@@ -123,16 +121,11 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
   async function handleSubmit(channel: DeliveryChannel) {
     if (!validateForm()) return
     if (items.length === 0) {
-      toast({
-        title: 'Cart is empty',
-        description: 'Add products first, then request a quote.',
-        variant: 'destructive',
-      })
+      toast({ title: 'Cart is empty', description: 'Add products first.', variant: 'destructive' })
       return
     }
 
     setIsSubmitting(true)
-
     try {
       const res = await fetch('/api/cart/quote', {
         method: 'POST',
@@ -140,15 +133,15 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
         body: JSON.stringify({
           contact: {
             name: formData.name.trim(),
-  email: formData.email.trim(),
-  phone: String(phoneNumber),
-  company: formData.company.trim() ? formData.company.trim() : null,
-  channel,
-  application: formData.application,
-  notes: formData.notes.trim() ? formData.notes.trim() : null,
-  consent: !!formData.consent,
-  display_currency: selectedCountry.currency,
-  display_total: total * exchangeRate,
+            email: formData.email.trim(),
+            phone: String(phoneNumber),
+            company: formData.company.trim() || null,
+            channel,
+            application: formData.application,
+            notes: formData.notes.trim() || null,
+            consent: !!formData.consent,
+            display_currency: selectedCountry.currency,
+            display_total: total * exchangeRate,
           },
           items: items.map((item) => ({
             product_id: extractProductId(item.id),
@@ -162,28 +155,19 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
       })
 
       const data = await res.json()
-      if (!res.ok || !data?.ok) {
-        throw new Error(data?.error || 'Failed to submit quote.')
-      }
+      if (!res.ok || !data?.ok) throw new Error(data?.error || 'Failed to submit quote.')
 
       const quoteId = data.quoteId as string
       const quoteNumber = data.quoteNumber as string
-
-      const confirmationUrl = `/quote/confirmation?id=${encodeURIComponent(quoteId)}&number=${encodeURIComponent(
-        quoteNumber
-      )}`
+      const confirmationUrl = `/quote/confirmation?id=${encodeURIComponent(quoteId)}&number=${encodeURIComponent(quoteNumber)}`
 
       if (channel === 'whatsapp') {
-        const message = encodeURIComponent(
-          `Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`
-        )
+        const message = encodeURIComponent(`Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`)
         window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank')
       } else if (channel === 'viber') {
         window.open(`viber://chat?number=%2B${VIBER_NUMBER}`, '_blank')
         setTimeout(() => {
-          navigator.clipboard?.writeText(
-            `Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`
-          ).catch(() => {})
+          navigator.clipboard?.writeText(`Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`).catch(() => {})
         }, 600)
       }
 
@@ -201,35 +185,47 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6">
-      <button
-        onClick={onBack}
-        className="mb-6 flex items-center text-sm text-gray-500 transition-colors hover:text-gray-800"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Cart
-      </button>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold text-stone-950">Your Details</h1>
+        <p className="mt-1 text-sm text-stone-500">Fill in your contact info and we'll prepare your formal quotation.</p>
+      </div>
 
-      <div className="space-y-6">
-        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-          <h2 className="mb-8 text-xl font-bold text-gray-900">Contact Information</h2>
+      {/* Reassurance bar */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          { icon: Clock, text: 'Quote in 24 hours' },
+          { icon: ShieldCheck, text: 'No obligation to buy' },
+          { icon: CheckCircle, text: 'PDF quote via email' },
+        ].map((item) => (
+          <div key={item.text} className="flex items-center gap-2.5 rounded-2xl border border-stone-200 bg-white px-4 py-3">
+            <item.icon className="h-4 w-4 shrink-0 text-emerald-700" />
+            <span className="text-sm font-semibold text-stone-700">{item.text}</span>
+          </div>
+        ))}
+      </div>
 
-          <div className="space-y-6">
-            <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-[14px] font-medium text-gray-700">
-                Name <span className="text-red-500">*</span>
+      {/* Form */}
+      <div className="rounded-[1.75rem] border border-stone-200 bg-white p-7 shadow-sm">
+        <div className="space-y-5">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="name" className="text-sm font-semibold text-stone-700">
+                Full Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Your full name"
-                className={cn('h-11 rounded-lg border-gray-300', errors.name && 'border-red-500')}
+                className={cn('mt-1.5 h-11 rounded-xl', errors.name && 'border-red-400')}
+                disabled={isSubmitting}
               />
+              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-[14px] font-medium text-gray-700">
+            <div>
+              <Label htmlFor="email" className="text-sm font-semibold text-stone-700">
                 Email <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -238,150 +234,147 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="you@company.com"
-                className={cn('h-11 rounded-lg border-gray-300', errors.email && 'border-red-500')}
+                className={cn('mt-1.5 h-11 rounded-xl', errors.email && 'border-red-400')}
                 disabled={isSubmitting}
               />
-              {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="phone" className="text-[14px] font-medium text-gray-700">
-                Phone Number <span className="text-red-500">*</span>
-              </Label>
-              <div
-                className={cn(
-                  'flex h-11 w-full rounded-lg border border-gray-300 bg-gray-50/50 px-3 py-2 text-sm transition-all focus-within:ring-1 focus-within:ring-green-600',
-                  errors.phone && 'border-red-500'
-                )}
-              >
-                <PhoneInput
-                  defaultCountry="PH"
-                  placeholder="Enter phone number"
-                  value={phoneNumber}
-                  onChange={setPhoneNumber}
-                  className="phone-input-custom flex-1"
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="company" className="text-[14px] font-medium text-gray-700">
-                Company Name <span className="font-normal text-gray-400">(optional)</span>
-              </Label>
-              <Input
-                id="company"
-                value={formData.company}
-                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                placeholder="Your company name"
-                className="h-11 rounded-lg border-gray-300"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="application" className="text-[14px] font-medium text-gray-700">
-                Application <span className="text-red-500">*</span>
-              </Label>
-              <select
-                id="application"
-                value={formData.application}
-                onChange={(e) => setFormData({ ...formData, application: e.target.value })}
-                className={cn(
-                  'h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-green-600',
-                  errors.application && 'border-red-500'
-                )}
-                disabled={isSubmitting}
-              >
-                {APPLICATION_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-              {errors.application && <p className="text-xs text-red-600">{errors.application}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="notes" className="text-[14px] font-medium text-gray-700">
-                Additional Notes <span className="font-normal text-gray-400">(optional)</span>
-              </Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="min-h-[120px] rounded-lg border-gray-300 resize-none"
-                placeholder="Any project notes, delivery timing, or special requests"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <label className={cn('flex items-start gap-3 rounded-lg border p-4', errors.consent ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50')}>
-              <input
-                type="checkbox"
-                checked={formData.consent}
-                onChange={(e) => setFormData({ ...formData, consent: e.target.checked })}
-                className="mt-1 h-4 w-4"
-                disabled={isSubmitting}
-              />
-              <span className="text-sm text-gray-700">
-                I consent to being contacted about this quote request via my selected delivery channel.
-                <span className="text-red-500"> *</span>
-              </span>
-            </label>
-            {errors.consent && <p className="text-xs text-red-600">{errors.consent}</p>}
-
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="mt-0.5 h-4 w-4" />
-                <div>
-                  Viber does not always support long prefilled text on every device. If that happens,
-                  we copy your quote details to your clipboard so you can paste them into Viber.
-                </div>
-              </div>
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
             </div>
           </div>
+
+          <div>
+            <Label htmlFor="phone" className="text-sm font-semibold text-stone-700">
+              Phone Number <span className="text-red-500">*</span>
+            </Label>
+            <div className={cn(
+              'mt-1.5 flex h-11 w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2 text-sm focus-within:ring-1 focus-within:ring-emerald-600',
+              errors.phone && 'border-red-400'
+            )}>
+              <PhoneInput
+                defaultCountry="PH"
+                placeholder="Enter phone number"
+                value={phoneNumber}
+                onChange={setPhoneNumber}
+                className="phone-input-custom flex-1"
+                disabled={isSubmitting}
+              />
+            </div>
+            {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
+          </div>
+
+          <div>
+            <Label htmlFor="company" className="text-sm font-semibold text-stone-700">
+              Company <span className="font-normal text-stone-400">(optional)</span>
+            </Label>
+            <Input
+              id="company"
+              value={formData.company}
+              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+              placeholder="Your company name"
+              className="mt-1.5 h-11 rounded-xl"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="application" className="text-sm font-semibold text-stone-700">
+              Application <span className="text-red-500">*</span>
+            </Label>
+            <select
+              id="application"
+              value={formData.application}
+              onChange={(e) => setFormData({ ...formData, application: e.target.value })}
+              className={cn(
+                'mt-1.5 h-11 w-full rounded-xl border border-stone-300 bg-white px-3 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-emerald-600',
+                errors.application && 'border-red-400'
+              )}
+              disabled={isSubmitting}
+            >
+              {APPLICATION_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <Label htmlFor="notes" className="text-sm font-semibold text-stone-700">
+              Additional Notes <span className="font-normal text-stone-400">(optional)</span>
+            </Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="mt-1.5 min-h-[100px] resize-none rounded-xl"
+              placeholder="Project notes, delivery timing, or special requests"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <label className={cn('flex items-start gap-3 rounded-2xl border p-4', errors.consent ? 'border-red-300 bg-red-50' : 'border-stone-200 bg-stone-50')}>
+            <input
+              type="checkbox"
+              checked={formData.consent}
+              onChange={(e) => setFormData({ ...formData, consent: e.target.checked })}
+              className="mt-1 h-4 w-4 accent-emerald-600"
+              disabled={isSubmitting}
+            />
+            <span className="text-sm text-stone-600">
+              I consent to being contacted about this quote request. <span className="text-red-500">*</span>
+            </span>
+          </label>
         </div>
+      </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-          <h3 className="mb-4 text-lg font-semibold text-gray-900">Quote Preview</h3>
-          <pre className="whitespace-pre-wrap rounded-lg bg-gray-50 p-4 text-sm text-gray-700">
-            {quoteMessage}
-          </pre>
+      {/* Quote preview */}
+      <div className="rounded-[1.75rem] border border-stone-200 bg-white p-6">
+        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-400">Quote Preview</p>
+        <pre className="whitespace-pre-wrap rounded-2xl bg-stone-50 p-4 text-xs leading-6 text-stone-600">
+          {quoteMessage}
+        </pre>
+      </div>
+
+      {/* Viber note */}
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex items-start gap-2 text-sm text-amber-800">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>Viber may not support long prefilled text on all devices. If that happens, your quote details are copied to clipboard so you can paste them manually.</p>
         </div>
+      </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Button
-            type="button"
-            onClick={() => handleSubmit('email')}
-            className="h-14 gap-2 rounded-lg bg-[#16361f] text-lg font-medium text-white hover:bg-[#204a2b]"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mail className="h-5 w-5" />}
-            Email me the quote (PDF)
-          </Button>
+      {/* Submit buttons */}
+      <div className="space-y-3">
+        <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Choose how to receive your quote</p>
 
-          <Button
+        <button
+          type="button"
+          onClick={() => handleSubmit('email')}
+          disabled={isSubmitting}
+          className="flex w-full items-center justify-center gap-3 rounded-2xl bg-stone-950 py-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-stone-900 disabled:opacity-60"
+        >
+          {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mail className="h-5 w-5" />}
+          Email me the quote (PDF)
+        </button>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
             type="button"
             onClick={() => handleSubmit('whatsapp')}
-            className="h-14 gap-2 rounded-lg bg-[#1B5E20] text-lg font-medium text-white hover:bg-[#144718]"
             disabled={isSubmitting}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 py-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-emerald-800 disabled:opacity-60"
           >
-            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <MessageCircle className="h-5 w-5" />}
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
             Continue via WhatsApp
-          </Button>
-        </div>
+          </button>
 
-        <Button
-          type="button"
-          onClick={() => handleSubmit('viber')}
-          variant="outline"
-          className="h-14 w-full gap-2 rounded-lg border-gray-300 text-lg font-medium"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Phone className="h-5 w-5" />}
-          Continue via Viber
-        </Button>
+          <button
+            type="button"
+            onClick={() => handleSubmit('viber')}
+            disabled={isSubmitting}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-stone-300 bg-white py-4 text-sm font-bold text-stone-900 transition hover:-translate-y-0.5 hover:bg-stone-50 disabled:opacity-60"
+          >
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
+            Continue via Viber
+          </button>
+        </div>
       </div>
 
       <style jsx global>{`
