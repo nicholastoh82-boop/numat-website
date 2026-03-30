@@ -165,7 +165,7 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
         const message = encodeURIComponent(`Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`)
         window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank')
       } else if (channel === 'viber') {
-        window.open(`viber://chat?number=%2B${VIBER_NUMBER}`, '_blank')
+        window.open(`viber://chat?number=${VIBER_NUMBER}`, '_blank')
         setTimeout(() => {
           navigator.clipboard?.writeText(`Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`).catch(() => {})
         }, 600)
