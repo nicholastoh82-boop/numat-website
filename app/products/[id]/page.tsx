@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
+  MessageCircle,
   Minus,
   Plus,
   ShoppingBag,
@@ -414,7 +415,7 @@ export default function ProductDetailPage() {
   const productId = params?.id
 
   const { formatConvertedFromUsd } = useCurrency()
-  const { addItem, openCart } = useCartStore()
+  const { addItem } = useCartStore()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -910,7 +911,7 @@ export default function ProductDetailPage() {
 
     
 
-    openCart()
+    router.push(`/request-quote?product=${encodeURIComponent(resolved.productLabel)}`)
   }
 
   function decrementQty() {
@@ -1428,6 +1429,15 @@ export default function ProductDetailPage() {
                   <p className="mt-2 text-center text-xs text-white/35">
                     Sample size: 200mm × 200mm
                   </p>
+                  <a
+                    href={`https://wa.me/60162958983?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Ask about this product
+                  </a>
                 </div>
               </div>
             </aside>
@@ -1466,6 +1476,15 @@ export default function ProductDetailPage() {
               >
                 Sample
               </Link>
+              <a
+                href={`https://wa.me/60162958983?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-full border border-emerald-600 bg-emerald-600 px-4 py-3 text-stone-50 transition hover:bg-emerald-700"
+                aria-label="Ask about this product on WhatsApp"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </a>
             </div>
           </div>
         </div>

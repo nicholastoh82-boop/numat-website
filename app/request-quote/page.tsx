@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
@@ -15,7 +16,9 @@ export default function RequestQuotePage() {
       <Header />
       <CartDrawer />
       <main className="flex-1 bg-background">
-        <CartContent />
+        <Suspense>
+          <CartContent />
+        </Suspense>
       </main>
       <Footer />
     </div>

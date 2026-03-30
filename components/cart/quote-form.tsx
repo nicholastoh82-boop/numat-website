@@ -25,6 +25,7 @@ import { toast } from '@/hooks/use-toast'
 
 interface QuoteFormProps {
   onBack: () => void
+  prefillProduct?: string
 }
 
 const WHATSAPP_NUMBER = '60162958983'
@@ -47,7 +48,7 @@ function extractProductId(cartItemId: string) {
   return match ? match[0] : null
 }
 
-export function QuoteForm({ onBack }: QuoteFormProps) {
+export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
   const router = useRouter()
   const { items, getDiscountPercent, getTotal, clearCart } = useCartStore()
   const { formatConvertedFromUsd, selectedCountry, exchangeRate } = useCurrency()
@@ -65,7 +66,7 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
     email: '',
     company: '',
     application: APPLICATION_OPTIONS[0],
-    notes: '',
+    notes: prefillProduct ? `I'm interested in ${prefillProduct}.` : '',
     consent: true,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})

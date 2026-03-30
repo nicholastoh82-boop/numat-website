@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
@@ -43,7 +44,9 @@ export function CartContent() {
   } = useCartStore()
 
   const { formatConvertedFromUsd } = useCurrency()
-  const [showQuoteForm, setShowQuoteForm] = useState(false)
+  const searchParams = useSearchParams()
+  const prefillProduct = searchParams.get('product') ?? undefined
+  const [showQuoteForm, setShowQuoteForm] = useState(() => !!searchParams.get('product'))
 
   const totalItems = getTotalItems()
   const subtotal = getSubtotal()
@@ -255,7 +258,7 @@ export function CartContent() {
             )}
 
             {showQuoteForm && (
-              <QuoteForm onBack={() => setShowQuoteForm(false)} />
+              <QuoteForm onBack={() => setShowQuoteForm(false)} prefillProduct={prefillProduct} />
             )}
           </div>
 
