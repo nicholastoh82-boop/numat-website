@@ -27,7 +27,7 @@ interface QuoteFormProps {
   onBack: () => void
 }
 
-const WHATSAPP_NUMBER = '601139593956'
+const WHATSAPP_NUMBER = '60162958983'
 
 type DeliveryChannel = 'email' | 'whatsapp'
 
