@@ -358,7 +358,7 @@ export function ProductsContent() {
                 className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
                 onClick={() => setShowFilters(false)}
               />
-              <div className="absolute left-0 top-0 h-full w-72 bg-background p-6 shadow-xl">
+              <div className="absolute left-0 top-0 h-full w-[85vw] max-w-[288px] bg-background p-4 shadow-xl">
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="font-semibold text-foreground">Categories</h2>
                   <Button variant="ghost" size="icon" onClick={() => setShowFilters(false)}>

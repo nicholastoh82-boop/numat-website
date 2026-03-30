@@ -205,7 +205,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
           <>
             <button
               onClick={handlePrevImage}
-              className="absolute left-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 opacity-0 backdrop-blur-sm transition-all duration-300 hover:bg-background group-hover:opacity-100"
+              className="absolute left-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 opacity-100 backdrop-blur-sm transition-all duration-300 hover:bg-background sm:opacity-0 sm:group-hover:opacity-100"
               aria-label="Previous image"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -213,13 +213,13 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
 
             <button
               onClick={handleNextImage}
-              className="absolute right-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 opacity-0 backdrop-blur-sm transition-all duration-300 hover:bg-background group-hover:opacity-100"
+              className="absolute right-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 opacity-100 backdrop-blur-sm transition-all duration-300 hover:bg-background sm:opacity-0 sm:group-hover:opacity-100"
               aria-label="Next image"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
 
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-background/80 px-2.5 py-1.5 text-xs font-medium text-foreground opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-background/80 px-2.5 py-1.5 text-xs font-medium text-foreground opacity-100 backdrop-blur-sm transition-opacity duration-300 sm:opacity-0 sm:group-hover:opacity-100">
               {currentImageIndex + 1} / {productImages.length}
             </div>
           </>
@@ -243,7 +243,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
 
         <button
           onClick={onQuickView}
-          className="absolute bottom-3 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground opacity-0 shadow-lg transition-all duration-300 hover:bg-primary/90 hover:shadow-xl group-hover:opacity-100"
+          className="absolute bottom-3 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground opacity-100 shadow-lg transition-all duration-300 hover:bg-primary/90 hover:shadow-xl sm:opacity-0 sm:group-hover:opacity-100"
           aria-label="Quick view"
         >
           <Eye className="h-4 w-4" />
@@ -314,7 +314,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-r-none hover:bg-primary/20"
+                className="h-8 w-8 rounded-r-none hover:bg-primary/20"
                 onClick={decrementQty}
                 disabled={quantity <= minQty}
                 aria-label="Decrease quantity"
@@ -329,7 +329,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-l-none hover:bg-primary/20"
+                className="h-8 w-8 rounded-l-none hover:bg-primary/20"
                 onClick={incrementQty}
                 aria-label="Increase quantity"
               >

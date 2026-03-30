@@ -183,13 +183,13 @@ export function CartContent() {
                       </div>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-4">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-y-3 border-t border-stone-100 pt-4">
                       <div className="flex items-center gap-2">
                         <button
-                          className="flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition hover:bg-stone-100"
+                          className="flex h-10 w-10 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition hover:bg-stone-100"
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
                         >
-                          <Minus className="h-3 w-3" />
+                          <Minus className="h-3.5 w-3.5" />
                         </button>
                         <input
                           type="number"
@@ -203,13 +203,13 @@ export function CartContent() {
                             const val = parseInt(e.target.value, 10)
                             if (isNaN(val) || val < item.minOrderQty) updateQuantity(item.id, item.minOrderQty)
                           }}
-                          className="h-8 w-16 rounded-xl border border-stone-200 bg-white text-center text-sm font-semibold text-stone-950"
+                          className="h-10 w-16 rounded-xl border border-stone-200 bg-white text-center text-sm font-semibold text-stone-950"
                         />
                         <button
-                          className="flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition hover:bg-stone-100"
+                          className="flex h-10 w-10 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition hover:bg-stone-100"
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
                         >
-                          <Plus className="h-3 w-3" />
+                          <Plus className="h-3.5 w-3.5" />
                         </button>
                         <span className="ml-2 text-xs text-stone-400">MOQ: {item.minOrderQty}</span>
                       </div>
@@ -219,7 +219,7 @@ export function CartContent() {
                           {formatConvertedFromUsd(item.quantity * (item.unitPrice ?? 0))}
                         </p>
                         <button
-                          className="flex h-8 w-8 items-center justify-center rounded-xl text-stone-400 transition hover:bg-red-50 hover:text-red-500"
+                          className="flex h-10 w-10 items-center justify-center rounded-xl text-stone-400 transition hover:bg-red-50 hover:text-red-500"
                           onClick={() => removeItem(item.id)}
                         >
                           <Trash2 className="h-4 w-4" />

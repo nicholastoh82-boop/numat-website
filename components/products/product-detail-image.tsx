@@ -36,7 +36,7 @@ export default function ProductDetailImage({
   }, [preferredImage])
 
   return (
-    <div className="relative h-full min-h-[420px] overflow-hidden rounded-3xl">
+    <div className="relative h-full min-h-[260px] overflow-hidden rounded-3xl sm:min-h-[420px]">
       <Image
         src={imageSrc}
         alt={product.name || 'Product image'}
