@@ -17,7 +17,7 @@ const pillars = [
   {
     title: 'Keep the quote moving',
     description:
-      'Selected items continue into the cart and can be handed off through WhatsApp or Viber with more context intact.',
+      'Selected items continue into the cart and can be handed off through WhatsApp with more context intact.',
   },
 ]
 

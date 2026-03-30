@@ -22,7 +22,7 @@ const facts = [
   },
   {
     label: 'Quote flow',
-    value: 'Configured products continue into the cart and can be handed off through WhatsApp or Viber.',
+    value: 'Configured products continue into the cart and can be handed off through WhatsApp.',
   },
   {
     label: 'Use case',

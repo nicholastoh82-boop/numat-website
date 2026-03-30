@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import useSWR from 'swr'
-import { Download, RefreshCw, MessageCircle, Phone, Mail, Loader2, FileText, Send, Bell, MessageSquare } from 'lucide-react'
+import { Download, RefreshCw, MessageCircle, Mail, Loader2, FileText, Send, Bell, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -31,7 +31,7 @@ type QuoteWithCustomer = {
     discount_amount: number
     discount_percent: number
     total: number
-    delivery_channel: 'whatsapp' | 'viber' | 'email'
+    delivery_channel: 'whatsapp' | 'email'
     customers: {
         name: string
         email: string
@@ -207,7 +207,7 @@ export default function AdminQuotesPage() {
         }
     }
 
-    const handleShareOnSocial = async (quoteId: string, channel: 'whatsapp' | 'viber') => {
+    const handleShareOnSocial = async (quoteId: string, channel: 'whatsapp') => {
         try {
             const headers = await getAuthHeaders()
             const res = await fetch('/api/admin/share-quote', {
@@ -338,7 +338,6 @@ export default function AdminQuotesPage() {
                                         <td className="px-4 py-3 hidden md:table-cell">
                                             <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
                                                 {quote.delivery_channel === 'whatsapp' ? <MessageCircle className="w-4 h-4 text-green-600" /> :
-                                                    quote.delivery_channel === 'viber' ? <Phone className="w-4 h-4 text-purple-600" /> :
                                                         <Mail className="w-4 h-4 text-blue-600" />}
                                                 <span className="capitalize">{quote.delivery_channel}</span>
                                             </span>
@@ -450,19 +449,6 @@ export default function AdminQuotesPage() {
                                                     ) : (
                                                         <MessageCircle className="w-4 h-4" />
                                                     )}
-                                                </Button>
-
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 hover:text-purple-600"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        handleShareOnSocial(quote.id, 'viber')
-                                                    }}
-                                                    title="Share on Viber"
-                                                >
-                                                    <Phone className="w-4 h-4" />
                                                 </Button>
 
                                                 <Button

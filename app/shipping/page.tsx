@@ -97,7 +97,7 @@ export default function ShippingPage() {
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium shrink-0">2</div>
                   <div>
                     <h4 className="font-medium text-foreground">Receive Your Quote</h4>
-                    <p className="text-muted-foreground">Get detailed pricing including shipping via WhatsApp, Viber, or Email</p>
+                    <p className="text-muted-foreground">Get detailed pricing including shipping via WhatsApp or Email</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">

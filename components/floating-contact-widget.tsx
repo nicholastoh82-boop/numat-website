@@ -1,15 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { MessageCircleMore, PhoneCall, PackageCheck } from 'lucide-react'
+import { MessageCircleMore, PackageCheck } from 'lucide-react'
 
-const whatsappNumber = '+60162958983'
-const viberNumber = '+60162958983'
-
-const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+const whatsappUrl = `https://wa.me/60162958983?text=${encodeURIComponent(
   'Hello NUMAT, I would like to request product information and a quotation.'
 )}`
-const viberUrl = `viber://chat?number=%2B${viberNumber}`
 
 export default function FloatingContactWidget() {
   return (
@@ -23,8 +19,6 @@ export default function FloatingContactWidget() {
         <span className="hidden text-sm font-semibold text-white sm:inline">Request Samples</span>
       </Link>
 
-      
-    
       <a
         href={whatsappUrl}
         target="_blank"
@@ -34,17 +28,6 @@ export default function FloatingContactWidget() {
       >
         <MessageCircleMore className="h-5 w-5 text-white" />
         <span className="hidden text-sm font-semibold text-white sm:inline">WhatsApp Sales</span>
-      </a>
-
-      <a
-        href={viberUrl}
-        target="_blank"
-        rel="noreferrer"
-        aria-label="Chat on Viber"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-800 sm:h-auto sm:w-auto sm:gap-3 sm:px-4 sm:py-3"
-      >
-        <PhoneCall className="h-5 w-5 text-white" />
-        <span className="hidden text-sm font-semibold text-white sm:inline">Viber Sales</span>
       </a>
     </div>
   )

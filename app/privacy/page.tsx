@@ -40,7 +40,7 @@ export default function PrivacyPage() {
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                 <li>Process and respond to your quote requests</li>
                 <li>Communicate with you about products, services, and orders</li>
-                <li>Send quotes via your preferred channel (WhatsApp, Viber, or Email)</li>
+                <li>Send quotes via your preferred channel (WhatsApp or Email)</li>
                 <li>Improve our products and services</li>
                 <li>Comply with legal obligations</li>
               </ul>

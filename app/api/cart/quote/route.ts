@@ -10,7 +10,7 @@ interface QuoteContact {
   email: string
   phone: string
   company?: string | null
-  channel: 'whatsapp' | 'viber' | 'email'
+  channel: 'whatsapp' | 'email'
   application: string
   notes?: string | null
   consent: boolean

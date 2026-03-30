@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 interface ShareData {
   quoteId: string
-  channel: 'whatsapp' | 'viber'
+  channel: 'whatsapp'
   phoneNumber?: string
 }
 
@@ -52,12 +52,7 @@ export async function POST(request: NextRequest) {
 
     const cleanPhone = customerPhone.replace(/[^\d+]/g, '')
 
-    let shareUrl = ''
-    if (channel === 'whatsapp') {
-      shareUrl = `https://wa.me/${cleanPhone}?text=${message}`
-    } else if (channel === 'viber') {
-      shareUrl = `viber://chat?number=${cleanPhone}&text=${message}`
-    }
+    const shareUrl = `https://wa.me/${cleanPhone}?text=${message}`
 
     // Log the share action in database (optional)
     try {

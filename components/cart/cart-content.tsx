@@ -235,7 +235,7 @@ export function CartContent() {
                   <div className="mt-5 space-y-4">
                     {[
                       { icon: FileText, step: '1', title: 'Fill in your details', body: 'Name, email, phone and your project application.' },
-                      { icon: MessageCircle, step: '2', title: 'Choose how to receive your quote', body: 'Via email (PDF), WhatsApp, or Viber — your choice.' },
+                      { icon: MessageCircle, step: '2', title: 'Choose how to receive your quote', body: 'Via email (PDF) or WhatsApp — your choice.' },
                       { icon: Clock, step: '3', title: 'We respond within 24 hours', body: 'Our team reviews your request and sends a formal quotation.' },
                       { icon: CheckCircle, step: '4', title: 'Confirm and order', body: 'Accept the quote, pay 50% deposit, and we begin production.' },
                     ].map((item) => (

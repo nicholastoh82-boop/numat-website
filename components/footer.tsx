@@ -62,7 +62,6 @@ export default function Footer() {
             <div className="mt-6 space-y-2 text-sm text-white/68">
               <p>Sales: sales@numat.ph</p>
               <p>WhatsApp: +60162958983</p>
-              <p>Viber: +60162958983</p>
             </div>
           </div>
 

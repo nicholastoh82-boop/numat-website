@@ -5,7 +5,7 @@ import { CartContent } from '@/components/cart/cart-content'
 
 export const metadata = {
   title: 'Request Quote | NUMAT',
-  description: 'Review your cart and request an instant quote delivered via WhatsApp or Viber.',
+  description: 'Review your cart and request an instant quote delivered via WhatsApp or Email.',
 }
 
 export default function CartPage() {

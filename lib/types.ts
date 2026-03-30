@@ -17,7 +17,7 @@ export interface Product {
 export interface Contact {
   name: string
   phone: string
-  channel: 'whatsapp' | 'viber'
+  channel: 'whatsapp'
   email?: string
   company?: string
   buyerType?: 'Retailer' | 'Distributor' | 'Contractor' | 'Homeowner'

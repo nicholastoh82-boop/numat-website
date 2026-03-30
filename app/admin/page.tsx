@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
-import { MessageCircle, Phone, Mail, Loader2 } from 'lucide-react'
+import { MessageCircle, Mail, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 // You might need to update this import if your types are strict, 
@@ -61,7 +61,6 @@ export default function AdminOverviewPage() {
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
                     {/* FIXED: Changed delivery_method to delivery_channel to match your schema */}
                     {quote.delivery_channel === 'whatsapp' ? <MessageCircle className="w-5 h-5 text-green-600" /> :
-                      quote.delivery_channel === 'viber' ? <Phone className="w-5 h-5 text-purple-600" /> :
                         <Mail className="w-5 h-5 text-blue-600" />}
                   </div>
                   <div>

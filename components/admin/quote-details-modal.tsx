@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Download, Mail, Bell, MessageCircle, Phone, X } from 'lucide-react'
+import { Download, Mail, Bell, MessageCircle, X } from 'lucide-react'
 
 interface QuoteItem {
   product_name: string
@@ -37,7 +37,7 @@ interface QuoteDetailsModalProps {
   onDownloadPdf: (quoteId: string, quoteNumber: string) => void
   onSendQuote: (quoteId: string, quoteNumber: string) => void
   onSendReminder: (quoteId: string, quoteNumber: string) => void
-  onShare: (quoteId: string, channel: 'whatsapp' | 'viber') => void
+  onShare: (quoteId: string, channel: 'whatsapp') => void
   isSending: boolean
 }
 
@@ -195,15 +195,6 @@ export function QuoteDetailsModal({
             >
               <MessageCircle className="w-4 h-4 text-green-600" />
               WhatsApp
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => onShare(quote.id, 'viber')}
-            >
-              <Phone className="w-4 h-4 text-purple-600" />
-              Viber
             </Button>
           </div>
         </div>
