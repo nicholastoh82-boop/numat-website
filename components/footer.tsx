@@ -62,6 +62,17 @@ export default function Footer() {
             <div className="mt-6 space-y-2 text-sm text-white/68">
               <p>Sales: sales@numat.ph</p>
               <p>WhatsApp: +60162958983</p>
+              <a
+                href="https://www.facebook.com/NuMatPH/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 transition-colors hover:text-white"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                  </svg>
+                facebook.com/NuMatPH
+              </a>
             </div>
           </div>
 

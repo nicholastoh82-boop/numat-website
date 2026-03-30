@@ -2,12 +2,12 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
 import { ContactForm } from '@/components/contact-form'
-import { 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Clock, 
-  MessageCircle
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  MessageCircle,
 } from 'lucide-react'
 
 export const metadata = {
@@ -100,6 +100,24 @@ export default function ContactPage() {
                         Monday - Friday: 8:00 AM - 5:00 PM<br />
                         Saturday: 8:00 AM - 12:00 PM
                       </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground">Facebook</h3>
+                      <a
+                        href="https://www.facebook.com/NuMatPH/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground mt-1 block hover:text-primary transition-colors"
+                      >
+                        facebook.com/NuMatPH
+                      </a>
                     </div>
                   </div>
                 </div>
