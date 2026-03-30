@@ -99,6 +99,7 @@ export const viewport: Viewport = {
 }
 
 const GA_ID = 'G-ZSZ7J2LDPF'
+const CS_ID = 'a94870d42bc1e'
 
 export default function RootLayout({
   children,
@@ -110,6 +111,10 @@ export default function RootLayout({
       <head>
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script
+          src="https://t.contentsquare.net/uxa/a94870d42bc1e.js"
           strategy="afterInteractive"
         />
         <Script id="google-analytics" strategy="afterInteractive">
