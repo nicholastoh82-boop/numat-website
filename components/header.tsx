@@ -46,7 +46,7 @@ export default function Header() {
             />
           </Link>
 
-          <nav className="hidden items-center gap-5 lg:flex xl:gap-7">
+          <nav className="hidden items-center gap-3 lg:flex xl:gap-5">
             {navLinks.map((link) => {
               const isActive =
                 pathname === link.href ||
@@ -56,7 +56,7 @@ export default function Header() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    'text-sm font-medium tracking-[0.01em] transition-colors',
+                    'whitespace-nowrap text-sm font-medium tracking-[0.01em] transition-colors',
                     isActive ? 'text-stone-900' : 'text-stone-700 hover:text-stone-900'
                   )}
                 >
