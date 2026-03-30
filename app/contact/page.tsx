@@ -11,8 +11,13 @@ import {
 } from 'lucide-react'
 
 export const metadata = {
-  title: 'Contact Us | NUMAT',
-  description: 'Get in touch with NUMAT for inquiries about our NuBam engineered bamboo products, bulk orders, or partnerships.',
+  title: 'Contact Sales — Get a Quote or Request Samples',
+  description: 'Contact NUMAT for product enquiries, quotes, and technical support. WhatsApp, Viber, and email support for commercial buyers across Southeast Asia and internationally.',
+  openGraph: {
+    title: 'Contact NUMAT Bamboo Sales',
+    description: 'Get a quote, request samples, or talk to our technical team. Fast response for commercial buyers.',
+    url: 'https://numatbamboo.com/contact',
+  },
 }
 
 export default function ContactPage() {

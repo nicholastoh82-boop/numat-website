@@ -10,8 +10,13 @@ import {
 } from 'lucide-react'
 
 export const metadata = {
-  title: 'NuBam vs Plywood vs MDF | NUMAT',
-  description: 'Compare engineered bamboo boards against plywood, MDF, and solid wood for commercial interior and furniture applications.',
+  title: 'Bamboo vs Plywood vs MDF vs Solid Wood — Material Comparison',
+  description: 'Compare engineered bamboo against plywood, MDF, and solid wood across strength, sustainability, workability, moisture resistance, and cost for commercial applications.',
+  openGraph: {
+    title: 'NuBam vs Plywood vs MDF vs Solid Wood — Full Comparison',
+    description: 'Side-by-side material comparison for architects, furniture manufacturers, and commercial buyers. DOST/ASTM tested data included.',
+    url: 'https://numatbamboo.com/compare',
+  },
 }
 
 type Rating = 'excellent' | 'good' | 'average' | 'poor'

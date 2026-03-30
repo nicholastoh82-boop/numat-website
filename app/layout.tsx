@@ -20,12 +20,16 @@ const dmSerif = DM_Serif_Display({
 })
 
 export const metadata: Metadata = {
-  title: 'NUMAT Bamboo | Engineered Bamboo Boards for Furniture, Interiors, and Projects',
+  metadataBase: new URL('https://numatbamboo.com'),
+  title: {
+    default: 'NUMAT Bamboo | Engineered Bamboo Boards for Furniture, Interiors & Projects',
+    template: '%s | NUMAT Bamboo',
+  },
   description:
-    'Engineered bamboo boards for furniture, cabinetry, interiors, doors, wall systems, and commercial applications. Technical documentation, sample support, and export-ready supply.',
+    'Engineered bamboo boards for furniture, cabinetry, interiors, doors, wall systems, and commercial applications. FSC-certified, DOST/ASTM tested, export-ready supply from the Philippines.',
   keywords: [
     'engineered bamboo boards',
-    'bamboo boards',
+    'bamboo boards Philippines',
     'FSC-certified bamboo',
     'bamboo furniture boards',
     'bamboo wall panels',
@@ -33,28 +37,55 @@ export const metadata: Metadata = {
     'bamboo flooring',
     'sustainable building materials',
     'commercial bamboo supply',
+    'Dendrocalamus asper',
+    'bamboo fit-out materials',
+    'carbon negative building materials',
+    'bamboo export Philippines',
+    'NuBam board',
+    'NuWall bamboo',
   ],
-  authors: [{ name: 'NUMAT' }],
+  authors: [{ name: 'NUMAT Sustainable Manufacturing Inc' }],
+  creator: 'NUMAT',
+  publisher: 'NUMAT Sustainable Manufacturing Inc',
   generator: 'Next.js',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   icons: {
     icon: '/icon.png',
     shortcut: '/favicon.ico',
     apple: '/icon.png',
   },
   openGraph: {
-    title: 'NUMAT Bamboo | Engineered Bamboo Boards for Commercial and Interior Applications',
+    title: 'NUMAT Bamboo | Engineered Bamboo Boards for Commercial & Interior Applications',
     description:
-      'Engineered bamboo boards with technical documentation, sample support, and export-ready supply.',
+      'FSC-certified engineered bamboo boards with DOST/ASTM testing, technical documentation, sample support, and export-ready supply from the Philippines.',
     type: 'website',
+    url: 'https://numatbamboo.com',
+    siteName: 'NUMAT Bamboo',
     locale: 'en_US',
     images: [
       {
-        url: '/icon.png',
-        width: 192,
-        height: 192,
-        alt: 'NUMAT logo',
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'NUMAT Bamboo — Engineered Bamboo Boards',
       },
     ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NUMAT Bamboo | Engineered Bamboo Boards',
+    description:
+      'FSC-certified engineered bamboo boards for furniture, interiors, and commercial applications. Export-ready supply from the Philippines.',
+    images: ['/og-image.jpg'],
   },
 }
 
