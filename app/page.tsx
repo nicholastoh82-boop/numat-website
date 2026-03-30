@@ -118,7 +118,7 @@ export default function NumatBambooHomepageRevamp() {
   ]
 
   const visualTrust = [
-    { title: 'FSC-Certified Sourcing', image: '/Bamboo-Wall.png' },
+    { title: 'Sustainable Harvesting', image: '/Bamboo-Wall.png' },
     { title: 'Project-Ready Boards', image: '/Bamboo-Board.png' },
     { title: 'Commercial Support', image: '/Bamboo-Door.png' },
     { title: 'Interior-Focused Finish', image: '/Bamboo-Flooring.png' },

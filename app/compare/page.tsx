@@ -73,7 +73,7 @@ const rows: CompareRow[] = [
   },
   {
     category: 'Sustainability',
-    attribute: 'FSC / Certified Source',
+    attribute: 'Sustainable Sourcing / Certified Source',
     nubam: { value: 'Sustainably Harvested', rating: 'excellent' },
     plywood: { value: 'Varies by supplier', rating: 'average' },
     mdf: { value: 'Varies by supplier', rating: 'average' },
