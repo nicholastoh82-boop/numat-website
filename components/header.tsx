@@ -15,7 +15,7 @@ const navLinks = [
   { label: 'Compare', href: '/compare' },
   { label: 'News', href: '/news' },
   { label: 'Certifications', href: '/testing' },
-  { label: 'ESG', href: '/esg' },
+  { label: 'Investor Relations', shortLabel: 'IR', href: '/esg' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
 ]
@@ -46,7 +46,7 @@ export default function Header() {
             />
           </Link>
 
-          <nav className="hidden items-center gap-3 lg:flex xl:gap-5">
+          <nav className="hidden items-center gap-2 lg:flex xl:gap-5">
             {navLinks.map((link) => {
               const isActive =
                 pathname === link.href ||
@@ -60,7 +60,12 @@ export default function Header() {
                     isActive ? 'text-stone-900' : 'text-stone-700 hover:text-stone-900'
                   )}
                 >
-                  {link.label}
+                  {'shortLabel' in link ? (
+                    <>
+                      <span className="xl:hidden">{link.shortLabel}</span>
+                      <span className="hidden xl:inline">{link.label}</span>
+                    </>
+                  ) : link.label}
                 </Link>
               )
             })}
