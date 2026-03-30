@@ -161,18 +161,24 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
       const quoteNumber = data.quoteNumber as string
       const confirmationUrl = `/quote/confirmation?id=${encodeURIComponent(quoteId)}&number=${encodeURIComponent(quoteNumber)}`
 
-      if (channel === 'whatsapp') {
-        const message = encodeURIComponent(`Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`)
-        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank')
-      } else if (channel === 'viber') {
-        window.open(`viber://chat?number=${VIBER_NUMBER}`, '_blank')
-        setTimeout(() => {
-          navigator.clipboard?.writeText(`Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`).catch(() => {})
-        }, 600)
-      }
+      const confirmMsg = `Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`
 
-      clearCart()
-      router.push(confirmationUrl)
+      if (channel === 'whatsapp') {
+        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(confirmMsg)}`, '_blank')
+        clearCart()
+        router.push(confirmationUrl)
+      } else if (channel === 'viber') {
+        // Copy message before navigation so user can paste it in Viber
+        await navigator.clipboard?.writeText(confirmMsg).catch(() => {})
+        clearCart()
+        // location.href triggers the deep link without being blocked by popup blockers
+        window.location.href = `viber://chat?number=${VIBER_NUMBER}`
+        // Fall back to confirmation page in case Viber isn't installed
+        setTimeout(() => router.push(confirmationUrl), 1500)
+      } else {
+        clearCart()
+        router.push(confirmationUrl)
+      }
     } catch (err) {
       toast({
         title: 'Quote submission failed',
