@@ -26,11 +26,11 @@ export const metadata: Metadata = {
     template: '%s | NUMAT Bamboo',
   },
   description:
-    'Engineered bamboo boards for furniture, cabinetry, interiors, doors, wall systems, and commercial applications. FSC-certified, DOST/ASTM tested, export-ready supply from the Philippines.',
+    'Engineered bamboo boards for furniture, cabinetry, interiors, doors, wall systems, and commercial applications. Sustainably Harvested, DOST/ASTM tested, export-ready supply from the Philippines.',
   keywords: [
     'engineered bamboo boards',
     'bamboo boards Philippines',
-    'FSC-certified bamboo',
+    'Sustainably Harvested bamboo',
     'bamboo furniture boards',
     'bamboo wall panels',
     'bamboo doors',
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'NUMAT Bamboo | Engineered Bamboo Boards for Commercial & Interior Applications',
     description:
-      'FSC-certified engineered bamboo boards with DOST/ASTM testing, technical documentation, sample support, and export-ready supply from the Philippines.',
+      'Sustainably Harvested engineered bamboo boards with DOST/ASTM testing, technical documentation, sample support, and export-ready supply from the Philippines.',
     type: 'website',
     url: 'https://numatbamboo.com',
     siteName: 'NUMAT Bamboo',
@@ -84,7 +84,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'NUMAT Bamboo | Engineered Bamboo Boards',
     description:
-      'FSC-certified engineered bamboo boards for furniture, interiors, and commercial applications. Export-ready supply from the Philippines.',
+      'Sustainably Harvested engineered bamboo boards for furniture, interiors, and commercial applications. Export-ready supply from the Philippines.',
     images: ['/og-image.jpg'],
   },
 }
