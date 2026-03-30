@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
+
+declare const gtag: (...args: unknown[]) => void
 import { useRouter } from 'next/navigation'
 import {
   Mail,
@@ -153,6 +155,8 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
 
       const data = await res.json()
       if (!res.ok || !data?.ok) throw new Error(data?.error || 'Failed to submit quote.')
+
+      gtag('event', 'quote_request', { event_category: 'conversion', event_label: 'Quote Form' })
 
       const quoteId = data.quoteId as string
       const quoteNumber = data.quoteNumber as string

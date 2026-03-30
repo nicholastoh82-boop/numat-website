@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+
+declare const gtag: (...args: unknown[]) => void
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import Link from 'next/link'
@@ -144,6 +146,7 @@ export default function RequestSamplesPage() {
           submissionTime: 5000,
         }),
       })
+      gtag('event', 'sample_request', { event_category: 'conversion', event_label: 'Sample Request Form' })
       setStep('success')
     } catch {
       alert('Something went wrong. Please try again.')

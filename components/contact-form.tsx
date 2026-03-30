@@ -2,6 +2,8 @@
 
 import React from "react"
 
+declare const gtag: (...args: unknown[]) => void
+
 import { useState } from 'react'
 import { Loader2, Send, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -131,6 +133,7 @@ export function ContactForm() {
       const data = await response.json()
 
       if (data.ok) {
+        gtag('event', 'contact_form', { event_category: 'conversion', event_label: 'Contact Form' })
         setIsSuccess(true)
         toast({
           title: 'Message Sent!',
