@@ -1,11 +1,12 @@
 import React from 'react'
 import type { Metadata, Viewport } from 'next'
 import { DM_Sans, DM_Serif_Display } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/toaster'
 import { CurrencyProvider } from '@/components/providers/currency-provider'
 import CountrySelectorModal from '@/components/country-selector-modal'
 import FloatingContactWidget from '@/components/floating-contact-widget'
+import CookieConsentBanner from '@/components/cookie-consent-banner'
+import AnalyticsProvider from '@/components/providers/analytics-provider'
 import './globals.css'
 
 const dmSans = DM_Sans({
@@ -108,7 +109,8 @@ export default function RootLayout({
           <CountrySelectorModal />
           <FloatingContactWidget />
           <Toaster />
-          <Analytics />
+          <CookieConsentBanner />
+          <AnalyticsProvider />
         </CurrencyProvider>
       </body>
     </html>
