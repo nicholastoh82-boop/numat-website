@@ -3,11 +3,9 @@
 import React, { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  AlertCircle,
   Mail,
   Loader2,
   MessageCircle,
-  Phone,
   CheckCircle,
   Clock,
   ShieldCheck,
@@ -28,9 +26,8 @@ interface QuoteFormProps {
 }
 
 const WHATSAPP_NUMBER = '601139593956'
-const VIBER_NUMBER = '639628127829'
 
-type DeliveryChannel = 'email' | 'whatsapp' | 'viber'
+type DeliveryChannel = 'email' | 'whatsapp'
 
 const APPLICATION_OPTIONS = [
   'Interior fit-out',
@@ -161,24 +158,13 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
       const quoteNumber = data.quoteNumber as string
       const confirmationUrl = `/quote/confirmation?id=${encodeURIComponent(quoteId)}&number=${encodeURIComponent(quoteNumber)}`
 
-      const confirmMsg = `Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`
-
       if (channel === 'whatsapp') {
+        const confirmMsg = `Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`
         window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(confirmMsg)}`, '_blank')
-        clearCart()
-        router.push(confirmationUrl)
-      } else if (channel === 'viber') {
-        // Copy message before navigation so user can paste it in Viber
-        await navigator.clipboard?.writeText(confirmMsg).catch(() => {})
-        clearCart()
-        // location.href triggers the deep link without being blocked by popup blockers
-        window.location.href = `viber://chat?number=${VIBER_NUMBER}`
-        // Fall back to confirmation page in case Viber isn't installed
-        setTimeout(() => router.push(confirmationUrl), 1500)
-      } else {
-        clearCart()
-        router.push(confirmationUrl)
       }
+
+      clearCart()
+      router.push(confirmationUrl)
     } catch (err) {
       toast({
         title: 'Quote submission failed',
@@ -338,14 +324,6 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
         </pre>
       </div>
 
-      {/* Viber note */}
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-        <div className="flex items-start gap-2 text-sm text-amber-800">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>Viber may not support long prefilled text on all devices. If that happens, your quote details are copied to clipboard so you can paste them manually.</p>
-        </div>
-      </div>
-
       {/* Submit buttons */}
       <div className="space-y-3">
         <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Choose how to receive your quote</p>
@@ -360,27 +338,15 @@ export function QuoteForm({ onBack }: QuoteFormProps) {
           Email me the quote (PDF)
         </button>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => handleSubmit('whatsapp')}
-            disabled={isSubmitting}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 py-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-emerald-800 disabled:opacity-60"
-          >
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-            Continue via WhatsApp
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSubmit('viber')}
-            disabled={isSubmitting}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-stone-300 bg-white py-4 text-sm font-bold text-stone-900 transition hover:-translate-y-0.5 hover:bg-stone-50 disabled:opacity-60"
-          >
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
-            Continue via Viber
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => handleSubmit('whatsapp')}
+          disabled={isSubmitting}
+          className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-700 py-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-emerald-800 disabled:opacity-60"
+        >
+          {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <MessageCircle className="h-5 w-5" />}
+          Continue via WhatsApp
+        </button>
       </div>
 
       <style jsx global>{`

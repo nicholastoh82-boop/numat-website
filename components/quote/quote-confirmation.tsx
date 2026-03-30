@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import useSWR from 'swr'
-import { CheckCircle2, Download, MessageCircle, Phone, Mail, ArrowRight, Leaf, Loader2 } from 'lucide-react'
+import { CheckCircle2, Download, MessageCircle, Mail, ArrowRight, Leaf, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { QuoteWithItems } from '@/lib/supabase/types'
 
@@ -107,7 +107,7 @@ export function QuoteConfirmation() {
         </h1>
         <p className="text-muted-foreground text-lg max-w-md mx-auto">
           Your quote is being prepared and will be delivered shortly via{' '}
-          {deliveryChannel === 'whatsapp' ? 'WhatsApp' : deliveryChannel === 'viber' ? 'Viber' : 'Email'}.
+          {deliveryChannel === 'whatsapp' ? 'WhatsApp' : 'Email'}.
         </p>
       </div>
 
@@ -123,8 +123,6 @@ export function QuoteConfirmation() {
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">
               {deliveryChannel === 'whatsapp' ? (
                 <MessageCircle className="w-4 h-4" />
-              ) : deliveryChannel === 'viber' ? (
-                <Phone className="w-4 h-4" />
               ) : (
                 <Mail className="w-4 h-4" />
               )}
@@ -212,18 +210,12 @@ export function QuoteConfirmation() {
             <div className="flex items-start gap-3">
               {deliveryChannel === 'whatsapp' ? (
                 <MessageCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-              ) : deliveryChannel === 'viber' ? (
-                <Phone className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               ) : (
                 <Mail className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
               )}
               <div>
                 <p className="font-medium text-foreground">
-                  {deliveryChannel === 'whatsapp'
-                    ? 'WhatsApp'
-                    : deliveryChannel === 'viber'
-                    ? 'Viber'
-                    : 'Email'}{' '}
+                  {deliveryChannel === 'whatsapp' ? 'WhatsApp' : 'Email'}{' '}
                   Delivery
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -245,12 +237,7 @@ export function QuoteConfirmation() {
                   <p className="font-medium text-foreground">Check your messages</p>
                   <p className="text-sm text-muted-foreground">
                     You will receive a quote summary and PDF link via{' '}
-                    {deliveryChannel === 'whatsapp'
-                      ? 'WhatsApp'
-                      : deliveryChannel === 'viber'
-                      ? 'Viber'
-                      : 'Email'}
-                    .
+                    {deliveryChannel === 'whatsapp' ? 'WhatsApp' : 'Email'}.
                   </p>
                 </div>
               </div>
