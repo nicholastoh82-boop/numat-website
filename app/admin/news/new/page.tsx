@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import RichTextEditor from '@/components/admin/rich-text-editor'
 
 type ContentBlock = {
   type: 'heading' | 'paragraph' | 'image' | 'quote'
@@ -38,14 +39,7 @@ export default function NewNewsPage() {
 
   function updateBlock(index: number, field: 'type' | 'value' | 'caption', value: string) {
     setContent((prev) =>
-      prev.map((block, i) =>
-        i === index
-          ? {
-              ...block,
-              [field]: value,
-            }
-          : block
-      )
+      prev.map((block, i) => (i === index ? { ...block, [field]: value } : block))
     )
   }
 
@@ -56,18 +50,9 @@ export default function NewNewsPage() {
   async function uploadSingleFile(file: File) {
     const formData = new FormData()
     formData.append('file', file)
-
-    const response = await fetch('/api/admin/upload', {
-      method: 'POST',
-      body: formData,
-    })
-
+    const response = await fetch('/api/admin/upload', { method: 'POST', body: formData })
     const result = await response.json()
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to upload image.')
-    }
-
+    if (!response.ok) throw new Error(result.error || 'Failed to upload image.')
     return result.url as string
   }
 
@@ -101,18 +86,11 @@ export default function NewNewsPage() {
     try {
       setError('')
       setMultiUploading(true)
-
       const uploadedBlocks: ContentBlock[] = []
-
       for (const file of Array.from(files)) {
         const url = await uploadSingleFile(file)
-        uploadedBlocks.push({
-          type: 'image',
-          value: url,
-          caption: '',
-        })
+        uploadedBlocks.push({ type: 'image', value: url, caption: '' })
       }
-
       setContent((prev) => [...prev, ...uploadedBlocks])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload images.')
@@ -123,35 +101,23 @@ export default function NewNewsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-
     try {
       setSaving(true)
       setError('')
-
       const response = await fetch('/api/admin/news', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title,
-          slug,
-          excerpt,
+          title, slug, excerpt,
           cover_image_url: coverImageUrl,
-          status,
-          featured,
+          status, featured,
           seo_title: seoTitle,
           seo_description: seoDescription,
           content,
         }),
       })
-
       const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create news post.')
-      }
-
+      if (!response.ok) throw new Error(result.error || 'Failed to create news post.')
       router.push('/admin/news')
       router.refresh()
     } catch (err) {
@@ -205,7 +171,6 @@ export default function NewNewsPage() {
 
           <div className="space-y-3">
             <label className="text-sm font-medium">Cover Image</label>
-
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -213,10 +178,9 @@ export default function NewNewsPage() {
                 className="rounded-lg border px-3 py-2 text-sm"
                 disabled={coverUploading}
               >
-                {coverUploading ? 'Uploading Cover...' : 'Upload Cover Image'}
+                {coverUploading ? 'Uploading...' : 'Upload Cover Image'}
               </button>
             </div>
-
             <input
               ref={coverInputRef}
               type="file"
@@ -224,27 +188,19 @@ export default function NewNewsPage() {
               className="hidden"
               onChange={async (e) => {
                 const file = e.target.files?.[0]
-                if (file) {
-                  await handleCoverUpload(file)
-                }
+                if (file) await handleCoverUpload(file)
                 e.currentTarget.value = ''
               }}
             />
-
             <input
               value={coverImageUrl}
               onChange={(e) => setCoverImageUrl(e.target.value)}
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-              placeholder="/images/news/example.jpg or uploaded image URL"
+              placeholder="Paste image URL or upload above"
             />
-
             {coverImageUrl && (
               <div className="overflow-hidden rounded-xl border bg-muted">
-                <img
-                  src={coverImageUrl}
-                  alt="Cover preview"
-                  className="max-h-64 w-full object-cover"
-                />
+                <img src={coverImageUrl} alt="Cover preview" className="max-h-64 w-full object-cover" />
               </div>
             )}
           </div>
@@ -261,7 +217,6 @@ export default function NewNewsPage() {
                 <option value="published">Published</option>
               </select>
             </div>
-
             <div className="flex items-center gap-3 pt-8">
               <input
                 id="featured"
@@ -269,9 +224,7 @@ export default function NewNewsPage() {
                 checked={featured}
                 onChange={(e) => setFeatured(e.target.checked)}
               />
-              <label htmlFor="featured" className="text-sm font-medium">
-                Featured post
-              </label>
+              <label htmlFor="featured" className="text-sm font-medium">Featured post</label>
             </div>
           </div>
         </div>
@@ -280,30 +233,22 @@ export default function NewNewsPage() {
           <div>
             <h2 className="text-lg font-semibold">Content Blocks</h2>
             <p className="text-sm text-muted-foreground">
-              Build the article using headings, paragraphs, images, and quotes.
+              Build the article using headings, rich text paragraphs, images, and quotes.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => addBlock('heading')} className="rounded-lg border px-3 py-2 text-sm">
-              Add Heading
-            </button>
-            <button type="button" onClick={() => addBlock('paragraph')} className="rounded-lg border px-3 py-2 text-sm">
-              Add Paragraph
-            </button>
-            <button type="button" onClick={() => addBlock('image')} className="rounded-lg border px-3 py-2 text-sm">
-              Add Image
-            </button>
-            <button type="button" onClick={() => addBlock('quote')} className="rounded-lg border px-3 py-2 text-sm">
-              Add Quote
-            </button>
+            <button type="button" onClick={() => addBlock('heading')} className="rounded-lg border px-3 py-2 text-sm">+ Heading</button>
+            <button type="button" onClick={() => addBlock('paragraph')} className="rounded-lg border px-3 py-2 text-sm">+ Paragraph</button>
+            <button type="button" onClick={() => addBlock('image')} className="rounded-lg border px-3 py-2 text-sm">+ Image</button>
+            <button type="button" onClick={() => addBlock('quote')} className="rounded-lg border px-3 py-2 text-sm">+ Quote</button>
             <button
               type="button"
               onClick={() => multiImageInputRef.current?.click()}
               className="rounded-lg border px-3 py-2 text-sm"
               disabled={multiUploading}
             >
-              {multiUploading ? 'Uploading Images...' : 'Upload Multiple Images'}
+              {multiUploading ? 'Uploading...' : '+ Multiple Images'}
             </button>
           </div>
 
@@ -315,9 +260,7 @@ export default function NewNewsPage() {
             className="hidden"
             onChange={async (e) => {
               const files = e.target.files
-              if (files && files.length > 0) {
-                await handleMultiImageUpload(files)
-              }
+              if (files && files.length > 0) await handleMultiImageUpload(files)
               e.currentTarget.value = ''
             }}
           />
@@ -326,21 +269,23 @@ export default function NewNewsPage() {
             {content.map((block, index) => (
               <div key={index} className="rounded-lg border p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <select
-                    value={block.type}
-                    onChange={(e) => updateBlock(index, 'type', e.target.value)}
-                    className="rounded-lg border bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="heading">Heading</option>
-                    <option value="paragraph">Paragraph</option>
-                    <option value="image">Image</option>
-                    <option value="quote">Quote</option>
-                  </select>
-
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={block.type}
+                      onChange={(e) => updateBlock(index, 'type', e.target.value)}
+                      className="rounded-lg border bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="heading">Heading</option>
+                      <option value="paragraph">Paragraph</option>
+                      <option value="image">Image</option>
+                      <option value="quote">Quote</option>
+                    </select>
+                    <span className="text-xs text-muted-foreground capitalize">Block {index + 1}</span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeBlock(index)}
-                    className="rounded-lg border px-3 py-2 text-sm"
+                    className="rounded-lg border px-3 py-1.5 text-sm text-red-600 hover:bg-red-50"
                   >
                     Remove
                   </button>
@@ -348,54 +293,49 @@ export default function NewNewsPage() {
 
                 {block.type === 'image' ? (
                   <div className="space-y-3">
-                    <div className="flex flex-wrap gap-2">
-                      <label className="inline-flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-sm">
-                        {blockUploadingIndex === index ? 'Uploading...' : 'Upload Image'}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0]
-                            if (file) {
-                              await handleBlockUpload(index, file)
-                            }
-                            e.currentTarget.value = ''
-                          }}
-                        />
-                      </label>
-                    </div>
-
+                    <label className="inline-flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-sm">
+                      {blockUploadingIndex === index ? 'Uploading...' : 'Upload Image'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (file) await handleBlockUpload(index, file)
+                          e.currentTarget.value = ''
+                        }}
+                      />
+                    </label>
                     <input
                       value={block.value}
                       onChange={(e) => updateBlock(index, 'value', e.target.value)}
                       className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-                      placeholder="Enter image URL"
+                      placeholder="Or paste image URL"
                     />
-
                     <input
                       value={block.caption || ''}
                       onChange={(e) => updateBlock(index, 'caption', e.target.value)}
                       className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-                      placeholder="Image caption"
+                      placeholder="Image caption (optional)"
                     />
-
                     {block.value && (
                       <div className="overflow-hidden rounded-xl border bg-muted">
-                        <img
-                          src={block.value}
-                          alt={block.caption || 'News image preview'}
-                          className="max-h-72 w-full object-cover"
-                        />
+                        <img src={block.value} alt={block.caption || ''} className="max-h-72 w-full object-cover" />
                       </div>
                     )}
                   </div>
-                ) : (
-                  <textarea
+                ) : block.type === 'heading' ? (
+                  <input
                     value={block.value}
                     onChange={(e) => updateBlock(index, 'value', e.target.value)}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-sm min-h-[120px]"
-                    placeholder="Enter content"
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-sm font-semibold"
+                    placeholder="Enter heading text"
+                  />
+                ) : (
+                  <RichTextEditor
+                    value={block.value}
+                    onChange={(html) => updateBlock(index, 'value', html)}
+                    placeholder={block.type === 'quote' ? 'Enter quote text...' : 'Start writing...'}
                   />
                 )}
               </div>
@@ -406,11 +346,8 @@ export default function NewNewsPage() {
         <div className="rounded-xl border bg-card p-6 space-y-4">
           <div>
             <h2 className="text-lg font-semibold">SEO</h2>
-            <p className="text-sm text-muted-foreground">
-              Optional overrides for search engines and social previews.
-            </p>
+            <p className="text-sm text-muted-foreground">Optional overrides for search engines and social previews.</p>
           </div>
-
           <div className="space-y-2">
             <label className="text-sm font-medium">SEO Title</label>
             <input
@@ -420,7 +357,6 @@ export default function NewNewsPage() {
               placeholder="Optional SEO title"
             />
           </div>
-
           <div className="space-y-2">
             <label className="text-sm font-medium">SEO Description</label>
             <textarea
