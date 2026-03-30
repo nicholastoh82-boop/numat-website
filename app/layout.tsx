@@ -73,7 +73,7 @@ export const metadata: Metadata = {
     locale: 'en_US',
     images: [
       {
-        url: '/og-image.jpg',
+        url: '/og-social.jpg',
         width: 1200,
         height: 630,
         alt: 'NUMAT Bamboo — Engineered Bamboo Boards',
@@ -85,7 +85,7 @@ export const metadata: Metadata = {
     title: 'NUMAT Bamboo | Engineered Bamboo Boards',
     description:
       'Sustainably Harvested engineered bamboo boards for furniture, interiors, and commercial applications. Export-ready supply from the Philippines.',
-    images: ['/og-image.jpg'],
+    images: ['/og-social.jpg'],
   },
 }
 
