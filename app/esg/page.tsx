@@ -278,7 +278,7 @@ export default function ESGPage() {
               <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-white/60">vs Plywood</p>
                 <p className="mt-2 text-3xl font-extrabold text-white">{vsPlywood.toFixed(1)}t</p>
-                <p className="mt-1 text-xs text-white/50">CO₂ better than plywood equivalent</p>
+                <p className="mt-1 text-xs text-white/50">CO₂ avoided compared to plywood</p>
               </div>
               <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-white/60">Trees Equivalent</p>
