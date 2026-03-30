@@ -1,12 +1,12 @@
 import React from 'react'
 import type { Metadata, Viewport } from 'next'
 import { DM_Sans, DM_Serif_Display } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/toaster'
 import { CurrencyProvider } from '@/components/providers/currency-provider'
 import CountrySelectorModal from '@/components/country-selector-modal'
 import FloatingContactWidget from '@/components/floating-contact-widget'
-import CookieConsentBanner from '@/components/cookie-consent-banner'
-import AnalyticsProvider from '@/components/providers/analytics-provider'
+import Script from 'next/script'
 import './globals.css'
 
 const dmSans = DM_Sans({
@@ -27,11 +27,10 @@ export const metadata: Metadata = {
     template: '%s | NUMAT Bamboo',
   },
   description:
-    'Engineered bamboo boards for furniture, cabinetry, interiors, doors, wall systems, and commercial applications. Sustainably Harvested, DOST/ASTM tested, export-ready supply from the Philippines.',
+    'Engineered bamboo boards for furniture, cabinetry, interiors, doors, wall systems, and commercial applications. DOST/ASTM tested, export-ready supply from the Philippines.',
   keywords: [
     'engineered bamboo boards',
     'bamboo boards Philippines',
-    'Sustainably Harvested bamboo',
     'bamboo furniture boards',
     'bamboo wall panels',
     'bamboo doors',
@@ -49,6 +48,9 @@ export const metadata: Metadata = {
   creator: 'NUMAT',
   publisher: 'NUMAT Sustainable Manufacturing Inc',
   generator: 'Next.js',
+  verification: {
+    google: 'Tn2bKAE_YfaE3DKf42V6G1DjMNSnh1wnrmb8fSrIrqU',
+  },
   robots: {
     index: true,
     follow: true,
@@ -67,7 +69,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'NUMAT Bamboo | Engineered Bamboo Boards for Commercial & Interior Applications',
     description:
-      'Sustainably Harvested engineered bamboo boards with DOST/ASTM testing, technical documentation, sample support, and export-ready supply from the Philippines.',
+      'Engineered bamboo boards with DOST/ASTM testing, technical documentation, sample support, and export-ready supply from the Philippines.',
     type: 'website',
     url: 'https://numatbamboo.com',
     siteName: 'NUMAT Bamboo',
@@ -85,7 +87,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'NUMAT Bamboo | Engineered Bamboo Boards',
     description:
-      'Sustainably Harvested engineered bamboo boards for furniture, interiors, and commercial applications. Export-ready supply from the Philippines.',
+      'Engineered bamboo boards for furniture, interiors, and commercial applications. Export-ready supply from the Philippines.',
     images: ['/og-social.jpg'],
   },
 }
@@ -96,6 +98,8 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
+const GA_ID = 'G-ZSZ7J2LDPF'
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -103,14 +107,29 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_ID}', {
+              page_path: window.location.pathname,
+            });
+          `}
+        </Script>
+      </head>
       <body className={`${dmSans.variable} ${dmSerif.variable} font-sans antialiased`}>
         <CurrencyProvider>
           {children}
           <CountrySelectorModal />
           <FloatingContactWidget />
           <Toaster />
-          <CookieConsentBanner />
-          <AnalyticsProvider />
+          <Analytics />
         </CurrencyProvider>
       </body>
     </html>
