@@ -140,7 +140,12 @@ function getListingDisplayName(product: ProductApiItem): string {
   return product.name
 }
 
-export function ProductsContent() {
+interface ProductsContentProps {
+  initialProducts?: ProductApiItem[]
+  initialCategories?: Category[]
+}
+
+export function ProductsContent({ initialProducts = [], initialCategories = [] }: ProductsContentProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const initialCategory = normalizeCategorySlug(searchParams.get('category') || 'all')
@@ -172,11 +177,11 @@ export function ProductsContent() {
     isLoading: productsLoading,
     error: productsError,
   } = useSWR<ProductApiItem[]>('/api/products', fetcher, {
-    fallbackData: [],
+    fallbackData: initialProducts,
   })
 
   const { data: categories } = useSWR<Category[]>('/api/categories', fetcher, {
-    fallbackData: [],
+    fallbackData: initialCategories,
   })
 
   useEffect(() => {
