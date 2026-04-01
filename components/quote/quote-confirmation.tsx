@@ -22,8 +22,13 @@ export function QuoteConfirmation() {
 
   // GA4 conversion event — fires once when a real quote loads
   useEffect(() => {
-    if (!quote || !quoteId) return
+    console.log('useEffect fired, quote:', !!quote, 'quoteId:', quoteId)
+    if (!quote || !quoteId) {
+      console.log('early return - missing quote or quoteId')
+      return
+    }
     if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
+      console.log('firing gtag event')
       const q = quote as any
       ;(window as any).gtag('event', 'quote_submitted', {
         quote_id: quoteId,
@@ -32,6 +37,8 @@ export function QuoteConfirmation() {
         currency: q.display_currency ?? 'USD',
         items_count: quote.quote_items?.length ?? 0,
       })
+    } else {
+      console.log('gtag not available:', typeof (window as any).gtag)
     }
   }, [quoteId, !!quote])
 
