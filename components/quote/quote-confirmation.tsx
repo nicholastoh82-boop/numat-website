@@ -33,7 +33,7 @@ export function QuoteConfirmation() {
         items_count: quote.quote_items?.length ?? 0,
       })
     }
-  }, [quoteId, quote])
+  }, [quoteId, !!quote])
 
   const handleDownload = () => {
     if (!quoteId) return
