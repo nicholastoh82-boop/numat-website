@@ -20,6 +20,21 @@ export function QuoteConfirmation() {
     fetcher
   )
 
+  // GA4 conversion event — fires once when a real quote loads
+  useEffect(() => {
+    if (!quote || !quoteId) return
+    if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
+      const q = quote as any
+      ;(window as any).gtag('event', 'quote_submitted', {
+        quote_id: quoteId,
+        quote_number: q.quote_number ?? q.quoteNumber ?? quoteNumber ?? '—',
+        value: q.display_total ?? q.total ?? 0,
+        currency: q.display_currency ?? 'USD',
+        items_count: quote.quote_items?.length ?? 0,
+      })
+    }
+  }, [quoteId, quote])
+
   const handleDownload = () => {
     if (!quoteId) return
     window.open(`/api/quote/pdf?id=${quoteId}`, '_blank')
@@ -76,19 +91,7 @@ export function QuoteConfirmation() {
   const displayDiscountAmount: number = q.discount_amount ?? 0
   
 
-  // GA4 conversion event — fires once when a real quote loads
-  useEffect(() => {
-    if (!quote || !quoteId) return
-    if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
-      ;(window as any).gtag('event', 'quote_submitted', {
-        quote_id: quoteId,
-        quote_number: displayedQuoteNumber,
-        value: displayTotal,
-        currency: displayCurrency,
-        items_count: quote.quote_items?.length ?? 0,
-      })
-    }
-  }, [quoteId])
+  
 
   // Format a number in the display currency
   function formatAmount(amount: number) {
