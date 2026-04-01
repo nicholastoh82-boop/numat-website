@@ -108,7 +108,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
+      <body className={`${dmSans.variable} ${dmSerif.variable} font-sans antialiased`}>
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
           strategy="afterInteractive"
@@ -127,8 +127,6 @@ export default function RootLayout({
             });
           `}
         </Script>
-      </head>
-      <body className={`${dmSans.variable} ${dmSerif.variable} font-sans antialiased`}>
         <CurrencyProvider>
           {children}
           <CountrySelectorModal />
