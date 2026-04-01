@@ -301,11 +301,7 @@ export function ProductsContent({ initialProducts = [], initialCategories = [] }
                 ? 'Loading...'
                 : `${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''} available`}
             </p>
-            {productsError && (
-              <p className="mt-2 text-sm text-red-600">
-                Failed to load products: {productsError.message}
-              </p>
-            )}
+            
           </div>
 
           <div className="flex flex-col gap-4 sm:flex-row">
