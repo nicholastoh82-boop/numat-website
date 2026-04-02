@@ -252,7 +252,6 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
 
       <div className="flex flex-grow flex-col gap-3 p-5">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-muted-foreground">SKU: {product.sku || '—'}</p>
           {hasMultipleImages && (
             <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">
               {productImages.length} images
