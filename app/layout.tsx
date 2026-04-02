@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { CurrencyProvider } from '@/components/providers/currency-provider'
 import CountrySelectorModal from '@/components/country-selector-modal'
 import FloatingContactWidget from '@/components/floating-contact-widget'
+import StickyCaptureBar from '@/components/sticky-capture-bar'
 import Script from 'next/script'
 import './globals.css'
 
@@ -99,7 +100,6 @@ export const viewport: Viewport = {
 }
 
 const GA_ID = 'G-ZSZ7J2LDPF'
-const CS_ID = 'a94870d42bc1e'
 
 export default function RootLayout({
   children,
@@ -133,6 +133,7 @@ export default function RootLayout({
           <FloatingContactWidget />
           <Toaster />
           <Analytics />
+          <StickyCaptureBar />
         </CurrencyProvider>
       </body>
     </html>
