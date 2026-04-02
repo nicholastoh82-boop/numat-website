@@ -93,11 +93,21 @@ export async function GET(
     return NextResponse.json({ error: variantsError.message }, { status: 500 })
   }
 
-  const { data: productImages } = await supabase
+  const { data: allImages } = await supabase
     .from('product_images')
-    .select('id, image_url, alt_text, is_primary, display_order')
+    .select('id, image_url, alt_text, is_primary, display_order, variant_id')
     .eq('product_id', id)
     .order('display_order', { ascending: true })
+
+  const productImages = (allImages ?? []).filter((img: any) => !img.variant_id)
+
+  const variantImagesMap: Record<string, any[]> = {}
+  for (const img of (allImages ?? [])) {
+    if (img.variant_id) {
+      if (!variantImagesMap[img.variant_id]) variantImagesMap[img.variant_id] = []
+      variantImagesMap[img.variant_id].push(img)
+    }
+  }
 
   const mappedVariants = (variants ?? []).map((variant: any) => ({
     id: variant.id,
@@ -115,6 +125,12 @@ export async function GET(
     size_label: variant.size_label ?? null,
     is_price_on_request: variant.is_price_on_request ?? false,
     price_notes: variant.price_notes ?? null,
+    images: (variantImagesMap[variant.id] ?? []).map((img: any) => ({
+      id: img.id,
+      image_url: img.image_url,
+      alt_text: img.alt_text ?? '',
+      is_primary: img.is_primary ?? false,
+    })),
   }))
 
   const firstPricedVariant =

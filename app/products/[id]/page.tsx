@@ -56,6 +56,12 @@ type Product = {
     size_label: string | null
     is_price_on_request: boolean
     price_notes: string | null
+    images?: Array<{
+      id: string
+      image_url: string
+      alt_text: string
+      is_primary: boolean
+    }>
   }>
   images?: Array<{
     id: string
@@ -1047,7 +1053,10 @@ export default function ProductDetailPage() {
               <div className="overflow-hidden rounded-[34px] border border-black/8 bg-white shadow-sm">
                 <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
                   <div className="relative min-h-[320px] bg-[#efe7d9] sm:min-h-[420px] lg:min-h-[620px]">
-                    <ProductDetailImage product={product} />
+                    <ProductDetailImage
+                      product={product}
+                      variantImages={selectedVariant?.images}
+                    />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
                   </div>
 

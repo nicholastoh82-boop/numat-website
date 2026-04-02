@@ -374,6 +374,11 @@ export default function AdminProductsPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [variantImageFiles, setVariantImageFiles] = useState<File[]>([])
+  const [existingVariantImages, setExistingVariantImages] = useState<any[]>([])
+  const [isUploadingVariantImages, setIsUploadingVariantImages] = useState(false)
+  const variantImageInputRef = useRef<HTMLInputElement>(null)
+
   const [multipleImageFiles, setMultipleImageFiles] = useState<File[]>([])
   const multiImageInputRef = useRef<HTMLInputElement>(null)
   const [existingProductImages, setExistingProductImages] = useState<any[]>([])
@@ -503,9 +508,44 @@ export default function AdminProductsPage() {
     setIsProductModalOpen(true)
   }
 
-  const handleOpenVariantEdit = (variant: Variant) => {
+  const handleOpenVariantEdit = async (variant: Variant) => {
     setCurrentVariant(variant)
+    setVariantImageFiles([])
+    setExistingVariantImages([])
+    if (variantImageInputRef.current) variantImageInputRef.current.value = ''
+
+    if (variant.id) {
+      try {
+        const res = await fetch(`/api/admin/variant-images?variantId=${variant.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setExistingVariantImages(data.images || [])
+        }
+      } catch {}
+    }
+
     setIsVariantModalOpen(true)
+  }
+
+  const handleVariantImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const valid = files.filter((f) => {
+      if (f.size > 5 * 1024 * 1024) {
+        toast({ title: 'Error', description: `${f.name} exceeds 5MB`, variant: 'destructive' })
+        return false
+      }
+      return true
+    })
+    setVariantImageFiles((prev) => [...prev, ...valid])
+  }
+
+  const handleDeleteVariantImage = async (imageId: string) => {
+    try {
+      await fetch(`/api/admin/variant-images?imageId=${imageId}`, { method: 'DELETE' })
+      setExistingVariantImages((prev) => prev.filter((img) => img.id !== imageId))
+    } catch {
+      toast({ title: 'Error', description: 'Failed to delete image', variant: 'destructive' })
+    }
   }
 
   const handleOpenDelete = (id: string) => {
@@ -699,8 +739,30 @@ export default function AdminProductsPage() {
 
       await mutateVariants()
 
+      // Upload any new variant images
+      if (variantImageFiles.length > 0 && currentVariant.product_id) {
+        setIsUploadingVariantImages(true)
+        try {
+          const formData = new FormData()
+          formData.append('variantId', currentVariant.id)
+          formData.append('productId', currentVariant.product_id)
+          variantImageFiles.forEach((f) => formData.append('images', f))
+          const uploadRes = await fetch('/api/admin/variant-images', { method: 'POST', body: formData })
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json()
+            setExistingVariantImages((prev) => [...prev, ...(uploadData.images || [])])
+          }
+        } finally {
+          setIsUploadingVariantImages(false)
+          setVariantImageFiles([])
+          if (variantImageInputRef.current) variantImageInputRef.current.value = ''
+        }
+      }
+
       setIsVariantModalOpen(false)
       setCurrentVariant(INITIAL_VARIANT)
+      setVariantImageFiles([])
+      setExistingVariantImages([])
 
       toast({
         title: 'Success',
@@ -1612,6 +1674,62 @@ export default function AdminProductsPage() {
               <Label htmlFor="variant-quote">Price on request / Quote only</Label>
             </div>
 
+            {/* Variant Images */}
+            <div className="border-t pt-4 space-y-3">
+              <Label className="block">Variant Images</Label>
+              <p className="text-xs text-muted-foreground">
+                These images display in the carousel when this thickness is selected.
+              </p>
+
+              {existingVariantImages.length > 0 && (
+                <div className="grid grid-cols-4 gap-2">
+                  {existingVariantImages.map((img) => (
+                    <div key={img.id} className="relative h-20 w-20 overflow-hidden rounded-lg border border-border bg-muted">
+                      <img src={img.image_url} alt={img.alt_text || ''} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteVariantImage(img.id)}
+                        className="absolute right-0.5 top-0.5 rounded-full bg-black/50 p-0.5 text-white hover:bg-black/70"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Input
+                ref={variantImageInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleVariantImageChange}
+                className="cursor-pointer"
+              />
+
+              {variantImageFiles.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-foreground">
+                    {variantImageFiles.length} new image(s) selected — saved when you click Save Variant
+                  </p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {variantImageFiles.map((f, i) => (
+                      <div key={i} className="relative h-20 w-20 overflow-hidden rounded-lg border border-border bg-muted">
+                        <img src={URL.createObjectURL(f)} alt={f.name} className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setVariantImageFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="absolute right-0.5 top-0.5 rounded-full bg-black/50 p-0.5 text-white hover:bg-black/70"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <DialogFooter className="pt-4">
               <Button
                 type="button"
@@ -1621,11 +1739,11 @@ export default function AdminProductsPage() {
                 Cancel
               </Button>
 
-              <Button type="submit" disabled={isVariantSaving}>
-                {isVariantSaving ? (
+              <Button type="submit" disabled={isVariantSaving || isUploadingVariantImages}>
+                {isVariantSaving || isUploadingVariantImages ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    {isUploadingVariantImages ? 'Uploading...' : 'Saving...'}
                   </>
                 ) : (
                   <>

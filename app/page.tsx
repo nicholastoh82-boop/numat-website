@@ -15,6 +15,7 @@ import {
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
+import HeroLeadCapture from '@/components/hero-lead-capture'
 
 type Testimonial = {
   id: string
@@ -124,13 +125,6 @@ export default function NumatBambooHomepageRevamp() {
     { title: 'Interior-Focused Finish', image: '/Bamboo-Flooring.png' },
   ]
 
-  const quickIcons = [
-    'Commercial interiors',
-    'Furniture production',
-    'Joinery and cabinetry',
-    'Procurement-ready support',
-  ]
-
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -173,18 +167,9 @@ export default function NumatBambooHomepageRevamp() {
                 </p>
               </div>
 
-              <div className="mt-7 grid max-w-xl grid-cols-2 gap-3">
-                {quickIcons.map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-2xl border border-stone-200 bg-white/90 px-4 py-3 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-emerald-800" />
-                      <p className="text-sm font-medium text-stone-700">{item}</p>
-                    </div>
-                  </div>
-                ))}
+              {/* ── Hero inline lead capture form ── */}
+              <div className="mt-7">
+                <HeroLeadCapture />
               </div>
             </div>
 
@@ -266,73 +251,73 @@ export default function NumatBambooHomepageRevamp() {
 
         {/* News & Activities */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-            <div className="mb-8 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
-                  Latest updates
-                </p>
-                <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-                  News & Activities
-                </h2>
-              </div>
-              <Link href="/news" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
-                View all
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+                Latest updates
+              </p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+                News & Activities
+              </h2>
             </div>
+            <Link href="/news" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
+              View all
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
 
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {newsItems.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/news/${item.slug}`}
-                  className="group block overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-xl"
-                >
-                  {item.cover_image_url ? (
-                    <div className="relative h-52 overflow-hidden">
-                      <img
-                        src={item.cover_image_url}
-                        alt={item.title}
-                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                      {item.featured && (
-                        <span className="absolute left-4 top-4 rounded-full bg-emerald-700 px-3 py-1 text-xs font-semibold text-white">
-                          Featured
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex h-52 items-center justify-center bg-stone-100">
-                      <FileText className="h-10 w-10 text-stone-300" />
-                    </div>
-                  )}
-
-                  <div className="p-6">
-                    {item.published_at && (
-                      <p className="text-xs font-medium text-stone-400">
-                        {new Date(item.published_at).toLocaleDateString('en-PH', {
-                          year: 'numeric', month: 'long', day: 'numeric',
-                        })}
-                      </p>
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {newsItems.map((item) => (
+              <Link
+                key={item.id}
+                href={`/news/${item.slug}`}
+                className="group block overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-xl"
+              >
+                {item.cover_image_url ? (
+                  <div className="relative h-52 overflow-hidden">
+                    <img
+                      src={item.cover_image_url}
+                      alt={item.title}
+                      className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    {item.featured && (
+                      <span className="absolute left-4 top-4 rounded-full bg-emerald-700 px-3 py-1 text-xs font-semibold text-white">
+                        Featured
+                      </span>
                     )}
-                    <h3 className="mt-2 text-lg font-semibold leading-snug text-stone-950">
-                      {item.title}
-                    </h3>
-                    {item.excerpt && (
-                      <p className="mt-2 text-sm leading-6 text-stone-500 line-clamp-2">
-                        {item.excerpt}
-                      </p>
-                    )}
-                    <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
-                      Read more
-                      <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-                    </div>
                   </div>
-                </Link>
-              ))}
-            </div>
-          </section>
+                ) : (
+                  <div className="flex h-52 items-center justify-center bg-stone-100">
+                    <FileText className="h-10 w-10 text-stone-300" />
+                  </div>
+                )}
+
+                <div className="p-6">
+                  {item.published_at && (
+                    <p className="text-xs font-medium text-stone-400">
+                      {new Date(item.published_at).toLocaleDateString('en-PH', {
+                        year: 'numeric', month: 'long', day: 'numeric',
+                      })}
+                    </p>
+                  )}
+                  <h3 className="mt-2 text-lg font-semibold leading-snug text-stone-950">
+                    {item.title}
+                  </h3>
+                  {item.excerpt && (
+                    <p className="mt-2 text-sm leading-6 text-stone-500 line-clamp-2">
+                      {item.excerpt}
+                    </p>
+                  )}
+                  <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                    Read more
+                    <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         {/* Product Families */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
@@ -483,21 +468,19 @@ export default function NumatBambooHomepageRevamp() {
             </div>
           </div>
           <div className="mt-8 rounded-[2rem] border border-emerald-200 bg-emerald-50 px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-bold text-emerald-900">Not sure which material is right for your project?</p>
-                <p className="mt-1 text-sm text-emerald-700">See how NuBam stacks up against plywood, MDF, and solid wood across strength, sustainability, and cost.</p>
-              </div>
-              <Link
-                href="/compare"
-                className="shrink-0 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-emerald-900"
-              >
-                Compare Materials
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+            <div>
+              <p className="text-sm font-bold text-emerald-900">Not sure which material is right for your project?</p>
+              <p className="mt-1 text-sm text-emerald-700">See how NuBam stacks up against plywood, MDF, and solid wood across strength, sustainability, and cost.</p>
             </div>
+            <Link
+              href="/compare"
+              className="shrink-0 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-emerald-900"
+            >
+              Compare Materials
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </section>
-
-        
 
         {/* Testimonials */}
         {testimonials.length > 0 && (
