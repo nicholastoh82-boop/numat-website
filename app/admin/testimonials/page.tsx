@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import Image from 'next/image'
 
 type Testimonial = {
   id: string
@@ -31,6 +30,41 @@ const emptyForm = {
   is_active: true,
 }
 
+// Infer country from domain TLD as a rough location hint
+const TLD_COUNTRY_MAP: Record<string, string> = {
+  sg: 'Singapore',
+  ph: 'Philippines',
+  my: 'Malaysia',
+  au: 'Australia',
+  nz: 'New Zealand',
+  uk: 'United Kingdom',
+  co: 'Colombia',
+  jp: 'Japan',
+  cn: 'China',
+  hk: 'Hong Kong',
+  in: 'India',
+  id: 'Indonesia',
+  th: 'Thailand',
+  vn: 'Vietnam',
+  de: 'Germany',
+  fr: 'France',
+  nl: 'Netherlands',
+  ca: 'Canada',
+  ae: 'UAE',
+  sa: 'Saudi Arabia',
+}
+
+function inferLocationFromDomain(domain: string): string {
+  const parts = domain.split('.')
+  const tld = parts[parts.length - 1].toLowerCase()
+  // .com.ph, .com.sg etc — check second-to-last
+  const secondTld = parts.length >= 3 ? parts[parts.length - 2].toLowerCase() : ''
+  if (secondTld && TLD_COUNTRY_MAP[secondTld]) return TLD_COUNTRY_MAP[secondTld]
+  if (TLD_COUNTRY_MAP[tld]) return TLD_COUNTRY_MAP[tld]
+  // .com is usually US-based but too generic — skip
+  return ''
+}
+
 async function parseJsonSafely(response: Response) {
   const text = await response.text()
   if (!text) return null
@@ -41,12 +75,13 @@ async function parseJsonSafely(response: Response) {
   }
 }
 
+// Standalone logo search component
 function LogoSearch({
   value,
   onSelect,
 }: {
   value: string
-  onSelect: (company: string, logoUrl: string) => void
+  onSelect: (company: string, logoUrl: string, location: string) => void
 }) {
   const [query, setQuery] = useState(value)
   const [suggestions, setSuggestions] = useState<ClearbitCompany[]>([])
@@ -57,6 +92,7 @@ function LogoSearch({
   const search = useCallback(async (q: string) => {
     if (!q || q.length < 2) {
       setSuggestions([])
+      setOpen(false)
       return
     }
     setSearching(true)
@@ -66,71 +102,90 @@ function LogoSearch({
       )
       if (res.ok) {
         const data: ClearbitCompany[] = await res.json()
-        setSuggestions(data.slice(0, 5))
-        setOpen(true)
+        setSuggestions(data.slice(0, 6))
+        setOpen(data.length > 0)
       }
     } catch {
-      // Clearbit unavailable — silently fail
+      // Clearbit unavailable silently
     } finally {
       setSearching(false)
     }
   }, [])
 
   useEffect(() => {
-    const timer = setTimeout(() => search(query), 400)
+    const timer = setTimeout(() => search(query), 450)
     return () => clearTimeout(timer)
   }, [query, search])
 
-  function handleSelect(company: ClearbitCompany) {
+  function handleSelect(e: React.MouseEvent, company: ClearbitCompany) {
+    // Critical: stop click from bubbling to modal backdrop
+    e.preventDefault()
+    e.stopPropagation()
+    const location = inferLocationFromDomain(company.domain)
     setQuery(company.name)
     setPreviewLogo(company.logo)
     setSuggestions([])
     setOpen(false)
-    onSelect(company.name, company.logo)
+    onSelect(company.name, company.logo, location)
   }
 
   function handleManualChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value
     setQuery(val)
+    // Keep existing logo if any, just update company name
+    onSelect(val, previewLogo, '')
     if (!val) {
       setPreviewLogo('')
-      onSelect('', '')
-    } else {
-      onSelect(val, previewLogo)
+      setSuggestions([])
+      setOpen(false)
     }
   }
 
+  function handleBlur() {
+    // Small delay so click on suggestion fires first
+    setTimeout(() => setOpen(false), 180)
+  }
+
   return (
-    <div className="relative">
+    <div className="relative" onClick={e => e.stopPropagation()}>
       <div className="flex items-center gap-2">
         {previewLogo && (
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white p-1">
             <img
               src={previewLogo}
-              alt="Company logo"
+              alt="logo"
               className="h-full w-full object-contain"
               onError={() => setPreviewLogo('')}
             />
           </div>
         )}
-        <input
-          value={query}
-          onChange={handleManualChange}
-          placeholder="Company name (auto-fetches logo)"
-          className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
-        />
-        {searching && (
-          <span className="absolute right-3 top-3 text-xs text-neutral-400">...</span>
-        )}
+        <div className="relative flex-1">
+          <input
+            value={query}
+            onChange={handleManualChange}
+            onBlur={handleBlur}
+            onFocus={() => suggestions.length > 0 && setOpen(true)}
+            placeholder="Company name — type to search or enter manually"
+            className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
+          />
+          {searching && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400">
+              searching...
+            </span>
+          )}
+        </div>
       </div>
 
       {open && suggestions.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-neutral-200 bg-white shadow-lg overflow-hidden">
-          {suggestions.map((s) => (
+        <div className="absolute left-0 right-0 top-full z-[100] mt-1 rounded-xl border border-neutral-200 bg-white shadow-xl overflow-hidden">
+          <p className="px-3 py-2 text-xs text-neutral-400 border-b border-neutral-100">
+            Select a match, or just keep typing if not listed
+          </p>
+          {suggestions.map(s => (
             <button
               key={s.domain}
               type="button"
-              onClick={() => handleSelect(s)}
+              onMouseDown={e => handleSelect(e, s)}
               className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-neutral-50 transition-colors"
             >
               {s.logo && (
@@ -139,20 +194,184 @@ function LogoSearch({
                     src={s.logo}
                     alt={s.name}
                     className="h-full w-full object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none'
+                    onError={e => {
+                      ;(e.target as HTMLImageElement).style.display = 'none'
                     }}
                   />
                 </div>
               )}
               <div className="min-w-0">
                 <p className="font-medium text-neutral-900 truncate">{s.name}</p>
-                <p className="text-xs text-neutral-400 truncate">{s.domain}</p>
+                <p className="text-xs text-neutral-400 truncate">
+                  {s.domain}
+                  {inferLocationFromDomain(s.domain)
+                    ? ` — ${inferLocationFromDomain(s.domain)}`
+                    : ''}
+                </p>
               </div>
             </button>
           ))}
+          <div className="px-3 py-2 border-t border-neutral-100">
+            <p className="text-xs text-neutral-400">
+              Not listed? Just type the company name — logo optional.
+            </p>
+          </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function TestimonialForm({
+  initialForm,
+  onSubmit,
+  submitLabel,
+  submitting,
+}: {
+  initialForm: typeof emptyForm
+  onSubmit: (form: typeof emptyForm) => void
+  submitLabel: string
+  submitting: boolean
+}) {
+  const [form, setForm] = useState(initialForm)
+
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
+    const target = e.target as HTMLInputElement
+    const { name, value, type } = target
+    if (type === 'checkbox') {
+      setForm(f => ({ ...f, [name]: target.checked }))
+      return
+    }
+    setForm(f => ({
+      ...f,
+      [name]: name === 'sort_order' ? Number(value) : value,
+    }))
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="mb-2 block text-sm font-medium text-neutral-700">Name</label>
+        <input
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          placeholder="Client name"
+          required
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
+        />
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-neutral-700">
+          Company
+          <span className="ml-2 text-xs font-normal text-neutral-400">
+            auto-fetches logo
+          </span>
+        </label>
+        <LogoSearch
+          value={form.company}
+          onSelect={(company, logoUrl, inferredLocation) => {
+            setForm(f => ({
+              ...f,
+              company,
+              logo_url: logoUrl,
+              // Only auto-fill location if it's currently empty
+              location: inferredLocation && !f.location ? inferredLocation : f.location,
+            }))
+          }}
+        />
+        {form.logo_url && (
+          <div className="mt-2 flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md border border-neutral-200 bg-white p-1">
+              <img
+                src={form.logo_url}
+                alt="Logo preview"
+                className="h-full w-full object-contain"
+                onError={e =>
+                  ((e.target as HTMLImageElement).style.display = 'none')
+                }
+              />
+            </div>
+            <p className="text-xs text-neutral-500">
+              Logo found for <strong>{form.company}</strong>
+            </p>
+            <button
+              type="button"
+              onClick={() => setForm(f => ({ ...f, logo_url: '' }))}
+              className="ml-auto text-xs text-neutral-400 hover:text-red-500"
+            >
+              Remove
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-neutral-700">
+          Location
+          <span className="ml-2 text-xs font-normal text-neutral-400">
+            auto-suggested from company domain
+          </span>
+        </label>
+        <input
+          name="location"
+          value={form.location}
+          onChange={handleChange}
+          placeholder="City, Country"
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
+        />
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-neutral-700">
+          Testimonial
+        </label>
+        <textarea
+          name="testimonial"
+          value={form.testimonial}
+          onChange={handleChange}
+          placeholder="Write the testimonial here"
+          required
+          rows={6}
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
+        />
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-neutral-700">
+          Sort order
+        </label>
+        <input
+          name="sort_order"
+          type="number"
+          value={form.sort_order}
+          onChange={handleChange}
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
+        />
+      </div>
+
+      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-neutral-200 px-3 py-3 text-sm text-neutral-700">
+        <input
+          type="checkbox"
+          name="is_active"
+          checked={form.is_active}
+          onChange={handleChange}
+          className="h-4 w-4"
+        />
+        Active on homepage
+      </label>
+
+      <button
+        type="button"
+        onClick={() => onSubmit(form)}
+        disabled={submitting || !form.name || !form.testimonial}
+        className="inline-flex w-full items-center justify-center rounded-lg bg-neutral-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {submitting ? 'Saving...' : submitLabel}
+      </button>
     </div>
   )
 }
@@ -166,7 +385,10 @@ function EditModal({
   onSave: (updated: Testimonial) => void
   onClose: () => void
 }) {
-  const [form, setForm] = useState({
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const initialForm = {
     name: testimonial.name,
     company: testimonial.company || '',
     logo_url: testimonial.logo_url || '',
@@ -174,21 +396,9 @@ function EditModal({
     testimonial: testimonial.testimonial,
     sort_order: testimonial.sort_order ?? 0,
     is_active: testimonial.is_active,
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    const target = e.target as HTMLInputElement
-    const { name, value, type } = target
-    if (type === 'checkbox') {
-      setForm(f => ({ ...f, [name]: target.checked }))
-      return
-    }
-    setForm(f => ({ ...f, [name]: name === 'sort_order' ? Number(value) : value }))
   }
 
-  async function handleSave() {
+  async function handleSave(form: typeof initialForm) {
     setSaving(true)
     setError('')
     try {
@@ -202,20 +412,25 @@ function EditModal({
       onSave({ ...testimonial, ...form })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update')
-    } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    // Backdrop — stopPropagation on inner panel so clicks inside don't close modal
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative w-full max-w-lg rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl">
+        className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-neutral-900">Edit testimonial</h2>
+          <h2 className="text-lg font-semibold text-neutral-900">
+            Edit testimonial
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -231,90 +446,12 @@ function EditModal({
           </div>
         )}
 
-        <div className="space-y-4">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-neutral-700">Name</label>
-            <input
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm outline-none focus:border-neutral-900"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-neutral-700">Company</label>
-            <LogoSearch
-              value={form.company}
-              onSelect={(company, logoUrl) =>
-                setForm(f => ({ ...f, company, logo_url: logoUrl }))
-              }
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-neutral-700">Location</label>
-            <input
-              name="location"
-              value={form.location}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm outline-none focus:border-neutral-900"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-neutral-700">Testimonial</label>
-            <textarea
-              name="testimonial"
-              value={form.testimonial}
-              onChange={handleChange}
-              rows={4}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm outline-none focus:border-neutral-900"
-            />
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="mb-2 block text-sm font-medium text-neutral-700">Sort order</label>
-              <input
-                name="sort_order"
-                type="number"
-                value={form.sort_order}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm outline-none focus:border-neutral-900"
-              />
-            </div>
-
-            <label className="mt-7 flex items-center gap-2 text-sm text-neutral-700 cursor-pointer">
-              <input
-                type="checkbox"
-                name="is_active"
-                checked={form.is_active}
-                onChange={handleChange}
-                className="h-4 w-4"
-              />
-              Active
-            </label>
-          </div>
-        </div>
-
-        <div className="mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-60 transition"
-          >
-            {saving ? 'Saving...' : 'Save changes'}
-          </button>
-        </div>
+        <TestimonialForm
+          initialForm={initialForm}
+          onSubmit={handleSave}
+          submitLabel="Save changes"
+          submitting={saving}
+        />
       </div>
     </div>
   )
@@ -328,7 +465,6 @@ export default function AdminTestimonialsPage() {
   const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [form, setForm] = useState(emptyForm)
 
   useEffect(() => {
     fetchTestimonials()
@@ -340,7 +476,7 @@ export default function AdminTestimonialsPage() {
       setError('')
       const response = await fetch('/api/admin/testimonials', { cache: 'no-store' })
       const data = await parseJsonSafely(response)
-      if (!response.ok) throw new Error(data?.error || 'Failed to fetch testimonials')
+      if (!response.ok) throw new Error(data?.error || 'Failed to fetch')
       setTestimonials(Array.isArray(data) ? data : [])
     } catch (err) {
       setTestimonials([])
@@ -350,18 +486,7 @@ export default function AdminTestimonialsPage() {
     }
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    const target = e.target as HTMLInputElement
-    const { name, value, type } = target
-    if (type === 'checkbox') {
-      setForm(f => ({ ...f, [name]: target.checked }))
-      return
-    }
-    setForm(f => ({ ...f, [name]: name === 'sort_order' ? Number(value) : value }))
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleAdd(form: typeof emptyForm) {
     try {
       setSubmitting(true)
       setError('')
@@ -372,13 +497,12 @@ export default function AdminTestimonialsPage() {
         body: JSON.stringify(form),
       })
       const data = await parseJsonSafely(response)
-      if (!response.ok) throw new Error(data?.error || 'Failed to add testimonial')
+      if (!response.ok) throw new Error(data?.error || 'Failed to add')
       if (data) {
         setTestimonials(prev =>
           [data, ...prev].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
         )
       }
-      setForm(emptyForm)
       setSuccess('Testimonial added successfully.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add testimonial')
@@ -388,18 +512,20 @@ export default function AdminTestimonialsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm('Are you sure you want to delete this testimonial?')) return
+    if (!window.confirm('Delete this testimonial?')) return
     try {
       setDeletingId(id)
       setError('')
       setSuccess('')
-      const response = await fetch(`/api/admin/testimonials?id=${id}`, { method: 'DELETE' })
+      const response = await fetch(`/api/admin/testimonials?id=${id}`, {
+        method: 'DELETE',
+      })
       const data = await parseJsonSafely(response)
-      if (!response.ok) throw new Error(data?.error || 'Failed to delete testimonial')
+      if (!response.ok) throw new Error(data?.error || 'Failed to delete')
       setTestimonials(prev => prev.filter(item => item.id !== id))
-      setSuccess('Testimonial deleted successfully.')
+      setSuccess('Testimonial deleted.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete testimonial')
+      setError(err instanceof Error ? err.message : 'Failed to delete')
     } finally {
       setDeletingId(null)
     }
@@ -407,11 +533,12 @@ export default function AdminTestimonialsPage() {
 
   function handleEditSave(updated: Testimonial) {
     setTestimonials(prev =>
-      prev.map(t => (t.id === updated.id ? updated : t))
+      prev
+        .map(t => (t.id === updated.id ? updated : t))
         .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     )
     setEditingTestimonial(null)
-    setSuccess('Testimonial updated successfully.')
+    setSuccess('Testimonial updated.')
   }
 
   return (
@@ -429,7 +556,7 @@ export default function AdminTestimonialsPage() {
           <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">
             Testimonials
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-neutral-600">
+          <p className="mt-2 text-sm text-neutral-600">
             Add and manage testimonials shown on the homepage.
           </p>
         </div>
@@ -454,117 +581,28 @@ export default function AdminTestimonialsPage() {
           <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="mb-5">
               <h2 className="text-lg font-semibold text-neutral-900">Add testimonial</h2>
-              <p className="mt-1 text-sm text-neutral-500">Keep entries polished and credible.</p>
+              <p className="mt-1 text-sm text-neutral-500">
+                Keep entries polished and credible.
+              </p>
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">Name</label>
-                <input
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  placeholder="Client name"
-                  required
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">
-                  Company
-                  <span className="ml-2 text-xs font-normal text-neutral-400">auto-fetches logo</span>
-                </label>
-                <LogoSearch
-                  value={form.company}
-                  onSelect={(company, logoUrl) =>
-                    setForm(f => ({ ...f, company, logo_url: logoUrl }))
-                  }
-                />
-                {form.logo_url && (
-                  <div className="mt-2 flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-md border border-neutral-200 bg-white p-1">
-                      <img
-                        src={form.logo_url}
-                        alt="Logo preview"
-                        className="h-full w-full object-contain"
-                        onError={e => (e.target as HTMLImageElement).style.display = 'none'}
-                      />
-                    </div>
-                    <p className="text-xs text-neutral-500">Logo found for <strong>{form.company}</strong></p>
-                    <button
-                      type="button"
-                      onClick={() => setForm(f => ({ ...f, logo_url: '' }))}
-                      className="ml-auto text-xs text-neutral-400 hover:text-red-500"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">Location</label>
-                <input
-                  name="location"
-                  value={form.location}
-                  onChange={handleChange}
-                  placeholder="City / Country"
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">Testimonial</label>
-                <textarea
-                  name="testimonial"
-                  value={form.testimonial}
-                  onChange={handleChange}
-                  placeholder="Write the testimonial here"
-                  required
-                  rows={6}
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">Sort order</label>
-                <input
-                  name="sort_order"
-                  type="number"
-                  value={form.sort_order}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-900"
-                />
-              </div>
-
-              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-neutral-200 px-3 py-3 text-sm text-neutral-700">
-                <input
-                  type="checkbox"
-                  name="is_active"
-                  checked={form.is_active}
-                  onChange={handleChange}
-                  className="h-4 w-4"
-                />
-                Active on homepage
-              </label>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex w-full items-center justify-center rounded-lg bg-neutral-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting ? 'Saving...' : 'Add testimonial'}
-              </button>
-            </form>
+            <TestimonialForm
+              initialForm={emptyForm}
+              onSubmit={handleAdd}
+              submitLabel="Add testimonial"
+              submitting={submitting}
+            />
           </div>
 
           {/* Existing list */}
           <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-neutral-900">Existing testimonials</h2>
-                <p className="mt-1 text-sm text-neutral-500">Edit or remove entries from the live site.</p>
+                <h2 className="text-lg font-semibold text-neutral-900">
+                  Existing testimonials
+                </h2>
+                <p className="mt-1 text-sm text-neutral-500">
+                  Edit or remove entries from the live site.
+                </p>
               </div>
               <button
                 type="button"
@@ -593,28 +631,27 @@ export default function AdminTestimonialsPage() {
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                          {/* Company logo */}
                           {item.logo_url && (
                             <div className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-white p-1">
                               <img
                                 src={item.logo_url}
                                 alt={item.company || item.name}
                                 className="h-full w-full object-contain"
-                                onError={e => (e.target as HTMLImageElement).style.display = 'none'}
+                                onError={e =>
+                                  ((e.target as HTMLImageElement).style.display = 'none')
+                                }
                               />
                             </div>
                           )}
-
-                          <h3 className="text-base font-semibold text-neutral-900">{item.name}</h3>
-
+                          <h3 className="text-base font-semibold text-neutral-900">
+                            {item.name}
+                          </h3>
                           {item.company && (
                             <span className="text-sm text-neutral-500">{item.company}</span>
                           )}
-
                           {item.location && (
                             <span className="text-sm text-neutral-400">{item.location}</span>
                           )}
-
                           {item.is_active ? (
                             <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
                               Active
@@ -625,11 +662,9 @@ export default function AdminTestimonialsPage() {
                             </span>
                           )}
                         </div>
-
                         <p className="mt-2 text-xs uppercase tracking-[0.14em] text-neutral-400">
                           Sort order: {item.sort_order ?? 0}
                         </p>
-
                         <p className="mt-3 whitespace-pre-line text-sm leading-6 text-neutral-700">
                           "{item.testimonial}"
                         </p>
