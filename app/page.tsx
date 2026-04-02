@@ -83,14 +83,8 @@ export default function NumatBambooHomepageRevamp() {
     {
       title: 'NuSlat',
       subtitle: 'Decorative bamboo slats for feature walls and design applications',
-      image: '/Bamboo-DIY.png',
+      image: '/bamboo-slats.png',
       href: '/products?category=nuslat',
-    },
-    {
-      title: 'NuFurniture',
-      subtitle: 'Bamboo boards for tables, shelving, and cabinetry',
-      image: '/Bamboo-Furniture.png',
-      href: '/products?category=furniture',
     },
   ]
 
