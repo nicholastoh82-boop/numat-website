@@ -1,207 +1,123 @@
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
+// GET - list all testimonials
 export async function GET() {
   try {
-    const supabase = await createClient()
-
     const { data, error } = await supabase
       .from('testimonials')
-      .select(
-        'id, name, location, testimonial, sort_order, is_active, created_at'
-      )
+      .select('*')
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Admin testimonials GET error:', error)
-      return NextResponse.json(
-        { error: error.message || 'Failed to fetch testimonials' },
-        {
-          status: 500,
-          headers: {
-            'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-          },
-        }
-      )
-    }
+    if (error) throw error
 
-    return NextResponse.json(data ?? [], {
-      status: 200,
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-      },
-    })
-  } catch (error) {
-    console.error('Admin testimonials GET exception:', error)
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to fetch testimonials',
-      },
-      {
-        status: 500,
-        headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-        },
-      }
-    )
+    return NextResponse.json(data ?? [])
+  } catch (err) {
+    console.error('GET /api/admin/testimonials error:', err)
+    return NextResponse.json({ error: 'Failed to fetch testimonials' }, { status: 500 })
   }
 }
 
-export async function POST(request: Request) {
+// POST - create new testimonial
+export async function POST(req: Request) {
   try {
-    const supabase = await createClient()
-    const body = await request.json()
-
-    const name = String(body?.name ?? '').trim()
-    const location = String(body?.location ?? '').trim()
-    const testimonial = String(body?.testimonial ?? '').trim()
-
-    const sort_order =
-      body?.sort_order === '' || body?.sort_order == null
-        ? 0
-        : Number(body.sort_order)
-
-    const is_active =
-      typeof body?.is_active === 'boolean' ? body.is_active : true
+    const body = await req.json()
+    const { name, company, logo_url, location, testimonial, sort_order, is_active } = body
 
     if (!name || !testimonial) {
-      return NextResponse.json(
-        { error: 'Name and testimonial are required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Name and testimonial are required' }, { status: 400 })
     }
 
     const { data, error } = await supabase
       .from('testimonials')
       .insert({
         name,
-        location,
+        company: company || null,
+        logo_url: logo_url || null,
+        location: location || null,
         testimonial,
-        sort_order: Number.isNaN(sort_order) ? 0 : sort_order,
-        is_active,
+        sort_order: sort_order ?? 0,
+        is_active: is_active ?? true,
       })
-      .select(
-        'id, name, location, testimonial, sort_order, is_active, created_at'
-      )
+      .select()
       .single()
 
-    if (error) {
-      console.error('Admin testimonials POST error:', error)
-      return NextResponse.json(
-        { error: error.message || 'Failed to create testimonial' },
-        { status: 500 }
-      )
-    }
+    if (error) throw error
 
-    return NextResponse.json(data, { status: 201 })
-  } catch (error) {
-    console.error('Admin testimonials POST exception:', error)
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to create testimonial',
-      },
-      { status: 500 }
-    )
+    return NextResponse.json(data)
+  } catch (err) {
+    console.error('POST /api/admin/testimonials error:', err)
+    return NextResponse.json({ error: 'Failed to create testimonial' }, { status: 500 })
   }
 }
 
-export async function DELETE(request: Request) {
+// PATCH - update existing testimonial
+export async function PATCH(req: Request) {
   try {
-    const supabase = await createClient()
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
 
     if (!id) {
-      return NextResponse.json(
-        { error: 'Missing testimonial id' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
 
-    const { data: existing, error: existingError } = await supabase
+    const body = await req.json()
+    const { name, company, logo_url, location, testimonial, sort_order, is_active } = body
+
+    if (!name || !testimonial) {
+      return NextResponse.json({ error: 'Name and testimonial are required' }, { status: 400 })
+    }
+
+    const { data, error } = await supabase
       .from('testimonials')
-      .select('id')
+      .update({
+        name,
+        company: company || null,
+        logo_url: logo_url || null,
+        location: location || null,
+        testimonial,
+        sort_order: sort_order ?? 0,
+        is_active: is_active ?? true,
+      })
       .eq('id', id)
-      .maybeSingle()
+      .select()
+      .single()
 
-    if (existingError) {
-      console.error('Admin testimonials DELETE existing check error:', existingError)
-      return NextResponse.json(
-        { error: existingError.message || 'Failed to verify testimonial' },
-        { status: 500 }
-      )
+    if (error) throw error
+
+    return NextResponse.json(data)
+  } catch (err) {
+    console.error('PATCH /api/admin/testimonials error:', err)
+    return NextResponse.json({ error: 'Failed to update testimonial' }, { status: 500 })
+  }
+}
+
+// DELETE - remove testimonial
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
 
-    if (!existing) {
-      return NextResponse.json(
-        { error: 'Testimonial not found' },
-        { status: 404 }
-      )
-    }
-
-    const { error: deleteError } = await supabase
+    const { error } = await supabase
       .from('testimonials')
       .delete()
       .eq('id', id)
 
-    if (deleteError) {
-      console.error('Admin testimonials DELETE error:', deleteError)
-      return NextResponse.json(
-        { error: deleteError.message || 'Failed to delete testimonial' },
-        { status: 500 }
-      )
-    }
+    if (error) throw error
 
-    const { data: verifyStillExists, error: verifyError } = await supabase
-      .from('testimonials')
-      .select('id')
-      .eq('id', id)
-      .maybeSingle()
-
-    if (verifyError) {
-      console.error('Admin testimonials DELETE verify error:', verifyError)
-      return NextResponse.json(
-        { error: verifyError.message || 'Failed to verify deletion' },
-        { status: 500 }
-      )
-    }
-
-    if (verifyStillExists) {
-      return NextResponse.json(
-        { error: 'Delete request completed but row still exists' },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json(
-      { success: true, deletedId: id },
-      {
-        status: 200,
-        headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-        },
-      }
-    )
-  } catch (error) {
-    console.error('Admin testimonials DELETE exception:', error)
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to delete testimonial',
-      },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error('DELETE /api/admin/testimonials error:', err)
+    return NextResponse.json({ error: 'Failed to delete testimonial' }, { status: 500 })
   }
 }
