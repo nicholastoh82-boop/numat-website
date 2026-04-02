@@ -58,40 +58,40 @@ export default function NumatBambooHomepageRevamp() {
 
   const productFamilies = [
     {
-      title: 'Furniture Boards',
-      subtitle: 'Cabinetry, tables, shelving',
-      image: '/Bamboo-Furniture.png',
-      href: '/products?category=furniture',
-    },
-    {
-      title: 'Wall Panels',
-      subtitle: 'Interior surfaces, feature walls',
+      title: 'NuWall',
+      subtitle: 'Engineered bamboo panels for interior surfaces and feature walls',
       image: '/Bamboo-Wall.png',
       href: '/products?category=nuwall',
     },
     {
-      title: 'Doors & Joinery',
-      subtitle: 'Panels, doors, components',
+      title: 'NuDoor',
+      subtitle: 'Bamboo door panels and joinery components',
       image: '/Bamboo-Door.png',
       href: '/products?category=nudoor',
     },
     {
-      title: 'Flooring',
-      subtitle: 'Interior surfaces, premium finish',
+      title: 'NuFloor',
+      subtitle: 'Premium bamboo flooring for interior surfaces',
       image: '/Bamboo-Flooring.png',
       href: '/products?category=nufloor',
     },
     {
-      title: 'Fit-Out Boards',
-      subtitle: 'Project and board applications',
+      title: 'NuBam Boards',
+      subtitle: 'Versatile bamboo boards for furniture, cabinetry, and fit-outs',
       image: '/Bamboo-Board.png',
       href: '/products?category=nubam-boards',
     },
     {
-      title: 'Decorative Bamboo',
-      subtitle: 'Feature walls and design-led use',
+      title: 'NuSlat',
+      subtitle: 'Decorative bamboo slats for feature walls and design applications',
       image: '/Bamboo-DIY.png',
-      href: '/products',
+      href: '/products?category=nuslat',
+    },
+    {
+      title: 'NuFurniture',
+      subtitle: 'Bamboo boards for tables, shelving, and cabinetry',
+      image: '/Bamboo-Furniture.png',
+      href: '/products?category=furniture',
     },
   ]
 
