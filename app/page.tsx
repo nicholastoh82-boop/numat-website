@@ -112,10 +112,10 @@ export default function NumatBambooHomepageRevamp() {
   ]
 
   const visualTrust = [
-    { title: 'Sustainable Harvesting', image: '/Bamboo-Wall.png' },
-    { title: 'Project-Ready Boards', image: '/Bamboo-Board.png' },
-    { title: 'Commercial Support', image: '/Bamboo-Door.png' },
-    { title: 'Interior-Focused Finish', image: '/Bamboo-Flooring.png' },
+    { title: 'Sustainable Harvesting', image: '/harvest.jpg' },
+    { title: 'Project-Ready Boards', image: '/board stack.jpg' },
+    { title: 'Commercial Support', image: '/DSCF1689.JPG' },
+    { title: 'Interior-Focused Finish', image: '/bm-132.jpg' },
   ]
 
   return (
