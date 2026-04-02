@@ -21,13 +21,6 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -361,10 +354,6 @@ export default function AdminProductsPage() {
     mutate: mutateVariants,
   } = useSWR<RawVariant[]>(variantsApiUrl, fetcher)
 
-  const { data: categoriesData } = useSWR<{ id: string; name: string }[]>(
-    '/api/categories',
-    fetcher
-  )
 
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>(
@@ -1197,32 +1186,6 @@ export default function AdminProductsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={currentProduct.category_id}
-                  onValueChange={(value) => {
-                    const cat = (categoriesData ?? []).find((c) => c.id === value)
-                    setCurrentProduct({
-                      ...currentProduct,
-                      category_id: value,
-                      category: cat?.name ?? '',
-                    })
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(categoriesData ?? []).map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="price">Base Price (USD) *</Label>
                 <Input
                   id="price"
@@ -1245,7 +1208,7 @@ export default function AdminProductsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="length">Length (mm)</Label>
                 <Input
@@ -1277,36 +1240,9 @@ export default function AdminProductsPage() {
                   }
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="thickness">Thickness (mm)</Label>
-                <Input
-                  id="thickness"
-                  type="number"
-                  min="0"
-                  value={currentProduct.thickness_mm ?? ''}
-                  onChange={(e) =>
-                    setCurrentProduct({
-                      ...currentProduct,
-                      thickness_mm: e.target.value === '' ? null : Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="ply">Ply</Label>
-                <Input
-                  id="ply"
-                  value={currentProduct.ply}
-                  onChange={(e) =>
-                    setCurrentProduct({ ...currentProduct, ply: e.target.value })
-                  }
-                />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="moq">MOQ</Label>
                 <Input
