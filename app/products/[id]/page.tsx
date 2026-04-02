@@ -57,6 +57,12 @@ type Product = {
     is_price_on_request: boolean
     price_notes: string | null
   }>
+  images?: Array<{
+    id: string
+    image_url: string
+    alt_text: string
+    is_primary: boolean
+  }>
 }
 
 type ProductListItem = {

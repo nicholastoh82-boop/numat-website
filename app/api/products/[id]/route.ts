@@ -93,6 +93,12 @@ export async function GET(
     return NextResponse.json({ error: variantsError.message }, { status: 500 })
   }
 
+  const { data: productImages } = await supabase
+    .from('product_images')
+    .select('id, image_url, alt_text, is_primary, display_order')
+    .eq('product_id', id)
+    .order('display_order', { ascending: true })
+
   const mappedVariants = (variants ?? []).map((variant: any) => ({
     id: variant.id,
     sku: variant.sku ?? '',
@@ -138,5 +144,11 @@ export async function GET(
     unit: mappedVariants[0]?.unit ?? product.unit ?? 'sheet',
     min_order_qty: mappedVariants[0]?.min_order_qty ?? product.min_order_qty ?? 1,
     variants: mappedVariants,
+    images: (productImages ?? []).map((img: any) => ({
+      id: img.id,
+      image_url: img.image_url,
+      alt_text: img.alt_text ?? '',
+      is_primary: img.is_primary ?? false,
+    })),
   })
 }
