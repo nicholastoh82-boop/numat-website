@@ -15,7 +15,6 @@ import {
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
-import HeroLeadCapture from '@/components/hero-lead-capture'
 
 type Testimonial = {
   id: string
@@ -167,10 +166,6 @@ export default function NumatBambooHomepageRevamp() {
                 </p>
               </div>
 
-              {/* ── Hero inline lead capture form ── */}
-              <div className="mt-7">
-                <HeroLeadCapture />
-              </div>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2 lg:grid-rows-[1.15fr_0.85fr] animate-[fadeUp_.8s_ease-out]">
