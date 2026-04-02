@@ -1435,15 +1435,6 @@ export default function ProductDetailPage() {
                     Add to Quote
                   </button>
 
-                  <Link
-                    href={`/request-samples?product=${encodeURIComponent(resolved.productLabel)}`}
-                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/8 px-4 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/15"
-                  >
-                    Request Sample
-                  </Link>
-                  <p className="mt-2 text-center text-xs text-white/35">
-                    Sample size: 200mm × 200mm
-                  </p>
                   <a
                     href={`https://wa.me/60162958983?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
                     target="_blank"
@@ -1485,12 +1476,6 @@ export default function ProductDetailPage() {
                 <ShoppingBag className="h-4 w-4" />
                 Add to Quote
               </button>
-              <Link
-                href={`/request-samples?product=${encodeURIComponent(resolved.productLabel)}`}
-                className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
-              >
-                Sample
-              </Link>
               <a
                 href={`https://wa.me/60162958983?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
                 target="_blank"

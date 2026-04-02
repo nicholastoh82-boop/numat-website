@@ -35,7 +35,7 @@ export async function POST(
 
     // 2. Get current max display order
     const { data: existingImages } = await supabase
-      .from('products')
+      .from('product_images')
       .select('display_order')
       .eq('product_id', id)
       .order('display_order', { ascending: false })
@@ -72,7 +72,7 @@ export async function POST(
 
       // 5. Create product image record in Database
       const { data: imageRecord, error: insertError } = await supabase
-        .from('products')
+        .from('product_images')
         .insert({
           product_id: id,
           image_url: publicUrl.publicUrl,
@@ -121,7 +121,7 @@ export async function GET(
     const supabase = await createClient()
 
     const { data: images, error } = await supabase
-      .from('products')
+      .from('product_images')
       .select('*')
       .eq('product_id', id)
       .order('display_order', { ascending: true })
@@ -154,7 +154,7 @@ export async function DELETE(
     const supabase = await createClient()
 
     const { data: image, error: fetchError } = await supabase
-      .from('products')
+      .from('product_images')
       .select('*')
       .eq('id', imageId)
       .eq('product_id', id)
@@ -173,7 +173,7 @@ export async function DELETE(
     }
 
     const { error: deleteError } = await supabase
-      .from('products')
+      .from('product_images')
       .delete()
       .eq('id', imageId)
 

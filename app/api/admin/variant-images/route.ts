@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   if (!variantId) return NextResponse.json({ error: 'variantId required' }, { status: 400 })
 
   const { data, error } = await supabase
-    .from('products')
+    .from('product_images')
     .select('*')
     .eq('variant_id', variantId)
     .order('display_order', { ascending: true })
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: existing } = await supabase
-    .from('products')
+    .from('product_images')
     .select('display_order')
     .eq('variant_id', variantId)
     .order('display_order', { ascending: false })
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     const { data: urlData } = supabase.storage.from('products').getPublicUrl(fileName)
 
     const { data: record } = await supabase
-      .from('products')
+      .from('product_images')
       .insert({
         product_id: productId,
         variant_id: variantId,
@@ -102,7 +102,7 @@ export async function DELETE(request: NextRequest) {
   if (!imageId) return NextResponse.json({ error: 'imageId required' }, { status: 400 })
 
   const { data: image } = await supabase
-    .from('products')
+    .from('product_images')
     .select('image_url')
     .eq('id', imageId)
     .single()
@@ -115,7 +115,7 @@ export async function DELETE(request: NextRequest) {
     }
   }
 
-  const { error } = await supabase.from('products').delete().eq('id', imageId)
+  const { error } = await supabase.from('product_images').delete().eq('id', imageId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ ok: true })
