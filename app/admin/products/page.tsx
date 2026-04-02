@@ -90,6 +90,7 @@ type Product = {
   moq: number
   lead_time_days: number
   category: string
+  category_id: string
   description: string
   image: string
   is_active: boolean
@@ -159,7 +160,8 @@ const INITIAL_PRODUCT: Product = {
   price: 0,
   moq: 10,
   lead_time_days: 10,
-  category: 'General',
+  category: '',
+  category_id: '',
   description: '',
   image: '',
   is_active: true,
@@ -185,18 +187,6 @@ const INITIAL_VARIANT: Variant = {
   price_notes: '',
   core_type: '',
 }
-
-const CATEGORY_OPTIONS = [
-  'General',
-  'Structural',
-  'Furniture',
-  'Flooring',
-  'Doors',
-  'Cladding',
-  'Veneer',
-  'DIY Project',
-  'Other',
-]
 
 const fetcher = async (url: string) => {
   const res = await fetch(url, {
@@ -230,7 +220,8 @@ function normalizeProduct(raw: RawProduct): Product {
     base_price: usdPrice,
     moq: Number(raw.moq ?? raw.min_order_qty ?? 1),
     lead_time_days: Number(raw.lead_time_days ?? 10),
-    category: raw.category || raw.categories?.name || 'General',
+    category: raw.category || raw.categories?.name || '',
+    category_id: raw.category_id || '',
     description: raw.description || '',
     image: raw.image || raw.image_url || '',
     is_active: raw.is_active ?? true,
@@ -369,6 +360,11 @@ export default function AdminProductsPage() {
     error: variantsError,
     mutate: mutateVariants,
   } = useSWR<RawVariant[]>(variantsApiUrl, fetcher)
+
+  const { data: categoriesData } = useSWR<{ id: string; name: string }[]>(
+    '/api/categories',
+    fetcher
+  )
 
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>(
@@ -1203,18 +1199,23 @@ export default function AdminProductsPage() {
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Select
-                  value={currentProduct.category}
-                  onValueChange={(value) =>
-                    setCurrentProduct({ ...currentProduct, category: value })
-                  }
+                  value={currentProduct.category_id}
+                  onValueChange={(value) => {
+                    const cat = (categoriesData ?? []).find((c) => c.id === value)
+                    setCurrentProduct({
+                      ...currentProduct,
+                      category_id: value,
+                      category: cat?.name ?? '',
+                    })
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORY_OPTIONS.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
+                    {(categoriesData ?? []).map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

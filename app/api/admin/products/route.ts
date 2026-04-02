@@ -113,13 +113,13 @@ export async function POST(request: NextRequest) {
   }
 
   const payload = {
-    sku,
     name: title,
     slug: body.slug || sku.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     description: description || '',
     image: image || null,
     image_url: image || null,
     category_id: category_id || null,
+    category: body.category || null,
     length_mm:
       length_mm === '' || length_mm === undefined || length_mm === null
         ? null
@@ -136,9 +136,7 @@ export async function POST(request: NextRequest) {
     moq: moq === '' || moq === undefined || moq === null ? null : Number(moq),
     is_featured: is_featured === true,
     is_active: is_active !== false,
-
-    // Canonical stored price: base USD
-    price: parsedPrice,
+    base_price_usd: parsedPrice,
   }
 
   const { data: product, error } = await supabase
@@ -177,6 +175,7 @@ export async function PATCH(request: NextRequest) {
     description,
     is_active,
     category_id,
+    category,
     length_mm,
     width_mm,
     thickness_mm,
@@ -213,6 +212,10 @@ export async function PATCH(request: NextRequest) {
 
   if (category_id !== undefined) {
     updateData.category_id = category_id || null
+  }
+
+  if (category !== undefined) {
+    updateData.category = category || null
   }
 
   if (length_mm !== undefined) {
@@ -252,8 +255,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Canonical stored price: base USD
-    updateData.price = parsedPrice
+    updateData.base_price_usd = parsedPrice
   }
 
   const { data: product, error } = await supabase
