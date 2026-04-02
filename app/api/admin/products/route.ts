@@ -88,13 +88,11 @@ export async function POST(request: NextRequest) {
     image,
     is_active,
     category_id,
-    size,
     length_mm,
     width_mm,
     thickness_mm,
     ply,
     moq,
-    lead_time_days,
     is_featured,
   } = body
 
@@ -122,7 +120,6 @@ export async function POST(request: NextRequest) {
     image: image || null,
     image_url: image || null,
     category_id: category_id || null,
-    size: size || null,
     length_mm:
       length_mm === '' || length_mm === undefined || length_mm === null
         ? null
@@ -137,12 +134,6 @@ export async function POST(request: NextRequest) {
         : Number(thickness_mm),
     ply: ply || null,
     moq: moq === '' || moq === undefined || moq === null ? null : Number(moq),
-    lead_time_days:
-      lead_time_days === '' ||
-      lead_time_days === undefined ||
-      lead_time_days === null
-        ? null
-        : Number(lead_time_days),
     is_featured: is_featured === true,
     is_active: is_active !== false,
 
@@ -186,13 +177,11 @@ export async function PATCH(request: NextRequest) {
     description,
     is_active,
     category_id,
-    size,
     length_mm,
     width_mm,
     thickness_mm,
     ply,
     moq,
-    lead_time_days,
     is_featured,
   } = body
 
@@ -226,10 +215,6 @@ export async function PATCH(request: NextRequest) {
     updateData.category_id = category_id || null
   }
 
-  if (size !== undefined) {
-    updateData.size = size || null
-  }
-
   if (length_mm !== undefined) {
     updateData.length_mm = length_mm === '' || length_mm === null ? null : Number(length_mm)
   }
@@ -251,13 +236,6 @@ export async function PATCH(request: NextRequest) {
 
   if (moq !== undefined) {
     updateData.moq = moq === '' || moq === null ? null : Number(moq)
-  }
-
-  if (lead_time_days !== undefined) {
-    updateData.lead_time_days =
-      lead_time_days === '' || lead_time_days === null
-        ? null
-        : Number(lead_time_days)
   }
 
   if (is_featured !== undefined) {

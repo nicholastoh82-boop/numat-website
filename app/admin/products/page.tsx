@@ -1296,17 +1296,6 @@ export default function AdminProductsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="size">Size</Label>
-                <Input
-                  id="size"
-                  value={currentProduct.size}
-                  onChange={(e) =>
-                    setCurrentProduct({ ...currentProduct, size: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="ply">Ply</Label>
                 <Input
                   id="ply"
@@ -1316,9 +1305,7 @@ export default function AdminProductsPage() {
                   }
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="moq">MOQ</Label>
                 <Input
@@ -1330,22 +1317,6 @@ export default function AdminProductsPage() {
                     setCurrentProduct({
                       ...currentProduct,
                       moq: Number(e.target.value) || 1,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="lead_time">Lead Time (days)</Label>
-                <Input
-                  id="lead_time"
-                  type="number"
-                  min="1"
-                  value={currentProduct.lead_time_days}
-                  onChange={(e) =>
-                    setCurrentProduct({
-                      ...currentProduct,
-                      lead_time_days: Number(e.target.value) || 10,
                     })
                   }
                 />
