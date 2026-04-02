@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
-export default function StickyCaptureBar() {
-  const [visible, setVisible] = useState(false)
+function CaptureBarContent() {
   const [dismissed, setDismissed] = useState(false)
+  const [visible, setVisible] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', interest: 'sample' })
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
   useEffect(() => {
     if (dismissed) return
-    const timer = setTimeout(() => setVisible(true), 6000) // show after 6s
+    const timer = setTimeout(() => setVisible(true), 6000)
     return () => clearTimeout(timer)
   }, [dismissed])
 
@@ -32,6 +33,8 @@ export default function StickyCaptureBar() {
           source: 'sticky_bar',
         })
       }
+      // Auto-dismiss after 4s on success
+      setTimeout(() => setDismissed(true), 4000)
     } catch {
       setStatus('error')
     }
@@ -41,77 +44,176 @@ export default function StickyCaptureBar() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 shadow-2xl"
-      style={{ background: '#0d1b2a', borderTop: '1px solid rgba(6,182,212,0.3)' }}
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999,
+        // iOS safe area (home bar)
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
     >
-      <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center gap-3">
+      {/* Attention accent line */}
+      <div style={{ height: '3px', background: 'linear-gradient(to right, #059669, #06b6d4, #059669)' }} />
 
-        {status === 'success' ? (
-          <p className="flex-1 text-center text-sm font-medium" style={{ color: '#06b6d4' }}>
-            ✓ Got it! We'll reach out within 24 hours.
-          </p>
-        ) : (
-          <>
-            <p className="text-white text-sm font-semibold whitespace-nowrap hidden md:block">
-              🌿 Get a free sample or quote
+      <div
+        style={{
+          background: '#0f1e12',
+          borderTop: '1px solid rgba(5,150,105,0.4)',
+          boxShadow: '0 -4px 32px rgba(0,0,0,0.5)',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '80rem',
+            margin: '0 auto',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          {status === 'success' ? (
+            <p style={{ flex: 1, textAlign: 'center', color: '#34d399', fontWeight: 600, fontSize: '14px', padding: '4px 0' }}>
+              ✓ Received! We'll reach out within 24 hours.
             </p>
-            <div className="flex flex-1 gap-2 w-full flex-wrap sm:flex-nowrap">
-              <input
-                type="text"
-                placeholder="Your name"
-                value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                className="flex-1 min-w-0 px-3 py-2 rounded-md text-sm text-white placeholder-white/40 focus:outline-none transition-colors"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
-                onFocus={e => (e.target.style.borderColor = '#06b6d4')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
-              />
-              <input
-                type="email"
-                placeholder="Work email"
-                value={form.email}
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                className="flex-1 min-w-0 px-3 py-2 rounded-md text-sm text-white placeholder-white/40 focus:outline-none transition-colors"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
-                onFocus={e => (e.target.style.borderColor = '#06b6d4')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
-              />
-              <select
-                value={form.interest}
-                onChange={e => setForm(f => ({ ...f, interest: e.target.value }))}
-                className="px-3 py-2 rounded-md text-sm text-white focus:outline-none cursor-pointer"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+          ) : (
+            <>
+              {/* Label — hidden on small mobile to save space */}
+              <p
+                style={{ color: '#6ee7b7', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}
+                className="hidden sm:block"
               >
-                <option value="sample" style={{ background: '#0d1b2a' }}>🌿 Free Sample</option>
-                <option value="quote" style={{ background: '#0d1b2a' }}>📋 Get Quote</option>
-              </select>
+                🌿 Free sample or quote →
+              </p>
+
+              {/* Inputs */}
+              <div style={{ display: 'flex', flex: 1, gap: '8px', minWidth: 0, flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Your name"
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  style={{
+                    flex: '1 1 120px',
+                    minWidth: 0,
+                    padding: '9px 12px',
+                    borderRadius: '10px',
+                    background: 'rgba(255,255,255,0.07)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    fontSize: '14px',
+                    outline: 'none',
+                  }}
+                  onFocus={e => (e.target.style.borderColor = '#059669')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
+                />
+                <input
+                  type="email"
+                  placeholder="Work email"
+                  value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  style={{
+                    flex: '1 1 140px',
+                    minWidth: 0,
+                    padding: '9px 12px',
+                    borderRadius: '10px',
+                    background: 'rgba(255,255,255,0.07)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    fontSize: '14px',
+                    outline: 'none',
+                  }}
+                  onFocus={e => (e.target.style.borderColor = '#059669')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
+                />
+                <select
+                  value={form.interest}
+                  onChange={e => setForm(f => ({ ...f, interest: e.target.value }))}
+                  style={{
+                    padding: '9px 12px',
+                    borderRadius: '10px',
+                    background: 'rgba(255,255,255,0.07)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    fontSize: '14px',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  <option value="sample" style={{ background: '#0f1e12' }}>🌿 Free Sample</option>
+                  <option value="quote" style={{ background: '#0f1e12' }}>📋 Get Quote</option>
+                </select>
+              </div>
+
+              {/* Submit */}
               <button
                 onClick={handleSubmit}
                 disabled={status === 'loading' || !form.name || !form.email}
-                className="px-5 py-2 rounded-md text-white text-sm font-semibold transition-colors whitespace-nowrap disabled:opacity-50"
-                style={{ background: '#06b6d4' }}
-                onMouseEnter={e => ((e.target as HTMLElement).style.background = '#0891b2')}
-                onMouseLeave={e => ((e.target as HTMLElement).style.background = '#06b6d4')}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: '10px',
+                  background: status === 'loading' ? '#065f46' : '#059669',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  opacity: (!form.name || !form.email) ? 0.5 : 1,
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={e => { if (form.name && form.email) (e.target as HTMLElement).style.background = '#047857' }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.background = '#059669' }}
               >
                 {status === 'loading' ? '...' : 'Submit →'}
               </button>
-            </div>
-          </>
-        )}
 
-        <button
-          onClick={() => setDismissed(true)}
-          className="text-white/30 hover:text-white transition-colors text-xl leading-none flex-shrink-0"
-          aria-label="Dismiss"
-        >
-          ×
-        </button>
+              {status === 'error' && (
+                <p style={{ width: '100%', textAlign: 'center', color: '#f87171', fontSize: '12px' }}>
+                  Something went wrong — please try again.
+                </p>
+              )}
+            </>
+          )}
+
+          {/* Dismiss */}
+          <button
+            onClick={() => setDismissed(true)}
+            style={{
+              color: 'rgba(255,255,255,0.3)',
+              fontSize: '20px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              lineHeight: 1,
+              flexShrink: 0,
+              padding: '0 4px',
+            }}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
       </div>
-      {status === 'error' && (
-        <p className="text-center text-xs pb-2" style={{ color: '#f87171' }}>
-          Something went wrong — please try again.
-        </p>
-      )}
     </div>
   )
+}
+
+export default function StickyCaptureBar() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+
+  // Portal renders directly into document.body, bypassing any parent
+  // CSS transforms that break position:fixed on mobile
+  return createPortal(<CaptureBarContent />, document.body)
 }
