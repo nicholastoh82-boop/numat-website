@@ -55,6 +55,8 @@ type RawProduct = {
   title?: string | null
   name?: string | null
   size?: string | null
+  length_mm?: number | null
+  width_mm?: number | null
   thickness_mm?: number | null
   ply?: string | null
   price?: number | null
@@ -79,7 +81,9 @@ type Product = {
   sku: string
   title: string
   size: string
-  thickness_mm: number
+  length_mm: number | null
+  width_mm: number | null
+  thickness_mm: number | null
   ply: string
   price: number
   base_price?: number
@@ -148,7 +152,9 @@ const INITIAL_PRODUCT: Product = {
   sku: '',
   title: '',
   size: '',
-  thickness_mm: 0,
+  length_mm: null,
+  width_mm: null,
+  thickness_mm: null,
   ply: '',
   price: 0,
   moq: 10,
@@ -216,7 +222,9 @@ function normalizeProduct(raw: RawProduct): Product {
     sku: raw.sku || raw.slug || raw.id || '',
     title: raw.title || raw.name || '',
     size: raw.size || '',
-    thickness_mm: Number(raw.thickness_mm ?? 0),
+    length_mm: raw.length_mm === null || raw.length_mm === undefined ? null : Number(raw.length_mm),
+    width_mm: raw.width_mm === null || raw.width_mm === undefined ? null : Number(raw.width_mm),
+    thickness_mm: raw.thickness_mm === null || raw.thickness_mm === undefined ? null : Number(raw.thickness_mm),
     ply: raw.ply || '',
     price: usdPrice,
     base_price: usdPrice,
@@ -1238,12 +1246,33 @@ export default function AdminProductsPage() {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="size">Size</Label>
+                <Label htmlFor="length">Length (mm)</Label>
                 <Input
-                  id="size"
-                  value={currentProduct.size}
+                  id="length"
+                  type="number"
+                  min="0"
+                  value={currentProduct.length_mm ?? ''}
                   onChange={(e) =>
-                    setCurrentProduct({ ...currentProduct, size: e.target.value })
+                    setCurrentProduct({
+                      ...currentProduct,
+                      length_mm: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="width">Width (mm)</Label>
+                <Input
+                  id="width"
+                  type="number"
+                  min="0"
+                  value={currentProduct.width_mm ?? ''}
+                  onChange={(e) =>
+                    setCurrentProduct({
+                      ...currentProduct,
+                      width_mm: e.target.value === '' ? null : Number(e.target.value),
+                    })
                   }
                 />
               </div>
@@ -1254,12 +1283,25 @@ export default function AdminProductsPage() {
                   id="thickness"
                   type="number"
                   min="0"
-                  value={currentProduct.thickness_mm}
+                  value={currentProduct.thickness_mm ?? ''}
                   onChange={(e) =>
                     setCurrentProduct({
                       ...currentProduct,
-                      thickness_mm: Number(e.target.value) || 0,
+                      thickness_mm: e.target.value === '' ? null : Number(e.target.value),
                     })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="size">Size</Label>
+                <Input
+                  id="size"
+                  value={currentProduct.size}
+                  onChange={(e) =>
+                    setCurrentProduct({ ...currentProduct, size: e.target.value })
                   }
                 />
               </div>

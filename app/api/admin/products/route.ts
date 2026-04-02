@@ -89,6 +89,8 @@ export async function POST(request: NextRequest) {
     is_active,
     category_id,
     size,
+    length_mm,
+    width_mm,
     thickness_mm,
     ply,
     moq,
@@ -121,6 +123,14 @@ export async function POST(request: NextRequest) {
     image_url: image || null,
     category_id: category_id || null,
     size: size || null,
+    length_mm:
+      length_mm === '' || length_mm === undefined || length_mm === null
+        ? null
+        : Number(length_mm),
+    width_mm:
+      width_mm === '' || width_mm === undefined || width_mm === null
+        ? null
+        : Number(width_mm),
     thickness_mm:
       thickness_mm === '' || thickness_mm === undefined || thickness_mm === null
         ? null
@@ -177,6 +187,8 @@ export async function PATCH(request: NextRequest) {
     is_active,
     category_id,
     size,
+    length_mm,
+    width_mm,
     thickness_mm,
     ply,
     moq,
@@ -216,6 +228,14 @@ export async function PATCH(request: NextRequest) {
 
   if (size !== undefined) {
     updateData.size = size || null
+  }
+
+  if (length_mm !== undefined) {
+    updateData.length_mm = length_mm === '' || length_mm === null ? null : Number(length_mm)
+  }
+
+  if (width_mm !== undefined) {
+    updateData.width_mm = width_mm === '' || width_mm === null ? null : Number(width_mm)
   }
 
   if (thickness_mm !== undefined) {
