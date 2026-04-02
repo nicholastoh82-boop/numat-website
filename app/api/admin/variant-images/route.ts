@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   if (!variantId) return NextResponse.json({ error: 'variantId required' }, { status: 400 })
 
   const { data, error } = await supabase
-    .from('product_images')
+    .from('products')
     .select('*')
     .eq('variant_id', variantId)
     .order('display_order', { ascending: true })
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: existing } = await supabase
-    .from('product_images')
+    .from('products')
     .select('display_order')
     .eq('variant_id', variantId)
     .order('display_order', { ascending: false })
@@ -67,15 +67,15 @@ export async function POST(request: NextRequest) {
   for (const file of files) {
     const fileName = `variants/${variantId}/${uuidv4()}-${file.name}`
     const { error: uploadError } = await supabase.storage
-      .from('product_images')
+      .from('products')
       .upload(fileName, file, { cacheControl: '3600', upsert: false })
 
     if (uploadError) continue
 
-    const { data: urlData } = supabase.storage.from('product_images').getPublicUrl(fileName)
+    const { data: urlData } = supabase.storage.from('products').getPublicUrl(fileName)
 
     const { data: record } = await supabase
-      .from('product_images')
+      .from('products')
       .insert({
         product_id: productId,
         variant_id: variantId,
@@ -102,20 +102,20 @@ export async function DELETE(request: NextRequest) {
   if (!imageId) return NextResponse.json({ error: 'imageId required' }, { status: 400 })
 
   const { data: image } = await supabase
-    .from('product_images')
+    .from('products')
     .select('image_url')
     .eq('id', imageId)
     .single()
 
   if (image) {
-    const bucketStr = '/storage/v1/object/public/product_images/'
+    const bucketStr = '/storage/v1/object/public/products/'
     const parts = image.image_url.split(bucketStr)
     if (parts.length === 2) {
-      await supabase.storage.from('product_images').remove([parts[1]])
+      await supabase.storage.from('products').remove([parts[1]])
     }
   }
 
-  const { error } = await supabase.from('product_images').delete().eq('id', imageId)
+  const { error } = await supabase.from('products').delete().eq('id', imageId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ ok: true })

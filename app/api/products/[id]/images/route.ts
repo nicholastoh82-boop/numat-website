@@ -35,7 +35,7 @@ export async function POST(
 
     // 2. Get current max display order
     const { data: existingImages } = await supabase
-      .from('product_images')
+      .from('products')
       .select('display_order')
       .eq('product_id', id)
       .order('display_order', { ascending: false })
@@ -50,10 +50,10 @@ export async function POST(
     let lastError = null
 
     for (const file of files) {
-      // 3. Upload to Supabase Storage (Bucket name: product_images)
+      // 3. Upload to Supabase Storage (Bucket name: products)
       const fileName = `${id}/${uuidv4()}-${file.name}`
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('product_images')
+        .from('products')
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false,
@@ -67,12 +67,12 @@ export async function POST(
 
       // 4. Get public URL
       const { data: publicUrl } = supabase.storage
-        .from('product_images')
+        .from('products')
         .getPublicUrl(fileName)
 
       // 5. Create product image record in Database
       const { data: imageRecord, error: insertError } = await supabase
-        .from('product_images')
+        .from('products')
         .insert({
           product_id: id,
           image_url: publicUrl.publicUrl,
@@ -121,7 +121,7 @@ export async function GET(
     const supabase = await createClient()
 
     const { data: images, error } = await supabase
-      .from('product_images')
+      .from('products')
       .select('*')
       .eq('product_id', id)
       .order('display_order', { ascending: true })
@@ -154,7 +154,7 @@ export async function DELETE(
     const supabase = await createClient()
 
     const { data: image, error: fetchError } = await supabase
-      .from('product_images')
+      .from('products')
       .select('*')
       .eq('id', imageId)
       .eq('product_id', id)
@@ -165,15 +165,15 @@ export async function DELETE(
     }
 
     // Extract file path safely
-    const bucketSearchString = '/storage/v1/object/public/product_images/'
+    const bucketSearchString = '/storage/v1/object/public/products/'
     const urlParts = image.image_url.split(bucketSearchString)
     if (urlParts.length === 2) {
       const filePath = urlParts[1]
-      await supabase.storage.from('product_images').remove([filePath])
+      await supabase.storage.from('products').remove([filePath])
     }
 
     const { error: deleteError } = await supabase
-      .from('product_images')
+      .from('products')
       .delete()
       .eq('id', imageId)
 
