@@ -17,6 +17,7 @@ const N8N_WEBHOOK = "https://nicholastoh.app.n8n.cloud/webhook/numat-lead";
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +27,7 @@ export default function ChatWidget() {
   const sessionIdRef = useRef<string>("");
   const pageUrlRef = useRef<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     sessionIdRef.current = crypto.randomUUID();
@@ -37,12 +38,12 @@ export default function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, submitted]);
 
+  // Keep cursor in textarea whenever chat is open and not minimized
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 300);
+    if (isOpen && !isMinimized && !submitted) {
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen]);
-
+  }, [isOpen, isMinimized, submitted, isLoading]);
 
   // Listen for Calendly booking confirmation
   useEffect(() => {
@@ -141,29 +142,55 @@ export default function ChatWidget() {
     setIsLoading(false);
   };
 
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  // Enter = send, Shift+Enter = new line
+  const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
-  // Expand height when Calendly is showing
+  // Auto-resize textarea as user types
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    e.target.style.height = "auto";
+    e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px";
+  };
+
+  // Toggle button behaviour
+  const handleToggle = () => {
+    if (!isOpen) {
+      setIsOpen(true);
+      setIsMinimized(false);
+    } else if (isMinimized) {
+      setIsMinimized(false);
+    } else {
+      setIsMinimized(true);
+    }
+  };
+
   const windowHeight = submitted ? "680px" : "560px";
+  const windowVisible = isOpen && !isMinimized;
 
   return (
     <>
       {isOpen && (
         <div style={{
           position: "fixed", bottom: "88px", right: "24px",
-          width: "380px", height: windowHeight, maxHeight: "calc(100vh - 160px)",
+          width: "380px",
+          height: windowVisible ? windowHeight : "0px",
+          maxHeight: windowVisible ? "calc(100vh - 160px)" : "0px",
+          opacity: windowVisible ? 1 : 0,
+          pointerEvents: windowVisible ? "auto" : "none",
           background: "#fff", borderRadius: "16px",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08)",
+          boxShadow: windowVisible ? "0 20px 60px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08)" : "none",
           display: "flex", flexDirection: "column", overflow: "hidden",
           zIndex: 9999, border: "1px solid rgba(13,33,55,0.1)",
-          animation: "naraSlideUp 0.25s cubic-bezier(0.34,1.56,0.64,1)",
-          transition: "height 0.3s ease",
+          transition: "height 0.3s ease, opacity 0.2s ease, max-height 0.3s ease",
         }}>
           {/* Header */}
           <div style={{
-            background: "#0D2137", padding: "16px 20px",
+            background: "#0D2137", padding: "14px 16px",
             display: "flex", alignItems: "center", gap: "12px", flexShrink: 0,
           }}>
             <img
@@ -174,10 +201,19 @@ export default function ChatWidget() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: "15px", letterSpacing: "0.01em" }}>NARA</div>
             </div>
+            {/* Minimize button */}
             <button
-              onClick={() => setIsOpen(false)}
-              style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: "22px", lineHeight: 1, padding: "2px 6px", flexShrink: 0 }}
+              onClick={() => setIsMinimized(true)}
+              aria-label="Minimize chat"
+              title="Minimize"
+              style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: "20px", lineHeight: 1, padding: "2px 8px", flexShrink: 0 }}
+            >−</button>
+            {/* Close button */}
+            <button
+              onClick={() => { setIsOpen(false); setIsMinimized(false); }}
               aria-label="Close chat"
+              title="Close"
+              style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: "20px", lineHeight: 1, padding: "2px 6px", flexShrink: 0 }}
             >×</button>
           </div>
 
@@ -228,7 +264,8 @@ export default function ChatWidget() {
                 padding: "12px 14px", fontSize: "12px", color: "#085041",
                 textAlign: "center", lineHeight: 1.6, marginTop: "4px", flexShrink: 0,
               }}>
-                ✓ Your details have been received. A NUMAT specialist will reach out within 24 hours.<br /><span style={{ fontWeight: 600 }}>Book a discovery call below:</span>
+                ✓ Your details have been received. A NUMAT specialist will reach out within 24 hours.<br />
+                <span style={{ fontWeight: 600 }}>Book a discovery call below:</span>
               </div>
             )}
 
@@ -243,7 +280,7 @@ export default function ChatWidget() {
               </div>
             )}
 
-            {/* Calendly inline widget — iframe is the most reliable embed method */}
+            {/* Calendly inline widget */}
             {submitted && !meetingBooked && (
               <div style={{ flexShrink: 0, borderRadius: "12px", overflow: "hidden", marginTop: "4px" }}>
                 <iframe
@@ -262,22 +299,25 @@ export default function ChatWidget() {
           {/* Input area — hidden after lead submitted */}
           {!submitted && (
             <div style={{
-              padding: "12px 14px", background: "#fff",
+              padding: "10px 12px", background: "#fff",
               borderTop: "1px solid rgba(0,0,0,0.06)",
-              display: "flex", gap: "8px", alignItems: "center", flexShrink: 0,
+              display: "flex", gap: "8px", alignItems: "flex-end", flexShrink: 0,
             }}>
-              <input
+              <textarea
                 ref={inputRef}
                 value={input}
-                onChange={e => setInput(e.target.value)}
+                onChange={handleInput}
                 onKeyDown={handleKey}
                 disabled={isLoading}
-                placeholder="Type your message..."
+                rows={1}
+                placeholder="Type your message… (Shift+Enter for new line)"
                 style={{
-                  flex: 1, border: "1px solid #e8e8e8", borderRadius: "24px",
-                  padding: "9px 16px", fontSize: "13px", outline: "none",
+                  flex: 1, border: "1px solid #e8e8e8", borderRadius: "16px",
+                  padding: "9px 14px", fontSize: "13px", outline: "none",
                   fontFamily: "inherit", background: "#F8F7F5", color: "#1a1a1a",
+                  resize: "none", overflow: "hidden", lineHeight: "1.5",
                   transition: "border-color 0.15s",
+                  minHeight: "38px", maxHeight: "100px",
                 }}
                 onFocus={e => (e.target.style.borderColor = "#1D9E75")}
                 onBlur={e => (e.target.style.borderColor = "#e8e8e8")}
@@ -291,7 +331,7 @@ export default function ChatWidget() {
                   background: input.trim() && !isLoading ? "#0D2137" : "#e5e5e5",
                   border: "none", cursor: input.trim() && !isLoading ? "pointer" : "default",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  transition: "background 0.15s",
+                  transition: "background 0.15s", marginBottom: "1px",
                 }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -307,9 +347,9 @@ export default function ChatWidget() {
         </div>
       )}
 
-      {/* Floating toggle button */}
+      {/* Floating toggle button — minimized shows a notification dot */}
       <button
-        onClick={() => setIsOpen(o => !o)}
+        onClick={handleToggle}
         aria-label="Chat with NARA"
         style={{
           position: "fixed", bottom: "24px", right: "24px",
@@ -320,16 +360,23 @@ export default function ChatWidget() {
           zIndex: 10000,
           boxShadow: "0 4px 20px rgba(13,33,55,0.35)",
           transition: "transform 0.2s ease",
-          overflow: "hidden",
-          padding: 0,
+          overflow: "hidden", padding: 0,
         }}
         onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.08)")}
         onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
       >
-        {isOpen
+        {isOpen && !isMinimized
           ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6L18 18" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
           : <img src="/numat-icon.jpeg" alt="NARA" style={{ width: "52px", height: "52px", objectFit: "cover" }} />
         }
+        {/* Green dot when minimized with active session */}
+        {isMinimized && (
+          <span style={{
+            position: "absolute", top: "6px", right: "6px",
+            width: "10px", height: "10px", borderRadius: "50%",
+            background: "#1D9E75", border: "2px solid #0D2137",
+          }} />
+        )}
       </button>
 
       <style>{`
