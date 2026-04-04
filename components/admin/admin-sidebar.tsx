@@ -10,6 +10,7 @@ import {
   Settings,
   MessageSquareQuote,
   Newspaper,
+  Bot,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -57,6 +58,11 @@ export default function AdminSidebar() {
       <Link href="/admin/inquiries" className={linkClass('/admin/inquiries')}>
         <Inbox className="w-5 h-5" />
         Inquiries
+      </Link>
+
+      <Link href="/admin/nara" className={linkClass('/admin/nara')}>
+        <Bot className="w-5 h-5" />
+        NARA
       </Link>
 
       <Link href="/admin/settings" className={linkClass('/admin/settings')}>
