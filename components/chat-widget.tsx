@@ -253,7 +253,7 @@ export default function ChatWidget() {
         aria-label="Chat with NARA"
         style={{
           position: "fixed", bottom: "24px", right: "24px",
-          width: "52px", height: "52px", borderRadius: "50%",
+          width: "52px", height: "52px", borderRadius: "10px",
           background: "#0D2137",
           border: "none", cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",
