@@ -184,8 +184,12 @@ RULES:
 - Never make up specifications, prices, or technical data
 - Be warm, professional, and concise (1-3 sentences per reply)
 - After answering questions, naturally guide towards understanding their project — ask about their project type, location, and scale
-- Once you have collected name, company, project type, location, and area in sqm — say a specialist will contact them within 24 hours and end your message with exactly: [LEAD_COMPLETE]
-- Never mention [LEAD_COMPLETE] to the user`
+- Once you have collected name, company, project type, location, and area in sqm — say a specialist will contact them within 24 hours
+- When ready to mark the lead complete, append the following TWO items at the very end of your message, in this exact order:
+  1. A hidden structured data block in this exact format (fill in only what was collected, leave others as empty string):
+     <!--LEAD_DATA:{"contact_name":"","company":"","email":"","phone":"","country":"","industry":"","project_type":"","area_sqm":"","location":"","timeline":"","budget":"","decision_maker":""}-->
+  2. Immediately after: [LEAD_COMPLETE]
+- Never show or mention the LEAD_DATA block or [LEAD_COMPLETE] tag to the user — they must be invisible`
 }
 
 interface ChatMessage {
@@ -271,9 +275,21 @@ export async function POST(request: NextRequest) {
       "I'm sorry, I had a connection issue. Please email us at sales@numat.ph"
 
     const isComplete = rawText.includes('[LEAD_COMPLETE]')
-    const text = rawText.replace('[LEAD_COMPLETE]', '').trim()
 
-    // Non-blocking: save assistant response
+    // Extract structured lead data from hidden comment block
+    let leadData: Record<string, string> = {}
+    const leadDataMatch = rawText.match(/<!--LEAD_DATA:(\{.*?\})-->/)
+    if (leadDataMatch) {
+      try { leadData = JSON.parse(leadDataMatch[1]) } catch { /* ignore parse errors */ }
+    }
+
+    // Strip both the hidden block and the tag — user never sees either
+    const text = rawText
+      .replace(/<!--LEAD_DATA:\{[\s\S]*?\}-->/, '')
+      .replace('[LEAD_COMPLETE]', '')
+      .trim()
+
+    // Non-blocking: save assistant response (clean text, no hidden tags)
     supabase.from('chat_messages').insert({
       session_id,
       role: 'assistant',
@@ -281,18 +297,17 @@ export async function POST(request: NextRequest) {
       knowledge_used: knowledgeIds,
     }).then(() => {})
 
-    // Mark session complete and fire n8n webhook
+    // Mark session complete and fire n8n webhook with structured data
     if (isComplete) {
-      await supabase
+      supabase
         .from('chat_sessions')
         .update({ completed: true, lead_submitted: true })
         .eq('id', session_id)
+        .then(() => {})
 
       const fullConvo = [...messages, { role: 'assistant', content: text }]
         .map(m => `${m.role.toUpperCase()}: ${m.content}`)
         .join('\n\n')
-
-      const emailMatch = fullConvo.match(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/)
 
       fetch(N8N_WEBHOOK, {
         method: 'POST',
@@ -301,7 +316,10 @@ export async function POST(request: NextRequest) {
           source: 'NARA',
           lead_source: 'Website',
           session_id,
-          email: emailMatch?.[0] || null,
+          // Structured fields — populated from LEAD_DATA block
+          ...leadData,
+          // Fallback email extraction if not in structured data
+          email: leadData.email || fullConvo.match(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/)?.[0] || null,
           notes: `NARA conversation:\n\n${fullConvo}`,
         }),
       }).catch(e => console.error('[NARA Webhook] Failed:', e))
