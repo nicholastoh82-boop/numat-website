@@ -272,7 +272,7 @@ export default function ChatWidget() {
               <div style={{ flexShrink: 0, borderRadius: "12px", overflow: "hidden", marginTop: "4px" }}>
                 <div
                   className="calendly-inline-widget"
-                  data-url="https://calendly.com/numat/discovery?hide_gdpr_banner=1&primary_color=1D9E75"
+                  data-url="https://calendly.com/numat/product-discovery-call?hide_gdpr_banner=1&primary_color=1D9E75"
                   style={{ minWidth: "100%", height: "380px" }}
                 />
               </div>
