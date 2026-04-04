@@ -113,12 +113,14 @@ async function searchKnowledge(
   // Also search by question text for top keywords
   const topKeywords = keywords.slice(0, 3)
   const questionFilters = topKeywords.map(k => `question.ilike.%${k}%`).join(',')
-  const { data: byQuestion } = await supabase
+  const byQuestionQuery = supabase
     .from('nara_knowledge')
     .select('id, category, question, answer, keywords')
     .eq('is_active', true)
-    .or(questionFilters)
     .limit(5)
+  const { data: byQuestion } = questionFilters
+    ? await byQuestionQuery.or(questionFilters)
+    : await byQuestionQuery
 
   // Merge, deduplicate, and score by relevance
   const seen = new Set<string>()
@@ -211,41 +213,37 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin()
     const userAgent = request.headers.get('user-agent') || undefined
+    const lastMsg = messages[messages.length - 1]
+    const userQuestion = lastMsg?.content || ''
 
-    // Upsert chat session
-    await supabase.from('chat_sessions').upsert(
+    // Non-blocking: upsert session and save user message (tables may not exist yet)
+    supabase.from('chat_sessions').upsert(
       { id: session_id, page_url: page_url || null, user_agent: userAgent || null },
       { onConflict: 'id', ignoreDuplicates: true }
-    )
+    ).then(() => {})
 
-    // Save incoming user message
-    const lastMsg = messages[messages.length - 1]
     if (lastMsg?.role === 'user') {
-      await supabase.from('chat_messages').insert({
+      supabase.from('chat_messages').insert({
         session_id,
         role: 'user',
         content: lastMsg.content,
         knowledge_used: [],
-      })
+      }).then(() => {})
     }
 
-    // Search knowledge base
-    const userQuestion = lastMsg?.content || ''
+    // Search knowledge base (safe — returns empty on error)
     const { entries: knowledgeEntries, hasResults } = await searchKnowledge(supabase, userQuestion)
 
-    // Log unanswered questions when no knowledge found and question looks substantive
+    // Non-blocking: log unanswered questions
     if (!hasResults && userQuestion.length > 15 && lastMsg?.role === 'user') {
-      await supabase.from('nara_unanswered').insert({
-        session_id,
-        question: userQuestion,
-      }).then(() => {})
+      supabase.from('nara_unanswered').insert({ session_id, question: userQuestion }).then(() => {})
     }
 
     // Build system prompt with relevant knowledge injected
     const systemPrompt = buildSystemPrompt(knowledgeEntries)
     const knowledgeIds = knowledgeEntries.map(e => e.id)
 
-    // Call Claude
+    // Call Claude — this is the critical path
     const claudeRes = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
       headers: {
@@ -254,7 +252,7 @@ export async function POST(request: NextRequest) {
         'x-api-key': apiKey,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 500,
         system: systemPrompt,
         messages: messages.map(m => ({ role: m.role, content: m.content })),
@@ -275,13 +273,13 @@ export async function POST(request: NextRequest) {
     const isComplete = rawText.includes('[LEAD_COMPLETE]')
     const text = rawText.replace('[LEAD_COMPLETE]', '').trim()
 
-    // Save assistant response
-    await supabase.from('chat_messages').insert({
+    // Non-blocking: save assistant response
+    supabase.from('chat_messages').insert({
       session_id,
       role: 'assistant',
       content: text,
       knowledge_used: knowledgeIds,
-    })
+    }).then(() => {})
 
     // Mark session complete and fire n8n webhook
     if (isComplete) {
