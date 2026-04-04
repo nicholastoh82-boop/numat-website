@@ -44,12 +44,20 @@ export default function ChatWidget() {
     }
   }, [isOpen]);
 
-  // Init Calendly inline widget once submitted and open
+  // Init Calendly inline widget — poll until script is ready and div is in DOM
   useEffect(() => {
-    if (submitted && isOpen && window.Calendly) {
-      window.Calendly.initInlineWidgets();
-    }
-  }, [submitted, isOpen]);
+    if (!submitted) return;
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (window.Calendly) {
+        window.Calendly.initInlineWidgets();
+        clearInterval(interval);
+      }
+      if (attempts > 20) clearInterval(interval); // give up after 10s
+    }, 500);
+    return () => clearInterval(interval);
+  }, [submitted]);
 
   // Listen for Calendly booking confirmation
   useEffect(() => {
@@ -244,7 +252,7 @@ export default function ChatWidget() {
                 padding: "12px 14px", fontSize: "12px", color: "#085041",
                 textAlign: "center", lineHeight: 1.6, marginTop: "4px", flexShrink: 0,
               }}>
-                ✓ Your details have been received.<br />Book a discovery call below or we will reach out within 24 hours.
+                ✓ Your details have been received. A NUMAT specialist will reach out within 24 hours.<br /><span style={{ fontWeight: 600 }}>Book a discovery call below:</span>
               </div>
             )}
 
