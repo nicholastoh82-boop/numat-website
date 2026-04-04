@@ -163,6 +163,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit inquiry.' }, { status: 500 })
     }
 
+    // Send webhook to n8n
+    try {
+      await fetch('https://nicholastoh.app.n8n.cloud/webhook/numat-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: inquiry.id,
+          name: sanitizeInput(name.trim()),
+          email: email.trim().toLowerCase(),
+          phone: phone ? sanitizeInput(phone.trim()) : null,
+          company: company ? sanitizeInput(company.trim()) : null,
+          subject: sanitizeInput(subject.trim()),
+          message: sanitizeInput(message.trim()),
+          source: 'contact_form',
+        }),
+      })
+    } catch (webhookError) {
+      console.error('[n8n Webhook] Failed:', webhookError)
+    }
+
     // Send email notification via Resend
     try {
       const emailRes = await fetch('https://api.resend.com/emails', {
