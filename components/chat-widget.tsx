@@ -131,15 +131,13 @@ export default function ChatWidget() {
             background: "#0D2137", padding: "16px 20px",
             display: "flex", alignItems: "center", gap: "12px", flexShrink: 0,
           }}>
-            <div style={{
-              width: "40px", height: "40px", borderRadius: "50%",
-              background: "#1D9E75",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "20px", flexShrink: 0,
-            }}>🌿</div>
+            <img
+              src="/numat-icon.jpeg"
+              alt="NARA"
+              style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
+            />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: "15px", letterSpacing: "0.01em" }}>NARA</div>
-              <div style={{ color: "#5DCAA5", fontSize: "11px", marginTop: "2px" }}>NUMAT Autonomous Response Assistant</div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
@@ -165,7 +163,7 @@ export default function ChatWidget() {
                   boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
                   border: msg.role === "assistant" ? "1px solid rgba(0,0,0,0.06)" : "none",
                   whiteSpace: "pre-wrap",
-                }}>{msg.content}</div>
+                }} dangerouslySetInnerHTML={{ __html: msg.content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>') }} />
               </div>
             ))}
 
