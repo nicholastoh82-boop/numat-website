@@ -40,19 +40,6 @@ CREATE TABLE nara_unanswered (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   resolved BOOLEAN NOT NULL DEFAULT false
 );
-
--- Seed knowledge entries
-INSERT INTO nara_knowledge (category, question, answer, keywords) VALUES
-('product', 'What products does NUMAT make?', 'NUMAT makes four engineered bamboo products: NuFloor (bamboo flooring for commercial and hospitality spaces), NuBoard (structural boards replacing plywood and MDF), NuSlat (decorative wall and ceiling slats), and NuPanel (interior composite panels). All use Dendrocalamus asper — the highest-grade structural bamboo.', ARRAY['products','nufloor','nuboard','nuslat','nupanel','bamboo','what','make','sell']),
-('product', 'What is NuFloor?', 'NuFloor is NUMAT''s engineered bamboo flooring product. It is designed for high-traffic commercial and hospitality environments — hotels, resorts, offices, restaurants, and residential developments. It offers the warmth and aesthetics of wood with superior hardness, moisture resistance, and sustainability credentials.', ARRAY['nufloor','flooring','floor','bamboo floor']),
-('product', 'What is NuBoard?', 'NuBoard is NUMAT''s structural bamboo board, designed as a sustainable replacement for plywood and MDF in construction and interior fit-out projects. It offers higher strength-to-weight ratio than plywood and is made from 100% Dendrocalamus asper bamboo.', ARRAY['nuboard','board','plywood','mdf','structural','construction']),
-('company', 'Where is NUMAT based?', 'NUMAT Sustainable Manufacturing Inc. is registered in the Philippines and backed by WaveMaker Impact, a Singapore-based sustainability-focused venture fund. We primarily serve markets across Southeast Asia including the Philippines, Malaysia, and Singapore.', ARRAY['where','based','location','company','philippines','singapore']),
-('company', 'What bamboo species does NUMAT use?', 'NUMAT uses Dendrocalamus asper — considered the gold standard of structural bamboo species. It grows in the Philippines, matures in 3-5 years (versus 25-50 years for hardwood trees), and sequesters significantly more carbon than timber alternatives. This makes NUMAT products both high-performance and highly sustainable.', ARRAY['species','bamboo','dendrocalamus','asper','type','material','sustainable']),
-('process', 'How do I get a quote or pricing?', 'Pricing depends on the product, finish, volume, and delivery location. Our team prepares detailed quotes after understanding your project specifications. The fastest way is to share your project type, location, and estimated area in sqm — I can collect that now and have our specialist follow up with a full quote within 24 hours.', ARRAY['price','pricing','quote','cost','how much','rate']),
-('process', 'How long does delivery take?', 'Lead times vary by product and volume. For standard orders within the Philippines and Malaysia, typical lead time is 4-8 weeks from order confirmation. For larger custom orders or export shipments, our team will confirm exact timelines during the quotation process.', ARRAY['delivery','lead time','shipping','how long','timeline','when']),
-('faq', 'Is bamboo flooring durable?', 'Yes — engineered bamboo from Dendrocalamus asper is significantly harder than most hardwoods, including oak. NUMAT''s NuFloor is designed specifically for high-traffic commercial environments like hotel lobbies, restaurant floors, and office fit-outs. It is also more dimensionally stable than timber in humid tropical climates.', ARRAY['durable','durability','hard','hardness','strong','last','wear']),
-('faq', 'Is NUMAT bamboo sustainable or eco-friendly?', 'Yes. Bamboo is one of the fastest-growing plants on earth — Dendrocalamus asper matures in 3-5 years compared to 25-50 years for hardwood. It also sequesters more carbon per hectare than most tree species. NUMAT sources from sustainable farms in the Philippines, supporting local farming communities while providing a genuinely low-carbon building material.', ARRAY['sustainable','eco','green','carbon','environment','fsc','certification']),
-('faq', 'What markets or countries does NUMAT serve?', 'NUMAT''s primary markets are the Philippines, Malaysia, and Singapore. We also serve projects in Indonesia, Thailand, Vietnam, Australia, and the Middle East. If your project is in a different country, contact us and we can discuss export options.', ARRAY['country','market','serve','ship','export','where','available']);
 */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -102,7 +89,6 @@ async function searchKnowledge(
     return { entries: data || [], hasResults: (data?.length ?? 0) > 0 }
   }
 
-  // Search by keyword array overlap
   const { data: byKeywords } = await supabase
     .from('nara_knowledge')
     .select('id, category, question, answer, keywords')
@@ -110,7 +96,6 @@ async function searchKnowledge(
     .overlaps('keywords', keywords)
     .limit(5)
 
-  // Also search by question text for top keywords
   const topKeywords = keywords.slice(0, 3)
   const questionFilters = topKeywords.map(k => `question.ilike.%${k}%`).join(',')
   const byQuestionQuery = supabase
@@ -122,7 +107,6 @@ async function searchKnowledge(
     ? await byQuestionQuery.or(questionFilters)
     : await byQuestionQuery
 
-  // Merge, deduplicate, and score by relevance
   const seen = new Set<string>()
   const merged: (KnowledgeEntry & { score: number })[] = []
 
@@ -146,16 +130,13 @@ async function searchKnowledge(
 
   merged.sort((a, b) => b.score - a.score)
   const top5 = merged.slice(0, 5)
-
   return { entries: top5, hasResults: top5.length > 0 }
 }
 
 function buildSystemPrompt(knowledgeEntries: KnowledgeEntry[]): string {
   const knowledgeBlock =
     knowledgeEntries.length > 0
-      ? knowledgeEntries
-          .map(e => `Q: ${e.question}\nA: ${e.answer}`)
-          .join('\n\n')
+      ? knowledgeEntries.map(e => `Q: ${e.question}\nA: ${e.answer}`).join('\n\n')
       : 'No specific knowledge entries matched this query.'
 
   return `You are NARA — NUMAT Autonomous Response Assistant. You help visitors understand NUMAT's bamboo products and qualify their project needs.
@@ -164,32 +145,35 @@ ABOUT NUMAT:
 NUMAT Sustainable Manufacturing Inc. is a Philippines-based manufacturer of engineered bamboo building materials, backed by WaveMaker Impact (Singapore). We use Dendrocalamus asper bamboo — the highest-grade structural bamboo species — grown sustainably in the Philippines.
 
 PRODUCTS:
-- NuFloor: Engineered bamboo flooring. High durability, suitable for high-traffic commercial and hospitality spaces. Available in various finishes and plank sizes.
-- NuBoard: Structural bamboo boards. Used as replacement for plywood and MDF in construction and fit-out projects.
+- NuFloor: Engineered bamboo flooring for high-traffic commercial and hospitality spaces.
+- NuBoard: Structural bamboo boards replacing plywood and MDF in construction and fit-out projects.
 - NuSlat: Bamboo slats for decorative wall cladding, ceiling features, and acoustic panels.
 - NuPanel: Bamboo composite panels for interior applications.
 
 PRIMARY MARKETS: Philippines, Malaysia, Singapore
 SECONDARY MARKETS: Indonesia, Thailand, Vietnam, Australia, Middle East
-
-WEBSITE: numatbamboo.com
-CONTACT: sales@numat.ph
+WEBSITE: numatbamboo.com | CONTACT: sales@numat.ph
 
 RELEVANT KNOWLEDGE FOR THIS CONVERSATION:
 ${knowledgeBlock}
 
+LEAD SCORING (use to determine tier for LEAD_DATA):
+- HOT (score 7-10): Hotel/Resort/Interior Design firm OR large commercial project + decision maker + specific area in sqm + Philippines/Malaysia/Singapore
+- WARM (score 4-6.9): Mid-size company, designer/PM, general project interest, SEA region
+- COLD (score 0-3.9): Residential only with no commercial angle, unknown company, no clear project, outside SEA
+
 RULES:
-- Answer questions using the knowledge provided above
-- If you do not have a specific answer in your knowledge base, say: 'That is a great question — I will flag this for our team and they will include the answer in a follow-up. Would you like me to have someone reach out directly?'
+- Answer questions using the knowledge provided above only
+- If you do not have a specific answer, say: "That is a great question — I will flag this for our team. Would you like me to have someone reach out directly?"
 - Never make up specifications, prices, or technical data
-- Be warm, professional, and concise (1-3 sentences per reply)
-- After answering questions, naturally guide towards understanding their project — ask about their project type, location, and scale
-- Once you have collected name, company, project type, location, and area in sqm — say a specialist will contact them within 24 hours
-- When ready to mark the lead complete, append the following TWO items at the very end of your message, in this exact order:
-  1. A hidden structured data block in this exact format (fill in only what was collected, leave others as empty string):
-     <!--LEAD_DATA:{"contact_name":"","company":"","email":"","phone":"","country":"","industry":"","project_type":"","area_sqm":"","location":"","timeline":"","budget":"","decision_maker":""}-->
+- Be warm, professional, concise — 1-3 sentences per reply
+- After answering, guide towards understanding their project — ask about type, location, scale
+- Once you have collected name, company, project type, location, and area in sqm — complete the lead
+- When ready to complete, append BOTH items below at the very end of your message:
+  1. Hidden data block (fill what was collected, assess tier and score honestly):
+     <!--LEAD_DATA:{"contact_name":"","company":"","email":"","phone":"","country":"","industry":"","project_type":"","area_sqm":"","location":"","timeline":"","budget":"","decision_maker":"","tier":"WARM","score":"5.0"}-->
   2. Immediately after: [LEAD_COMPLETE]
-- Never show or mention the LEAD_DATA block or [LEAD_COMPLETE] tag to the user — they must be invisible`
+- NEVER show or mention LEAD_DATA or [LEAD_COMPLETE] to the user`
 }
 
 interface ChatMessage {
@@ -205,11 +189,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const {
-      messages,
-      session_id,
-      page_url,
-    }: { messages: ChatMessage[]; session_id: string; page_url?: string } = body
+    const { messages, session_id, page_url }: {
+      messages: ChatMessage[]
+      session_id: string
+      page_url?: string
+    } = body
 
     if (!session_id || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
@@ -220,34 +204,31 @@ export async function POST(request: NextRequest) {
     const lastMsg = messages[messages.length - 1]
     const userQuestion = lastMsg?.content || ''
 
-    // Non-blocking: upsert session and save user message (tables may not exist yet)
+    // Non-blocking: upsert session
     supabase.from('chat_sessions').upsert(
       { id: session_id, page_url: page_url || null, user_agent: userAgent || null },
       { onConflict: 'id', ignoreDuplicates: true }
     ).then(() => {})
 
+    // Save user message
     if (lastMsg?.role === 'user') {
       supabase.from('chat_messages').insert({
-        session_id,
-        role: 'user',
-        content: lastMsg.content,
-        knowledge_used: [],
+        session_id, role: 'user', content: lastMsg.content, knowledge_used: [],
       }).then(() => {})
     }
 
-    // Search knowledge base (safe — returns empty on error)
+    // Search knowledge base
     const { entries: knowledgeEntries, hasResults } = await searchKnowledge(supabase, userQuestion)
 
-    // Non-blocking: log unanswered questions
+    // Log unanswered questions
     if (!hasResults && userQuestion.length > 15 && lastMsg?.role === 'user') {
       supabase.from('nara_unanswered').insert({ session_id, question: userQuestion }).then(() => {})
     }
 
-    // Build system prompt with relevant knowledge injected
     const systemPrompt = buildSystemPrompt(knowledgeEntries)
     const knowledgeIds = knowledgeEntries.map(e => e.id)
 
-    // Call Claude — this is the critical path
+    // Call Claude with correct model name
     const claudeRes = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
       headers: {
@@ -270,37 +251,36 @@ export async function POST(request: NextRequest) {
     }
 
     const claudeData = await claudeRes.json()
-    const rawText: string =
-      claudeData.content?.[0]?.text ||
+    const rawText: string = claudeData.content?.[0]?.text ||
       "I'm sorry, I had a connection issue. Please email us at sales@numat.ph"
 
     const isComplete = rawText.includes('[LEAD_COMPLETE]')
 
-    // Extract structured lead data from hidden comment block
+    // Extract structured lead data including tier and score
     let leadData: Record<string, string> = {}
     const leadDataMatch = rawText.match(/<!--LEAD_DATA:(\{.*?\})-->/)
     if (leadDataMatch) {
-      try { leadData = JSON.parse(leadDataMatch[1]) } catch { /* ignore parse errors */ }
+      try { leadData = JSON.parse(leadDataMatch[1]) } catch { /* ignore */ }
     }
 
-    // Strip both the hidden block and the tag — user never sees either
+    // Strip hidden block and tag — user never sees these
     const text = rawText
       .replace(/<!--LEAD_DATA:\{[\s\S]*?\}-->/, '')
       .replace('[LEAD_COMPLETE]', '')
       .trim()
 
-    // Non-blocking: save assistant response (clean text, no hidden tags)
+    // Extract tier and score for Calendly gating in the frontend
+    const tier = leadData.tier || null
+    const score = leadData.score ? parseFloat(leadData.score) : null
+
+    // Save assistant response
     supabase.from('chat_messages').insert({
-      session_id,
-      role: 'assistant',
-      content: text,
-      knowledge_used: knowledgeIds,
+      session_id, role: 'assistant', content: text, knowledge_used: knowledgeIds,
     }).then(() => {})
 
-    // Mark session complete and fire n8n webhook with structured data
+    // On lead complete — update session and fire n8n webhook with structured data
     if (isComplete) {
-      supabase
-        .from('chat_sessions')
+      supabase.from('chat_sessions')
         .update({ completed: true, lead_submitted: true })
         .eq('id', session_id)
         .then(() => {})
@@ -316,16 +296,17 @@ export async function POST(request: NextRequest) {
           source: 'NARA',
           lead_source: 'Website',
           session_id,
-          // Structured fields — populated from LEAD_DATA block
           ...leadData,
-          // Fallback email extraction if not in structured data
-          email: leadData.email || fullConvo.match(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/)?.[0] || null,
+          email: leadData.email ||
+            fullConvo.match(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/)?.[0] || null,
           notes: `NARA conversation:\n\n${fullConvo}`,
         }),
       }).catch(e => console.error('[NARA Webhook] Failed:', e))
     }
 
-    return NextResponse.json({ text, isComplete })
+    // Return text + tier + score — frontend uses tier to decide whether to show Calendly
+    return NextResponse.json({ text, isComplete, tier, score })
+
   } catch (error) {
     console.error('[NARA] Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
