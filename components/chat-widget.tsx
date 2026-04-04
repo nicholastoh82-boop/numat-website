@@ -247,7 +247,7 @@ export default function ChatWidget() {
                 NARA
               </div>
               <div style={{ color: "#5DCAA5", fontSize: "11px", marginTop: "1px" }}>
-                NUMAT Autonomous Response Assistant
+                Online
               </div>
             </div>
             <button
