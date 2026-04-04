@@ -1,11 +1,20 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import Script from "next/script";
 
 interface Message {
   role: "assistant" | "user";
   content: string;
 }
+
+declare global {
+  interface Window {
+    Calendly?: { initInlineWidgets: () => void };
+  }
+}
+
+const N8N_WEBHOOK = "https://nicholastoh.app.n8n.cloud/webhook/numat-lead";
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,6 +22,7 @@ export default function ChatWidget() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [meetingBooked, setMeetingBooked] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const sessionIdRef = useRef<string>("");
   const pageUrlRef = useRef<string>("");
@@ -26,13 +36,41 @@ export default function ChatWidget() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, submitted]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen]);
+
+  // Init Calendly inline widget once submitted and open
+  useEffect(() => {
+    if (submitted && isOpen && window.Calendly) {
+      window.Calendly.initInlineWidgets();
+    }
+  }, [submitted, isOpen]);
+
+  // Listen for Calendly booking confirmation
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.event === "calendly.event_scheduled") {
+        setMeetingBooked(true);
+        fetch(N8N_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            source: "NARA",
+            lead_source: "Website",
+            session_id: sessionIdRef.current,
+            meeting_booked: true,
+          }),
+        }).catch(() => {});
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
 
   const callChat = useCallback(async (conversation: Message[]): Promise<{ text: string; isComplete: boolean }> => {
     const res = await fetch("/api/chat", {
@@ -53,7 +91,7 @@ export default function ChatWidget() {
       .map(m => `${m.role.toUpperCase()}: ${m.content}`)
       .join("\n\n");
     const emailMatch = fullConvo.match(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/);
-    fetch("https://nicholastoh.app.n8n.cloud/webhook/numat-lead", {
+    fetch(N8N_WEBHOOK, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -114,17 +152,30 @@ export default function ChatWidget() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
+  // Expand height when Calendly is showing
+  const windowHeight = submitted ? "680px" : "560px";
+
   return (
     <>
+      {/* Load Calendly script once */}
+      <Script
+        src="https://assets.calendly.com/assets/external/widget.js"
+        strategy="lazyOnload"
+        onLoad={() => {
+          if (submitted && window.Calendly) window.Calendly.initInlineWidgets();
+        }}
+      />
+
       {isOpen && (
         <div style={{
           position: "fixed", bottom: "88px", right: "24px",
-          width: "380px", height: "560px", maxHeight: "calc(100vh - 160px)",
+          width: "380px", height: windowHeight, maxHeight: "calc(100vh - 160px)",
           background: "#fff", borderRadius: "16px",
           boxShadow: "0 20px 60px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08)",
           display: "flex", flexDirection: "column", overflow: "hidden",
           zIndex: 9999, border: "1px solid rgba(13,33,55,0.1)",
           animation: "naraSlideUp 0.25s cubic-bezier(0.34,1.56,0.64,1)",
+          transition: "height 0.3s ease",
         }}>
           {/* Header */}
           <div style={{
@@ -186,20 +237,43 @@ export default function ChatWidget() {
               </div>
             )}
 
-            {/* Lead submitted confirmation */}
+            {/* Lead submitted confirmation banner */}
             {submitted && (
               <div style={{
                 background: "#E1F5EE", border: "1px solid #1D9E75", borderRadius: "12px",
                 padding: "12px 14px", fontSize: "12px", color: "#085041",
-                textAlign: "center", lineHeight: 1.6, marginTop: "4px",
+                textAlign: "center", lineHeight: 1.6, marginTop: "4px", flexShrink: 0,
               }}>
-                ✓ Your details have been received.<br />A NUMAT specialist will reach out within 24 hours.
+                ✓ Your details have been received.<br />Book a discovery call below or we will reach out within 24 hours.
               </div>
             )}
+
+            {/* Meeting booked confirmation */}
+            {meetingBooked && (
+              <div style={{
+                background: "#0D2137", borderRadius: "12px",
+                padding: "12px 14px", fontSize: "12px", color: "#5DCAA5",
+                textAlign: "center", lineHeight: 1.6, flexShrink: 0,
+              }}>
+                🎉 Your meeting is booked!<br />Check your email for the calendar invite.
+              </div>
+            )}
+
+            {/* Calendly inline widget */}
+            {submitted && !meetingBooked && (
+              <div style={{ flexShrink: 0, borderRadius: "12px", overflow: "hidden", marginTop: "4px" }}>
+                <div
+                  className="calendly-inline-widget"
+                  data-url="https://calendly.com/numat/discovery?hide_gdpr_banner=1&primary_color=1D9E75"
+                  style={{ minWidth: "100%", height: "380px" }}
+                />
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input area */}
+          {/* Input area — hidden after lead submitted */}
           {!submitted && (
             <div style={{
               padding: "12px 14px", background: "#fff",
@@ -247,7 +321,7 @@ export default function ChatWidget() {
         </div>
       )}
 
-      {/* Floating toggle button — numat-icon.jpeg, shows X when open */}
+      {/* Floating toggle button */}
       <button
         onClick={() => setIsOpen(o => !o)}
         aria-label="Chat with NARA"
