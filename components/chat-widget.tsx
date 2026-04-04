@@ -247,26 +247,28 @@ export default function ChatWidget() {
         </div>
       )}
 
-      {/* Floating toggle button */}
+      {/* Floating toggle button — numat-icon.jpeg, shows X when open */}
       <button
         onClick={() => setIsOpen(o => !o)}
         aria-label="Chat with NARA"
         style={{
           position: "fixed", bottom: "24px", right: "24px",
-          width: "56px", height: "56px", borderRadius: "50%",
-          background: isOpen ? "#0D2137" : "#1D9E75",
+          width: "52px", height: "52px", borderRadius: "50%",
+          background: "#0D2137",
           border: "none", cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",
           zIndex: 10000,
           boxShadow: "0 4px 20px rgba(13,33,55,0.35)",
-          transition: "background 0.2s ease, transform 0.2s ease",
+          transition: "transform 0.2s ease",
+          overflow: "hidden",
+          padding: 0,
         }}
         onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.08)")}
         onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
       >
         {isOpen
           ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6L18 18" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
-          : <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          : <img src="/numat-icon.jpeg" alt="NARA" style={{ width: "52px", height: "52px", objectFit: "cover" }} />
         }
       </button>
 

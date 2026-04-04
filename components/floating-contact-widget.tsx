@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import React from 'react'
 import Link from 'next/link'
-import { MessageCircleMore, PackageCheck, Leaf } from 'lucide-react'
+import { PackageCheck } from 'lucide-react'
 
 declare const gtag: (...args: unknown[]) => void
 
@@ -10,158 +10,46 @@ const whatsappUrl = `https://wa.me/60162958983?text=${encodeURIComponent(
   'Hello NUMAT, I would like to request product information and a quotation.'
 )}`
 
-function MiniCaptureForm({ onClose }: { onClose: () => void }) {
-  const [form, setForm] = useState({ name: '', email: '', interest: 'sample' })
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-
-  const handleSubmit = async () => {
-    if (!form.name || !form.email) return
-    setStatus('loading')
-    try {
-      const res = await fetch('/api/capture-lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, source: 'mobile_floating' }),
-      })
-      if (!res.ok) throw new Error()
-      setStatus('success')
-      if (typeof window !== 'undefined' && (window as any).gtag) {
-        ;(window as any).gtag('event', 'lead_capture', {
-          event_category: 'engagement',
-          event_label: form.interest,
-          source: 'mobile_floating',
-        })
-      }
-      setTimeout(onClose, 3000)
-    } catch {
-      setStatus('error')
-    }
-  }
-
-  return (
-    <div
-      className="w-64 rounded-2xl overflow-hidden shadow-2xl"
-      style={{ background: '#0f1e12', border: '1px solid rgba(5,150,105,0.4)' }}
-    >
-      <div style={{ height: '2px', background: 'linear-gradient(to right, #059669, #06b6d4)' }} />
-
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#6ee7b7' }}>
-            Quick Request
-          </p>
-          <button
-            onClick={onClose}
-            style={{
-              color: 'rgba(255,255,255,0.4)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '20px',
-              lineHeight: 1,
-              padding: 0,
-            }}
-          >
-            x
-          </button>
-        </div>
-
-        {status === 'success' ? (
-          <p className="text-sm text-center py-3" style={{ color: '#34d399' }}>
-            Got it! We will reach out within 24 hours.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <input
-              type="text"
-              placeholder="Your name"
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              className="w-full text-sm text-white placeholder-white/40 rounded-lg px-3 py-2 outline-none"
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.15)',
-              }}
-              onFocus={e => (e.target.style.borderColor = '#059669')}
-              onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
-            />
-            <input
-              type="email"
-              placeholder="Work email"
-              value={form.email}
-              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              className="w-full text-sm text-white placeholder-white/40 rounded-lg px-3 py-2 outline-none"
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.15)',
-              }}
-              onFocus={e => (e.target.style.borderColor = '#059669')}
-              onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
-            />
-            <div className="flex gap-2">
-              {(['sample', 'quote'] as const).map(opt => (
-                <button
-                  key={opt}
-                  onClick={() => setForm(f => ({ ...f, interest: opt }))}
-                  className="flex-1 py-2 rounded-lg text-xs font-semibold"
-                  style={{
-                    background: form.interest === opt ? '#059669' : 'transparent',
-                    border: `1px solid ${form.interest === opt ? '#059669' : 'rgba(255,255,255,0.2)'}`,
-                    color: form.interest === opt ? '#fff' : 'rgba(255,255,255,0.5)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {opt === 'sample' ? 'Free Sample' : 'Get Quote'}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={handleSubmit}
-              disabled={status === 'loading' || !form.name || !form.email}
-              className="w-full py-2 rounded-lg text-sm font-bold text-white disabled:opacity-50"
-              style={{ background: '#059669', border: 'none', cursor: 'pointer' }}
-            >
-              {status === 'loading' ? 'Sending...' : 'Submit'}
-            </button>
-            {status === 'error' && (
-              <p className="text-xs text-center" style={{ color: '#f87171' }}>
-                Something went wrong. Try again.
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  )
+const btnStyle: React.CSSProperties = {
+  position: 'fixed',
+  right: '24px',
+  width: '52px',
+  height: '52px',
+  borderRadius: '50%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+  transition: 'transform 0.2s ease',
+  zIndex: 9998,
+  border: 'none',
+  cursor: 'pointer',
+  textDecoration: 'none',
 }
 
 export default function FloatingContactWidget() {
-  const [showForm, setShowForm] = useState(false)
-
   return (
-    <div className="fixed right-5 bottom-5 md:bottom-16 z-[80] flex flex-col items-end gap-3">
-
-      {showForm && (
-        <div className="md:hidden">
-          <MiniCaptureForm onClose={() => setShowForm(false)} />
-        </div>
-      )}
-
+    <>
+      {/* Request Samples — sits above WhatsApp */}
       <Link
         href="/request-samples"
         aria-label="Request Samples"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-800 text-white shadow-lg transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 sm:h-auto sm:w-auto sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-3"
+        style={{ ...btnStyle, bottom: '152px', background: '#1D5C3A' }}
+        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
+        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
       >
-        <PackageCheck className="h-5 w-5 shrink-0 text-white" />
-        <span className="hidden text-sm font-semibold text-white sm:inline">Request Samples</span>
+        <PackageCheck style={{ width: '22px', height: '22px', color: '#fff', flexShrink: 0 }} />
       </Link>
 
+      {/* WhatsApp — sits above chat button */}
       <a
         href={whatsappUrl}
         target="_blank"
         rel="noreferrer"
         aria-label="Chat on WhatsApp"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-800 text-white shadow-lg transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-700 sm:h-auto sm:w-auto sm:gap-3 sm:rounded-2xl sm:px-4 sm:py-3"
+        style={{ ...btnStyle, bottom: '88px', background: '#25D366' }}
+        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
+        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
         onClick={() =>
           gtag('event', 'whatsapp_click', {
             event_category: 'engagement',
@@ -169,23 +57,10 @@ export default function FloatingContactWidget() {
           })
         }
       >
-        <MessageCircleMore className="h-5 w-5 shrink-0 text-white" />
-        <span className="hidden text-sm font-semibold text-white sm:inline">WhatsApp Sales</span>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12.001 2C6.478 2 2 6.478 2 12c0 1.85.504 3.58 1.383 5.065L2 22l5.085-1.363A9.94 9.94 0 0 0 12.001 22C17.523 22 22 17.522 22 12S17.523 2 12.001 2zm0 18.154a8.12 8.12 0 0 1-4.154-1.138l-.298-.177-3.018.809.816-2.944-.194-.308A8.107 8.107 0 0 1 3.846 12c0-4.494 3.66-8.154 8.155-8.154 4.494 0 8.154 3.66 8.154 8.154 0 4.495-3.66 8.154-8.154 8.154zm4.48-6.113c-.246-.123-1.452-.716-1.677-.798-.225-.082-.389-.123-.553.123-.163.246-.634.798-.777.961-.143.164-.287.184-.533.061-.246-.122-1.038-.382-1.977-1.22-.73-.651-1.223-1.455-1.367-1.7-.143-.246-.015-.38.108-.502.11-.11.245-.287.368-.43.123-.143.163-.246.245-.41.082-.163.041-.307-.02-.43-.062-.122-.554-1.335-.758-1.827-.2-.48-.403-.414-.554-.422l-.47-.008c-.164 0-.43.061-.655.307-.225.246-.86.84-.86 2.05 0 1.21.88 2.38 1.003 2.543.123.163 1.732 2.644 4.197 3.707.587.253 1.044.404 1.4.517.589.187 1.124.16 1.548.097.472-.071 1.452-.594 1.657-1.167.205-.573.205-1.065.143-1.167-.06-.1-.224-.163-.47-.286z"/>
+        </svg>
       </a>
-
-      <button
-        onClick={() => setShowForm(s => !s)}
-        aria-label="Get a sample or quote"
-        className="md:hidden flex h-11 w-11 items-center justify-center rounded-full text-white shadow-lg transition duration-200 hover:-translate-y-0.5"
-        style={{
-          background: showForm ? '#047857' : '#059669',
-          border: 'none',
-          cursor: 'pointer',
-        }}
-      >
-        <Leaf className="h-5 w-5" />
-      </button>
-
-    </div>
+    </>
   )
 }
