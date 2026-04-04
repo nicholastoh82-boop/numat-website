@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
         'x-api-key': apiKey,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 500,
         system: systemPrompt,
         messages: messages.map(m => ({ role: m.role, content: m.content })),
