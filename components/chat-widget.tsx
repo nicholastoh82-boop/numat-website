@@ -119,7 +119,7 @@ export default function ChatWidget() {
       {isOpen && (
         <div style={{
           position: "fixed", bottom: "88px", right: "24px",
-          width: "380px", height: "560px",
+          width: "380px", height: "560px", maxHeight: "calc(100vh - 160px)",
           background: "#fff", borderRadius: "16px",
           boxShadow: "0 20px 60px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08)",
           display: "flex", flexDirection: "column", overflow: "hidden",
@@ -134,7 +134,7 @@ export default function ChatWidget() {
             <img
               src="/numat-icon.jpeg"
               alt="NARA"
-              style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
+              style={{ width: "36px", height: "36px", borderRadius: "6px", objectFit: "contain", flexShrink: 0, background: "#fff" }}
             />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: "15px", letterSpacing: "0.01em" }}>NARA</div>
