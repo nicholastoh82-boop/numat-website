@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import Script from "next/script";
 
 interface Message {
   role: "assistant" | "user";
@@ -44,20 +43,6 @@ export default function ChatWidget() {
     }
   }, [isOpen]);
 
-  // Init Calendly inline widget — poll until script is ready and div is in DOM
-  useEffect(() => {
-    if (!submitted) return;
-    let attempts = 0;
-    const interval = setInterval(() => {
-      attempts++;
-      if (window.Calendly) {
-        window.Calendly.initInlineWidgets();
-        clearInterval(interval);
-      }
-      if (attempts > 20) clearInterval(interval); // give up after 10s
-    }, 500);
-    return () => clearInterval(interval);
-  }, [submitted]);
 
   // Listen for Calendly booking confirmation
   useEffect(() => {
@@ -165,15 +150,6 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Load Calendly script once */}
-      <Script
-        src="https://assets.calendly.com/assets/external/widget.js"
-        strategy="lazyOnload"
-        onLoad={() => {
-          if (submitted && window.Calendly) window.Calendly.initInlineWidgets();
-        }}
-      />
-
       {isOpen && (
         <div style={{
           position: "fixed", bottom: "88px", right: "24px",
@@ -267,13 +243,15 @@ export default function ChatWidget() {
               </div>
             )}
 
-            {/* Calendly inline widget */}
+            {/* Calendly inline widget — iframe is the most reliable embed method */}
             {submitted && !meetingBooked && (
               <div style={{ flexShrink: 0, borderRadius: "12px", overflow: "hidden", marginTop: "4px" }}>
-                <div
-                  className="calendly-inline-widget"
-                  data-url="https://calendly.com/numat/product-discovery-call?hide_gdpr_banner=1&primary_color=1D9E75"
-                  style={{ minWidth: "100%", height: "380px" }}
+                <iframe
+                  src="https://calendly.com/numat/product-discovery-call?hide_gdpr_banner=1&primary_color=1D9E75&embed_type=Inline"
+                  width="100%"
+                  height="380"
+                  style={{ border: "none" }}
+                  title="Book a discovery call"
                 />
               </div>
             )}
