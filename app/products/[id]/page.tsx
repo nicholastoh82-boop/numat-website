@@ -56,6 +56,7 @@ type Product = {
     size_label: string | null
     is_price_on_request: boolean
     price_notes: string | null
+    in_stock?: boolean
     images?: Array<{
       id: string
       image_url: string
@@ -93,6 +94,7 @@ type Category = {
 type SelectOption = {
   label: string
   value: string
+  disabled?: boolean
 }
 
 type ResolvedQuoteState = {
@@ -400,14 +402,19 @@ function OptionPills({
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
           const isActive = value === opt.value
+          const isDisabled = opt.disabled === true
 
           return (
             <button
               key={opt.value}
               type="button"
-              onClick={() => onChange(opt.value)}
+              onClick={() => !isDisabled && onChange(opt.value)}
+              disabled={isDisabled}
+              title={isDisabled ? 'Out of stock' : undefined}
               className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
-                isActive
+                isDisabled
+                  ? 'cursor-not-allowed border-black/10 bg-white text-foreground/40 opacity-40 line-through'
+                  : isActive
                   ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
                   : 'border-black/10 bg-white text-foreground hover:border-black/20 hover:bg-stone-50'
               }`}
@@ -551,7 +558,18 @@ export default function ProductDetailPage() {
     if (!useVariantDrivenConfig) return []
 
     if (family === 'nuslat') {
-      return getUniqueOptions(pricedVariants.map((v) => formatThicknessLabel(v.thickness_mm)))
+      const uniqueThicknesses = Array.from(
+        new Set(pricedVariants.map((v) => formatThicknessLabel(v.thickness_mm)).filter(Boolean))
+      )
+      return uniqueThicknesses
+        .map((thickness) => ({
+          label: thickness,
+          value: thickness,
+          disabled: pricedVariants
+            .filter((v) => formatThicknessLabel(v.thickness_mm) === thickness)
+            .every((v) => v.in_stock === false),
+        }))
+        .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
     }
 
     const scoped =
@@ -598,8 +616,27 @@ export default function ProductDetailPage() {
 
   const variantLengthOptions = useMemo(() => {
     if (!useVariantDrivenConfig || family !== 'nuslat') return []
-    return getUniqueOptions(pricedVariants.map((v) => v.size_label))
-  }, [useVariantDrivenConfig, pricedVariants, family])
+
+    const uniqueLabels = Array.from(
+      new Set(pricedVariants.map((v) => (v.size_label || '').trim()).filter(Boolean))
+    )
+
+    return uniqueLabels.map((label) => {
+      const matchingVariants = pricedVariants.filter((v) => {
+        const labelMatch = (v.size_label || '').trim() === label
+        const thicknessMatch = selectedThickness
+          ? formatThicknessLabel(v.thickness_mm) === selectedThickness
+          : true
+        return labelMatch && thicknessMatch
+      })
+
+      const disabled =
+        matchingVariants.length === 0 ||
+        matchingVariants.every((v) => v.in_stock === false)
+
+      return { label, value: label, disabled }
+    })
+  }, [useVariantDrivenConfig, pricedVariants, family, selectedThickness])
 
   const coreTypeOptions: SelectOption[] =
     useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')
@@ -664,8 +701,10 @@ export default function ProductDetailPage() {
     }
 
     if (useVariantDrivenConfig && family === 'nuslat') {
-      const firstThickness = slatThicknessOptions[0]?.value ?? ''
-      const firstLength = slatLengthOptions[0]?.value ?? ''
+      const firstThickness =
+        slatThicknessOptions.find((o) => !o.disabled)?.value ?? slatThicknessOptions[0]?.value ?? ''
+      const firstLength =
+        slatLengthOptions.find((o) => !o.disabled)?.value ?? slatLengthOptions[0]?.value ?? ''
 
       if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
       if (!selectedLength && firstLength) setSelectedLength(firstLength)
@@ -723,6 +762,8 @@ export default function ProductDetailPage() {
 
     return (
       pricedVariants.find((variant) => {
+        if (variant.in_stock === false) return false
+
         if (family === 'nuslat') {
           const thicknessMatch = selectedThickness
             ? formatThicknessLabel(variant.thickness_mm) === selectedThickness

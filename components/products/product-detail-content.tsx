@@ -25,6 +25,7 @@ type ProductVariant = {
   is_price_on_request?: boolean
   price_notes?: string | null
   is_active?: boolean
+  in_stock?: boolean
   sort_order?: number | null
 }
 

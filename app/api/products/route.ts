@@ -111,6 +111,7 @@ export async function GET() {
       const productVariants = variantsMap.get(product.id) ?? []
 
       const variantUsdPrices = productVariants
+        .filter((variant) => variant.in_stock !== false)
         .map((variant) => parsePrice(variant.base_price_usd))
         .filter((price): price is number => price !== null)
 
@@ -153,6 +154,7 @@ export async function GET() {
           is_price_on_request: variant.is_price_on_request ?? false,
           price_notes: variant.price_notes ?? null,
           is_active: variant.is_active ?? true,
+          in_stock: variant.in_stock ?? true,
           sort_order: variant.sort_order ?? null,
         })),
         created_at: product.created_at ?? null,

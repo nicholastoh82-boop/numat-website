@@ -83,6 +83,7 @@ export async function GET(
       is_price_on_request,
       price_notes,
       is_active,
+      in_stock,
       sort_order
     `)
     .eq('product_id', id)
@@ -125,6 +126,7 @@ export async function GET(
     size_label: variant.size_label ?? null,
     is_price_on_request: variant.is_price_on_request ?? false,
     price_notes: variant.price_notes ?? null,
+    in_stock: variant.in_stock ?? true,
     images: (variantImagesMap[variant.id] ?? []).map((img: any) => ({
       id: img.id,
       image_url: img.image_url,
