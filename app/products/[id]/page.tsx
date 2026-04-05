@@ -303,6 +303,7 @@ function splitDescriptionContent(
       highlights.filter(
         (item) =>
           item &&
+          /[a-z]/i.test(item) &&
           item.toLowerCase() !== intro.toLowerCase() &&
           !specLike.some((spec) => spec.toLowerCase() === item.toLowerCase())
       )
