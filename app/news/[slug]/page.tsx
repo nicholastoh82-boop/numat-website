@@ -17,6 +17,7 @@ type NewsItem = {
   excerpt: string | null
   content: any
   cover_image_url: string | null
+  gallery_images: string[] | null
   published_at: string | null
   seo_title: string | null
   seo_description: string | null
@@ -77,10 +78,6 @@ function estimateReadingTime(content: any): number {
 }
 
 // ─── Universal content renderer ──────────────────────────────────────────────
-// Handles 3 formats that exist in the database:
-//   Format 1 – old custom: [{ type, value: "plain text" }]
-//   Format 2 – old Quill:  [{ type, value: "<p>html</p>" }]
-//   Format 3 – Tiptap JSON: [{ type, content: [...] }]
 
 function isHtmlString(str: string): boolean {
   return str.trimStart().startsWith('<')
@@ -189,7 +186,6 @@ function renderTiptapBlock(block: any, i: number): React.ReactNode {
 function renderLegacyBlock(block: any, i: number): React.ReactNode {
   const value: string = String(block.value ?? '')
 
-  // Format 2: HTML string
   if (isHtmlString(value)) {
     const cleaned = value
       .replace(/<p><br\s*\/?><\/p>/gi, '')
@@ -203,7 +199,6 @@ function renderLegacyBlock(block: any, i: number): React.ReactNode {
     )
   }
 
-  // Format 1: plain text
   if (block.type === 'heading') {
     return (
       <h2 key={i} className="mb-3 mt-10 text-2xl font-semibold text-stone-900">
@@ -252,7 +247,38 @@ function renderLegacyBlock(block: any, i: number): React.ReactNode {
   return null
 }
 
-function renderContent(content: any): React.ReactNode {
+// ─── Gallery image block renderer ────────────────────────────────────────────
+// Renders a single gallery image with SEO-friendly alt text derived from the
+// article title. Each image is full-width with rounded corners, matching the
+// article body width.
+
+function GalleryImage({ src, title, index }: { src: string; title: string; index: number }) {
+  // Build a descriptive alt string: "Engineered bamboo application — NUMAT (image 2)"
+  const altText = `${title} — engineered bamboo by NUMAT (image ${index + 2})`
+  return (
+    <figure className="my-10">
+      <div className="overflow-hidden rounded-2xl shadow-sm">
+        <img
+          src={src}
+          alt={altText}
+          className="w-full object-cover"
+          style={{ maxHeight: '500px' }}
+          loading="lazy"
+        />
+      </div>
+    </figure>
+  )
+}
+
+// ─── Content renderer with interspersed gallery images ───────────────────────
+// Injects gallery images at ~40% and ~75% through the content blocks so the
+// article reads like a magazine piece rather than a wall of text.
+
+function renderContentWithGallery(
+  content: any,
+  galleryImages: string[] | null,
+  title: string
+): React.ReactNode {
   if (!content) return null
 
   let blocks: any[] = []
@@ -264,13 +290,32 @@ function renderContent(content: any): React.ReactNode {
 
   if (!blocks.length) return null
 
-  // Detect format by checking the first block
   const firstBlock = blocks[0]
   const usesLegacyFormat = firstBlock?.value !== undefined
+  const renderFn = usesLegacyFormat ? renderLegacyBlock : renderTiptapBlock
 
-  return blocks.map((block, i) =>
-    usesLegacyFormat ? renderLegacyBlock(block, i) : renderTiptapBlock(block, i)
-  )
+  const total = blocks.length
+  // Insert image 2 after ~40% of blocks, image 3 after ~72%
+  const img2At = Math.max(2, Math.floor(total * 0.40))
+  const img3At = Math.max(img2At + 2, Math.floor(total * 0.72))
+
+  const nodes: React.ReactNode[] = []
+
+  blocks.forEach((block, i) => {
+    // Inject gallery image 2 between blocks
+    if (galleryImages?.[0] && i === img2At) {
+      nodes.push(<GalleryImage key="gallery-0" src={galleryImages[0]} title={title} index={0} />)
+    }
+    // Inject gallery image 3 between blocks
+    if (galleryImages?.[1] && i === img3At) {
+      nodes.push(<GalleryImage key="gallery-1" src={galleryImages[1]} title={title} index={1} />)
+    }
+
+    const rendered = renderFn(block, i)
+    if (rendered) nodes.push(rendered)
+  })
+
+  return nodes
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -290,7 +335,7 @@ export default async function NewsDetailPage({
   const { data: item, error } = await supabase
     .from('news')
     .select(
-      'id, title, slug, excerpt, content, cover_image_url, published_at, seo_title, seo_description, status'
+      'id, title, slug, excerpt, content, cover_image_url, gallery_images, published_at, seo_title, seo_description, status'
     )
     .eq('slug', slug)
     .eq('status', 'published')
@@ -318,7 +363,6 @@ export default async function NewsDetailPage({
     .order('published_at', { ascending: false, nullsFirst: false })
     .limit(3)
 
-  // JSON-LD structured data for SEO
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -388,7 +432,7 @@ export default async function NewsDetailPage({
             <div className="overflow-hidden rounded-3xl bg-stone-100 shadow-sm">
               <img
                 src={newsItem.cover_image_url}
-                alt={newsItem.title}
+                alt={`${newsItem.title} — engineered bamboo by NUMAT`}
                 className="w-full object-cover"
                 style={{ maxHeight: '520px' }}
               />
@@ -396,11 +440,15 @@ export default async function NewsDetailPage({
           </div>
         )}
 
-        {/* ── Article body ── */}
+        {/* ── Article body with interspersed gallery images ── */}
         <div className="mx-auto max-w-3xl px-5 py-12 md:px-8">
           <article>
             {newsItem.content ? (
-              renderContent(newsItem.content)
+              renderContentWithGallery(
+                newsItem.content,
+                newsItem.gallery_images,
+                newsItem.title
+              )
             ) : (
               <p className="text-base leading-8 text-stone-600">
                 No article content has been added yet.
@@ -458,7 +506,7 @@ export default async function NewsDetailPage({
                       <div className="aspect-[16/9] overflow-hidden bg-stone-100">
                         <img
                           src={recent.cover_image_url}
-                          alt={recent.title}
+                          alt={`${recent.title} — NUMAT Bamboo`}
                           className="h-full w-full object-cover transition group-hover:scale-[1.02]"
                         />
                       </div>
