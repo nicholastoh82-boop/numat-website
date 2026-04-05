@@ -132,13 +132,21 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
 
     if (converted == null) return 'Request Quote'
 
+    const isSubUnit = converted < 1
+    const minFraction = isSubUnit ? 2 : 0
+    const maxFraction = isSubUnit ? 4 : 0
+
     try {
       return new Intl.NumberFormat(selectedCountry.locale, {
         style: 'currency',
         currency: selectedCountry.currency,
-        maximumFractionDigits: 0,
+        minimumFractionDigits: minFraction,
+        maximumFractionDigits: maxFraction,
       }).format(converted)
     } catch {
+      if (isSubUnit) {
+        return `${selectedCountry.currency} ${converted.toFixed(4)}`
+      }
       return `${selectedCountry.currency} ${Math.round(converted).toLocaleString()}`
     }
   }
