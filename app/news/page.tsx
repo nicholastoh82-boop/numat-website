@@ -20,6 +20,27 @@ type NewsItem = {
   published_at: string | null
 }
 
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+export const metadata = {
+  title: 'News & Updates | NUMAT Bamboo',
+  description:
+    'The latest news, project updates, product announcements, and industry insights from NUMAT Bamboo — engineered bamboo manufacturer in the Philippines.',
+  openGraph: {
+    title: 'News & Updates | NUMAT Bamboo',
+    description:
+      'The latest news and updates from NUMAT Bamboo, a leading engineered bamboo manufacturer in the Philippines.',
+    type: 'website',
+  },
+}
+
 export default async function NewsPage() {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     throw new Error('Missing Supabase environment variables.')
@@ -31,7 +52,6 @@ export default async function NewsPage() {
     .from('news')
     .select('id, title, slug, excerpt, status, featured, cover_image_url, published_at')
     .eq('status', 'published')
-    .order('featured', { ascending: false })
     .order('published_at', { ascending: false, nullsFirst: false })
 
   if (error) {
@@ -39,159 +59,139 @@ export default async function NewsPage() {
   }
 
   const newsItems: NewsItem[] = items ?? []
-  const featuredItem = newsItems.find((item) => item.featured) || null
+
+  // Use explicitly featured article, or fall back to the most recent one as the hero
+  const heroItem = newsItems.find((item) => item.featured) ?? newsItems[0] ?? null
+  const gridItems = newsItems.filter((item) => item.id !== heroItem?.id)
 
   return (
     <>
       <Header />
 
-      <main className="min-h-screen bg-background">
-        <section className="border-b bg-muted/30">
-          <div className="container mx-auto px-4 py-16 md:px-6 lg:px-8">
-            <div className="max-w-3xl space-y-4">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">
-                News
-              </p>
-              <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
-                NUMAT News & Activities
-              </h1>
-              <p className="text-base text-muted-foreground md:text-lg">
-                Updates on projects, product developments, events, partnerships, and company
-                activities across NUMAT Bamboo.
-              </p>
+      <main className="min-h-screen bg-[#f9f6f0]">
 
-              <div className="pt-2">
-                <Link
-                  href="/news/archive"
-                  className="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
-                >
-                  Browse News Archive
-                </Link>
-              </div>
-            </div>
+        {/* ── Page header ── */}
+        <section className="bg-white border-b">
+          <div className="mx-auto max-w-5xl px-5 py-14 md:px-8 md:py-20">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              NUMAT News
+            </p>
+            <h1 className="font-serif text-4xl font-semibold tracking-tight text-stone-900 md:text-5xl">
+              News &amp; Updates
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-stone-600 md:text-lg">
+              Industry insights, product launches, project updates and company announcements from
+              NUMAT Bamboo — the Philippines&apos; engineered bamboo manufacturer.
+            </p>
           </div>
         </section>
 
-        <section className="container mx-auto px-4 py-12 md:px-6 lg:px-8">
-          {featuredItem && (
-            <article className="mb-10 overflow-hidden rounded-2xl border bg-card">
-              {featuredItem.cover_image_url && (
-                <div className="aspect-[16/7] w-full overflow-hidden bg-muted">
-                  <img
-                    src={featuredItem.cover_image_url}
-                    alt={featuredItem.title}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              )}
-
-              <div className="p-6 md:p-8">
-                <div className="mb-3 flex flex-wrap items-center gap-3">
-                  <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    Featured
-                  </span>
-                  {featuredItem.published_at && (
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(featuredItem.published_at).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-
-                <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-                  {featuredItem.title}
-                </h2>
-
-                {featuredItem.excerpt && (
-                  <p className="mt-4 max-w-3xl text-muted-foreground">
-                    {featuredItem.excerpt}
-                  </p>
-                )}
-
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Link
-                    href={`/news/${featuredItem.slug}`}
-                    className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-                  >
-                    Read Update
-                  </Link>
-
-                  <Link
-                    href="/news/archive"
-                    className="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
-                  >
-                    View Archive
-                  </Link>
-                </div>
-              </div>
-            </article>
-          )}
-
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight">Latest Updates</h2>
-              <p className="text-sm text-muted-foreground">
-                Recent NUMAT announcements and activity highlights.
-              </p>
-            </div>
-
-            <Link
-              href="/news/archive"
-              className="hidden rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted md:inline-flex"
-            >
-              View Archive
-            </Link>
-          </div>
+        <div className="mx-auto max-w-5xl px-5 py-12 md:px-8">
 
           {newsItems.length === 0 ? (
-            <div className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground">
+            <div className="rounded-2xl border bg-white p-10 text-center text-muted-foreground">
               No news updates have been published yet.
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {newsItems.map((item) => (
+            <>
+              {/* ── Featured / hero article ── */}
+              {heroItem && (
                 <Link
-                  key={item.id}
-                  href={`/news/${item.slug}`}
-                  className="overflow-hidden rounded-2xl border bg-card transition hover:-translate-y-0.5 hover:shadow-md"
+                  href={`/news/${heroItem.slug}`}
+                  className="group mb-12 block overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md"
                 >
-                  {item.cover_image_url && (
-                    <div className="aspect-[16/10] w-full overflow-hidden bg-muted">
+                  {heroItem.cover_image_url && (
+                    <div className="aspect-[16/7] w-full overflow-hidden bg-stone-100">
                       <img
-                        src={item.cover_image_url}
-                        alt={item.title}
-                        className="h-full w-full object-cover"
+                        src={heroItem.cover_image_url}
+                        alt={heroItem.title}
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
                       />
                     </div>
                   )}
 
-                  <div className="p-6">
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                      {item.published_at && (
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(item.published_at).toLocaleDateString()}
-                        </p>
-                      )}
-
-                      {item.featured && (
-                        <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                          Featured
+                  <div className="p-7 md:p-10">
+                    <div className="mb-4 flex flex-wrap items-center gap-3">
+                      <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
+                        Latest
+                      </span>
+                      {heroItem.published_at && (
+                        <span className="text-sm text-muted-foreground">
+                          {formatDate(heroItem.published_at)}
                         </span>
                       )}
                     </div>
 
-                    <h3 className="text-xl font-semibold tracking-tight">{item.title}</h3>
+                    <h2 className="font-serif text-2xl font-semibold leading-snug text-stone-900 group-hover:text-primary sm:text-3xl md:text-4xl">
+                      {heroItem.title}
+                    </h2>
 
-                    {item.excerpt && (
-                      <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                        {item.excerpt}
+                    {heroItem.excerpt && (
+                      <p className="mt-4 max-w-3xl text-base leading-relaxed text-stone-600">
+                        {heroItem.excerpt}
                       </p>
                     )}
+
+                    <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-primary group-hover:gap-3 transition-all">
+                      Read article <span aria-hidden>→</span>
+                    </span>
                   </div>
                 </Link>
-              ))}
-            </div>
+              )}
+
+              {/* ── Grid of remaining articles ── */}
+              {gridItems.length > 0 && (
+                <>
+                  <div className="mb-6">
+                    <h2 className="text-xl font-semibold text-stone-900">More Updates</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Recent announcements and industry perspectives from NUMAT.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {gridItems.map((item) => (
+                      <Link
+                        key={item.id}
+                        href={`/news/${item.slug}`}
+                        className="group overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                      >
+                        {item.cover_image_url && (
+                          <div className="aspect-[16/10] w-full overflow-hidden bg-stone-100">
+                            <img
+                              src={item.cover_image_url}
+                              alt={item.title}
+                              className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+                            />
+                          </div>
+                        )}
+
+                        <div className="p-6">
+                          {item.published_at && (
+                            <p className="mb-2 text-xs text-muted-foreground">
+                              {formatDate(item.published_at)}
+                            </p>
+                          )}
+                          <h3 className="text-lg font-semibold leading-snug text-stone-900 group-hover:text-primary">
+                            {item.title}
+                          </h3>
+                          {item.excerpt && (
+                            <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-stone-600">
+                              {item.excerpt}
+                            </p>
+                          )}
+                          <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                            Read more →
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
           )}
-        </section>
+        </div>
       </main>
 
       <Footer />
