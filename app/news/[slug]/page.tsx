@@ -10,18 +10,12 @@ export const revalidate = 0
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-type NewsContentBlock = {
-  type: 'heading' | 'paragraph' | 'image' | 'quote'
-  value: string
-  caption?: string
-}
-
 type NewsItem = {
   id: string
   title: string
   slug: string
   excerpt: string | null
-  content: NewsContentBlock[] | null
+  content: any
   cover_image_url: string | null
   published_at: string | null
   seo_title: string | null
@@ -58,54 +52,86 @@ export async function generateMetadata({
   }
 }
 
-function renderBlock(block: NewsContentBlock, index: number) {
-  if (block.type === 'heading') {
-    return (
-      <h2 key={index} className="text-2xl font-semibold tracking-tight text-stone-900">
-        {block.value}
-      </h2>
-    )
+function renderContent(content: any): React.ReactNode {
+  let blocks: any[] = []
+
+  if (Array.isArray(content)) {
+    blocks = content
+  } else if (content && typeof content === 'object' && Array.isArray(content.content)) {
+    blocks = content.content
+  } else {
+    return null
   }
 
-  if (block.type === 'paragraph') {
-    return (
-      <p key={index} className="text-base leading-8 text-stone-700">
-        {block.value}
-      </p>
-    )
-  }
+  return blocks.map((block, i) => {
+    if (block.type === 'paragraph') {
+      return (
+        <p key={i} className="mb-4 text-base leading-relaxed text-foreground">
+          {block.content?.map((inline: any, j: number) => {
+            const isBold = inline.marks?.some((m: any) => m.type === 'bold')
+            return isBold
+              ? <strong key={j}>{inline.text}</strong>
+              : <span key={j}>{inline.text}</span>
+          })}
+        </p>
+      )
+    }
 
-  if (block.type === 'quote') {
-    return (
-      <blockquote
-        key={index}
-        className="border-l-4 border-primary/50 pl-6 text-lg italic leading-8 text-stone-700"
-      >
-        {block.value}
-      </blockquote>
-    )
-  }
+    if (block.type === 'heading') {
+      const level = block.attrs?.level ?? 2
+      const text = block.content?.map((c: any) => c.text).join('') ?? ''
+      if (level === 2) return <h2 key={i} className="mt-8 mb-3 text-2xl font-semibold text-foreground">{text}</h2>
+      if (level === 3) return <h3 key={i} className="mt-6 mb-2 text-xl font-semibold text-foreground">{text}</h3>
+      return <h4 key={i} className="mt-4 mb-2 text-lg font-semibold text-foreground">{text}</h4>
+    }
 
-  if (block.type === 'image') {
-    return (
-      <figure key={index} className="space-y-3">
-        <div className="overflow-hidden rounded-2xl border bg-muted">
-          <img
-            src={block.value}
-            alt={block.caption || 'News image'}
-            className="h-full w-full object-cover"
-          />
-        </div>
-        {block.caption && (
-          <figcaption className="text-sm text-muted-foreground">
-            {block.caption}
-          </figcaption>
-        )}
-      </figure>
-    )
-  }
+    if (block.type === 'bulletList') {
+      return (
+        <ul key={i} className="mb-4 list-disc pl-6 space-y-1">
+          {block.content?.map((item: any, j: number) => (
+            <li key={j} className="text-base text-foreground">
+              {item.content?.[0]?.content?.map((inline: any) => inline.text).join('') ?? ''}
+            </li>
+          ))}
+        </ul>
+      )
+    }
 
-  return null
+    if (block.type === 'blockquote') {
+      const text = block.content
+        ?.flatMap((p: any) => p.content?.map((c: any) => c.text) ?? [])
+        .join('') ?? ''
+      return (
+        <blockquote
+          key={i}
+          className="border-l-4 border-primary/50 pl-6 text-lg italic leading-8 text-stone-700"
+        >
+          {text}
+        </blockquote>
+      )
+    }
+
+    if (block.type === 'image') {
+      return (
+        <figure key={i} className="space-y-3">
+          <div className="overflow-hidden rounded-2xl border bg-muted">
+            <img
+              src={block.attrs?.src}
+              alt={block.attrs?.alt || 'News image'}
+              className="w-full object-cover"
+            />
+          </div>
+          {block.attrs?.title && (
+            <figcaption className="text-sm text-muted-foreground">
+              {block.attrs.title}
+            </figcaption>
+          )}
+        </figure>
+      )
+    }
+
+    return null
+  })
 }
 
 export default async function NewsDetailPage({
@@ -184,7 +210,7 @@ export default async function NewsDetailPage({
         <section className="container mx-auto px-4 py-12 md:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl space-y-10">
             {newsItem.cover_image_url && (
-              <div className="overflow-hidden rounded-3xl border bg-muted">
+              <div className="aspect-video overflow-hidden rounded-3xl border bg-muted">
                 <img
                   src={newsItem.cover_image_url}
                   alt={newsItem.title}
@@ -194,8 +220,8 @@ export default async function NewsDetailPage({
             )}
 
             <article className="space-y-8">
-              {Array.isArray(newsItem.content) && newsItem.content.length > 0 ? (
-                newsItem.content.map((block, index) => renderBlock(block, index))
+              {newsItem.content ? (
+                renderContent(newsItem.content)
               ) : (
                 <p className="text-base leading-8 text-stone-700">
                   No article content has been added yet.
