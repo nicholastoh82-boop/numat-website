@@ -551,10 +551,10 @@ export default function ChatWidget() {
           position: "fixed",
           bottom: "24px",
           right: "24px",
-          width: "52px",
-          height: "52px",
-          borderRadius: "10px",
-          background: "#0D2137",
+          width: "56px",
+          height: "56px",
+          borderRadius: "50%",
+          background: "#fff",
           border: "none",
           cursor: "pointer",
           display: "flex",
@@ -582,7 +582,7 @@ export default function ChatWidget() {
           <img
             src="/nara_icon_1.jpeg"
             alt="NARA"
-            style={{ width: "52px", height: "52px", objectFit: "cover", borderRadius: "50%" }}
+            style={{ width: "56px", height: "56px", objectFit: "contain" }}
           />
         )}
         {isMinimized && (
