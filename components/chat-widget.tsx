@@ -224,7 +224,7 @@ export default function ChatWidget() {
             }}
           >
             <img
-              src="/nara_icon_1.jpeg"
+              src="/nara-icon.png"
               alt="NARA"
               style={{
                 width: "36px",
@@ -580,7 +580,7 @@ export default function ChatWidget() {
           </svg>
         ) : (
           <img
-            src="/nara_icon_1.jpeg"
+            src="/nara-icon.png"
             alt="NARA"
             style={{ width: "56px", height: "56px", objectFit: "cover" }}
           />
