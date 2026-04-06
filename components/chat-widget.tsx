@@ -224,15 +224,14 @@ export default function ChatWidget() {
             }}
           >
             <img
-              src="/numat-icon.jpeg"
+              src="/nara_icon_1.jpeg"
               alt="NARA"
               style={{
                 width: "36px",
                 height: "36px",
-                borderRadius: "6px",
-                objectFit: "contain",
+                borderRadius: "50%",
+                objectFit: "cover",
                 flexShrink: 0,
-                background: "#fff",
               }}
             />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -581,9 +580,9 @@ export default function ChatWidget() {
           </svg>
         ) : (
           <img
-            src="/numat-icon.jpeg"
+            src="/nara_icon_1.jpeg"
             alt="NARA"
-            style={{ width: "52px", height: "52px", objectFit: "cover" }}
+            style={{ width: "52px", height: "52px", objectFit: "cover", borderRadius: "50%" }}
           />
         )}
         {isMinimized && (
