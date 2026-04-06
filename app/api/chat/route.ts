@@ -74,10 +74,36 @@ interface KnowledgeEntry {
   keywords: string[]
 }
 
+async function fetchInternalKnowledge(
+  supabase: ReturnType<typeof getSupabaseAdmin>
+): Promise<KnowledgeEntry[]> {
+  const { data } = await supabase
+    .from('nara_knowledge')
+    .select('id, category, question, answer, keywords')
+    .eq('is_active', true)
+    .eq('category', 'internal')
+  return data || []
+}
+
+async function markRelatedUnansweredResolved(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  keywords: string[]
+): Promise<void> {
+  if (keywords.length === 0) return
+  const filters = keywords.slice(0, 5).map(k => `question.ilike.%${k}%`).join(',')
+  if (!filters) return
+  supabase
+    .from('nara_unanswered')
+    .update({ resolved: true })
+    .eq('resolved', false)
+    .or(filters)
+    .then(() => {})
+}
+
 async function searchKnowledge(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   userMessage: string
-): Promise<{ entries: KnowledgeEntry[]; hasResults: boolean }> {
+): Promise<{ entries: KnowledgeEntry[]; hasResults: boolean; keywords: string[] }> {
   const keywords = extractKeywords(userMessage)
 
   if (keywords.length === 0) {
@@ -85,14 +111,16 @@ async function searchKnowledge(
       .from('nara_knowledge')
       .select('id, category, question, answer, keywords')
       .eq('is_active', true)
+      .neq('category', 'internal')
       .limit(3)
-    return { entries: data || [], hasResults: (data?.length ?? 0) > 0 }
+    return { entries: data || [], hasResults: (data?.length ?? 0) > 0, keywords }
   }
 
   const { data: byKeywords } = await supabase
     .from('nara_knowledge')
     .select('id, category, question, answer, keywords')
     .eq('is_active', true)
+    .neq('category', 'internal')
     .overlaps('keywords', keywords)
     .limit(5)
 
@@ -102,6 +130,7 @@ async function searchKnowledge(
     .from('nara_knowledge')
     .select('id, category, question, answer, keywords')
     .eq('is_active', true)
+    .neq('category', 'internal')
     .limit(5)
   const { data: byQuestion } = questionFilters
     ? await byQuestionQuery.or(questionFilters)
@@ -130,14 +159,19 @@ async function searchKnowledge(
 
   merged.sort((a, b) => b.score - a.score)
   const top5 = merged.slice(0, 5)
-  return { entries: top5, hasResults: top5.length > 0 }
+  return { entries: top5, hasResults: top5.length > 0, keywords }
 }
 
-function buildSystemPrompt(knowledgeEntries: KnowledgeEntry[]): string {
-  const knowledgeBlock =
-    knowledgeEntries.length > 0
-      ? knowledgeEntries.map(e => `Q: ${e.question}\nA: ${e.answer}`).join('\n\n')
-      : 'No specific knowledge entries matched this query.'
+function buildSystemPrompt(internalEntries: KnowledgeEntry[], knowledgeEntries: KnowledgeEntry[]): string {
+  const internalBlock = internalEntries.length > 0
+    ? internalEntries.map(e => `[${e.category.toUpperCase()}: ${e.question}]\n${e.answer}`).join('\n\n')
+    : ''
+
+  const knowledgeBlock = knowledgeEntries.length > 0
+    ? knowledgeEntries.map(e =>
+        `---\n[Category: ${e.category}]\nQ: ${e.question}\nA: ${e.answer}`
+      ).join('\n')
+    : '---\nNo specific knowledge entries matched this query.'
 
   return `You are NARA — NUMAT Autonomous Response Assistant. You help visitors understand NUMAT's bamboo products and qualify their project needs.
 
@@ -153,14 +187,9 @@ PRODUCTS:
 PRIMARY MARKETS: Philippines, Malaysia, Singapore
 SECONDARY MARKETS: Indonesia, Thailand, Vietnam, Australia, Middle East
 WEBSITE: numatbamboo.com | CONTACT: sales@numat.ph
-
-RELEVANT KNOWLEDGE FOR THIS CONVERSATION:
+${internalBlock ? `\nBEHAVIORAL GUIDELINES (always follow):\n${internalBlock}\n` : ''}
+RELEVANT KNOWLEDGE BASE ENTRIES:
 ${knowledgeBlock}
-
-LEAD SCORING (use to determine tier for LEAD_DATA):
-- HOT (score 7-10): Hotel/Resort/Interior Design firm OR large commercial project + decision maker + specific area in sqm + Philippines/Malaysia/Singapore
-- WARM (score 4-6.9): Mid-size company, designer/PM, general project interest, SEA region
-- COLD (score 0-3.9): Residential only with no commercial angle, unknown company, no clear project, outside SEA
 
 RULES:
 - Answer questions using the knowledge provided above only
@@ -217,15 +246,22 @@ export async function POST(request: NextRequest) {
       }).then(() => {})
     }
 
-    // Search knowledge base
-    const { entries: knowledgeEntries, hasResults } = await searchKnowledge(supabase, userQuestion)
+    // Fetch internal guidelines (always) + search contextual knowledge (by message) in parallel
+    const [internalEntries, { entries: knowledgeEntries, hasResults, keywords }] = await Promise.all([
+      fetchInternalKnowledge(supabase),
+      searchKnowledge(supabase, userQuestion),
+    ])
 
-    // Log unanswered questions
-    if (!hasResults && userQuestion.length > 15 && lastMsg?.role === 'user') {
-      supabase.from('nara_unanswered').insert({ session_id, question: userQuestion }).then(() => {})
+    // Log unanswered questions; mark related unanswered resolved when knowledge now covers them
+    if (lastMsg?.role === 'user') {
+      if (!hasResults && userQuestion.length > 15) {
+        supabase.from('nara_unanswered').insert({ session_id, question: userQuestion }).then(() => {})
+      } else if (hasResults) {
+        markRelatedUnansweredResolved(supabase, keywords)
+      }
     }
 
-    const systemPrompt = buildSystemPrompt(knowledgeEntries)
+    const systemPrompt = buildSystemPrompt(internalEntries, knowledgeEntries)
     const knowledgeIds = knowledgeEntries.map(e => e.id)
 
     // Call Claude with correct model name
