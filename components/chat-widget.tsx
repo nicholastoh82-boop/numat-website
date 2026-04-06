@@ -582,7 +582,7 @@ export default function ChatWidget() {
           <img
             src="/nara_icon_1.jpeg"
             alt="NARA"
-            style={{ width: "56px", height: "56px", objectFit: "contain" }}
+            style={{ width: "56px", height: "56px", objectFit: "cover" }}
           />
         )}
         {isMinimized && (
