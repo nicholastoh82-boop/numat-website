@@ -580,9 +580,18 @@ export default function ProductDetailPage() {
           )
         : pricedVariants
 
-    return getUniqueOptions(scoped.map((v) => formatThicknessLabel(v.thickness_mm))).sort(
-      (a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', ''))
+    const uniqueThicknesses = Array.from(
+      new Set(scoped.map((v) => formatThicknessLabel(v.thickness_mm)).filter(Boolean))
     )
+    return uniqueThicknesses
+      .map((thickness) => ({
+        label: thickness,
+        value: thickness,
+        disabled: scoped
+          .filter((v) => formatThicknessLabel(v.thickness_mm) === thickness)
+          .every((v) => v.in_stock === false),
+      }))
+      .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
   }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType])
 
   const variantPlyOptions = useMemo(() => {

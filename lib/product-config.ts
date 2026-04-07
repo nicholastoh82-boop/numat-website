@@ -77,7 +77,7 @@ const DOOR_MODELS = {
   },
 } as const
 
-const FLOOR_DIMENSIONS = '1220mm x 153mm'
+const FLOOR_DIMENSIONS = '1220mm x 305mm'
 
 function slugify(input: string) {
   return input
@@ -169,7 +169,6 @@ export function getConfiguratorOptions(family: ProductFamily) {
   if (family === 'nufloor') {
     return {
       thicknesses: [
-        { label: '12mm', value: '12mm' },
         { label: '20mm', value: '20mm' },
       ] satisfies ConfigOption[],
     }
