@@ -527,7 +527,7 @@ export default function ProductDetailPage() {
 
   const useVariantDrivenConfig =
     pricedVariants.length > 0 &&
-    (family === 'nubam-boards' || family === 'nuwall' || family === 'nuslat')
+    (family === 'nubam-boards' || family === 'nuwall' || family === 'nuslat' || family === 'nufloor')
 
   const nudoorModelProducts = useMemo(() => {
     if (family !== 'nudoor') return []
@@ -683,7 +683,18 @@ export default function ProductDetailPage() {
       : []
 
   const floorThicknessOptions: SelectOption[] =
-    'thicknesses' in options && Array.isArray(options.thicknesses)
+    useVariantDrivenConfig && family === 'nufloor'
+      ? Array.from(
+          new Set(
+            pricedVariants
+              .filter((v) => v.in_stock !== false)
+              .map((v) => formatThicknessLabel(v.thickness_mm))
+              .filter(Boolean)
+          )
+        )
+          .map((t) => ({ label: t, value: t }))
+          .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
+      : 'thicknesses' in options && Array.isArray(options.thicknesses)
       ? [...options.thicknesses].sort(
           (a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', ''))
         )
@@ -795,6 +806,12 @@ export default function ProductDetailPage() {
           return thicknessMatch && lengthMatch
         }
 
+        if (family === 'nufloor') {
+          return (
+            selectedThickness ? formatThicknessLabel(variant.thickness_mm) === selectedThickness : true
+          )
+        }
+
         if (
           (family === 'nubam-boards' || family === 'nuwall') &&
           selectedCoreType &&
@@ -856,7 +873,10 @@ export default function ProductDetailPage() {
         thickness: formatThicknessLabel(selectedVariant.thickness_mm) || '—',
         ply: formatPlyLabel(selectedVariant.ply_count) || '—',
         length: family === 'nuslat' ? selectedVariant.size_label || selectedLength || '' : '',
-        dimensions: selectedVariant.dimensions || product?.dimensions || '—',
+        dimensions:
+          family === 'nufloor' && selectedVariant.length_mm && selectedVariant.width_mm
+            ? `${selectedVariant.length_mm}mm x ${selectedVariant.width_mm}mm`
+            : selectedVariant.dimensions || product?.dimensions || '—',
         moq: selectedVariant.min_order_qty || product?.min_order_qty || 1,
         unit: selectedVariant.unit || product?.unit || 'sheet',
         priceUsd: selectedVariant.base_price_usd,
@@ -1290,7 +1310,7 @@ export default function ProductDetailPage() {
                         <span className="font-medium text-foreground">Dimensions:</span>{' '}
                         {resolved.dimensions && resolved.dimensions !== '—'
                           ? formatDimensions(resolved.dimensions)
-                          : '1220mm × 153mm'}
+                          : '1220mm × 305mm'}
                       </div>
                     </>
                   )}
