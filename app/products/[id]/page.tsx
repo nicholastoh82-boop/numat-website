@@ -619,9 +619,18 @@ export default function ProductDetailPage() {
       return coreMatch && thicknessMatch
     })
 
-    return getUniqueOptions(scoped.map((v) => formatPlyLabel(v.ply_count))).sort(
-      (a, b) => Number(a.value.replace(/\D/g, '')) - Number(b.value.replace(/\D/g, ''))
+    const uniquePlys = Array.from(
+      new Set(scoped.map((v) => formatPlyLabel(v.ply_count)).filter(Boolean))
     )
+    return uniquePlys
+      .map((ply) => ({
+        label: ply,
+        value: ply,
+        disabled: scoped
+          .filter((v) => formatPlyLabel(v.ply_count) === ply)
+          .every((v) => v.in_stock === false),
+      }))
+      .sort((a, b) => Number(a.value.replace(/\D/g, '')) - Number(b.value.replace(/\D/g, '')))
   }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType, selectedThickness])
 
   const variantLengthOptions = useMemo(() => {
@@ -702,7 +711,7 @@ export default function ProductDetailPage() {
     if (useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')) {
       const firstCore = coreTypeOptions[0]?.value ?? ''
       const firstThickness = thicknessOptionsForBoards[0]?.value ?? ''
-      const firstPly = plyOptionsForBoards[0]?.value ?? ''
+      const firstPly = plyOptionsForBoards.find((p) => !p.disabled)?.value ?? plyOptionsForBoards[0]?.value ?? ''
 
       if (!selectedCoreType && firstCore) setSelectedCoreType(firstCore)
       if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
@@ -747,7 +756,7 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')) {
-      const firstPly = plyOptionsForBoards[0]?.value ?? ''
+      const firstPly = plyOptionsForBoards.find((p) => !p.disabled)?.value ?? plyOptionsForBoards[0]?.value ?? ''
       if (firstPly && !plyOptionsForBoards.find((p) => p.value === selectedPly)) {
         setSelectedPly(firstPly)
       }
