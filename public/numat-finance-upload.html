@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NUMAT Finance — Submit Transaction</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1D6A47;--green-light:#E8F5EE;--green-mid:#2d8a5e;
+  --amber:#D4860A;--amber-light:#FEF3E2;
+  --red:#C0392B;--red-light:#FDEAEA;
+  --text:#1a1a1a;--text-muted:#6b7280;
+  --border:#e0e0e0;--bg:#f7f7f5;--card:#ffffff;--radius:10px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);padding:0 0 80px;}
+.header{background:var(--green);padding:20px 24px 18px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;}
+.header-logo{width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:11px;color:white;font-weight:500;letter-spacing:0.5px;}
+.header-text h1{font-size:16px;font-weight:600;color:white;line-height:1.2;}
+.header-text p{font-size:12px;color:rgba(255,255,255,0.65);margin-top:1px;}
+.container{max-width:560px;margin:0 auto;padding:24px 16px;}
+.section-label{font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;margin-top:28px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.field{padding:14px 16px;border-bottom:1px solid var(--border);}
+.field:last-child{border-bottom:none;}
+.field label{display:block;font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;}
+.field label .req{color:var(--red);margin-left:2px;}
+.field input,.field select,.field textarea{width:100%;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:transparent;border:none;outline:none;appearance:none;-webkit-appearance:none;}
+.field select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0 center;padding-right:20px;}
+.field textarea{resize:none;min-height:60px;line-height:1.5;}
+.amount-row{display:flex;align-items:center;gap:8px;}
+.amount-currency{font-size:15px;font-weight:500;color:var(--green);font-family:'DM Mono',monospace;white-space:nowrap;flex-shrink:0;min-width:36px;}
+.amount-row input{flex:1;}
+.staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;padding:14px 16px;}
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 16px;}
+.cur-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;}
+.cur-btn{border:1.5px solid var(--border);border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;}
+.cur-btn.active{border-color:var(--green);background:var(--green-light);}
+.cur-code{font-size:13px;font-weight:700;color:var(--text);}
+.cur-name{font-size:10px;color:var(--text-muted);margin-top:2px;}
+.cur-btn.active .cur-code{color:var(--green);}
+.cur-btn.active .cur-name{color:var(--green-mid);}
+.upload-zone{margin:14px 16px;border:2px dashed var(--border);border-radius:8px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .15s;position:relative;}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--green);background:var(--green-light);}
+.upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-icon{width:40px;height:40px;background:var(--green-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;}
+.upload-icon svg{width:20px;height:20px;stroke:var(--green);fill:none;stroke-width:1.5;stroke-linecap:round;}
+.upload-zone h3{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px;}
+.upload-zone p{font-size:12px;color:var(--text-muted);}
+.upload-preview{display:none;align-items:center;gap:10px;margin:0 16px 14px;padding:10px 12px;background:var(--green-light);border-radius:8px;border:1px solid #b7ddc8;}
+.upload-preview.show{display:flex;}
+.preview-icon{width:32px;height:32px;background:white;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;}
+.preview-info{flex:1;min-width:0;}
+.preview-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.preview-size{font-size:11px;color:var(--text-muted);}
+.preview-remove{background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:2px 4px;line-height:1;flex-shrink:0;}
+.submit-btn{width:100%;background:var(--green);color:white;border:none;border-radius:var(--radius);padding:16px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-top:24px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.submit-btn:hover{background:var(--green-mid);}
+.submit-btn:disabled{background:#9ca3af;cursor:not-allowed;}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:white;padding:12px 20px;border-radius:999px;font-size:14px;font-weight:500;white-space:nowrap;z-index:100;transition:transform .35s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.ok{background:var(--green);}
+.toast.err{background:var(--red);}
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:var(--amber-light);color:var(--amber);font-size:10px;font-weight:600;padding:3px 8px;border-radius:999px;border:1px solid #f0c060;text-transform:uppercase;letter-spacing:0.5px;margin-left:8px;}
+.field-hint{font-size:11px;color:var(--text-muted);margin-top:4px;}
+.success-screen{display:none;text-align:center;padding:60px 24px;}
+.success-screen.show{display:block;}
+.check-circle{width:72px;height:72px;background:var(--green-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
+.check-circle svg{width:36px;height:36px;stroke:var(--green);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.success-screen h2{font-size:22px;font-weight:600;margin-bottom:8px;}
+.success-screen p{color:var(--text-muted);font-size:14px;line-height:1.6;}
+.new-entry-btn{margin-top:28px;display:inline-block;padding:12px 24px;background:var(--green);color:white;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;}
+#mainForm{display:block;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">NM</div>
+  <div class="header-text">
+    <h1>Finance Upload</h1>
+    <p>NUMAT Sustainable Manufacturing</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="success-screen" id="successScreen">
+    <div class="check-circle">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h2>Submitted!</h2>
+    <p>Your transaction has been recorded.<br>The receipt is being processed by AI — data will appear in the system within a minute.</p>
+    <button class="new-entry-btn" onclick="resetForm()">Submit Another</button>
+  </div>
+
+  <div id="mainForm">
+
+    <div class="section-label">Who are you?</div>
+    <div class="card">
+      <div class="staff-grid" id="staffGrid"></div>
+      <div class="field" style="border-top:1px solid var(--border)">
+        <label>Or type your name <span class="req">*</span></label>
+        <input type="text" id="customName" placeholder="Full name" autocomplete="name">
+      </div>
+    </div>
+
+    <div class="section-label">What is this?</div>
+    <div class="card">
+      <div class="type-grid" id="typeGrid"></div>
+    </div>
+
+    <div class="section-label">Transaction details</div>
+    <div class="card">
+      <div class="field">
+        <label>Date <span class="req">*</span></label>
+        <input type="date" id="txDate">
+      </div>
+      <div class="field">
+        <label>Vendor / Client / Person paid</label>
+        <input type="text" id="vendorClient" placeholder="e.g. SM Supermarket, Juan Dela Cruz">
+      </div>
+      <div class="field">
+        <label>Currency <span class="req">*</span></label>
+        <div class="cur-grid">
+          <div class="cur-btn active" id="cur-PHP" onclick="selectCurrency('PHP')">
+            <div class="cur-code">PHP</div><div class="cur-name">Philippine Peso</div>
+          </div>
+          <div class="cur-btn" id="cur-USD" onclick="selectCurrency('USD')">
+            <div class="cur-code">USD</div><div class="cur-name">US Dollar</div>
+          </div>
+          <div class="cur-btn" id="cur-MYR" onclick="selectCurrency('MYR')">
+            <div class="cur-code">MYR</div><div class="cur-name">Malaysian Ringgit</div>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Amount <span class="req">*</span></label>
+        <div class="amount-row">
+          <span class="amount-currency" id="currencyLabel">PHP</span>
+          <input type="number" id="amount" placeholder="0.00" step="0.01" min="0">
+        </div>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="category"><option value="">Select category...</option></select>
+      </div>
+      <div class="field">
+        <label>Description / notes</label>
+        <textarea id="description" placeholder="What was this for? Any extra context..."></textarea>
+      </div>
+    </div>
+
+    <div class="section-label">
+      Receipt or proof of payment
+      <span class="ai-badge">✦ AI reads this</span>
+    </div>
+    <div class="card">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*,.pdf" onchange="handleFile(this)">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <h3>Tap to upload receipt</h3>
+        <p>Photo, scan, or PDF · handwritten OK</p>
+      </div>
+      <div class="upload-preview" id="uploadPreview">
+        <div class="preview-icon" id="previewIcon">📄</div>
+        <div class="preview-info">
+          <div class="preview-name" id="previewName"></div>
+          <div class="preview-size" id="previewSize"></div>
+        </div>
+        <button class="preview-remove" onclick="removeFile()" title="Remove">×</button>
+      </div>
+      <div class="field">
+        <p class="field-hint">✦ AI will automatically extract date, amount, vendor, and category. Fill fields above only to override.</p>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitForm()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <span id="submitLabel">Submit Transaction</span>
+      <div class="spinner" id="spinner"></div>
+    </button>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG — update before deploying ─────────────────────
+const N8N_WEBHOOK_URL   = 'https://nicholastoh.app.n8n.cloud/webhook/finance-receipt';
+const SUPABASE_URL      = 'https://peuwxnrojlfybdymkazj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBldXd4bnJvamxmeWJkeW1rYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTAzNjMsImV4cCI6MjA4ODI2NjM2M30.qCmHAsm8AqpV-LsnRac631au_Ff8fk1S7Dbeq5O-aGM';
+// ─────────────────────────────────────────────────────────
+
+const STAFF = [
+  {name:'Nicholas', initials:'NT', color:'#3B6D11'},
+  {name:'Mark',     initials:'MS', color:'#185FA5'},
+  {name:'Mohan',    initials:'ML', color:'#533AB7'},
+  {name:'Bryan',    initials:'BR', color:'#993C1D'},
+  {name:'Lemuel',   initials:'LA', color:'#854F0B'},
+  {name:'Eugene',   initials:'EG', color:'#0F6E56'},
+  {name:'Boyet',    initials:'BY', color:'#633806'},
+  {name:'Charlie',  initials:'CH', color:'#72243E'},
+  {name:'Francisco',initials:'FC', color:'#3C3489'},
+  {name:'Admin',    initials:'AD', color:'#444441'},
+  {name:'B22',      initials:'B2', color:'#185FA5'},
+];
+
+const TYPES = [
+  {id:'expense',          label:'Expense',     icon:'🧾'},
+  {id:'petty_cash',       label:'Petty Cash',  icon:'💵'},
+  {id:'sale',             label:'Sale',         icon:'📦'},
+  {id:'payment_received', label:'Payment In',  icon:'💰'},
+  {id:'invoice_sent',     label:'Invoice Out', icon:'📤'},
+  {id:'salary',           label:'Salary',       icon:'👤'},
+];
+
+const CATEGORIES = {
+  expense:          ['Raw Materials','Factory Labor','Utilities','Transport & Logistics','Equipment & Maintenance','Office Supplies','Marketing & Ads','Travel','Professional Fees','Rent','Miscellaneous'],
+  petty_cash:       ['Office Supplies','Transport & Logistics','Miscellaneous','Meals & Entertainment'],
+  sale:             ['Product Sales','Consultation Fee'],
+  payment_received: ['Full Payment','Partial Payment'],
+  invoice_sent:     ['Client Invoice'],
+  salary:           ['Staff Salary','Staff Allowance'],
+};
+
+let selectedStaff    = '';
+let selectedType     = '';
+let selectedCurrency = 'PHP';
+let selectedFile     = null;
+
+function init() {
+  const staffGrid = document.getElementById('staffGrid');
+  STAFF.forEach(s => {
+    const btn = document.createElement('div');
+    btn.dataset.name = s.name;
+    btn.style.cssText = 'border:1.5px solid #e0e0e0;border-radius:8px;padding:10px 8px;text-align:center;cursor:pointer;user-select:none;transition:all .15s;';
+    btn.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;background:${s.color}22;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${s.color};margin:0 auto 6px;">${s.initials}</div><span style="font-size:12px;font-weight:500;color:#1a1a1a;display:block;">${s.name}</span>`;
+    btn.onclick = () => selectStaff(s.name, btn);
+    staffGrid.appendChild(btn);
+  });
+
+  const typeGrid = document.getElementById('typeGrid');
+  TYPES.forEach(t => {
+    const chip = document.createElement('div');
+    chip.dataset.id = t.id;
+    chip.style.cssText = 'border:1.5px solid #e0e0e0;border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;user-select:none;transition:all .15s;';
+    chip.innerHTML = `<span style="font-size:20px;display:block;margin-bottom:4px;line-height:1;">${t.icon}</span><span style="font-size:10px;font-weight:600;color:#6b7280;display:block;text-transform:uppercase;letter-spacing:0.5px;">${t.label}</span>`;
+    chip.onclick = () => selectType(t.id, chip);
+    typeGrid.appendChild(chip);
+  });
+
+  document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
+
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+  });
+}
+
+function selectStaff(name, el) {
+  selectedStaff = name;
+  document.getElementById('customName').value = '';
+  document.querySelectorAll('#staffGrid > div').forEach(b => { b.style.borderColor='#e0e0e0'; b.style.background=''; });
+  el.style.borderColor = '#1D6A47';
+  el.style.background  = '#E8F5EE';
+}
+
+function selectType(id, el) {
+  selectedType = id;
+  document.querySelectorAll('#typeGrid > div').forEach(c => { c.style.borderColor='#e0e0e0'; c.style.background=''; });
+  el.style.borderColor = '#1D6A47';
+  el.style.background  = '#E8F5EE';
+  const cats = CATEGORIES[id] || [];
+  const sel  = document.getElementById('category');
+  sel.innerHTML = '<option value="">Select category...</option>';
+  cats.forEach(c => { const o = document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+}
+
+function selectCurrency(cur) {
+  selectedCurrency = cur;
+  ['PHP','USD','MYR'].forEach(c => {
+    document.getElementById('cur-'+c).classList.toggle('active', c === cur);
+  });
+  document.getElementById('currencyLabel').textContent = cur;
+}
+
+function handleFile(input) { if (input.files[0]) processFile(input.files[0]); }
+
+function processFile(file) {
+  selectedFile = file;
+  document.getElementById('previewName').textContent = file.name;
+  document.getElementById('previewSize').textContent = (file.size/1024).toFixed(1)+' KB';
+  document.getElementById('previewIcon').textContent = file.type.includes('pdf') ? '📄' : '🖼️';
+  document.getElementById('uploadPreview').classList.add('show');
+  document.getElementById('uploadZone').style.display = 'none';
+}
+
+function removeFile() {
+  selectedFile = null;
+  document.getElementById('uploadPreview').classList.remove('show');
+  document.getElementById('uploadZone').style.display = '';
+  document.getElementById('fileInput').value = '';
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast '+type+' show';
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function setLoading(on) {
+  document.getElementById('submitBtn').disabled = on;
+  document.getElementById('spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('submitLabel').textContent = on ? 'Submitting...' : 'Submit Transaction';
+}
+
+async function submitForm() {
+  const staffName = selectedStaff || document.getElementById('customName').value.trim();
+  const txDate    = document.getElementById('txDate').value;
+  const amount    = document.getElementById('amount').value;
+
+  if (!staffName)                         { showToast('Please select or enter your name','err'); return; }
+  if (!selectedType)                      { showToast('Please select a transaction type','err'); return; }
+  if (!txDate)                            { showToast('Please enter a date','err'); return; }
+  if (!amount || parseFloat(amount) <= 0) { showToast('Please enter a valid amount','err'); return; }
+
+  setLoading(true);
+
+  try {
+    let receiptUrl = '';
+    let hasReceipt = false;
+
+    // Step 1 — upload file directly from browser to Supabase Storage
+    if (selectedFile) {
+      const ext      = selectedFile.name.split('.').pop() || 'jpg';
+      const safeName = staffName.replace(/\s+/g,'_')+'_'+txDate+'_'+Date.now()+'.'+ext;
+
+      showToast('Uploading receipt...','');
+
+      const up = await fetch(SUPABASE_URL+'/storage/v1/object/receipts/'+safeName, {
+        method:  'POST',
+        headers: {
+          'Authorization': 'Bearer '+SUPABASE_ANON_KEY,
+          'Content-Type':  selectedFile.type || 'application/octet-stream',
+          'x-upsert':      'true',
+        },
+        body: selectedFile,
+      });
+
+      if (up.ok) {
+        receiptUrl = SUPABASE_URL+'/storage/v1/object/public/receipts/'+safeName;
+        hasReceipt = true;
+        showToast('Receipt uploaded ✓','ok');
+      } else {
+        const e = await up.text();
+        console.error('Upload failed',up.status,e);
+        showToast('Receipt failed ('+up.status+') — submitting without','');
+      }
+    }
+
+    // Step 2 — send JSON to n8n
+    const payload = {
+      staff_name:       staffName,
+      type:             selectedType,
+      transaction_date: txDate,
+      vendor_client:    document.getElementById('vendorClient').value,
+      amount:           parseFloat(amount),
+      currency:         selectedCurrency,
+      category:         document.getElementById('category').value,
+      description:      document.getElementById('description').value,
+      submitted_at:     new Date().toISOString(),
+      has_receipt:      hasReceipt,
+      receipt_url:      receiptUrl,
+    };
+
+    const res = await fetch(N8N_WEBHOOK_URL, {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify(payload),
+    });
+
+    if (!res.ok) throw new Error('n8n '+res.status);
+
+    document.getElementById('mainForm').style.display = 'none';
+    document.getElementById('successScreen').classList.add('show');
+
+  } catch(err) {
+    console.error(err);
+    showToast('Failed: '+err.message,'err');
+    setLoading(false);
+  }
+}
+
+function resetForm() {
+  selectedStaff=''; selectedType=''; selectedFile=null; selectedCurrency='PHP';
+  document.querySelectorAll('#staffGrid > div').forEach(b=>{b.style.borderColor='#e0e0e0';b.style.background='';});
+  document.querySelectorAll('#typeGrid > div').forEach(c=>{c.style.borderColor='#e0e0e0';c.style.background='';});
+  ['customName','vendorClient','amount','description'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('category').innerHTML='<option value="">Select category...</option>';
+  selectCurrency('PHP');
+  removeFile();
+  document.getElementById('txDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('mainForm').style.display='block';
+  document.getElementById('successScreen').classList.remove('show');
+  setLoading(false);
+}
+
+init();
+</script>
+</body>
+</html>
