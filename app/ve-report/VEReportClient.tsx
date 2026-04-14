@@ -1,7 +1,8 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+
+type Props = { resort: string; rooms: number };
 
 // ─── Calculation engine ──────────────────────────────────────────────────────
 function calcSavings(rooms: number) {
@@ -30,23 +31,6 @@ function calcSavings(rooms: number) {
   };
 }
 
-// ─── Animated counter ────────────────────────────────────────────────────────
-function useCountUp(target: number, duration = 1800, start = false) {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    if (!start) return;
-    let startTime: number | null = null;
-    const step = (ts: number) => {
-      if (!startTime) startTime = ts;
-      const progress = Math.min((ts - startTime) / duration, 1);
-      const ease = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.round(ease * target));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, [target, duration, start]);
-  return value;
-}
 
 function fmt(n: number) {
   if (n >= 1_000_000) return `₱${(n / 1_000_000).toFixed(1)}M`;
@@ -96,22 +80,17 @@ function StatCard({ label, value, sub, accent, delay = 0, animate }: {
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
-export default function VEReportClient() {
-  const params  = useSearchParams();
-  const resort  = params.get('for')   || 'Your Property';
-  const rooms   = Math.max(1, parseInt(params.get('rooms') || '50') || 50);
-  const s       = calcSavings(rooms);
+export default function VEReportClient({ resort, rooms }: Props) {
+  const s = calcSavings(rooms);
 
   const heroRef = useRef<HTMLDivElement>(null);
   const [heroVisible, setHeroVisible] = useState(false);
-  useEffect(() => { setTimeout(() => setHeroVisible(true), 100); }, []);
+  useEffect(() => { setTimeout(() => setHeroVisible(true), 80); }, []);
 
   const { ref: sec2ref, visible: sec2 } = useInView();
   const { ref: sec3ref, visible: sec3 } = useInView();
   const { ref: sec4ref, visible: sec4 } = useInView();
   const { ref: sec5ref, visible: sec5 } = useInView();
-
-  const heroTotal = useCountUp(s.totalVsPlywood, 2000, heroVisible);
 
   // Print / PDF
   const handlePrint = () => window.print();
@@ -287,7 +266,10 @@ export default function VEReportClient() {
         .cta-note { font-size: 13px; color: #64748b; margin-top: 16px; }
 
         /* Print btn */
-        .print-btn {
+        @keyframes numReveal {
+          from { opacity: 0; transform: translateY(12px) scale(0.95); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
           background: transparent; border: 1px solid #cbd5e1; color: #1a3c5e;
           font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 8px;
           cursor: pointer; font-family: 'DM Sans', sans-serif;
@@ -311,9 +293,52 @@ export default function VEReportClient() {
         }
 
         @media print {
-          .topbar, .print-btn, .cta-btn { display: none !important; }
-          body { background: #fff; }
-          .hero { background: #0f2137 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .topbar, .print-btn,
+          iframe, [id*="chat"], [class*="chat"],
+          [id*="widget"], [class*="widget"],
+          [id*="nara"], [class*="nara"],
+          [id*="crisp"], [class*="intercom"],
+          [id*="drift"], [id*="zendesk"],
+          [class*="fixed"], [class*="sticky"],
+          div[style*="position: fixed"],
+          div[style*="position:fixed"] { display: none !important; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { background: #fff !important; font-size: 11pt; }
+          .container { max-width: 100%; padding: 0 20px; }
+          body::before { content:''; display:block; height:4px; background:linear-gradient(90deg,#0a2b18,#16a34a,#1a3c5e); }
+          .print-header { display: flex !important; align-items:center; justify-content:space-between; padding:16px 20px 14px; border-bottom:1px solid #d4dae3; }
+          .print-header img { height: 36px; }
+          .print-header-right { text-align:right; font-size:10pt; color:#3d5166; }
+          .print-header-right strong { display:block; color:#0a1628; font-size:11pt; }
+          .hero { background: linear-gradient(140deg,#071524 0%,#0f2d4a 50%,#0a2b18 100%) !important; padding: 36px 20px 32px !important; }
+          .hero-title { font-size: 28pt !important; color: #fff !important; }
+          .hero-title .accent { color: #22c55e !important; }
+          .hero-big-number .number { font-size: 42pt !important; color: #22c55e !important; }
+          .hero-eyebrow { color: #22c55e !important; }
+          .hero-subtitle, .hero-big-number .label, .hero-big-number .sub { color: #7db4d8 !important; }
+          .hero-chip { background: rgba(255,255,255,0.1) !important; color: #b8d4e8 !important; }
+          .hero-chip strong { color: #fff !important; }
+          .section { padding: 28px 0 !important; page-break-inside: avoid; }
+          .section-label { color: #16a34a !important; }
+          .section-title { font-size: 20pt !important; }
+          .breakdown { box-shadow: none !important; }
+          .breakdown-row .val.positive { color: #15803d !important; }
+          .breakdown-row.total { background: #f0fdf4 !important; }
+          .breakdown-row.total .val { color: #15803d !important; }
+          .timeline-card.bad { background: #fff5f5 !important; }
+          .timeline-card.good { background: #f0fdf4 !important; }
+          .timeline-card.bad .tc-weeks { color: #dc2626 !important; }
+          .timeline-card.good .tc-weeks { color: #16a34a !important; }
+          .callout.green .big { color: #15803d !important; }
+          .callout.blue .big { color: #1d4ed8 !important; }
+          .callout.green::before { background: #16a34a !important; }
+          .callout.blue::before { background: #1d4ed8 !important; }
+          .cta-section { background: linear-gradient(135deg,#071524,#0f2d4a) !important; padding: 28px 32px !important; }
+          .cta-section h2 { color: #fff !important; font-size: 18pt !important; }
+          .cta-section p { color: #7db4d8 !important; }
+          .cta-btn { display: none !important; }
+          .cta-contact { display: block !important; color: #22c55e !important; font-size: 13pt !important; font-weight: 700 !important; }
+          .divider { border-top-color: #d4dae3 !important; }
         }
       `}</style>
 
@@ -321,8 +346,8 @@ export default function VEReportClient() {
       <nav className="topbar">
         <div className="topbar-inner">
           <span className="topbar-logo">
-            {/* Logo file: place Numat_Logo.png inside /public/ in your repo */}
-            <img src="numat-logo.png" alt="NUMAT Sustainable Manufacturing" />
+            {/* Logo file: place Numat_Logo.png inside /public/images/ in your repo */}
+            <img src="/images/numat-logo.png" alt="NUMAT Sustainable Manufacturing" />
           </span>
           <span className="topbar-badge">Value Engineering Report</span>
           <button className="print-btn" onClick={handlePrint}>⬇ Save PDF</button>
@@ -352,7 +377,9 @@ export default function VEReportClient() {
 
             <div className="hero-big-number">
               <div className="label">Total projected savings vs marine plywood</div>
-              <div className="number">{fmt(heroTotal)}</div>
+              <div className="number" style={{ animation: heroVisible ? 'numReveal 0.6s ease forwards' : 'none' }}>
+                  {fmt(s.totalVsPlywood)}
+              </div>
               <div className="sub">over 25 years · based on {rooms}-room property</div>
             </div>
 
@@ -520,7 +547,7 @@ export default function VEReportClient() {
           <div ref={sec5ref}>
             <p className="section-label">Sustainability</p>
             <h2 className="section-title syne">Green building credentials</h2>
-            <p className="section-sub">For properties pursuing LEED, BERDE, or premium certification.</p>
+            <p className="section-sub">Material sustainability backed by data — no certifications claimed, no greenwashing.</p>
 
             <div
               style={{
@@ -579,13 +606,13 @@ export default function VEReportClient() {
             >
               Book a 15-Minute Call →
             </a>
-            <p className="cta-note">Or email directly: nick@numat.ph · numatbamboo.com</p>
+            <p className="cta-note">Or email directly: mohan@numat.ph · numatbamboo.com</p>
           </div>
 
           <p className="footnote">
             <p>All savings figures are property-specific estimates calculated using independently verified benchmarks and scaled to {rooms} rooms. Marine plywood replacement cycle: 10–15 years. Hardwood refinishing rate: ₱3,500–₱7,000/sqm. Room revenue loss during renovation based on industry-standard occupancy assumptions.</p>
             <p>Bacterial inhibition: Fabrics Verification Association of Japan. Cooling energy reduction: ScienceDirect, tropical building research. CO₂ sequestration: peer-reviewed bamboo plantation studies.</p>
-            <p>© {new Date().getFullYear()} NUMAT Sustainable Manufacturing Inc. · numatbamboo.com</p>
+            <p>© 2024 NUMAT Sustainable Manufacturing Inc. · numatbamboo.com</p>
           </p>
         </div>
       </section>

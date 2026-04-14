@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NUMAT Finance — Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1D6A47;--green2:#2d8a5e;--green-light:#E8F5EE;--green-pale:#f0faf5;
+  --amber:#C87F0A;--amber-light:#FEF3E2;
+  --red:#C0392B;--red-light:#FDEAEA;
+  --blue:#185FA5;--blue-light:#EBF3FC;
+  --text:#111827;--text2:#4B5563;--text3:#9CA3AF;
+  --border:#E5E7EB;--border2:#D1D5DB;
+  --bg:#F9FAFB;--card:#fff;
+  --radius:10px;--radius-lg:14px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg:0 4px 16px rgba(0,0,0,.08);
+}
+body{font-family:'Lato',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;left:0;top:0;width:220px;height:100vh;background:var(--green);display:flex;flex-direction:column;z-index:50;padding:0;}
+.sidebar-brand{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.1);}
+.sidebar-brand h1{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:#fff;line-height:1.2;}
+.sidebar-brand p{font-size:11px;color:rgba(255,255,255,.55);margin-top:3px;font-family:'DM Mono',monospace;}
+.sidebar-nav{padding:16px 10px;flex:1;}
+.nav-label{font-size:9px;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,.35);text-transform:uppercase;padding:0 10px;margin:16px 0 6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,.65);font-size:13px;font-weight:400;transition:all .15s;margin-bottom:2px;}
+.nav-item:hover{background:rgba(255,255,255,.1);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,.15);color:#fff;font-weight:700;}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;}
+.sidebar-bottom{padding:16px 10px;border-top:1px solid rgba(255,255,255,.1);}
+.sidebar-user{display:flex;align-items:center;gap:10px;padding:8px 10px;}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}
+.user-info p{font-size:12px;color:#fff;font-weight:700;}
+.user-info span{font-size:10px;color:rgba(255,255,255,.5);}
+
+/* ── MAIN ── */
+.main{margin-left:220px;min-height:100vh;display:flex;flex-direction:column;}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
+.topbar-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:600;color:var(--text);}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:700;font-family:'Lato',sans-serif;cursor:pointer;border:none;transition:all .15s;}
+.btn-primary{background:var(--green);color:#fff;}
+.btn-primary:hover{background:var(--green2);}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2);}
+.btn-ghost:hover{background:var(--bg);}
+.btn-danger{background:var(--red-light);color:var(--red);}
+.btn-approve{background:var(--green-light);color:var(--green);}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px;}
+.content{padding:28px;flex:1;}
+
+/* ── STATS STRIP ── */
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);}
+.stat-label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
+.stat-value{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text);line-height:1;}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+.stat-card.flagged .stat-value{color:var(--red);}
+.stat-card.income .stat-value{color:var(--green);}
+
+/* ── FILTERS ── */
+.filters-bar{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:var(--shadow);}
+.filter-select,.filter-input{padding:7px 10px;border:1px solid var(--border2);border-radius:7px;font-size:13px;color:var(--text);font-family:'Lato',sans-serif;background:var(--bg);outline:none;cursor:pointer;}
+.filter-select:focus,.filter-input:focus{border-color:var(--green);background:#fff;}
+.filter-input{flex:1;min-width:160px;}
+.filter-divider{width:1px;height:24px;background:var(--border);margin:0 4px;}
+.badge-count{background:var(--red);color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;}
+
+/* ── TABLE ── */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;}
+.table-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.table-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;}
+table{width:100%;border-collapse:collapse;}
+th{padding:10px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px;color:var(--text);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#FAFBFC;}
+.td-amount{font-family:'DM Mono',monospace;font-weight:500;font-size:13px;}
+.td-staff{display:flex;align-items:center;gap:8px;}
+.staff-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;}
+.td-actions{display:flex;align-items:center;gap:6px;}
+
+/* ── STATUS BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;white-space:nowrap;}
+.badge-pending{background:#F3F4F6;color:#6B7280;}
+.badge-verified{background:var(--green-light);color:var(--green);}
+.badge-flagged{background:var(--red-light);color:var(--red);}
+.badge-dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+/* ── TYPE BADGES ── */
+.type-badge{padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700;text-transform:uppercase;}
+.type-expense{background:#FEF3E2;color:#854F0B;}
+.type-sale{background:var(--green-light);color:var(--green);}
+.type-salary{background:var(--blue-light);color:var(--blue);}
+.type-payment_received{background:#EAF3DE;color:#3B6D11;}
+.type-invoice_sent{background:#F3F4F6;color:#374151;}
+.type-petty_cash{background:#FBEAF0;color:#72243E;}
+.type-other{background:#F3F4F6;color:#6B7280;}
+
+/* ── RECEIPT LINK ── */
+.receipt-link{display:inline-flex;align-items:center;gap:4px;color:var(--blue);font-size:12px;font-weight:700;text-decoration:none;padding:3px 8px;border-radius:5px;background:var(--blue-light);}
+.receipt-link:hover{background:#d8ebf9;}
+.no-receipt{font-size:11px;color:var(--text3);}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:#fff;border-radius:var(--radius-lg);width:580px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:translateY(12px);transition:transform .2s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-head{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-head h2{font-family:'Syne',sans-serif;font-size:16px;font-weight:600;}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;line-height:1;padding:2px 6px;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:20px 24px;}
+.modal-field{margin-bottom:16px;}
+.modal-field label{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
+.modal-field input,.modal-field select,.modal-field textarea{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:7px;font-size:13px;color:var(--text);font-family:'Lato',sans-serif;outline:none;background:#fff;}
+.modal-field input:focus,.modal-field select:focus,.modal-field textarea:focus{border-color:var(--green);}
+.modal-field textarea{resize:vertical;min-height:70px;}
+.modal-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;justify-content:flex-end;}
+.receipt-preview{width:100%;border-radius:8px;border:1px solid var(--border);margin-top:8px;background:var(--bg);min-height:120px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.receipt-preview img{max-width:100%;border-radius:8px;}
+.receipt-preview iframe{width:100%;height:340px;border:none;border-radius:8px;}
+
+/* ── EMPTY / LOADING ── */
+.empty-state{padding:60px 20px;text-align:center;color:var(--text3);}
+.empty-state svg{width:40px;height:40px;margin:0 auto 12px;display:block;opacity:.3;}
+.loading-row td{padding:30px;text-align:center;color:var(--text3);}
+.spinner-inline{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:700;z-index:200;transform:translateY(60px);opacity:0;transition:all .3s;box-shadow:var(--shadow-lg);}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.ok{background:var(--green);}
+.toast.err{background:var(--red);}
+
+/* ── PAGINATION ── */
+.pagination{display:flex;align-items:center;gap:6px;padding:14px 18px;border-top:1px solid var(--border);justify-content:flex-end;}
+.page-btn{width:30px;height:30px;border:1px solid var(--border2);border-radius:6px;background:#fff;cursor:pointer;font-size:12px;font-weight:700;color:var(--text2);display:flex;align-items:center;justify-content:center;}
+.page-btn:hover{background:var(--bg);border-color:var(--green);}
+.page-btn.active{background:var(--green);color:#fff;border-color:var(--green);}
+.page-info{font-size:12px;color:var(--text3);margin-right:8px;}
+
+@media(max-width:900px){
+  .sidebar{width:60px;}
+  .sidebar-brand p,.nav-item span,.user-info,.nav-label{display:none;}
+  .main{margin-left:60px;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <h1>NUMAT</h1>
+    <p>Finance Admin</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Main</div>
+    <div class="nav-item active" onclick="showView('transactions')">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Transactions</span>
+    </div>
+    <div class="nav-item" onclick="showView('flagged')">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      <span>Flagged <span class="badge-count" id="flagCount">0</span></span>
+    </div>
+    <div class="nav-item" onclick="showView('receipts')">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>Receipts</span>
+    </div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="sidebar-user">
+      <div class="user-avatar">NT</div>
+      <div class="user-info">
+        <p>Nicholas</p>
+        <span>Admin</span>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <span class="topbar-title" id="viewTitle">All Transactions</span>
+    <div class="topbar-right">
+      <button class="btn btn-ghost" onclick="loadTransactions()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+      <button class="btn btn-primary" onclick="exportCSV()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total transactions</div>
+        <div class="stat-value" id="statTotal">—</div>
+        <div class="stat-sub" id="statPeriod">this week</div>
+      </div>
+      <div class="stat-card income">
+        <div class="stat-label">Total income</div>
+        <div class="stat-value" id="statIncome">—</div>
+        <div class="stat-sub">sales + payments</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total expenses</div>
+        <div class="stat-value" id="statExpenses">—</div>
+        <div class="stat-sub">all expense types</div>
+      </div>
+      <div class="stat-card flagged">
+        <div class="stat-label">Flagged</div>
+        <div class="stat-value" id="statFlagged">—</div>
+        <div class="stat-sub">needs review</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value" id="statPending">—</div>
+        <div class="stat-sub">not yet verified</div>
+      </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters-bar">
+      <input class="filter-input" id="searchInput" placeholder="Search vendor, staff, description..." oninput="applyFilters()">
+      <div class="filter-divider"></div>
+      <select class="filter-select" id="filterStatus" onchange="applyFilters()">
+        <option value="">All statuses</option>
+        <option value="pending">Pending</option>
+        <option value="verified">Verified</option>
+        <option value="flagged">Flagged</option>
+      </select>
+      <select class="filter-select" id="filterType" onchange="applyFilters()">
+        <option value="">All types</option>
+        <option value="expense">Expense</option>
+        <option value="sale">Sale</option>
+        <option value="salary">Salary</option>
+        <option value="payment_received">Payment received</option>
+        <option value="invoice_sent">Invoice sent</option>
+        <option value="petty_cash">Petty cash</option>
+      </select>
+      <select class="filter-select" id="filterStaff" onchange="applyFilters()">
+        <option value="">All staff</option>
+      </select>
+      <select class="filter-select" id="filterPeriod" onchange="applyFilters()">
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="0">All time</option>
+      </select>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <span class="table-title" id="tableTitle">Transactions</span>
+        <span style="font-size:12px;color:var(--text3)" id="tableCount"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Staff</th>
+              <th>Type</th>
+              <th>Vendor / Client</th>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Receipt</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="txTable">
+            <tr class="loading-row"><td colspan="9"><span class="spinner-inline"></span>Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Edit Transaction</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <div class="modal-2col">
+        <div class="modal-field">
+          <label>Date</label>
+          <input type="date" id="editDate">
+        </div>
+        <div class="modal-field">
+          <label>Type</label>
+          <select id="editType">
+            <option value="expense">Expense</option>
+            <option value="petty_cash">Petty Cash</option>
+            <option value="sale">Sale</option>
+            <option value="payment_received">Payment Received</option>
+            <option value="invoice_sent">Invoice Sent</option>
+            <option value="salary">Salary</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>Vendor / Client</label>
+        <input type="text" id="editVendor" placeholder="Vendor or client name">
+      </div>
+      <div class="modal-2col">
+        <div class="modal-field">
+          <label>Amount</label>
+          <input type="number" id="editAmount" step="0.01" min="0">
+        </div>
+        <div class="modal-field">
+          <label>Currency</label>
+          <select id="editCurrency">
+            <option value="PHP">PHP</option>
+            <option value="USD">USD</option>
+            <option value="MYR">MYR</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>Category</label>
+        <select id="editCategory">
+          <option value="Raw Materials">Raw Materials</option>
+          <option value="Factory Labor">Factory Labor</option>
+          <option value="Utilities">Utilities</option>
+          <option value="Transport & Logistics">Transport & Logistics</option>
+          <option value="Equipment & Maintenance">Equipment & Maintenance</option>
+          <option value="Office Supplies">Office Supplies</option>
+          <option value="Marketing & Ads">Marketing & Ads</option>
+          <option value="Travel">Travel</option>
+          <option value="Professional Fees">Professional Fees</option>
+          <option value="Rent">Rent</option>
+          <option value="Product Sales">Product Sales</option>
+          <option value="Staff Salary">Staff Salary</option>
+          <option value="Staff Allowance">Staff Allowance</option>
+          <option value="Petty Cash Disbursement">Petty Cash Disbursement</option>
+          <option value="Miscellaneous">Miscellaneous</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Description / Notes</label>
+        <textarea id="editDescription" placeholder="Additional notes..."></textarea>
+      </div>
+      <div class="modal-field">
+        <label>Status</label>
+        <select id="editStatus">
+          <option value="pending">Pending</option>
+          <option value="verified">Verified</option>
+          <option value="flagged">Flagged</option>
+        </select>
+      </div>
+      <div class="modal-field" id="receiptSection">
+        <label>Receipt</label>
+        <div class="receipt-preview" id="receiptPreview"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="updateStatus('flagged')">Flag</button>
+      <button class="btn btn-approve btn-sm" onclick="updateStatus('verified')">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Approve
+      </button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG — update these two values ──
+const SUPABASE_URL = 'https://peuwxnrojlfybdymkazj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBldXd4bnJvamxmeWJkeW1rYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTAzNjMsImV4cCI6MjA4ODI2NjM2M30.qCmHAsm8AqpV-LsnRac631au_Ff8fk1S7Dbeq5O-aGM';
+// ─────────────────────────────────────
+
+const STAFF_COLORS = {
+  Nicholas:'#3B6D11',Mark:'#185FA5',Mohan:'#533AB7',Bryan:'#993C1D',
+  Lemuel:'#854F0B',Eugene:'#0F6E56',Boyet:'#633806',Charlie:'#72243E',
+  Francisco:'#3C3489',Admin:'#444441',B22:'#185FA5'
+};
+
+let allData = [];
+let filtered = [];
+let currentPage = 1;
+const PER_PAGE = 20;
+let editingId = null;
+
+async function api(method, path, body) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method,
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : 'return=representation',
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function loadTransactions() {
+  document.getElementById('txTable').innerHTML = '<tr class="loading-row"><td colspan="9"><span class="spinner-inline"></span>Loading...</td></tr>';
+  try {
+    const rows = await api('GET', 'financial_transactions?order=transaction_date.desc,created_at.desc&limit=1000');
+    allData = rows;
+    buildStaffFilter();
+    updateStats();
+    applyFilters();
+    updateFlagCount();
+  } catch(e) {
+    document.getElementById('txTable').innerHTML = `<tr class="loading-row"><td colspan="9" style="color:var(--red)">Error loading data — check your Supabase anon key. ${e.message}</td></tr>`;
+  }
+}
+
+function buildStaffFilter() {
+  const staffSet = [...new Set(allData.map(r => r.staff_name).filter(Boolean))].sort();
+  const sel = document.getElementById('filterStaff');
+  sel.innerHTML = '<option value="">All staff</option>';
+  staffSet.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+}
+
+function updateStats() {
+  const days = parseInt(document.getElementById('filterPeriod').value) || 0;
+  const cutoff = days ? new Date(Date.now() - days * 86400000).toISOString().split('T')[0] : null;
+  const data = cutoff ? allData.filter(r => r.transaction_date >= cutoff) : allData;
+
+  const income = data.filter(r => ['sale','payment_received'].includes(r.type)).reduce((s,r) => s + (r.amount||0), 0);
+  const expenses = data.filter(r => ['expense','petty_cash','salary'].includes(r.type)).reduce((s,r) => s + (r.amount||0), 0);
+  const flagged = data.filter(r => r.status === 'flagged').length;
+  const pending = data.filter(r => r.status === 'pending').length;
+
+  document.getElementById('statTotal').textContent = data.length;
+  document.getElementById('statIncome').textContent = fmt(income);
+  document.getElementById('statExpenses').textContent = fmt(expenses);
+  document.getElementById('statFlagged').textContent = flagged;
+  document.getElementById('statPending').textContent = pending;
+}
+
+function fmt(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+  return n.toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function updateFlagCount() {
+  const c = allData.filter(r => r.status === 'flagged').length;
+  document.getElementById('flagCount').textContent = c;
+  document.getElementById('flagCount').style.display = c ? '' : 'none';
+}
+
+function applyFilters() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('filterStatus').value;
+  const type = document.getElementById('filterType').value;
+  const staff = document.getElementById('filterStaff').value;
+  const days = parseInt(document.getElementById('filterPeriod').value) || 0;
+  const cutoff = days ? new Date(Date.now() - days * 86400000).toISOString().split('T')[0] : null;
+
+  // Check which view we're in
+  const view = document.querySelector('.nav-item.active')?.dataset?.view || 'transactions';
+
+  filtered = allData.filter(r => {
+    if (view === 'flagged' && r.status !== 'flagged') return false;
+    if (view === 'receipts' && !r.receipt_url) return false;
+    if (status && r.status !== status) return false;
+    if (type && r.type !== type) return false;
+    if (staff && r.staff_name !== staff) return false;
+    if (cutoff && r.transaction_date < cutoff) return false;
+    if (search) {
+      const hay = [r.vendor_client, r.staff_name, r.description, r.category, r.notes].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  currentPage = 1;
+  renderTable();
+  updateStats();
+}
+
+function renderTable() {
+  const start = (currentPage - 1) * PER_PAGE;
+  const page = filtered.slice(start, start + PER_PAGE);
+  document.getElementById('tableCount').textContent = `${filtered.length} records`;
+
+  if (!filtered.length) {
+    document.getElementById('txTable').innerHTML = `<tr><td colspan="9" style="padding:40px;text-align:center;color:var(--text3);">No transactions found</td></tr>`;
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  document.getElementById('txTable').innerHTML = page.map(r => {
+    const initials = (r.staff_name || '?').substring(0,2).toUpperCase();
+    const color = STAFF_COLORS[r.staff_name] || '#888';
+    const statusBadge = {
+      pending: '<span class="badge badge-pending"><span class="badge-dot"></span>Pending</span>',
+      verified: '<span class="badge badge-verified"><span class="badge-dot"></span>Verified</span>',
+      flagged: '<span class="badge badge-flagged"><span class="badge-dot"></span>Flagged</span>',
+    }[r.status] || '';
+    const typeClass = 'type-' + (r.type||'other');
+    const typeLabel = (r.type||'').replace(/_/g,' ');
+    const receiptCell = r.receipt_url
+      ? `<a class="receipt-link" href="${r.receipt_url}" target="_blank">
+           <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+           View
+         </a>`
+      : `<span class="no-receipt">None</span>`;
+
+    return `<tr>
+      <td style="white-space:nowrap;color:var(--text2);">${r.transaction_date || '—'}</td>
+      <td><div class="td-staff">
+        <div class="staff-dot" style="background:${color}22;color:${color}">${initials}</div>
+        <span>${r.staff_name || '—'}</span>
+      </div></td>
+      <td><span class="type-badge ${typeClass}">${typeLabel}</span></td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.vendor_client || '<span style="color:var(--text3)">—</span>'}</td>
+      <td style="color:var(--text2)">${r.category || '—'}</td>
+      <td class="td-amount">${r.currency||'PHP'} ${(r.amount||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</td>
+      <td>${receiptCell}</td>
+      <td>${statusBadge}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-approve btn-sm" onclick="quickApprove('${r.id}')">✓</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEdit('${r.id}')">Edit</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const total = Math.ceil(filtered.length / PER_PAGE);
+  if (total <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+  let html = `<span class="page-info">Page ${currentPage} of ${total}</span>`;
+  for (let i = 1; i <= total; i++) {
+    if (total > 7 && i > 2 && i < total - 1 && Math.abs(i - currentPage) > 1) {
+      if (i === 3 || i === total - 2) html += `<span style="color:var(--text3);font-size:12px;padding:0 2px;">…</span>`;
+      continue;
+    }
+    html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  document.getElementById('pagination').innerHTML = html;
+}
+
+function goPage(n) { currentPage = n; renderTable(); window.scrollTo(0,0); }
+
+async function quickApprove(id) {
+  try {
+    await api('PATCH', `financial_transactions?id=eq.${id}`, { status: 'verified' });
+    const row = allData.find(r => r.id === id);
+    if (row) row.status = 'verified';
+    renderTable();
+    updateFlagCount();
+    toast('Approved ✓', 'ok');
+  } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+function openEdit(id) {
+  const r = allData.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  document.getElementById('editId').value = id;
+  document.getElementById('editDate').value = r.transaction_date || '';
+  document.getElementById('editType').value = r.type || 'expense';
+  document.getElementById('editVendor').value = r.vendor_client || '';
+  document.getElementById('editAmount').value = r.amount || '';
+  document.getElementById('editCurrency').value = r.currency || 'PHP';
+  document.getElementById('editCategory').value = r.category || '';
+  document.getElementById('editDescription').value = r.description || '';
+  document.getElementById('editStatus').value = r.status || 'pending';
+
+  const preview = document.getElementById('receiptPreview');
+  if (r.receipt_url) {
+    const isPdf = r.receipt_url.toLowerCase().includes('.pdf') || (r.receipt_filename||'').toLowerCase().endsWith('.pdf');
+    preview.innerHTML = isPdf
+      ? `<iframe src="${r.receipt_url}"></iframe>`
+      : `<img src="${r.receipt_url}" alt="Receipt" onerror="this.parentElement.innerHTML='<span style=color:var(--text3);padding:20px;>Cannot preview — <a href=${r.receipt_url} target=_blank>open in new tab</a></span>'">`;
+    document.getElementById('receiptSection').style.display = '';
+  } else {
+    preview.innerHTML = '<span style="color:var(--text3);padding:20px;font-size:12px;">No receipt uploaded</span>';
+    document.getElementById('receiptSection').style.display = '';
+  }
+
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('editModal').classList.remove('open'); }
+
+async function saveEdit() {
+  const id = editingId;
+  const payload = {
+    transaction_date: document.getElementById('editDate').value,
+    type: document.getElementById('editType').value,
+    vendor_client: document.getElementById('editVendor').value,
+    amount: parseFloat(document.getElementById('editAmount').value) || 0,
+    currency: document.getElementById('editCurrency').value,
+    category: document.getElementById('editCategory').value,
+    description: document.getElementById('editDescription').value,
+    status: document.getElementById('editStatus').value,
+  };
+  try {
+    await api('PATCH', `financial_transactions?id=eq.${id}`, payload);
+    Object.assign(allData.find(r => r.id === id), payload);
+    renderTable();
+    updateStats();
+    updateFlagCount();
+    closeModal();
+    toast('Saved ✓', 'ok');
+  } catch(e) { toast('Save failed: ' + e.message, 'err'); }
+}
+
+async function updateStatus(status) {
+  const id = editingId;
+  try {
+    await api('PATCH', `financial_transactions?id=eq.${id}`, { status });
+    const row = allData.find(r => r.id === id);
+    if (row) row.status = status;
+    document.getElementById('editStatus').value = status;
+    renderTable();
+    updateFlagCount();
+    toast(status === 'verified' ? 'Approved ✓' : 'Flagged', 'ok');
+    closeModal();
+  } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+function showView(view) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  event.currentTarget.dataset.view = view;
+  const titles = { transactions: 'All Transactions', flagged: 'Flagged — Needs Review', receipts: 'Receipts' };
+  document.getElementById('viewTitle').textContent = titles[view];
+  document.getElementById('tableTitle').textContent = titles[view];
+  applyFilters();
+}
+
+function exportCSV() {
+  const cols = ['transaction_date','type','vendor_client','category','amount','currency','staff_name','status','description','receipt_url'];
+  const header = cols.join(',');
+  const rows = filtered.map(r => cols.map(c => {
+    const v = r[c] == null ? '' : String(r[c]);
+    return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g,'""')}"` : v;
+  }).join(','));
+  const csv = [header, ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `NUMAT_Finance_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  toast('CSV downloaded', 'ok');
+}
+
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type + ' show';
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+document.getElementById('editModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('editModal')) closeModal();
+});
+
+// Boot
+loadTransactions();
+</script>
+</body>
+</html>
