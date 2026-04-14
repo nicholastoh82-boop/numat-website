@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-type Props = { resort: string; rooms: number };
-
 // ─── Calculation engine ──────────────────────────────────────────────────────
 function calcSavings(rooms: number) {
   const BASE_ROOMS = 50;
@@ -80,7 +78,20 @@ function StatCard({ label, value, sub, accent, delay = 0, animate }: {
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
-export default function VEReportClient({ resort, rooms }: Props) {
+export default function VEReportClient() {
+  // ── Read URL params client-side — no server function needed ────────────
+  // Defaults are meaningful (50 rooms = ₱7.3M) so page never shows zeroes
+  const [resort, setResort] = useState('Your Property');
+  const [rooms,  setRooms]  = useState(50);
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const r = p.get('for');
+    const n = Math.max(1, parseInt(p.get('rooms') || '50') || 50);
+    if (r) setResort(r.trim());
+    setRooms(n);
+  }, []);
+
   const s = calcSavings(rooms);
 
   const heroRef = useRef<HTMLDivElement>(null);
@@ -376,7 +387,7 @@ export default function VEReportClient({ resort, rooms }: Props) {
       <nav className="topbar">
         <div className="topbar-inner">
           <span className="topbar-logo">
-            {/* Logo file: place Numat_Logo.png inside /public/ in your repo */}
+            {/* Logo file: place Numat_Logo.png inside /public in your repo */}
             <img src="numat-logo.png" alt="NUMAT Sustainable Manufacturing" />
           </span>
           <span className="topbar-badge">Value Engineering Report</span>
