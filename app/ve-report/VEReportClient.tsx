@@ -92,7 +92,37 @@ export default function VEReportClient({ resort, rooms }: Props) {
   const { ref: sec4ref, visible: sec4 } = useInView();
   const { ref: sec5ref, visible: sec5 } = useInView();
 
-  // Print / PDF
+  // ── Hide all fixed-position widgets before printing ──────────────────────
+  // Catches WhatsApp, NARA, 3D viewer — any widget injected by the site
+  useEffect(() => {
+    const ATTR = 'data-print-hidden';
+
+    const beforePrint = () => {
+      document.querySelectorAll<HTMLElement>('body *').forEach(el => {
+        const pos = window.getComputedStyle(el).position;
+        if ((pos === 'fixed' || pos === 'sticky') && !el.closest('.topbar')) {
+          el.setAttribute(ATTR, el.style.display || 'unset');
+          el.style.setProperty('display', 'none', 'important');
+        }
+      });
+    };
+
+    const afterPrint = () => {
+      document.querySelectorAll<HTMLElement>(`[${ATTR}]`).forEach(el => {
+        const prev = el.getAttribute(ATTR);
+        el.style.display = prev === 'unset' ? '' : (prev || '');
+        el.removeAttribute(ATTR);
+      });
+    };
+
+    window.addEventListener('beforeprint', beforePrint);
+    window.addEventListener('afterprint',  afterPrint);
+    return () => {
+      window.removeEventListener('beforeprint', beforePrint);
+      window.removeEventListener('afterprint',  afterPrint);
+    };
+  }, []);
+
   const handlePrint = () => window.print();
 
   return (
@@ -346,8 +376,8 @@ export default function VEReportClient({ resort, rooms }: Props) {
       <nav className="topbar">
         <div className="topbar-inner">
           <span className="topbar-logo">
-            {/* Logo file: place Numat_Logo.png inside /public/images/ in your repo */}
-            <img src="/images/numat-logo.png" alt="NUMAT Sustainable Manufacturing" />
+            {/* Logo file: place Numat_Logo.png inside /public/ in your repo */}
+            <img src="numat-logo.png" alt="NUMAT Sustainable Manufacturing" />
           </span>
           <span className="topbar-badge">Value Engineering Report</span>
           <button className="print-btn" onClick={handlePrint}>⬇ Save PDF</button>
