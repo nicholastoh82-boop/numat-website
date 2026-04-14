@@ -321,8 +321,8 @@ export default function VEReportClient() {
       <nav className="topbar">
         <div className="topbar-inner">
           <span className="topbar-logo">
-            {/* Logo file: place Numat_Logo.png inside /public/images/ in your repo */}
-            <img src="/images/numat-logo.png" alt="NUMAT Sustainable Manufacturing" />
+            {/* Logo file: place Numat_Logo.png inside /public/ in your repo */}
+            <img src="numat-logo.png" alt="NUMAT Sustainable Manufacturing" />
           </span>
           <span className="topbar-badge">Value Engineering Report</span>
           <button className="print-btn" onClick={handlePrint}>⬇ Save PDF</button>
