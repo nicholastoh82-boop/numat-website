@@ -129,18 +129,18 @@ export default function VEReportClient() {
 
         /* Top nav bar */
         .topbar {
-          background: #0f2137;
-          padding: 14px 0;
+          background: #ffffff;
+          padding: 12px 0;
           position: sticky; top: 0; z-index: 100;
-          border-bottom: 2px solid #1a3c5e;
+          border-bottom: 1px solid #e2e8f0;
+          box-shadow: 0 1px 8px rgba(0,0,0,0.07);
         }
         .topbar-inner {
           max-width: 860px; margin: 0 auto; padding: 0 24px;
           display: flex; align-items: center; justify-content: space-between;
         }
-        .topbar-logo { color: #fff; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.5px; }
-        .topbar-logo span { color: #4ade80; }
-        .topbar-badge { background: #1a3c5e; color: #94c5f0; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px; border: 1px solid #2a5a8e; }
+        .topbar-logo img { height: 40px; width: auto; display: block; }
+        .topbar-badge { background: #f0f7ff; color: #1a3c5e; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px; border: 1px solid #bfdbfe; }
 
         /* Hero */
         .hero {
@@ -288,7 +288,7 @@ export default function VEReportClient() {
 
         /* Print btn */
         .print-btn {
-          background: transparent; border: 1px solid #cbd5e1; color: #4b5e70;
+          background: transparent; border: 1px solid #cbd5e1; color: #1a3c5e;
           font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 8px;
           cursor: pointer; font-family: 'DM Sans', sans-serif;
           transition: background 0.15s;
@@ -320,7 +320,10 @@ export default function VEReportClient() {
       {/* ── Top bar ── */}
       <nav className="topbar">
         <div className="topbar-inner">
-          <span className="topbar-logo syne">NU<span>MAT</span></span>
+          <span className="topbar-logo">
+            {/* Logo file: place Numat_Logo.png inside /public/images/ in your repo */}
+            <img src="/images/numat-logo.png" alt="NUMAT Sustainable Manufacturing" />
+          </span>
           <span className="topbar-badge">Value Engineering Report</span>
           <button className="print-btn" onClick={handlePrint}>⬇ Save PDF</button>
         </div>
@@ -579,11 +582,11 @@ export default function VEReportClient() {
             <p className="cta-note">Or email directly: nick@numat.ph · numatbamboo.com</p>
           </div>
 
-          <div className="footnote">
+          <p className="footnote">
             <p>All savings figures are property-specific estimates calculated using independently verified benchmarks and scaled to {rooms} rooms. Marine plywood replacement cycle: 10–15 years. Hardwood refinishing rate: ₱3,500–₱7,000/sqm. Room revenue loss during renovation based on industry-standard occupancy assumptions.</p>
             <p>Bacterial inhibition: Fabrics Verification Association of Japan. Cooling energy reduction: ScienceDirect, tropical building research. CO₂ sequestration: peer-reviewed bamboo plantation studies.</p>
             <p>© {new Date().getFullYear()} NUMAT Sustainable Manufacturing Inc. · numatbamboo.com</p>
-          </div>
+          </p>
         </div>
       </section>
     </>
