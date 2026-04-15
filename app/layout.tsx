@@ -5,9 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/toaster'
 import { CurrencyProvider } from '@/components/providers/currency-provider'
 import CountrySelectorModal from '@/components/country-selector-modal'
-import FloatingContactWidget from '@/components/floating-contact-widget'
-import StickyCaptureBar from '@/components/sticky-capture-bar'
-import ChatWidget from '@/components/chat-widget'
+import PublicOnlyWidgets from '@/components/public-only-widgets'
 import Script from 'next/script'
 import './globals.css'
 
@@ -131,11 +129,9 @@ export default function RootLayout({
         <CurrencyProvider>
           {children}
           <CountrySelectorModal />
-          <FloatingContactWidget />
-          <ChatWidget />
+          <PublicOnlyWidgets />
           <Toaster />
           <Analytics />
-          <StickyCaptureBar />
         </CurrencyProvider>
       </body>
     </html>
