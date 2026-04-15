@@ -1,13 +1,11 @@
 'use client'
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import {
   Search, Filter, X, ChevronLeft, ChevronRight,
-  CheckSquare, Square, Save, Loader2, RefreshCw,
-  Mail, Phone, Globe, MapPin, Calendar, User,
-  TrendingUp, Clock, MessageSquare, AlertCircle,
-  CheckCircle2, XCircle, Building2, Users,
+  SquareCheck, Square, Save, Loader2, RefreshCw,
+  Mail, MapPin, TrendingUp, MessageSquare, Building2, Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -562,7 +560,7 @@ export default function AdminLeadsPage() {
                 <th className="w-10 px-4 py-3 text-left">
                   <button onClick={toggleSelectAll}>
                     {selectedIds.size === leads.length && leads.length > 0
-                      ? <CheckSquare className="w-4 h-4 text-primary" />
+                      ? <SquareCheck className="w-4 h-4 text-primary" />
                       : <Square className="w-4 h-4 text-muted-foreground" />
                     }
                   </button>
@@ -604,7 +602,7 @@ export default function AdminLeadsPage() {
                 {role === 'admin' && (
                   <td className="px-4 py-3" onClick={e => { e.stopPropagation(); toggleSelect(lead.id) }}>
                     {selectedIds.has(lead.id)
-                      ? <CheckSquare className="w-4 h-4 text-primary" />
+                      ? <SquareCheck className="w-4 h-4 text-primary" />
                       : <Square className="w-4 h-4 text-muted-foreground" />
                     }
                   </td>
