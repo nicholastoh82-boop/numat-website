@@ -9,20 +9,32 @@ import {
   Inbox,
   MessageSquareQuote,
   Newspaper,
+  Users,
+  BarChart2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAdminRole } from '@/app/admin/layout'
 
-const navItems = [
+const adminNavItems = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
+  { href: '/admin/leads', label: 'Leads', icon: Users },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/news', label: 'News', icon: Newspaper },
-  { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquareQuote },
+  { href: '/admin/testimonials', label: 'Reviews', icon: MessageSquareQuote },
   { href: '/admin/quotes', label: 'Quotes', icon: FileText },
   { href: '/admin/inquiries', label: 'Inquiries', icon: Inbox },
 ]
 
+const repNavItems = [
+  { href: '/admin/leads', label: 'My Leads', icon: Users },
+  { href: '/admin/pipeline', label: 'Pipeline', icon: BarChart2 },
+]
+
 export default function AdminMobileNav() {
   const pathname = usePathname()
+  const { role } = useAdminRole()
+
+  const navItems = role === 'rep' ? repNavItems : adminNavItems
 
   return (
     <div className="bg-card border-t border-border">

@@ -11,11 +11,15 @@ import {
   MessageSquareQuote,
   Newspaper,
   Bot,
+  Users,
+  BarChart2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAdminRole } from '@/app/admin/layout'
 
 export default function AdminSidebar() {
   const pathname = usePathname()
+  const { role } = useAdminRole()
 
   const isActive = (href: string) =>
     href === '/admin' ? pathname === '/admin' : pathname.startsWith(href)
@@ -28,11 +32,38 @@ export default function AdminSidebar() {
         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
     )
 
+  // Rep-only nav (limited)
+  if (role === 'rep') {
+    return (
+      <nav className="p-4 space-y-1">
+        <Link href="/admin/leads" className={linkClass('/admin/leads')}>
+          <Users className="w-5 h-5" />
+          My Leads
+        </Link>
+        <Link href="/admin/pipeline" className={linkClass('/admin/pipeline')}>
+          <BarChart2 className="w-5 h-5" />
+          Pipeline
+        </Link>
+      </nav>
+    )
+  }
+
+  // Admin nav (full)
   return (
     <nav className="p-4 space-y-1">
       <Link href="/admin" className={linkClass('/admin')}>
         <LayoutDashboard className="w-5 h-5" />
         Overview
+      </Link>
+
+      <Link href="/admin/leads" className={linkClass('/admin/leads')}>
+        <Users className="w-5 h-5" />
+        Leads
+      </Link>
+
+      <Link href="/admin/pipeline" className={linkClass('/admin/pipeline')}>
+        <BarChart2 className="w-5 h-5" />
+        Pipeline
       </Link>
 
       <Link href="/admin/products" className={linkClass('/admin/products')}>
