@@ -15,7 +15,30 @@ export default function CrmLoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const router = useRouter()
+
+  const handleGoogleLogin = async () => {
+    setError(null)
+    setGoogleLoading(true)
+    try {
+      const supabase = createClient()
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=/crm/dashboard`,
+          queryParams: { hd: 'numat.ph' },
+        },
+      })
+      if (oauthError) {
+        setError(oauthError.message)
+        setGoogleLoading(false)
+      }
+    } catch {
+      setError('Could not start Google sign-in. Please try again.')
+      setGoogleLoading(false)
+    }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,6 +92,31 @@ export default function CrmLoginPage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          <Button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading || loading}
+            className="w-full bg-[#1D6A47] hover:bg-[#155a3a] text-white"
+          >
+            {googleLoading ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redirecting...</>
+            ) : (
+              <>
+                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#FFFFFF" d="M21.35 11.1H12v3.2h5.35c-.23 1.4-1.66 4.1-5.35 4.1-3.22 0-5.85-2.66-5.85-5.95S8.78 6.5 12 6.5c1.83 0 3.06.78 3.76 1.45l2.57-2.48C16.7 3.95 14.55 3 12 3 6.98 3 2.93 7.03 2.93 12.05S6.98 21.1 12 21.1c6.92 0 9.5-4.86 9.5-7.85 0-.55-.06-.97-.15-1.4z"/>
+                </svg>
+                Sign in with Google
+              </>
+            )}
+          </Button>
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-2 text-gray-400">or continue with email</span>
+            </div>
+          </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
