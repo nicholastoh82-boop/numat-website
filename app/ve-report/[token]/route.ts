@@ -18,11 +18,11 @@ export async function GET(
 
   const { data, error } = await supabase
     .from('ve_reports')
-    .select('report_html, resort_name, view_count, first_viewed_at')
+    .select('resort_name, rooms, sqm, saving_vs_hard_lo, saving_vs_hard_hi, numat_total_lo, numat_total_hi, view_count, first_viewed_at, rooms_source')
     .eq('token', token)
     .single()
 
-  if (error || !data || !data.report_html) {
+  if (error || !data || !data.resort_name) {
     return new NextResponse(
       `<!DOCTYPE html><html><head><title>Report Not Found</title>
       <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f7f6}
@@ -37,6 +37,11 @@ export async function GET(
     )
   }
 
+  // Non-hotel entity — no report to show
+  if (data.rooms_source && data.rooms_source.startsWith('non_hotel')) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+
   // Fire-and-forget view tracking
   const now = new Date().toISOString()
   supabase
@@ -49,12 +54,16 @@ export async function GET(
     .eq('token', token)
     .then()
 
-  return new NextResponse(data.report_html, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store, no-cache',
-      'X-Report-For': data.resort_name || '',
-    },
+  // Build redirect URL with live Supabase data — VEReportClient renders dynamically
+  const params = new URLSearchParams({
+    for:        data.resort_name,
+    rooms:      String(data.rooms || 50),
+    sqm:        String(data.sqm || (data.rooms || 50) * 35),
+    save_lo:    String(data.saving_vs_hard_lo || 0),
+    save_hi:    String(data.saving_vs_hard_hi || 0),
+    numat_lo:   String(data.numat_total_lo || 0),
+    numat_hi:   String(data.numat_total_hi || 0),
   })
+
+  return NextResponse.redirect(new URL(`/ve-report?${params.toString()}`, request.url))
 }
