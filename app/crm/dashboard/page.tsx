@@ -146,17 +146,32 @@ export default function CRMDashboard() {
   }, [supabase, router])
 
   const loadLeads = useCallback(async (crmUser: CRMUser) => {
-    let query = supabase
-      .from('master_leads')
-      .select('id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link')
-      .order('created_at', { ascending: false })
-      .limit(10000)
-    if (crmUser.role === 'rep') {
-      query = query.eq('rep_email', crmUser.email)
+    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link'
+    const PAGE_SIZE = 1000
+    const allLeads: Lead[] = []
+    let from = 0
+    let keepFetching = true
+
+    while (keepFetching) {
+      let query = supabase
+        .from('master_leads')
+        .select(SELECT_FIELDS)
+        .order('created_at', { ascending: false })
+        .range(from, from + PAGE_SIZE - 1)
+
+      if (crmUser.role === 'rep') {
+        query = query.eq('rep_email', crmUser.email)
+      }
+
+      const { data, error } = await query
+      if (error) { showToast('Failed to load leads', 'error'); return }
+      if (!data || data.length === 0) break
+      allLeads.push(...data)
+      if (data.length < PAGE_SIZE) break
+      from += PAGE_SIZE
     }
-    const { data, error } = await query
-    if (error) { showToast('Failed to load leads', 'error'); return }
-    setLeads(data || [])
+
+    setLeads(allLeads)
   }, [supabase])
 
   const refresh = async () => {
