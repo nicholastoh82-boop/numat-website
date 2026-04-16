@@ -347,6 +347,89 @@ export default function VEReportClient() {
 
       <hr className="divider" />
 
+
+      {/* ── Gallery: See It In Place ── */}
+      <section className="section" style={{ background: '#0f2137', padding: '64px 0' }}>
+        <div className="container">
+          <p className="section-label" style={{ color: '#4ade80' }}>In Application</p>
+          <h2 className="section-title syne" style={{ color: '#fff', marginBottom: 8 }}>See it in a real setting</h2>
+          <p style={{ fontSize: 15, color: '#94c5f0', marginBottom: 36, lineHeight: 1.6 }}>
+            NUMAT engineered bamboo across three product lines — each suited to different areas of {resort}.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginBottom: 16 }}>
+
+            {/* Flooring */}
+            <div style={{ borderRadius: 12, overflow: 'hidden', background: '#1a3c5e', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ position: 'relative', paddingTop: '66%', overflow: 'hidden' }}>
+                <img
+                  src="/Bamboo-Flooring.png"
+                  alt="NuFloor engineered bamboo flooring"
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              <div style={{ padding: '16px 20px 20px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#4ade80', marginBottom: 6 }}>NuFloor</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 6 }}>Commercial Bamboo Flooring</div>
+                <div style={{ fontSize: 13, color: '#94c5f0', lineHeight: 1.6 }}>Rated for high-traffic commercial use. Dimensionally stable in tropical humidity. Ideal for lobbies, corridors, and suites.</div>
+              </div>
+            </div>
+
+            {/* Wall */}
+            <div style={{ borderRadius: 12, overflow: 'hidden', background: '#1a3c5e', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ position: 'relative', paddingTop: '66%', overflow: 'hidden' }}>
+                <img
+                  src="/Bamboo-Wall.png"
+                  alt="NuWall engineered bamboo wall cladding"
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              <div style={{ padding: '16px 20px 20px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#4ade80', marginBottom: 6 }}>NuWall</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 6 }}>Wall Panels &amp; Cladding</div>
+                <div style={{ fontSize: 13, color: '#94c5f0', lineHeight: 1.6 }}>Interior and exterior wall cladding. Clean installation without specialist labour. Carries the natural warmth guests respond to.</div>
+              </div>
+            </div>
+
+            {/* Slats */}
+            <div style={{ borderRadius: 12, overflow: 'hidden', background: '#1a3c5e', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ position: 'relative', paddingTop: '66%', overflow: 'hidden' }}>
+                <img
+                  src="/bamboo-slats.png"
+                  alt="NuSlat decorative bamboo slat panels"
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              <div style={{ padding: '16px 20px 20px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#4ade80', marginBottom: 6 }}>NuSlat</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 6 }}>Decorative Slat Panels</div>
+                <div style={{ fontSize: 13, color: '#94c5f0', lineHeight: 1.6 }}>Feature walls, reception backdrops, room dividers. The signature look that signals premium sustainability to your guests.</div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Source shot */}
+          <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', position: 'relative' }}>
+            <img
+              src="/harvest.jpg"
+              alt="NUMAT bamboo harvest — Bukidnon, Mindanao"
+              style={{ width: '100%', height: 220, objectFit: 'cover', objectPosition: 'center 40%', display: 'block' }}
+            />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(15,33,55,0.85) 0%, rgba(15,33,55,0.2) 60%)', display: 'flex', alignItems: 'center', padding: '0 40px' }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#4ade80', marginBottom: 8 }}>From Source to Site</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Grown and engineered in Bukidnon, Mindanao</div>
+                <div style={{ fontSize: 14, color: '#94c5f0', maxWidth: 420, lineHeight: 1.6 }}>Giant Asper bamboo — the same species harvested here — is what becomes your flooring. No imports, no forex risk, 2–4 weeks to your property.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <hr className="divider" />
+
       {/* Section 2: Lead time */}
       <section className="section" style={{ background: '#fff' }}>
         <div className="container">
