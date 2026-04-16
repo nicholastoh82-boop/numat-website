@@ -7,6 +7,14 @@ interface Message {
   content: string;
 }
 
+// VE Report context fetched from Supabase when ?ve_report=TOKEN is in the URL
+interface VEContext {
+  company: string;
+  contact: string;
+  sqm: number;
+  token: string;
+}
+
 declare global {
   interface Window {
     Calendly?: { initInlineWidgets: () => void };
@@ -14,6 +22,8 @@ declare global {
 }
 
 const N8N_WEBHOOK = "https://nicholastoh.app.n8n.cloud/webhook/numat-lead";
+const SB_URL = "https://peuwxnrojlfybdymkazj.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBldXd4bnJvamxmeWJkeW1rYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTAzNjMsImV4cCI6MjA4ODI2NjM2M30.qCmHAsm8AqpV-LsnRac631au_Ff8fk1S7Dbeq5O-aGM";
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,13 +37,52 @@ export default function ChatWidget() {
   const [isInitialized, setIsInitialized] = useState(false);
   const sessionIdRef = useRef<string>("");
   const pageUrlRef = useRef<string>("");
+  const veContextRef = useRef<VEContext | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Initialise session ID and page URL
   useEffect(() => {
     sessionIdRef.current = crypto.randomUUID();
     pageUrlRef.current = window.location.href;
   }, []);
+
+  // ── VE Report auto-open ──────────────────────────────────────────────────
+  // When the visitor arrives via ?ve_report=TOKEN (from clicking "Chat with NARA"
+  // in their Value Engineering Report), fetch the report details and auto-open
+  // the chat widget after a 1.5s delay so the page has time to render first.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("ve_report");
+    if (!token) return;
+
+    fetch(
+      `${SB_URL}/rest/v1/ve_reports?token=eq.${token}&select=resort_name,contact_name,sqm`,
+      { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data[0]) {
+          const rpt = data[0];
+          veContextRef.current = {
+            company: rpt.resort_name || "",
+            contact: rpt.contact_name || "",
+            sqm: rpt.sqm || 0,
+            token,
+          };
+        }
+      })
+      .catch(() => {
+        // Context fetch failed — still auto-open with generic greeting
+      })
+      .finally(() => {
+        setTimeout(() => {
+          setIsOpen(true);
+          setIsMinimized(false);
+        }, 1500);
+      });
+  }, []);
+  // ────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -66,8 +115,14 @@ export default function ChatWidget() {
     return () => window.removeEventListener("message", handler);
   }, []);
 
+  // Pass ve_report_context to the API so NARA can personalise its greeting
   const callChat = useCallback(
-    async (conversation: Message[]): Promise<{ text: string; isComplete: boolean; tier?: string; score?: number }> => {
+    async (conversation: Message[]): Promise<{
+      text: string;
+      isComplete: boolean;
+      tier?: string;
+      score?: number;
+    }> => {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,6 +130,8 @@ export default function ChatWidget() {
           messages: conversation,
           session_id: sessionIdRef.current,
           page_url: pageUrlRef.current,
+          // Included on every request so NARA retains context throughout the chat
+          ve_report_context: veContextRef.current ?? undefined,
         }),
       });
       if (!res.ok) throw new Error("Chat request failed");
@@ -107,15 +164,27 @@ export default function ChatWidget() {
     if (isInitialized) return;
     setIsInitialized(true);
     setIsLoading(true);
+
+    // When VE context is present, the init trigger tells NARA to open with a
+    // personalised greeting referencing the report. The API injects the context
+    // into the system prompt so NARA knows the company and contact name.
+    const initTrigger = veContextRef.current
+      ? "__VE_REPORT_OPEN__"
+      : "Hello";
+
     try {
-      const { text } = await callChat([{ role: "user", content: "Hello" }]);
+      const { text } = await callChat([{ role: "user", content: initTrigger }]);
       setMessages([{ role: "assistant", content: text }]);
     } catch {
+      // Offline fallback — personalised where possible
+      const ctx = veContextRef.current;
+      const firstName = ctx?.contact?.split(" ")[0] ?? null;
       setMessages([
         {
           role: "assistant",
-          content:
-            "Hi! I'm NARA, NUMAT's bamboo specialist. What project can I help you with today?",
+          content: ctx
+            ? `Hi${firstName ? ` ${firstName}` : ""}! Thanks for reviewing the NUMAT report for ${ctx.company}. I'm NARA — what questions do you have about the bamboo products or your project?`
+            : "Hi! I'm NARA, NUMAT's bamboo specialist. What project can I help you with today?",
         },
       ]);
     }
@@ -143,7 +212,6 @@ export default function ChatWidget() {
       if (isComplete) {
         setSubmitted(true);
         fireWebhook(finalMessages);
-        // Only show Calendly for HOT leads (score 7+)
         setShowCalendly(tier === "HOT");
       }
     } catch {
@@ -209,7 +277,8 @@ export default function ChatWidget() {
             overflow: "hidden",
             zIndex: 9999,
             border: "1px solid rgba(13,33,55,0.1)",
-            transition: "height 0.3s ease, opacity 0.2s ease, max-height 0.3s ease",
+            transition:
+              "height 0.3s ease, opacity 0.2s ease, max-height 0.3s ease",
           }}
         >
           {/* Header */}
@@ -245,7 +314,9 @@ export default function ChatWidget() {
               >
                 NARA
               </div>
-              <div style={{ color: "#5DCAA5", fontSize: "11px", marginTop: "1px" }}>
+              <div
+                style={{ color: "#5DCAA5", fontSize: "11px", marginTop: "1px" }}
+              >
                 Online
               </div>
             </div>
@@ -303,7 +374,8 @@ export default function ChatWidget() {
                 key={i}
                 style={{
                   display: "flex",
-                  justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                  justifyContent:
+                    msg.role === "user" ? "flex-end" : "flex-start",
                 }}
               >
                 <div
@@ -408,7 +480,7 @@ export default function ChatWidget() {
               </>
             )}
 
-            {/* Lead submitted — WARM/COLD: no Calendly, just confirmation */}
+            {/* Lead submitted — WARM/COLD */}
             {submitted && !showCalendly && !meetingBooked && (
               <div
                 style={{
@@ -431,7 +503,7 @@ export default function ChatWidget() {
               </div>
             )}
 
-            {/* Meeting booked confirmation */}
+            {/* Meeting booked */}
             {meetingBooked && (
               <div
                 style={{
@@ -454,7 +526,7 @@ export default function ChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input area — hidden after lead submitted */}
+          {/* Input area */}
           {!submitted && (
             <div
               style={{

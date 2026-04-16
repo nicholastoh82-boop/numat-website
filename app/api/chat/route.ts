@@ -49,6 +49,14 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 const N8N_WEBHOOK = 'https://nicholastoh.app.n8n.cloud/webhook/numat-lead'
 const STOP_WORDS = new Set(['a','an','the','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','dare','ought','used','i','me','my','we','our','you','your','he','she','it','they','them','his','her','its','their','what','which','who','whom','this','that','these','those','am','at','by','for','in','of','on','or','to','up','and','but','if','or','nor','so','yet','both','either','neither','not','only','own','same','than','too','very','just','how','when','where','why','all','any','each','few','more','most','other','some','such','no','as'])
 
+// VE Report context passed from the chat widget when visitor arrives via ?ve_report=TOKEN
+interface VEReportContext {
+  company: string
+  contact: string
+  sqm: number
+  token: string
+}
+
 function getSupabaseAdmin() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -162,7 +170,12 @@ async function searchKnowledge(
   return { entries: top5, hasResults: top5.length > 0, keywords }
 }
 
-function buildSystemPrompt(internalEntries: KnowledgeEntry[], knowledgeEntries: KnowledgeEntry[]): string {
+function buildSystemPrompt(
+  internalEntries: KnowledgeEntry[],
+  knowledgeEntries: KnowledgeEntry[],
+  veContext?: VEReportContext,
+  isVEOpen?: boolean
+): string {
   const internalBlock = internalEntries.length > 0
     ? internalEntries.map(e => `[${e.category.toUpperCase()}: ${e.question}]\n${e.answer}`).join('\n\n')
     : ''
@@ -173,7 +186,44 @@ function buildSystemPrompt(internalEntries: KnowledgeEntry[], knowledgeEntries: 
       ).join('\n')
     : '---\nNo specific knowledge entries matched this query.'
 
-  return `You are NARA — NUMAT Autonomous Response Assistant. You help visitors understand NUMAT's bamboo products and qualify their project needs.
+  // VE Report opening instruction — injected when visitor clicks "Chat with NARA"
+  // from their personalised report. Gives NARA full context for a warm greeting.
+  const veOpeningBlock = isVEOpen && veContext ? `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VE REPORT VISITOR — PERSONALISED GREETING REQUIRED (PRIORITY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+This visitor has just arrived by clicking "Chat with NARA" directly
+from their personalised NUMAT Value Engineering Report. They have NOT
+typed anything — the chat opened automatically on their behalf.
+
+Your ONLY job right now is to deliver a warm, human, personalised greeting.
+
+What you know about this visitor:
+  • Company: ${veContext.company}
+  • Contact name: ${veContext.contact || 'not provided'}
+  • Project area in their report: ${veContext.sqm.toLocaleString()} sqm
+
+Your greeting MUST:
+1. Use their first name warmly if available (${veContext.contact?.split(' ')[0] || 'not provided'})
+2. Thank them sincerely for taking the time to review the report
+3. Reference their company by name (${veContext.company})
+4. Acknowledge the project scale so they know you have their details (${veContext.sqm.toLocaleString()} sqm)
+5. Invite them to ask anything — specifications, pricing, samples, or timelines
+6. Keep it to 3 sentences maximum. Sound genuinely human, not scripted.
+
+Do NOT ask for their name or company. You already have it.
+Do NOT start with a generic "Hello" — make it personal from the first word.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+` : ''
+
+  // When VE context is present (all subsequent messages too), remind NARA of the context
+  const veContextBlock = !isVEOpen && veContext ? `
+[VE REPORT CONTEXT — this visitor arrived from a personalised report]
+Company: ${veContext.company} | Project area: ${veContext.sqm.toLocaleString()} sqm
+You already know their company and scale. Do not ask for these again.
+` : ''
+
+  return `${veOpeningBlock}You are NARA — NUMAT Autonomous Response Assistant. You help visitors understand NUMAT's bamboo products and qualify their project needs.
 
 ABOUT NUMAT:
 NUMAT Sustainable Manufacturing Inc. is a Philippines-based manufacturer of engineered bamboo building materials, backed by WaveMaker Impact (Singapore). We use Dendrocalamus asper bamboo — the highest-grade structural bamboo species — grown sustainably in the Philippines.
@@ -187,7 +237,7 @@ PRODUCTS:
 PRIMARY MARKETS: Philippines, Malaysia, Singapore
 SECONDARY MARKETS: Indonesia, Thailand, Vietnam, Australia, Middle East
 WEBSITE: numatbamboo.com | CONTACT: sales@numat.ph
-${internalBlock ? `\nBEHAVIORAL GUIDELINES (always follow):\n${internalBlock}\n` : ''}
+${veContextBlock}${internalBlock ? `\nBEHAVIORAL GUIDELINES (always follow):\n${internalBlock}\n` : ''}
 RELEVANT KNOWLEDGE BASE ENTRIES:
 ${knowledgeBlock}
 
@@ -210,6 +260,9 @@ interface ChatMessage {
   content: string
 }
 
+// Internal trigger sent by the widget when the chat auto-opens from a VE report link
+const VE_OPEN_TRIGGER = '__VE_REPORT_OPEN__'
+
 export async function POST(request: NextRequest) {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
@@ -218,20 +271,41 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { messages, session_id, page_url }: {
+    const {
+      messages,
+      session_id,
+      page_url,
+      ve_report_context,
+    }: {
       messages: ChatMessage[]
       session_id: string
       page_url?: string
+      ve_report_context?: VEReportContext
     } = body
 
     if (!session_id || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
 
+    // Detect VE report auto-open: first message is the internal trigger token
+    const isVEOpen =
+      !!ve_report_context &&
+      messages.length === 1 &&
+      messages[0].content === VE_OPEN_TRIGGER
+
+    // Sanitise messages sent to Claude: replace the internal trigger with "Hello"
+    // so Claude never sees the raw trigger string — it gets context via system prompt instead
+    const claudeMessages: ChatMessage[] = messages.map((m, idx) =>
+      idx === 0 && m.content === VE_OPEN_TRIGGER
+        ? { ...m, content: 'Hello' }
+        : m
+    )
+
     const supabase = getSupabaseAdmin()
     const userAgent = request.headers.get('user-agent') || undefined
     const lastMsg = messages[messages.length - 1]
-    const userQuestion = lastMsg?.content || ''
+    // Use the sanitised content for knowledge search
+    const userQuestion = isVEOpen ? '' : (lastMsg?.content || '')
 
     // Non-blocking: upsert session
     supabase.from('chat_sessions').upsert(
@@ -239,21 +313,24 @@ export async function POST(request: NextRequest) {
       { onConflict: 'id', ignoreDuplicates: true }
     ).then(() => {})
 
-    // Save user message
+    // Save user message (store sanitised version in DB)
     if (lastMsg?.role === 'user') {
       supabase.from('chat_messages').insert({
-        session_id, role: 'user', content: lastMsg.content, knowledge_used: [],
+        session_id,
+        role: 'user',
+        content: isVEOpen ? '[VE Report auto-open]' : lastMsg.content,
+        knowledge_used: [],
       }).then(() => {})
     }
 
-    // Fetch internal guidelines (always) + search contextual knowledge (by message) in parallel
+    // Fetch internal guidelines + contextual knowledge in parallel
     const [internalEntries, { entries: knowledgeEntries, hasResults, keywords }] = await Promise.all([
       fetchInternalKnowledge(supabase),
       searchKnowledge(supabase, userQuestion),
     ])
 
-    // Log unanswered questions; mark related unanswered resolved when knowledge now covers them
-    if (lastMsg?.role === 'user') {
+    // Log unanswered questions
+    if (lastMsg?.role === 'user' && !isVEOpen) {
       if (!hasResults && userQuestion.length > 15) {
         supabase.from('nara_unanswered').insert({ session_id, question: userQuestion }).then(() => {})
       } else if (hasResults) {
@@ -261,10 +338,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const systemPrompt = buildSystemPrompt(internalEntries, knowledgeEntries)
+    const systemPrompt = buildSystemPrompt(
+      internalEntries,
+      knowledgeEntries,
+      ve_report_context,
+      isVEOpen
+    )
     const knowledgeIds = knowledgeEntries.map(e => e.id)
 
-    // Call Claude with correct model name
     const claudeRes = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
       headers: {
@@ -276,7 +357,7 @@ export async function POST(request: NextRequest) {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 500,
         system: systemPrompt,
-        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        messages: claudeMessages.map(m => ({ role: m.role, content: m.content })),
       }),
     })
 
@@ -292,29 +373,24 @@ export async function POST(request: NextRequest) {
 
     const isComplete = rawText.includes('[LEAD_COMPLETE]')
 
-    // Extract structured lead data including tier and score
     let leadData: Record<string, string> = {}
     const leadDataMatch = rawText.match(/<!--LEAD_DATA:(\{.*?\})-->/)
     if (leadDataMatch) {
       try { leadData = JSON.parse(leadDataMatch[1]) } catch { /* ignore */ }
     }
 
-    // Strip hidden block and tag — user never sees these
     const text = rawText
       .replace(/<!--LEAD_DATA:\{[\s\S]*?\}-->/, '')
       .replace('[LEAD_COMPLETE]', '')
       .trim()
 
-    // Extract tier and score for Calendly gating in the frontend
     const tier = leadData.tier || null
     const score = leadData.score ? parseFloat(leadData.score) : null
 
-    // Save assistant response
     supabase.from('chat_messages').insert({
       session_id, role: 'assistant', content: text, knowledge_used: knowledgeIds,
     }).then(() => {})
 
-    // On lead complete — update session and fire n8n webhook with structured data
     if (isComplete) {
       supabase.from('chat_sessions')
         .update({ completed: true, lead_submitted: true })
@@ -330,17 +406,18 @@ export async function POST(request: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           source: 'NARA',
-          lead_source: 'Website',
+          lead_source: 'VE Report',  // tag these leads as coming from a VE report
+          ve_report_company: ve_report_context?.company || null,
+          ve_report_token: ve_report_context?.token || null,
           session_id,
           ...leadData,
           email: leadData.email ||
             fullConvo.match(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/)?.[0] || null,
-          notes: `NARA conversation:\n\n${fullConvo}`,
+          notes: `NARA conversation (from VE Report):\n\n${fullConvo}`,
         }),
       }).catch(e => console.error('[NARA Webhook] Failed:', e))
     }
 
-    // Return text + tier + score — frontend uses tier to decide whether to show Calendly
     return NextResponse.json({ text, isComplete, tier, score })
 
   } catch (error) {
