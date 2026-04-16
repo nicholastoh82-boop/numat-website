@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 
 interface Lead {
@@ -65,7 +65,10 @@ const STAGE_LABELS: Record<string, string> = {
 const PHP_TO_USD = 56
 
 export default function CRMDashboard() {
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
   const router = useRouter()
 
   const [user, setUser] = useState<CRMUser | null>(null)
