@@ -537,15 +537,24 @@ export default function CRMDashboard() {
                           <label className="text-xs font-medium text-gray-400 block mb-1">Rep Assigned</label>
                           <select defaultValue={lead.rep_email || ''}
                             onChange={e => {
-                              const v = e.target.value
-                              updateLead(lead.id, { rep_email: v || null, rep_assigned: v || null })
+                              const email = e.target.value
+                              const repNameMap: Record<string,string> = {
+                                'mohan@numat.ph': 'Mohan',
+                                'lemuelaseniero@numat.ph': 'Lemuel',
+                                'bryan@numat.ph': 'Bryan',
+                              }
+                              const name = repNameMap[email] || email.split('@')[0]
+                              updateLead(lead.id, {
+                                rep_email: email || null,
+                                rep_assigned: email ? name : null,
+                                rep_reply_to: email || null,
+                              })
                             }}
                             className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                             <option value="">— Unassigned —</option>
-                            {repOptions.map(r => <option key={r} value={r}>{r.split('@')[0]}</option>)}
-                            {lead.rep_email && !repOptions.includes(lead.rep_email) && (
-                              <option value={lead.rep_email}>{lead.rep_email.split('@')[0]}</option>
-                            )}
+                            <option value="mohan@numat.ph">Mohan (International)</option>
+                            <option value="bryan@numat.ph">Bryan (Philippines)</option>
+                            <option value="lemuelaseniero@numat.ph">Lemuel (Philippines)</option>
                           </select>
                         </div>
                       )}
