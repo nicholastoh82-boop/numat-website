@@ -106,7 +106,7 @@ function mostRecent(...isos: (string | null | undefined)[]): string | null {
   return valid.reduce((a, b) => (new Date(a) > new Date(b) ? a : b))
 }
 
-const PHP_TO_USD = 56
+const PHP_TO_USD = 56 // ₱/USD rate
 
 export default function CRMDashboard() {
   const supabase = createBrowserClient(
