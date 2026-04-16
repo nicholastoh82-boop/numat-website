@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 
@@ -29,6 +29,22 @@ interface Lead {
   quote_issued_by: string | null
   last_activity_at: string | null
   created_at: string
+  title?: string | null
+  website?: string | null
+  linkedin_url?: string | null
+  email_sent_at?: string | null
+  replied_at?: string | null
+  last_email_sent?: string | null
+  last_activity_type?: string | null
+  reply_classification?: string | null
+  appointment_date?: string | null
+  close_date?: string | null
+  follow_up?: string | null
+  booking_confirmed?: boolean | null
+  won_lost?: string | null
+  qty?: number | null
+  unit?: string | null
+  meeting_link?: string | null
 }
 
 interface CRMUser {
@@ -62,6 +78,34 @@ const STAGE_LABELS: Record<string, string> = {
   lost: 'Lost',
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  booked: 'bg-green-100 text-green-700',
+  closed: 'bg-green-100 text-green-700',
+  bounced: 'bg-red-100 text-red-700',
+  unsubscribed: 'bg-red-100 text-red-700',
+}
+
+const REPLY_CLASSIFICATIONS = ['interested','not_interested','out_of_office','wrong_person','request_info','unsubscribed']
+
+const formatStatusLabel = (s: string) => s.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())
+
+function relDate(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return null
+  const diffMs = Date.now() - d.getTime()
+  const diffDays = Math.floor(diffMs / 86_400_000)
+  if (diffDays < 1) return 'Today'
+  if (diffDays < 7) return `${diffDays}d ago`
+  return d.toLocaleDateString('en-PH', { day: 'numeric', month: 'short' })
+}
+
+function mostRecent(...isos: (string | null | undefined)[]): string | null {
+  const valid = isos.filter(Boolean) as string[]
+  if (valid.length === 0) return null
+  return valid.reduce((a, b) => (new Date(a) > new Date(b) ? a : b))
+}
+
 const PHP_TO_USD = 56
 
 export default function CRMDashboard() {
@@ -85,6 +129,7 @@ export default function CRMDashboard() {
   const [quoteForm, setQuoteForm] = useState({ amountPHP: '', amountUSD: '', notes: '' })
   const [quoteSubmitting, setQuoteSubmitting] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+  const [analyticsOpen, setAnalyticsOpen] = useState(true)
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
@@ -103,9 +148,9 @@ export default function CRMDashboard() {
   const loadLeads = useCallback(async (crmUser: CRMUser) => {
     let query = supabase
       .from('master_leads')
-      .select('id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at')
+      .select('id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link')
       .order('created_at', { ascending: false })
-      .limit(5000)
+      .limit(10000)
     if (crmUser.role === 'rep') {
       query = query.eq('rep_email', crmUser.email)
     }
@@ -189,6 +234,37 @@ export default function CRMDashboard() {
 
   const signOut = async () => { await supabase.auth.signOut(); router.push('/crm/login') }
   const repOptions = Array.from(new Set(leads.map(l => l.rep_email).filter(Boolean))) as string[]
+  const segmentOptions = Array.from(new Set(leads.map(l => l.segment).filter(Boolean))) as string[]
+
+  const analytics = useMemo(() => {
+    const byAgent = new Map<string, number>()
+    const bySegment = new Map<string, number>()
+    const byCountry = new Map<string, number>()
+    const byStage = new Map<string, number>()
+    const byStatus = new Map<string, number>()
+    for (const l of leads) {
+      const agent = l.rep_email || 'unassigned'
+      byAgent.set(agent, (byAgent.get(agent) || 0) + 1)
+      const seg = l.segment || 'Unspecified'
+      bySegment.set(seg, (bySegment.get(seg) || 0) + 1)
+      const country = l.country || 'Unknown'
+      byCountry.set(country, (byCountry.get(country) || 0) + 1)
+      const stage = l.pipeline_stage || 'new'
+      byStage.set(stage, (byStage.get(stage) || 0) + 1)
+      const status = l.status || 'pending'
+      byStatus.set(status, (byStatus.get(status) || 0) + 1)
+    }
+    const sortDesc = (m: Map<string, number>) => Array.from(m.entries()).sort((a, b) => b[1] - a[1])
+    return {
+      total: leads.length,
+      byAgent: sortDesc(byAgent),
+      bySegment: sortDesc(bySegment),
+      byCountry: sortDesc(byCountry).slice(0, 10),
+      byStage: PIPELINE_STAGES.map(s => [s, byStage.get(s) || 0] as [string, number]),
+      byStatus: STATUS_OPTIONS.map(s => [s, byStatus.get(s) || 0] as [string, number]),
+    }
+  }, [leads])
+
   const stats = {
     total: filtered.length,
     active: filtered.filter(l => ['active','replied','nurturing'].includes(l.status || '')).length,
@@ -234,6 +310,88 @@ export default function CRMDashboard() {
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
+        {user?.role === 'admin' && (
+          <div className="bg-white rounded-xl border border-gray-200 mb-5 overflow-hidden">
+            <button
+              onClick={() => setAnalyticsOpen(o => !o)}
+              className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-700" />
+                <span className="font-semibold text-gray-800">Analytics</span>
+                <span className="text-xs text-gray-400">{analytics.total.toLocaleString()} total leads</span>
+              </div>
+              <span className="text-gray-400 text-sm">{analyticsOpen ? '▲' : '▼'}</span>
+            </button>
+            {analyticsOpen && (
+              <div className="border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-gray-100">
+                <div className="bg-white p-4">
+                  <div className="text-xs uppercase tracking-wide text-gray-400 font-medium mb-2">Total Leads</div>
+                  <div className="text-3xl font-bold text-green-700">{analytics.total.toLocaleString()}</div>
+                </div>
+                <div className="bg-white p-4">
+                  <div className="text-xs uppercase tracking-wide text-gray-400 font-medium mb-2">By Agent</div>
+                  <ul className="space-y-1 text-sm">
+                    {analytics.byAgent.length === 0 && <li className="text-gray-400 text-xs">No data</li>}
+                    {analytics.byAgent.map(([agent, count]) => (
+                      <li key={agent} className="flex justify-between gap-2">
+                        <span className="text-gray-700 truncate">{agent === 'unassigned' ? 'Unassigned' : agent.split('@')[0]}</span>
+                        <span className="text-gray-500 tabular-nums">{count.toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-white p-4">
+                  <div className="text-xs uppercase tracking-wide text-gray-400 font-medium mb-2">By Segment</div>
+                  <ul className="space-y-1 text-sm max-h-40 overflow-y-auto">
+                    {analytics.bySegment.length === 0 && <li className="text-gray-400 text-xs">No data</li>}
+                    {analytics.bySegment.map(([seg, count]) => (
+                      <li key={seg} className="flex justify-between gap-2">
+                        <span className="text-gray-700 truncate">{seg}</span>
+                        <span className="text-gray-500 tabular-nums">{count.toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-white p-4">
+                  <div className="text-xs uppercase tracking-wide text-gray-400 font-medium mb-2">Top 10 Countries</div>
+                  <ul className="space-y-1 text-sm">
+                    {analytics.byCountry.length === 0 && <li className="text-gray-400 text-xs">No data</li>}
+                    {analytics.byCountry.map(([country, count]) => (
+                      <li key={country} className="flex justify-between gap-2">
+                        <span className="text-gray-700 truncate">{country}</span>
+                        <span className="text-gray-500 tabular-nums">{count.toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-white p-4">
+                  <div className="text-xs uppercase tracking-wide text-gray-400 font-medium mb-2">By Pipeline Stage</div>
+                  <ul className="space-y-1 text-sm">
+                    {analytics.byStage.map(([stage, count]) => (
+                      <li key={stage} className="flex justify-between gap-2">
+                        <span className="text-gray-700 truncate">{STAGE_LABELS[stage] || stage}</span>
+                        <span className="text-gray-500 tabular-nums">{count.toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-white p-4">
+                  <div className="text-xs uppercase tracking-wide text-gray-400 font-medium mb-2">By Status</div>
+                  <ul className="space-y-1 text-sm">
+                    {analytics.byStatus.map(([status, count]) => (
+                      <li key={status} className="flex justify-between gap-2">
+                        <span className="text-gray-700 truncate">{formatStatusLabel(status)}</span>
+                        <span className="text-gray-500 tabular-nums">{count.toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-3 mb-5">
           <input type="text" placeholder="Search name, company, email, city..." value={search}
             onChange={e => setSearch(e.target.value)}
@@ -278,6 +436,8 @@ export default function CRMDashboard() {
             const isExpanded = expandedId === lead.id
             const stageColor = STAGE_COLORS[lead.pipeline_stage || 'new'] || 'bg-gray-100 text-gray-600'
             const stageLabel = STAGE_LABELS[lead.pipeline_stage || 'new'] || lead.pipeline_stage || 'New'
+            const statusColor = STATUS_COLORS[lead.status || ''] || 'bg-gray-100 text-gray-600'
+            const lastContact = relDate(mostRecent(lead.last_activity_at, lead.last_email_sent))
             return (
               <div key={lead.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 select-none"
@@ -287,6 +447,11 @@ export default function CRMDashboard() {
                       <span className="font-medium text-gray-800">{displayName}</span>
                       {lead.company && <span className="text-gray-500 text-sm">{lead.company}</span>}
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${stageColor}`}>{stageLabel}</span>
+                      {lead.status && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>
+                          {formatStatusLabel(lead.status)}
+                        </span>
+                      )}
                       {lead.quoted_at && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
                           ₱{Number(lead.deal_value_php || 0).toLocaleString()} quoted
@@ -295,6 +460,7 @@ export default function CRMDashboard() {
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5 truncate">
                       {[lead.email, lead.city, lead.country].filter(Boolean).join(' · ')}
+                      {lastContact && <span className="ml-2 text-gray-400">· {lastContact}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-3 shrink-0">
@@ -342,7 +508,75 @@ export default function CRMDashboard() {
                             placeholder="0" className="w-full border border-gray-200 bg-white rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                         </div>
                       </div>
-                      <div className="col-span-2 md:col-span-1">
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 block mb-1">Phone</label>
+                        <input type="text" defaultValue={lead.phone || ''} placeholder="+63..."
+                          onBlur={e => updateLead(lead.id, { phone: e.target.value || null })}
+                          className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 block mb-1">Title / Role</label>
+                        <input type="text" defaultValue={lead.title || ''} placeholder="e.g. Project Manager"
+                          onBlur={e => updateLead(lead.id, { title: e.target.value || null })}
+                          className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 block mb-1">Segment</label>
+                        <select defaultValue={lead.segment || ''}
+                          onChange={e => updateLead(lead.id, { segment: e.target.value || null })}
+                          className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                          <option value="">— None —</option>
+                          {segmentOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                          {lead.segment && !segmentOptions.includes(lead.segment) && (
+                            <option value={lead.segment}>{lead.segment}</option>
+                          )}
+                        </select>
+                      </div>
+                      {user?.role === 'admin' && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-400 block mb-1">Rep Assigned</label>
+                          <select defaultValue={lead.rep_email || ''}
+                            onChange={e => {
+                              const v = e.target.value
+                              updateLead(lead.id, { rep_email: v || null, rep_assigned: v || null })
+                            }}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                            <option value="">— Unassigned —</option>
+                            {repOptions.map(r => <option key={r} value={r}>{r.split('@')[0]}</option>)}
+                            {lead.rep_email && !repOptions.includes(lead.rep_email) && (
+                              <option value={lead.rep_email}>{lead.rep_email.split('@')[0]}</option>
+                            )}
+                          </select>
+                        </div>
+                      )}
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 block mb-1">Reply Classification</label>
+                        <select defaultValue={lead.reply_classification || ''}
+                          onChange={e => updateLead(lead.id, { reply_classification: e.target.value || null })}
+                          className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                          <option value="">— None —</option>
+                          {REPLY_CLASSIFICATIONS.map(c => <option key={c} value={c}>{formatStatusLabel(c)}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 block mb-1">Appointment Date</label>
+                        <input type="date" defaultValue={lead.appointment_date ? lead.appointment_date.slice(0, 10) : ''}
+                          onBlur={e => updateLead(lead.id, { appointment_date: e.target.value || null })}
+                          className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 block mb-1">Close Date</label>
+                        <input type="date" defaultValue={lead.close_date ? lead.close_date.slice(0, 10) : ''}
+                          onBlur={e => updateLead(lead.id, { close_date: e.target.value || null })}
+                          className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 block mb-1">Follow Up</label>
+                        <input type="text" defaultValue={lead.follow_up || ''} placeholder="e.g. Call back 20 Apr"
+                          onBlur={e => updateLead(lead.id, { follow_up: e.target.value || null })}
+                          className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      </div>
+                      <div className="col-span-2 md:col-span-3">
                         <label className="text-xs font-medium text-gray-400 block mb-1">Notes</label>
                         <textarea defaultValue={lead.notes || ''} rows={2} placeholder="Add notes..."
                           onBlur={e => updateLead(lead.id, { notes: e.target.value })}
