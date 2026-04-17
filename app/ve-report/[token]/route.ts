@@ -54,15 +54,17 @@ export async function GET(
     .eq('token', token)
     .then()
 
-  // Build redirect URL with live Supabase data — VEReportClient renders dynamically
+  // Build redirect URL — include ve_report=TOKEN so NARA can personalise
+  // its greeting using the hotel name and contact from Supabase
   const params = new URLSearchParams({
-    for:        data.resort_name,
-    rooms:      String(data.rooms || 50),
-    sqm:        String(data.sqm || (data.rooms || 50) * 35),
-    save_lo:    String(data.saving_vs_hard_lo || 0),
-    save_hi:    String(data.saving_vs_hard_hi || 0),
-    numat_lo:   String(data.numat_total_lo || 0),
-    numat_hi:   String(data.numat_total_hi || 0),
+    for:       data.resort_name,
+    rooms:     String(data.rooms || 50),
+    sqm:       String(data.sqm || (data.rooms || 50) * 35),
+    save_lo:   String(data.saving_vs_hard_lo || 0),
+    save_hi:   String(data.saving_vs_hard_hi || 0),
+    numat_lo:  String(data.numat_total_lo || 0),
+    numat_hi:  String(data.numat_total_hi || 0),
+    ve_report: token,   // ← NARA reads this to personalise its greeting
   })
 
   return NextResponse.redirect(new URL(`/ve-report?${params.toString()}`, request.url))
