@@ -52,12 +52,12 @@ const px = (id: string, w = 1260, h = 750) =>
   `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${w}&h=${h}&dpr=1`
 
 // ─── Application photos (Pexels free commercial license) ────────────────────
-// NUMAT owned application images — engineered bamboo in real interior settings
+// Nic's custom resort images via Google Drive CDN (publicly shared)
 const PHOTOS = {
-  lobby:  '/Bamboo-Flooring.png',   // NuFloor: bamboo boards laid as flooring in real room
-  lounge: '/Bamboo-Wall.png',        // NuWall: bamboo wall cladding with lounge furniture
-  wall:   '/Wall.png',               // NuWall: full bamboo feature wall, living room setting
-  door:   '/Bamboo-Door.png',        // NuDoor: bamboo door panel in real guestroom interior
+  overwater: 'https://lh3.googleusercontent.com/d/1dnryVoKcbrBzZUbnDb0LvGHw4ig_NwXL',  // Overwater bedroom, timber walls + deck
+  lounge:    'https://lh3.googleusercontent.com/d/1Pz94d35-f5Kl6EoZMh_zBqGyLBPcVb3a',  // Premium lounge, full timber feature wall
+  villa:     'https://lh3.googleusercontent.com/d/13b1awKIZq2iTwxSmqacFGJbvbJR5OLWu',  // Balinese villa exterior, timber decking
+  pool:      'https://lh3.googleusercontent.com/d/1qaSs4Vdzkg-895MMBs17pOSNAwSsDsKe',  // Balinese pool villa, timber pool deck
 }
 
 export default function VEReportClient() {
@@ -313,37 +313,37 @@ export default function VEReportClient() {
             <div className="gallery-grid">
               {/* Hotel Lobby */}
               <div className="gallery-card">
-                <img src={PHOTOS.lobby} alt="NuFloor engineered bamboo flooring installed in real interior setting" loading="lazy" style={{ objectPosition: "center 60%" }} />
+                <img src={PHOTOS.overwater} alt="Luxury overwater villa — bamboo timber wall cladding and deck" loading="lazy" style={{ objectPosition: 'center 40%' }} />
                 <div className="gallery-caption">
-                  <div className="tag">NuFloor</div>
-                  <div className="cap">Bamboo Flooring — In Situ<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Warm, stable, commercial-grade — installed and ready for lobbies, corridors and suites</span></div>
+                  <div className="tag">NuWall + NuFloor</div>
+                  <div className="cap">Overwater Villa — Timber Cladding &amp; Deck<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo wall panels and flooring carrying the guest experience from room to pool</span></div>
                 </div>
               </div>
 
               {/* Lounge Terrace */}
               <div className="gallery-card">
-                <img src={PHOTOS.lounge} alt="NuWall bamboo wall cladding in lounge setting" loading="lazy" />
+                <img src={PHOTOS.living} alt="Premium resort lounge — full timber bamboo feature wall" loading="lazy" />
                 <div className="gallery-caption">
                   <div className="tag">NuWall</div>
-                  <div className="cap">Wall Cladding — Lounge Setting<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Floor-to-ceiling bamboo panelling — warm, natural, zero maintenance</span></div>
+                  <div className="cap">Resort Lounge — Feature Wall<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Full-height bamboo panel wall — the setting guests photograph and share</span></div>
                 </div>
               </div>
 
               {/* Pool Deck */}
               <div className="gallery-card">
-                <img src={PHOTOS.wall} alt="NuWall bamboo feature wall — full room application" loading="lazy" />
+                <img src={PHOTOS.villa} alt="Balinese villa exterior — bamboo timber decking and pergola structure" loading="lazy" />
                 <div className="gallery-caption">
                   <div className="tag">NuWall</div>
-                  <div className="cap">Feature Wall — Full Room<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Transforms any interior space — the signature look your guests photograph</span></div>
+                  <div className="cap">Villa Exterior — Timber Decking<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo decking and pergola framing the outdoor living experience</span></div>
                 </div>
               </div>
 
               {/* Resort Pool */}
               <div className="gallery-card">
-                <img src={PHOTOS.door} alt="NuDoor bamboo door panel installed in guestroom interior" loading="lazy" />
+                <img src={PHOTOS.pool} alt="Balinese pool villa — bamboo timber pool deck and pavilion" loading="lazy" />
                 <div className="gallery-caption">
                   <div className="tag">NuDoor</div>
-                  <div className="cap">Guestroom Door &amp; Joinery<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo door panels — strong, consistent grain, humidity-resistant</span></div>
+                  <div className="cap">Pool Villa — Timber Pool Deck<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo decking stable at poolside humidity — no warping, no maintenance cycle</span></div>
                 </div>
               </div>
             </div>
