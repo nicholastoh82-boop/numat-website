@@ -52,12 +52,12 @@ const px = (id: string, w = 1260, h = 750) =>
   `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${w}&h=${h}&dpr=1`
 
 // ─── Application photos (Pexels free commercial license) ────────────────────
-// Nic's custom resort images via Google Drive CDN (publicly shared)
+// NUMAT resort application photos — served from numatbamboo.com/public
 const PHOTOS = {
-  overwater: 'https://lh3.googleusercontent.com/d/1dnryVoKcbrBzZUbnDb0LvGHw4ig_NwXL',  // Overwater bedroom, timber walls + deck
-  lounge:    'https://lh3.googleusercontent.com/d/1Pz94d35-f5Kl6EoZMh_zBqGyLBPcVb3a',  // Premium lounge, full timber feature wall
-  villa:     'https://lh3.googleusercontent.com/d/13b1awKIZq2iTwxSmqacFGJbvbJR5OLWu',  // Balinese villa exterior, timber decking
-  pool:      'https://lh3.googleusercontent.com/d/1qaSs4Vdzkg-895MMBs17pOSNAwSsDsKe',  // Balinese pool villa, timber pool deck
+  overwater: '/ve-resort-1.jpg',  // Hotel lounge — sunken fire pit, bamboo flooring
+  lounge:    '/ve-resort-2.jpg',  // Hotel guestroom — bamboo headboard feature wall
+  villa:     '/ve-resort-3.jpg',  // Hotel bar — bamboo counter surface — timber deck + bamboo pavilion
+  pool:      '/ve-resort-4.jpg',  // Balinese pool villa — timber decking around pool
 }
 
 export default function VEReportClient() {
@@ -307,43 +307,43 @@ export default function VEReportClient() {
             <p className="sec-label" style={{ color: '#4ade80' }}>Where It Goes</p>
             <h2 className="sec-title syne" style={{ color: '#fff', marginBottom: 8 }}>Built for hospitality settings like {resort}</h2>
             <p style={{ fontSize: 14, color: '#94c5f0', marginBottom: 32, lineHeight: 1.7, maxWidth: 580 }}>
-              Engineered bamboo works across the full property — from arrival through to the pool deck. These are the spaces where NUMAT product specifications are most common.
+              Engineered bamboo across four distinct hotel spaces — flooring, walls, F&amp;B surfaces, and ceilings. These are the exact applications NUMAT supplies into the hospitality sector.
             </p>
 
             <div className="gallery-grid">
               {/* Hotel Lobby */}
               <div className="gallery-card">
-                <img src={PHOTOS.overwater} alt="Luxury overwater villa — bamboo timber wall cladding and deck" loading="lazy" style={{ objectPosition: 'center 40%' }} />
+                <img src={PHOTOS.overwater} alt="Hotel lounge with bamboo flooring — sunken fire pit area" loading="lazy" style={{ objectPosition: 'center 40%' }} />
                 <div className="gallery-caption">
                   <div className="tag">NuWall + NuFloor</div>
-                  <div className="cap">Overwater Villa — Timber Cladding &amp; Deck<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo wall panels and flooring carrying the guest experience from room to pool</span></div>
+                  <div className="cap">Hotel Lounge — Bamboo Flooring<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo flooring across the full social space — warm, stable, zero refinishing</span></div>
                 </div>
               </div>
 
               {/* Lounge Terrace */}
               <div className="gallery-card">
-                <img src={PHOTOS.living} alt="Premium resort lounge — full timber bamboo feature wall" loading="lazy" />
+                <img src={PHOTOS.living} alt="Hotel guestroom with bamboo feature wall headboard panel" loading="lazy" />
                 <div className="gallery-caption">
                   <div className="tag">NuWall</div>
-                  <div className="cap">Resort Lounge — Feature Wall<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Full-height bamboo panel wall — the setting guests photograph and share</span></div>
+                  <div className="cap">Hotel Guestroom — Feature Wall<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo headboard wall panel — the detail guests photograph and remember</span></div>
                 </div>
               </div>
 
               {/* Pool Deck */}
               <div className="gallery-card">
-                <img src={PHOTOS.villa} alt="Balinese villa exterior — bamboo timber decking and pergola structure" loading="lazy" />
+                <img src={PHOTOS.villa} alt="Hotel bar counter — engineered bamboo surface in F&B setting" loading="lazy" />
                 <div className="gallery-caption">
                   <div className="tag">NuWall</div>
-                  <div className="cap">Villa Exterior — Timber Decking<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo decking and pergola framing the outdoor living experience</span></div>
+                  <div className="cap">Hotel Bar — Bamboo Counter Surface<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>High-traffic F&amp;B surface — bamboo board that handles daily commercial use</span></div>
                 </div>
               </div>
 
               {/* Resort Pool */}
               <div className="gallery-card">
-                <img src={PHOTOS.pool} alt="Balinese pool villa — bamboo timber pool deck and pavilion" loading="lazy" />
+                <img src={PHOTOS.pool} alt="Bamboo ceiling panels in hotel interior — skylight installation" loading="lazy" />
                 <div className="gallery-caption">
                   <div className="tag">NuDoor</div>
-                  <div className="cap">Pool Villa — Timber Pool Deck<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo decking stable at poolside humidity — no warping, no maintenance cycle</span></div>
+                  <div className="cap">Hotel Interior — Bamboo Ceiling<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo ceiling panels with skylight — an application most suppliers cannot deliver</span></div>
                 </div>
               </div>
             </div>
