@@ -52,11 +52,12 @@ const px = (id: string, w = 1260, h = 750) =>
   `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${w}&h=${h}&dpr=1`
 
 // ─── Application photos (Pexels free commercial license) ────────────────────
+// NUMAT owned application images — engineered bamboo in real interior settings
 const PHOTOS = {
-  lobby:   px('29649745', 1260, 840),  // Elegant hotel lobby, wood paneling
-  deck:    px('15098573', 1260, 840),  // Tropical pool with timber furniture
-  lounge:  px("3209049", 1260, 840),  // Premium tropical cabana + pool
-  pool:    px("1549121", 1260, 840),  // Blue sun loungers over ocean, Cabo
+  lobby:  '/Bamboo-Flooring.png',   // NuFloor: bamboo boards laid as flooring in real room
+  lounge: '/Bamboo-Wall.png',        // NuWall: bamboo wall cladding with lounge furniture
+  wall:   '/Wall.png',               // NuWall: full bamboo feature wall, living room setting
+  door:   '/Bamboo-Door.png',        // NuDoor: bamboo door panel in real guestroom interior
 }
 
 export default function VEReportClient() {
@@ -312,37 +313,37 @@ export default function VEReportClient() {
             <div className="gallery-grid">
               {/* Hotel Lobby */}
               <div className="gallery-card">
-                <img src={PHOTOS.lobby} alt="Hotel lobby setting — NuFloor and NuWall application" loading="lazy" />
+                <img src={PHOTOS.lobby} alt="NuFloor engineered bamboo flooring installed in real interior setting" loading="lazy" style={{ objectPosition: "center 60%" }} />
                 <div className="gallery-caption">
-                  <div className="tag">NuFloor + NuWall</div>
-                  <div className="cap">Hotel Lobby &amp; Reception<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Flooring and wall cladding — where the first impression is set</span></div>
+                  <div className="tag">NuFloor</div>
+                  <div className="cap">Bamboo Flooring — In Situ<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Warm, stable, commercial-grade — installed and ready for lobbies, corridors and suites</span></div>
                 </div>
               </div>
 
               {/* Lounge Terrace */}
               <div className="gallery-card">
-                <img src={PHOTOS.lounge} alt="Resort lounge terrace — NuSlat and NuFloor application" loading="lazy" />
+                <img src={PHOTOS.lounge} alt="NuWall bamboo wall cladding in lounge setting" loading="lazy" />
                 <div className="gallery-caption">
-                  <div className="tag">NuSlat + NuFloor</div>
-                  <div className="cap">Lounge &amp; Terrace Areas<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Decorative slat panels and flooring for outdoor-facing spaces</span></div>
+                  <div className="tag">NuWall</div>
+                  <div className="cap">Wall Cladding — Lounge Setting<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Floor-to-ceiling bamboo panelling — warm, natural, zero maintenance</span></div>
                 </div>
               </div>
 
               {/* Pool Deck */}
               <div className="gallery-card">
-                <img src={PHOTOS.deck} alt="Tropical pool with timber decking — NuFloor outdoor application" loading="lazy" />
+                <img src={PHOTOS.wall} alt="NuWall bamboo feature wall — full room application" loading="lazy" />
                 <div className="gallery-caption">
-                  <div className="tag">NuFloor Outdoor</div>
-                  <div className="cap">Pool Deck &amp; Walkways<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Stable in wet conditions — no warping at poolside humidity</span></div>
+                  <div className="tag">NuWall</div>
+                  <div className="cap">Feature Wall — Full Room<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Transforms any interior space — the signature look your guests photograph</span></div>
                 </div>
               </div>
 
               {/* Resort Pool */}
               <div className="gallery-card">
-                <img src={PHOTOS.pool} alt="Tropical resort pool area — full bamboo material application" loading="lazy" />
+                <img src={PHOTOS.door} alt="NuDoor bamboo door panel installed in guestroom interior" loading="lazy" />
                 <div className="gallery-caption">
-                  <div className="tag">Full Property</div>
-                  <div className="cap">Resort Pool &amp; Gardens<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Across the full outdoor experience your guests will remember</span></div>
+                  <div className="tag">NuDoor</div>
+                  <div className="cap">Guestroom Door &amp; Joinery<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo door panels — strong, consistent grain, humidity-resistant</span></div>
                 </div>
               </div>
             </div>
