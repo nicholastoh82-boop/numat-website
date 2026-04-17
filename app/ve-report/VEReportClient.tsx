@@ -55,8 +55,8 @@ const px = (id: string, w = 1260, h = 750) =>
 const PHOTOS = {
   lobby:   px('29649745', 1260, 840),  // Elegant hotel lobby, wood paneling
   deck:    px('15098573', 1260, 840),  // Tropical pool with timber furniture
-  lounge:  px('5563471',  1260, 840),  // Resort patio, wooden pergola + loungers
-  pool:    px('1488327',  1260, 840),  // Tropical resort pool, white loungers
+  lounge:  px("3209049", 1260, 840),  // Premium tropical cabana + pool
+  pool:    px("1549121", 1260, 840),  // Blue sun loungers over ocean, Cabo
 }
 
 export default function VEReportClient() {
