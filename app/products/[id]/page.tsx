@@ -1,1575 +1,1424 @@
+// ============================================================================
+// File path in your repo: app/admin/products/page.tsx
+//
+// Full rewrite after the catalog cleanup.
+//
+// Changes from the previous version:
+//   1. Removed NuDoor special case grouping (NuDoor is now a normal product
+//      with 3 variants, same pattern as everything else).
+//   2. Removed product form fields that map to dropped DB columns:
+//      length_mm, width_mm, thickness_mm, ply (these live on variants now).
+//   3. Added moq_unit and order_increment fields to product form.
+//   4. Added unit field to product form.
+//   5. Default variant unit is now 'piece' (was 'sheet').
+//   6. Variant save payload no longer sends currency or unit_price_old
+//      (columns were dropped).
+//   7. Variant form now has an in_stock toggle and an image_url input
+//      so admins can set the hero image per variant.
+//   8. The multi-image upload for variants still uses product_images table
+//      (no changes needed there).
+//   9. Product save payload only sends fields that exist in the new schema.
+// ============================================================================
+
 'use client'
 
-import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import React, { useMemo, useRef, useState } from 'react'
 import useSWR from 'swr'
+import Image from 'next/image'
 import {
-  ArrowLeft,
-  CheckCircle2,
+  ChevronDown,
   ChevronRight,
-  MessageCircle,
-  Minus,
+  Edit2,
+  ImageIcon,
+  Loader2,
   Plus,
-  ShoppingBag,
+  Save,
+  Search,
+  Trash2,
+  X,
 } from 'lucide-react'
-import Header from '@/components/header'
-import Footer from '@/components/footer'
-import CartDrawer from '@/components/cart-drawer'
-import ProductDetailImage from '@/components/products/product-detail-image'
-import { useCurrency } from '@/components/providers/currency-provider'
-import { toast } from '@/hooks/use-toast'
-import { useCartStore } from '@/lib/cart-store'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import {
-  detectProductFamily,
-  getConfiguratorOptions,
-  validateConfiguredQuantity,
-  type ProductFamily,
-} from '@/lib/product-config'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { useToast } from '@/hooks/use-toast'
+import { cn } from '@/lib/utils'
 
-const DOST_PDF_PATH = '/docs/DOST%20Results.pdf'
+// -----------------------------------------------------------------------------
+// Types
+// -----------------------------------------------------------------------------
+type RawProduct = {
+  id?: string
+  slug?: string | null
+  name?: string | null
+  description?: string | null
+  image?: string | null
+  image_url?: string | null
+  base_price_usd?: number | string | null
+  moq?: number | null
+  moq_unit?: string | null
+  order_increment?: number | null
+  unit?: string | null
+  category_id?: string | null
+  is_active?: boolean | null
+  is_featured?: boolean | null
+  is_price_on_request?: boolean | null
+  price_notes?: string | null
+  categories?: { name?: string | null } | null
+}
 
 type Product = {
-  id: string
-  name: string
+  id?: string
   slug: string
-  description: string | null
-  image_url: string | null
-  category: string | null
-  unit?: string | null
-  base_price_usd?: number | null
+  name: string
+  description: string
+  image_url: string
+  base_price_usd: number
+  moq: number
+  moq_unit: string
+  order_increment: number
+  unit: string
+  category_id: string
+  category_name: string
+  is_active: boolean
+  is_featured: boolean
+  is_price_on_request: boolean
+  price_notes: string
+}
+
+type RawVariant = {
+  id?: string
+  product_id?: string | null
   sku?: string | null
   thickness_mm?: number | null
+  length_mm?: number | null
+  width_mm?: number | null
   ply_count?: number | null
-  dimensions?: string | null
-  min_order_qty?: number | null
-  variants?: Array<{
-    id: string
-    sku: string
-    thickness_mm: number | null
-    ply_count: number | null
-    dimensions: string | null
-    base_price_usd: number | null
-    unit: string
-    min_order_qty: number
-    core_type: string | null
-    size_label: string | null
-    is_price_on_request: boolean
-    price_notes: string | null
-    in_stock?: boolean
-    images?: Array<{
-      id: string
-      image_url: string
-      alt_text: string
-      is_primary: boolean
-    }>
-  }>
-  images?: Array<{
-    id: string
-    image_url: string
-    alt_text: string
-    is_primary: boolean
-  }>
+  size_label?: string | null
+  finish?: string | null
+  grade?: string | null
+  unit?: string | null
+  moq?: number | null
+  sort_order?: number | null
+  unit_price?: number | string | null
+  base_price_usd?: number | string | null
+  is_active?: boolean | null
+  is_price_on_request?: boolean | null
+  in_stock?: boolean | null
+  price_notes?: string | null
+  core_type?: string | null
+  image_url?: string | null
+  applications?: string[] | null
 }
 
-type ProductListItem = {
+type Variant = {
   id: string
-  name: string
-  slug?: string
-  category?: string | { id?: string; name?: string } | null
-  categories?: { id: string; name: string } | null
-  created_at?: string | null
-  base_price_usd?: number | null
-}
-
-type Category = {
-  id: string
-  name: string
-  slug?: string
-  created_at?: string
-  is_active?: boolean
-  display_order?: number | null
-}
-
-type SelectOption = {
-  label: string
-  value: string
-  disabled?: boolean
-}
-
-type ResolvedQuoteState = {
-  productLabel: string
-  model: string
-  coreType: string
-  thickness: string
-  ply: string
-  length: string
-  dimensions: string
-  moq: number
-  unit: string
-  priceUsd: number | null
-  inStock: boolean
-  stockMessage: string
+  product_id: string
   sku: string
-  variantId: string | null
-  isPriceOnRequest: boolean
+  thickness_mm: number | null
+  length_mm: number | null
+  width_mm: number | null
+  ply_count: number | null
+  size_label: string
+  finish: string
+  grade: string
+  unit: string
+  moq: number | null
+  sort_order: number | null
+  unit_price: number | null
+  base_price_usd: number | null
+  is_active: boolean
+  is_price_on_request: boolean
+  in_stock: boolean
+  price_notes: string
+  core_type: string
+  image_url: string
+  applications: string[]
 }
 
+// -----------------------------------------------------------------------------
+// Defaults
+// -----------------------------------------------------------------------------
+const INITIAL_PRODUCT: Product = {
+  slug: '',
+  name: '',
+  description: '',
+  image_url: '',
+  base_price_usd: 0,
+  moq: 10,
+  moq_unit: 'piece',
+  order_increment: 1,
+  unit: 'piece',
+  category_id: '',
+  category_name: '',
+  is_active: true,
+  is_featured: false,
+  is_price_on_request: false,
+  price_notes: '',
+}
+
+const INITIAL_VARIANT: Variant = {
+  id: '',
+  product_id: '',
+  sku: '',
+  thickness_mm: null,
+  length_mm: null,
+  width_mm: null,
+  ply_count: null,
+  size_label: '',
+  finish: '',
+  grade: '',
+  unit: 'piece',
+  moq: null,
+  sort_order: null,
+  unit_price: null,
+  base_price_usd: null,
+  is_active: true,
+  is_price_on_request: false,
+  in_stock: true,
+  price_notes: '',
+  core_type: '',
+  image_url: '',
+  applications: [],
+}
+
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
 const fetcher = async (url: string) => {
-  const res = await fetch(url)
-  const data = await res.json()
-
-  if (!res.ok) {
-    throw new Error(data?.error || 'Failed to load data.')
-  }
-
+  const res = await fetch(url, { cache: 'no-store' })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || 'Failed to load data')
   return data
 }
 
-function slugify(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/['"]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
+function toNum(v: any): number | null {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
 }
 
-function normalizeCategorySlug(input: string): string {
-  const raw = slugify(input)
-
-  const aliasMap: Record<string, string> = {
-    door: 'nudoor',
-    nudoor: 'nudoor',
-
-    flooring: 'nufloor',
-    floor: 'nufloor',
-    nufloor: 'nufloor',
-
-    wall: 'nuwall',
-    'wall-panelling': 'nuwall',
-    'wall-paneling': 'nuwall',
-    nuwall: 'nuwall',
-
-    nubam: 'nubam-boards',
-    'nubam-boards': 'nubam-boards',
-    veneer: 'nubam-boards',
-
-    diy: 'nuslat',
-    'diy-project': 'nuslat',
-    'diy-projects': 'nuslat',
-    nuslat: 'nuslat',
-
-    furniture: 'furniture',
-  }
-
-  return aliasMap[raw] ?? raw
-}
-
-function normalizeCategoryName(input: string): string {
-  const normalizedSlug = normalizeCategorySlug(input)
-
-  const labelMap: Record<string, string> = {
-    nudoor: 'NuDoor',
-    nufloor: 'NuFloor',
-    nuwall: 'NuWall',
-    'nubam-boards': 'NuBam Boards',
-    nuslat: 'NuSlat',
-    furniture: 'Furniture',
-  }
-
-  return labelMap[normalizedSlug] ?? input
-}
-
-function getProductCategoryLabel(product: Product | null): string {
-  if (!product?.category) return 'Product'
-  return normalizeCategoryName(product.category)
-}
-
-function getProductCategorySlugFromListItem(product: ProductListItem): string {
-  const raw =
-    typeof product.category === 'string'
-      ? product.category
-      : product.category?.name || product.categories?.name || ''
-
-  return normalizeCategorySlug(raw)
-}
-
-function cleanText(value: string | null | undefined): string {
-  return value?.replace(/\s+/g, ' ').trim() ?? ''
-}
-
-function normalizeValue(input: string | null | undefined) {
-  return (input || '').trim().toLowerCase()
-}
-
-function formatThicknessLabel(value: number | null | undefined) {
-  return typeof value === 'number' ? `${value}mm` : ''
-}
-
-function formatPlyLabel(value: number | null | undefined) {
-  return typeof value === 'number' ? `${value} Ply` : ''
-}
-
-function getUniqueOptions(values: Array<string | null | undefined>): SelectOption[] {
-  return Array.from(new Set(values.map((v) => (v || '').trim()).filter(Boolean))).map((value) => ({
-    label: value,
-    value,
-  }))
-}
-
-function getDisplayProductName(name: string, family: ProductFamily) {
-  if (family === 'nudoor' && name.trim().toLowerCase() === 'nudoor light') {
-    return 'NuDoor'
-  }
-  return name
-}
-
-function getNuDoorModelLabel(name: string) {
-  const raw = name.trim().toLowerCase()
-
-  if (raw === 'nudoor light') return 'NuDoor Light'
-  if (raw === 'nudoor composite') return 'NuDoor Composite'
-  if (raw === 'nudoor premium') return 'NuDoor Premium'
-
-  return name
-}
-
-function splitDescriptionContent(
-  description: string | null,
-  productName: string,
-  family: ProductFamily
-) {
-  if (family === 'nuwall') {
-    return {
-      intro:
-        'NuWall engineered bamboo panels manufactured for structural integrity and aesthetic performance.',
-      specsText: '',
-      highlights: [] as string[],
-    }
-  }
-
-  const cleaned = cleanText(description)
-
-  if (!cleaned) {
-    return {
-      intro: `${productName} is designed for sustainable performance, reliable quality, and modern architectural or interior applications.`,
-      specsText: '',
-      highlights: [] as string[],
-    }
-  }
-
-  const withoutLabels = cleaned
-    .replace(/key benefits\s*:?\s*/gi, ' | ')
-    .replace(/applications?\s*:?\s*/gi, ' | ')
-    .replace(/specifications?\s*:?\s*/gi, ' | ')
-    .replace(/\s*[•·]\s*/g, ' | ')
-
-  const parts = withoutLabels
-    .split('|')
-    .map((part) => cleanText(part))
-    .filter(Boolean)
-
-  const intro = parts[0] || cleaned
-  const remaining = parts.slice(1)
-
-  const specLike: string[] = []
-  const highlights: string[] = []
-
-  for (const item of remaining) {
-    const lower = item.toLowerCase()
-
-    const isSpec =
-      lower.includes('thickness') ||
-      lower.includes('size') ||
-      lower.includes('dimension') ||
-      lower.includes('standard size') ||
-      lower.includes('custom sizing') ||
-      /\b\d+\s*mm\b/i.test(item)
-
-    if (isSpec) {
-      specLike.push(item)
-      continue
-    }
-
-    if (item.toLowerCase() !== intro.toLowerCase()) {
-      highlights.push(item)
-    }
-  }
-
-  const dedupedHighlights = Array.from(
-    new Set(
-      highlights.filter(
-        (item) =>
-          item &&
-          /[a-z]/i.test(item) &&
-          item.toLowerCase() !== intro.toLowerCase() &&
-          !specLike.some((spec) => spec.toLowerCase() === item.toLowerCase())
-      )
-    )
-  )
-
-  const specsText = Array.from(new Set(specLike)).join(' • ')
-
+function normalizeProduct(raw: RawProduct): Product {
   return {
-    intro,
-    specsText,
-    highlights: dedupedHighlights,
+    id: raw.id,
+    slug: raw.slug || '',
+    name: raw.name || '',
+    description: raw.description || '',
+    image_url: raw.image_url || raw.image || '',
+    base_price_usd: Number(raw.base_price_usd ?? 0) || 0,
+    moq: Number(raw.moq ?? 1),
+    moq_unit: raw.moq_unit || 'piece',
+    order_increment: Number(raw.order_increment ?? 1),
+    unit: raw.unit || 'piece',
+    category_id: raw.category_id || '',
+    category_name: raw.categories?.name || '',
+    is_active: raw.is_active ?? true,
+    is_featured: raw.is_featured ?? false,
+    is_price_on_request: raw.is_price_on_request ?? false,
+    price_notes: raw.price_notes || '',
   }
 }
 
-function getProductUseCases(family: ProductFamily): string[] {
-  switch (family) {
-    case 'nubam-boards':
-      return ['Furniture manufacturing', 'Interior fit-outs', 'Cabinetry']
-    case 'nuwall':
-      return ['Wall panels', 'Interior surfaces', 'Architectural finishes']
-    case 'nudoor':
-      return ['Residential doors', 'Commercial interiors', 'Premium fit-out projects']
-    case 'nufloor':
-      return ['Residential flooring', 'Commercial flooring', 'Sustainable interiors']
-    case 'nuslat':
-      return ['Feature walls', 'Decorative detailing', 'Custom joinery']
-    case 'furniture':
-      return ['Custom furniture', 'Built-in joinery', 'Interior applications']
-    default:
-      return ['Interior applications', 'Architectural projects', 'Sustainable build use']
+function normalizeVariant(raw: RawVariant): Variant {
+  return {
+    id: raw.id || '',
+    product_id: raw.product_id || '',
+    sku: raw.sku || '',
+    thickness_mm: toNum(raw.thickness_mm),
+    length_mm: toNum(raw.length_mm),
+    width_mm: toNum(raw.width_mm),
+    ply_count: toNum(raw.ply_count),
+    size_label: raw.size_label || '',
+    finish: raw.finish || '',
+    grade: raw.grade || '',
+    unit: raw.unit || 'piece',
+    moq: toNum(raw.moq),
+    sort_order: toNum(raw.sort_order),
+    unit_price: toNum(raw.unit_price),
+    base_price_usd: toNum(raw.base_price_usd),
+    is_active: raw.is_active ?? true,
+    is_price_on_request: raw.is_price_on_request ?? false,
+    in_stock: raw.in_stock ?? true,
+    price_notes: raw.price_notes || '',
+    core_type: raw.core_type || '',
+    image_url: raw.image_url || '',
+    applications: raw.applications || [],
   }
 }
 
-function getProductFeatureHighlights(family: ProductFamily): string[] {
-  switch (family) {
-    case 'nubam-boards':
-    case 'nuwall':
-      return ['Engineered strength', 'Premium finish quality', 'Moisture-resistant performance']
-    case 'nudoor':
-      return ['Elegant finish', 'Durable construction', 'Ready for premium projects']
-    case 'nufloor':
-      return ['Clean modern look', 'Stable construction', 'Sustainable material choice']
-    case 'nuslat':
-      return ['Lightweight format', 'Design flexibility', 'In-stock option available']
-    case 'furniture':
-      return ['Custom quote workflow', 'Interior-ready material', 'Design flexibility']
-    default:
-      return ['Engineered bamboo', 'Sustainable material', 'Project-ready quality']
-  }
+function formatVariantSize(variant: Variant) {
+  if (variant.size_label) return variant.size_label
+  const parts = [
+    variant.length_mm ? `${variant.length_mm}` : null,
+    variant.width_mm ? `${variant.width_mm}` : null,
+    variant.thickness_mm ? `${variant.thickness_mm}` : null,
+  ].filter(Boolean)
+  return parts.length > 0 ? `${parts.join(' x ')} mm` : '-'
 }
 
-function getFamilyBadge(family: ProductFamily, categoryLabel: string): string {
-  if (family === 'other') return categoryLabel
-  return normalizeCategoryName(categoryLabel)
-}
+// -----------------------------------------------------------------------------
+// Component
+// -----------------------------------------------------------------------------
+export default function AdminProductsPage() {
+  const { toast } = useToast()
 
-function getSelectionRows(resolved: ResolvedQuoteState) {
-  const rows = [
-    resolved.model ? { label: 'Model', value: resolved.model } : null,
-    resolved.coreType && resolved.coreType !== '—'
-      ? { label: 'Core Type', value: resolved.coreType }
-      : null,
-    resolved.thickness && resolved.thickness !== '—'
-      ? { label: 'Thickness', value: resolved.thickness }
-      : null,
-    resolved.ply && resolved.ply !== '—' ? { label: 'Ply', value: resolved.ply } : null,
-    resolved.length ? { label: 'Length', value: resolved.length } : null,
-    resolved.dimensions && resolved.dimensions !== '—'
-      ? { label: 'Dimensions', value: resolved.dimensions }
-      : null,
-  ].filter(Boolean) as Array<{ label: string; value: string }>
+  const {
+    data: productsData,
+    isLoading: isLoadingProducts,
+    error: productsError,
+    mutate: mutateProducts,
+  } = useSWR<RawProduct[]>('/api/admin/products?includeInactive=true', fetcher)
 
-  return rows
-}
+  const {
+    data: variantsData,
+    isLoading: isLoadingVariants,
+    error: variantsError,
+    mutate: mutateVariants,
+  } = useSWR<RawVariant[]>('/api/admin/product-variants?includeInactive=true', fetcher)
 
-function formatDimensions(value: string) {
-  return value.replace(/\s*x\s*/gi, ' × ')
-}
+  const [searchQuery, setSearchQuery] = useState('')
+  const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({})
 
-function OptionPills({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  options: SelectOption[]
-}) {
-  if (!options.length) return null
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false)
+  const [isVariantModalOpen, setIsVariantModalOpen] = useState(false)
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isVariantSaving, setIsVariantSaving] = useState(false)
 
-  return (
-    <div>
-      <label className="mb-3 block text-sm font-medium text-foreground">{label}</label>
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt) => {
-          const isActive = value === opt.value
-          const isDisabled = opt.disabled === true
+  const [currentProduct, setCurrentProduct] = useState<Product>(INITIAL_PRODUCT)
+  const [currentVariant, setCurrentVariant] = useState<Variant>(INITIAL_VARIANT)
+  const [productToDelete, setProductToDelete] = useState<string | null>(null)
 
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => !isDisabled && onChange(opt.value)}
-              disabled={isDisabled}
-              title={isDisabled ? 'Out of stock' : undefined}
-              className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
-                isDisabled
-                  ? 'cursor-not-allowed border-black/10 bg-white text-foreground/40 opacity-40 line-through'
-                  : isActive
-                  ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
-                  : 'border-black/10 bg-white text-foreground hover:border-black/20 hover:bg-stone-50'
-              }`}
-            >
-              {opt.label}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-export default function ProductDetailPage() {
-  const params = useParams<{ id: string }>()
-  const router = useRouter()
-  const productId = params?.id
+  const [variantImageFiles, setVariantImageFiles] = useState<File[]>([])
+  const [existingVariantImages, setExistingVariantImages] = useState<any[]>([])
+  const [isUploadingVariantImages, setIsUploadingVariantImages] = useState(false)
+  const variantImageInputRef = useRef<HTMLInputElement>(null)
 
-  const { formatConvertedFromUsd } = useCurrency()
-  const { addItem } = useCartStore()
+  const [multipleImageFiles, setMultipleImageFiles] = useState<File[]>([])
+  const multiImageInputRef = useRef<HTMLInputElement>(null)
+  const [existingProductImages, setExistingProductImages] = useState<any[]>([])
 
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [product, setProduct] = useState<Product | null>(null)
-
-  const [selectedCoreType, setSelectedCoreType] = useState('Horizontal')
-  const [selectedThickness, setSelectedThickness] = useState('')
-  const [selectedPly, setSelectedPly] = useState('')
-  const [selectedModel, setSelectedModel] = useState('premium')
-  const [selectedLength, setSelectedLength] = useState('8ft')
-  const [quantity, setQuantity] = useState(1)
-
-  const { data: categories } = useSWR<Category[]>('/api/categories', fetcher, {
-    fallbackData: [],
-  })
-
-  const { data: allProducts } = useSWR<ProductListItem[]>('/api/products', fetcher, {
-    fallbackData: [],
-  })
-
-  useEffect(() => {
-    if (!productId) {
-      setError('Missing product ID in route.')
-      setLoading(false)
-      return
-    }
-
-    let isMounted = true
-
-    async function loadProduct() {
-      try {
-        setLoading(true)
-        setError('')
-        setProduct(null)
-
-        const res = await fetch(`/api/products/${productId}`, { cache: 'no-store' })
-        const data = await res.json()
-
-        if (!isMounted) return
-
-        if (!res.ok) {
-          throw new Error(data?.error || 'Failed to load product.')
-        }
-
-        if (!data || !data.id) {
-          throw new Error('API returned empty product data.')
-        }
-
-        setProduct(data)
-      } catch (err) {
-        if (!isMounted) return
-        const message = err instanceof Error ? err.message : 'Something went wrong.'
-        setError(message)
-      } finally {
-        if (isMounted) setLoading(false)
-      }
-    }
-
-    loadProduct()
-
-    return () => {
-      isMounted = false
-    }
-  }, [productId])
-
-  const family: ProductFamily = useMemo(() => {
-    if (!product) return 'other'
-    return detectProductFamily(product.name, product.category)
-  }, [product])
-
-  const displayProductName = useMemo(
-    () => getDisplayProductName(product?.name || '', family),
-    [product?.name, family]
+  const products = useMemo(
+    () => (Array.isArray(productsData) ? productsData.map(normalizeProduct) : []),
+    [productsData],
   )
 
-  const options = useMemo(() => getConfiguratorOptions(family), [family])
-
-  const pricedVariants = useMemo(
-    () =>
-      (product?.variants ?? []).filter(
-        (variant) =>
-          !variant.is_price_on_request &&
-          typeof variant.base_price_usd === 'number' &&
-          Number.isFinite(variant.base_price_usd) &&
-          variant.base_price_usd > 0
-      ),
-    [product?.variants]
+  const variants = useMemo(
+    () => (Array.isArray(variantsData) ? variantsData.map(normalizeVariant) : []),
+    [variantsData],
   )
 
-  const useVariantDrivenConfig =
-    pricedVariants.length > 0 &&
-    (family === 'nubam-boards' || family === 'nuwall' || family === 'nuslat' || family === 'nufloor')
+  const variantsByProductId = useMemo(() => {
+    const grouped: Record<string, Variant[]> = {}
+    const getCoreRank = (v: Variant) => {
+      const c = (v.core_type || '').toLowerCase()
+      if (c.includes('horizontal')) return 0
+      if (c.includes('vertical')) return 1
+      return 2
+    }
+    const getThick = (v: Variant) => v.thickness_mm ?? Number.POSITIVE_INFINITY
 
-  const nudoorModelProducts = useMemo(() => {
-    if (family !== 'nudoor') return []
+    for (const v of variants) {
+      if (!v.product_id) continue
+      if (!grouped[v.product_id]) grouped[v.product_id] = []
+      grouped[v.product_id].push(v)
+    }
 
-    return (allProducts ?? [])
-      .filter((item) => getProductCategorySlugFromListItem(item) === 'nudoor')
-      .sort((a, b) => {
-        const orderMap: Record<string, number> = {
-          'nudoor light': 0,
-          'nudoor composite': 1,
-          'nudoor premium': 2,
-        }
-
-        const aOrder = orderMap[a.name.trim().toLowerCase()] ?? 999
-        const bOrder = orderMap[b.name.trim().toLowerCase()] ?? 999
-
-        if (aOrder !== bOrder) return aOrder - bOrder
-
-        return getNuDoorModelLabel(a.name).localeCompare(getNuDoorModelLabel(b.name))
+    for (const pid of Object.keys(grouped)) {
+      grouped[pid] = grouped[pid].sort((a, b) => {
+        const sortOrderDiff = (a.sort_order ?? 999) - (b.sort_order ?? 999)
+        if (sortOrderDiff !== 0) return sortOrderDiff
+        const coreRankDiff = getCoreRank(a) - getCoreRank(b)
+        if (coreRankDiff !== 0) return coreRankDiff
+        const thickDiff = getThick(a) - getThick(b)
+        if (thickDiff !== 0) return thickDiff
+        return (a.sku || '').localeCompare(b.sku || '')
       })
-  }, [allProducts, family])
+    }
 
-  const variantCoreTypeOptions = useMemo(() => {
-    if (!useVariantDrivenConfig) return []
-    return getUniqueOptions(pricedVariants.map((v) => v.core_type))
-  }, [useVariantDrivenConfig, pricedVariants])
+    return grouped
+  }, [variants])
 
-  const variantThicknessOptions = useMemo(() => {
-    if (!useVariantDrivenConfig) return []
-
-    if (family === 'nuslat') {
-      const uniqueThicknesses = Array.from(
-        new Set(pricedVariants.map((v) => formatThicknessLabel(v.thickness_mm)).filter(Boolean))
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim()
+    if (!q) return products
+    return products.filter((p) => {
+      const selfMatch =
+        p.name.toLowerCase().includes(q) ||
+        p.slug.toLowerCase().includes(q) ||
+        p.category_name.toLowerCase().includes(q)
+      const variantMatch = (variantsByProductId[p.id || ''] || []).some((v) =>
+        [v.sku, v.core_type, v.finish, v.grade, v.size_label]
+          .filter(Boolean)
+          .some((f) => f.toLowerCase().includes(q)),
       )
-      return uniqueThicknesses
-        .map((thickness) => ({
-          label: thickness,
-          value: thickness,
-          disabled: pricedVariants
-            .filter((v) => formatThicknessLabel(v.thickness_mm) === thickness)
-            .every((v) => v.in_stock === false),
-        }))
-        .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
-    }
-
-    const scoped =
-      family === 'nubam-boards' || family === 'nuwall'
-        ? pricedVariants.filter((v) =>
-            selectedCoreType ? normalizeValue(v.core_type) === normalizeValue(selectedCoreType) : true
-          )
-        : pricedVariants
-
-    const uniqueThicknesses = Array.from(
-      new Set(scoped.map((v) => formatThicknessLabel(v.thickness_mm)).filter(Boolean))
-    )
-    return uniqueThicknesses
-      .map((thickness) => ({
-        label: thickness,
-        value: thickness,
-        disabled: scoped
-          .filter((v) => formatThicknessLabel(v.thickness_mm) === thickness)
-          .every((v) => v.in_stock === false),
-      }))
-      .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
-  }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType])
-
-  const variantPlyOptions = useMemo(() => {
-    if (!useVariantDrivenConfig) return []
-
-    const scoped = pricedVariants.filter((v) => {
-      if (family === 'nuslat') {
-        const thicknessMatch = selectedThickness
-          ? formatThicknessLabel(v.thickness_mm) === selectedThickness
-          : true
-        return thicknessMatch
-      }
-
-      const coreMatch =
-        family === 'nubam-boards' || family === 'nuwall'
-          ? selectedCoreType
-            ? normalizeValue(v.core_type) === normalizeValue(selectedCoreType)
-            : true
-          : true
-
-      const thicknessMatch = selectedThickness
-        ? formatThicknessLabel(v.thickness_mm) === selectedThickness
-        : true
-
-      return coreMatch && thicknessMatch
+      return selfMatch || variantMatch
     })
+  }, [products, searchQuery, variantsByProductId])
 
-    const uniquePlys = Array.from(
-      new Set(scoped.map((v) => formatPlyLabel(v.ply_count)).filter(Boolean))
-    )
-    return uniquePlys
-      .map((ply) => ({
-        label: ply,
-        value: ply,
-        disabled: scoped
-          .filter((v) => formatPlyLabel(v.ply_count) === ply)
-          .every((v) => v.in_stock === false),
-      }))
-      .sort((a, b) => Number(a.value.replace(/\D/g, '')) - Number(b.value.replace(/\D/g, '')))
-  }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType, selectedThickness])
-
-  const variantLengthOptions = useMemo(() => {
-    if (!useVariantDrivenConfig || family !== 'nuslat') return []
-
-    const uniqueLabels = Array.from(
-      new Set(pricedVariants.map((v) => (v.size_label || '').trim()).filter(Boolean))
-    )
-
-    return uniqueLabels.map((label) => {
-      const matchingVariants = pricedVariants.filter((v) => {
-        const labelMatch = (v.size_label || '').trim() === label
-        const thicknessMatch = selectedThickness
-          ? formatThicknessLabel(v.thickness_mm) === selectedThickness
-          : true
-        return labelMatch && thicknessMatch
-      })
-
-      const disabled =
-        matchingVariants.length === 0 ||
-        matchingVariants.every((v) => v.in_stock === false)
-
-      return { label, value: label, disabled }
-    })
-  }, [useVariantDrivenConfig, pricedVariants, family, selectedThickness])
-
-  const coreTypeOptions: SelectOption[] =
-    useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')
-      ? variantCoreTypeOptions
-      : 'coreTypes' in options
-      ? options.coreTypes ?? []
-      : []
-
-  const thicknessOptionsForBoards: SelectOption[] =
-    useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')
-      ? variantThicknessOptions
-      : 'thicknesses' in options && typeof options.thicknesses === 'function'
-      ? (options.thicknesses(selectedCoreType) ?? []).sort(
-          (a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', ''))
-        )
-      : []
-
-  const plyOptionsForBoards: SelectOption[] =
-    useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')
-      ? variantPlyOptions
-      : 'plys' in options && typeof options.plys === 'function'
-      ? (options.plys(selectedCoreType, selectedThickness) ?? []).sort(
-          (a, b) => Number(a.value.replace(/\D/g, '')) - Number(b.value.replace(/\D/g, ''))
-        )
-      : []
-
-  const floorThicknessOptions: SelectOption[] =
-    useVariantDrivenConfig && family === 'nufloor'
-      ? Array.from(
-          new Set(
-            pricedVariants
-              .filter((v) => v.in_stock !== false)
-              .map((v) => formatThicknessLabel(v.thickness_mm))
-              .filter(Boolean)
-          )
-        )
-          .map((t) => ({ label: t, value: t }))
-          .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
-      : 'thicknesses' in options && Array.isArray(options.thicknesses)
-      ? [...options.thicknesses].sort(
-          (a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', ''))
-        )
-      : []
-
-  const slatThicknessOptions: SelectOption[] =
-    useVariantDrivenConfig && family === 'nuslat'
-      ? variantThicknessOptions.sort(
-          (a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', ''))
-        )
-      : 'thicknesses' in options && Array.isArray(options.thicknesses)
-      ? [...options.thicknesses].sort(
-          (a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', ''))
-        )
-      : []
-
-  const slatLengthOptions: SelectOption[] =
-    useVariantDrivenConfig && family === 'nuslat'
-      ? variantLengthOptions
-      : 'lengths' in options
-      ? options.lengths ?? []
-      : []
-
-  useEffect(() => {
-    if (useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')) {
-      const firstCore = coreTypeOptions[0]?.value ?? ''
-      const firstThickness = thicknessOptionsForBoards[0]?.value ?? ''
-      const firstPly = plyOptionsForBoards.find((p) => !p.disabled)?.value ?? plyOptionsForBoards[0]?.value ?? ''
-
-      if (!selectedCoreType && firstCore) setSelectedCoreType(firstCore)
-      if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
-      if (!selectedPly && firstPly) setSelectedPly(firstPly)
-      return
-    }
-
-    if (useVariantDrivenConfig && family === 'nuslat') {
-      const firstThickness =
-        slatThicknessOptions.find((o) => !o.disabled)?.value ?? slatThicknessOptions[0]?.value ?? ''
-      const firstLength =
-        slatLengthOptions.find((o) => !o.disabled)?.value ?? slatLengthOptions[0]?.value ?? ''
-
-      if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
-      if (!selectedLength && firstLength) setSelectedLength(firstLength)
-      return
-    }
-
-    if (family === 'nufloor') {
-      const firstThickness = floorThicknessOptions[0]?.value ?? '12mm'
-      if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
-    }
-
-    if (family === 'nuslat') {
-      if (!selectedThickness) setSelectedThickness('5mm')
-      if (!selectedLength) setSelectedLength('8ft')
-    }
-  }, [
-    useVariantDrivenConfig,
-    family,
-    selectedCoreType,
-    selectedThickness,
-    selectedPly,
-    selectedLength,
-    coreTypeOptions,
-    thicknessOptionsForBoards,
-    plyOptionsForBoards,
-    floorThicknessOptions,
-    slatThicknessOptions,
-    slatLengthOptions,
-  ])
-
-  useEffect(() => {
-    if (useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')) {
-      const firstPly = plyOptionsForBoards.find((p) => !p.disabled)?.value ?? plyOptionsForBoards[0]?.value ?? ''
-      if (firstPly && !plyOptionsForBoards.find((p) => p.value === selectedPly)) {
-        setSelectedPly(firstPly)
-      }
-      return
-    }
-
-    if (family === 'nufloor') {
-      setSelectedPly('3 Ply')
-    }
-  }, [useVariantDrivenConfig, family, plyOptionsForBoards, selectedPly])
-
-  useEffect(() => {
-    if (family === 'nubam-boards' || family === 'nuwall') setQuantity(10)
-    if (family === 'nudoor') setQuantity(1)
-    if (family === 'nufloor') setQuantity(20)
-    if (family === 'nuslat') setQuantity(500)
-    if (family === 'furniture') setQuantity(1)
-  }, [family])
-
-  const selectedVariant = useMemo(() => {
-    if (!useVariantDrivenConfig) return null
-
-    return (
-      pricedVariants.find((variant) => {
-        if (variant.in_stock === false) return false
-
-        if (family === 'nuslat') {
-          const thicknessMatch = selectedThickness
-            ? formatThicknessLabel(variant.thickness_mm) === selectedThickness
-            : true
-
-          const lengthMatch = selectedLength
-            ? normalizeValue(variant.size_label) === normalizeValue(selectedLength)
-            : true
-
-          return thicknessMatch && lengthMatch
-        }
-
-        if (family === 'nufloor') {
-          return (
-            selectedThickness ? formatThicknessLabel(variant.thickness_mm) === selectedThickness : true
-          )
-        }
-
-        if (
-          (family === 'nubam-boards' || family === 'nuwall') &&
-          selectedCoreType &&
-          normalizeValue(variant.core_type) !== normalizeValue(selectedCoreType)
-        ) {
-          return false
-        }
-
-        if (selectedThickness && formatThicknessLabel(variant.thickness_mm) !== selectedThickness) {
-          return false
-        }
-
-        if (selectedPly && formatPlyLabel(variant.ply_count) !== selectedPly) {
-          return false
-        }
-
-        return true
-      }) ?? null
-    )
-  }, [
-    useVariantDrivenConfig,
-    pricedVariants,
-    family,
-    selectedCoreType,
-    selectedThickness,
-    selectedPly,
-    selectedLength,
-  ])
-
-  const fallbackResolved = useMemo((): ResolvedQuoteState => {
-    return {
-      productLabel: displayProductName || '',
-      model:
-        family === 'nudoor'
-          ? getNuDoorModelLabel(product?.name || '')
-          : selectedModel || '',
-      coreType: family === 'nudoor' ? 'Horizontal' : selectedCoreType || '',
-      thickness: family === 'nufloor' ? selectedThickness || '—' : selectedThickness || '',
-      ply: family === 'nufloor' ? '3 Ply' : selectedPly || '',
-      length: family === 'nudoor' ? '8ft' : selectedLength || '',
-      dimensions: product?.dimensions || '2440mm x 1220mm',
-      moq: product?.min_order_qty || 1,
-      unit: product?.unit || 'sheet',
-      priceUsd: product?.base_price_usd ?? null,
-      inStock: true,
-      stockMessage: product?.base_price_usd != null ? '' : 'Request Quote',
-      sku: product?.sku || '',
-      variantId: null,
-      isPriceOnRequest: product?.base_price_usd == null,
-    }
-  }, [product, displayProductName, family, selectedModel, selectedCoreType, selectedThickness, selectedPly, selectedLength])
-
-  const resolved: ResolvedQuoteState = useMemo(() => {
-    if (useVariantDrivenConfig && selectedVariant) {
-      return {
-        productLabel: displayProductName || '',
-        model: selectedVariant.size_label || '',
-        coreType: selectedVariant.core_type || '',
-        thickness: formatThicknessLabel(selectedVariant.thickness_mm) || '—',
-        ply: formatPlyLabel(selectedVariant.ply_count) || '—',
-        length: family === 'nuslat' ? selectedVariant.size_label || selectedLength || '' : '',
-        dimensions:
-          family === 'nufloor' && selectedVariant.length_mm && selectedVariant.width_mm
-            ? `${selectedVariant.length_mm}mm x ${selectedVariant.width_mm}mm`
-            : selectedVariant.dimensions || product?.dimensions || '—',
-        moq: selectedVariant.min_order_qty || product?.min_order_qty || 1,
-        unit: selectedVariant.unit || product?.unit || 'sheet',
-        priceUsd: selectedVariant.base_price_usd,
-        inStock: true,
-        stockMessage: '',
-        sku: selectedVariant.sku || product?.sku || '',
-        variantId: selectedVariant.id,
-        isPriceOnRequest: false,
-      }
-    }
-
-    return fallbackResolved
-  }, [useVariantDrivenConfig, selectedVariant, product, family, selectedLength, displayProductName, fallbackResolved])
-
-  const totalUsd = resolved.priceUsd != null ? resolved.priceUsd * quantity : null
-  const familyQuantityError = validateConfiguredQuantity(family, quantity)
-  const quantityError =
-    quantity < resolved.moq
-      ? `Minimum order quantity is ${resolved.moq} ${resolved.unit}.`
-      : familyQuantityError
-
-  const allCategories = useMemo(() => {
-    const source = categories ?? []
-    const dedupedMap = new Map<string, Category>()
-
-    for (const category of source) {
-      if (category.is_active === false) continue
-
-      const normalizedSlug = normalizeCategorySlug(category.slug || category.name)
-      const normalizedName = normalizeCategoryName(category.name)
-
-      if (!dedupedMap.has(normalizedSlug)) {
-        dedupedMap.set(normalizedSlug, {
-          ...category,
-          name: normalizedName,
-          slug: normalizedSlug,
-        })
-      }
-    }
-
-    return Array.from(dedupedMap.values()).sort((a, b) => {
-      const ao = a.display_order ?? 999999
-      const bo = b.display_order ?? 999999
-      if (ao !== bo) return ao - bo
-      return a.name.localeCompare(b.name)
-    })
-  }, [categories])
-
-  const categoryRepresentativeProducts = useMemo(() => {
-    const map = new Map<string, ProductListItem>()
-
-    for (const item of allProducts ?? []) {
-      const slug = getProductCategorySlugFromListItem(item)
-      if (!slug) continue
-      if (!map.has(slug)) {
-        map.set(slug, item)
-      }
-    }
-
-    return map
-  }, [allProducts])
-
-  const categoryLabel = getProductCategoryLabel(product)
-
-  const descriptionContent = useMemo(
-    () =>
-      splitDescriptionContent(
-        product?.description ?? null,
-        displayProductName || 'This product',
-        family
-      ),
-    [product, displayProductName, family]
-  )
-
-  const useCases = useMemo(() => getProductUseCases(family), [family])
-  const featureHighlights = useMemo(() => getProductFeatureHighlights(family), [family])
-  const selectionRows = useMemo(() => getSelectionRows(resolved), [resolved])
-
-  function buildSpecs() {
-    const lines = [
-      resolved.model ? `Model: ${resolved.model}` : '',
-      resolved.coreType && resolved.coreType !== '—' ? `Core Type: ${resolved.coreType}` : '',
-      resolved.thickness && resolved.thickness !== '—' ? `Thickness: ${resolved.thickness}` : '',
-      resolved.ply && resolved.ply !== '—' ? `Ply: ${resolved.ply}` : '',
-      resolved.length ? `Length: ${resolved.length}` : '',
-      resolved.dimensions && resolved.dimensions !== '—' ? `Dimensions: ${resolved.dimensions}` : '',
-      `MOQ: ${resolved.moq} ${resolved.unit}`,
-    ].filter(Boolean)
-
-    return lines.join(' | ')
+  const toggleExpanded = (id: string) => {
+    setExpandedProducts((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
-  function handleAddToQuote() {
-    if (!product) return
+  // ---------------------------------------------------------------------------
+  // Product modal handlers
+  // ---------------------------------------------------------------------------
+  const fetchProductImages = async (productId: string) => {
+    try {
+      const res = await fetch(`/api/products/${productId}/images`)
+      if (res.ok) {
+        const data = await res.json()
+        setExistingProductImages(data.images || [])
+      }
+    } catch (e) {
+      console.error('Failed to fetch product images:', e)
+    }
+  }
 
-    if (quantityError) {
+  const handleOpenAdd = () => {
+    setCurrentProduct(INITIAL_PRODUCT)
+    setImageFile(null)
+    setImagePreview(null)
+    setMultipleImageFiles([])
+    setExistingProductImages([])
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    if (multiImageInputRef.current) multiImageInputRef.current.value = ''
+    setIsProductModalOpen(true)
+  }
+
+  const handleOpenEdit = (product: Product) => {
+    setCurrentProduct(product)
+    setImageFile(null)
+    setImagePreview(product.image_url || null)
+    setMultipleImageFiles([])
+    setExistingProductImages([])
+    if (product.id) fetchProductImages(product.id)
+    setIsProductModalOpen(true)
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Error', description: 'Image must be under 5MB', variant: 'destructive' })
+      return
+    }
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  const handleRemoveImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    setCurrentProduct({ ...currentProduct, image_url: '' })
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleMultipleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const valid = files.filter((f) => {
+      if (f.size > 5 * 1024 * 1024) {
+        toast({ title: 'Error', description: `${f.name} over 5MB`, variant: 'destructive' })
+        return false
+      }
+      return true
+    })
+    setMultipleImageFiles((prev) => [...prev, ...valid])
+  }
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSaving(true)
+    try {
+      let imageUrl = currentProduct.image_url
+
+      if (imageFile) {
+        const formData = new FormData()
+        formData.append('file', imageFile)
+        const uploadRes = await fetch('/api/admin/upload', { method: 'POST', body: formData })
+        const uploadData = await uploadRes.json().catch(() => null)
+        if (!uploadRes.ok) throw new Error(uploadData?.error || 'Image upload failed')
+        imageUrl = uploadData.url
+      }
+
+      // Build a clean payload with only fields that exist in the new schema
+      const payload: any = {
+        id: currentProduct.id,
+        slug: currentProduct.slug,
+        name: currentProduct.name,
+        description: currentProduct.description,
+        image_url: imageUrl,
+        base_price_usd: currentProduct.base_price_usd,
+        moq: currentProduct.moq,
+        moq_unit: currentProduct.moq_unit,
+        order_increment: currentProduct.order_increment,
+        unit: currentProduct.unit,
+        category_id: currentProduct.category_id || null,
+        is_active: currentProduct.is_active,
+        is_featured: currentProduct.is_featured,
+        is_price_on_request: currentProduct.is_price_on_request,
+        price_notes: currentProduct.price_notes,
+      }
+
+      const method = currentProduct.id ? 'PATCH' : 'POST'
+      const res = await fetch('/api/admin/products', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const saved = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(saved?.error || 'Save failed')
+
+      if (multipleImageFiles.length > 0 && saved?.id) {
+        const formData = new FormData()
+        multipleImageFiles.forEach((f) => formData.append('images', f))
+        await fetch(`/api/products/${saved.id}/images`, { method: 'POST', body: formData })
+      }
+
+      await mutateProducts()
+      setIsProductModalOpen(false)
+      setCurrentProduct(INITIAL_PRODUCT)
+      setImageFile(null)
+      setImagePreview(null)
+      setMultipleImageFiles([])
+      setExistingProductImages([])
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      if (multiImageInputRef.current) multiImageInputRef.current.value = ''
+      toast({ title: 'Success', description: `Product ${currentProduct.id ? 'updated' : 'created'}` })
+    } catch (err) {
       toast({
-        title: 'Quantity issue',
-        description: quantityError,
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Something went wrong',
         variant: 'destructive',
       })
-      return
+    } finally {
+      setIsSaving(false)
     }
+  }
 
-    addItem({
-      id: resolved.variantId || product.id,
-      name: resolved.productLabel,
-      specs: buildSpecs(),
-      quantity,
-      unitPrice: resolved.priceUsd,
-      minOrderQty: resolved.moq,
-      unit: resolved.unit,
-      imageUrl: product.image_url || '/Bamboo-Board.png',
-      isPriceOnRequest: resolved.isPriceOnRequest || resolved.priceUsd == null,
-      family,
-      dimensions: resolved.dimensions,
-      thickness: resolved.thickness,
-      ply: resolved.ply,
-      coreType: resolved.coreType,
-      model: resolved.model,
-      length: resolved.length,
-      stockMessage: resolved.stockMessage,
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return
+    try {
+      const res = await fetch(`/api/admin/products?id=${productToDelete}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || 'Delete failed')
+      await mutateProducts()
+      toast({ title: 'Deleted', description: 'Product marked inactive' })
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Could not delete',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeleteAlertOpen(false)
+      setProductToDelete(null)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Variant modal handlers
+  // ---------------------------------------------------------------------------
+  const handleOpenVariantEdit = async (variant: Variant) => {
+    setCurrentVariant(variant)
+    setVariantImageFiles([])
+    setExistingVariantImages([])
+    if (variantImageInputRef.current) variantImageInputRef.current.value = ''
+
+    if (variant.id) {
+      try {
+        const res = await fetch(`/api/admin/variant-images?variantId=${variant.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setExistingVariantImages(data.images || [])
+        }
+      } catch {}
+    }
+    setIsVariantModalOpen(true)
+  }
+
+  const handleVariantImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const valid = files.filter((f) => {
+      if (f.size > 5 * 1024 * 1024) {
+        toast({ title: 'Error', description: `${f.name} over 5MB`, variant: 'destructive' })
+        return false
+      }
+      return true
     })
-
-    
-
-    router.push(`/request-quote?product=${encodeURIComponent(resolved.productLabel)}`)
+    setVariantImageFiles((prev) => [...prev, ...valid])
   }
 
-  function decrementQty() {
-    const next =
-      family === 'nufloor'
-        ? Math.max(resolved.moq, quantity - 20)
-        : Math.max(resolved.moq, quantity - 1)
-
-    setQuantity(next)
+  const handleDeleteVariantImage = async (imageId: string) => {
+    try {
+      await fetch(`/api/admin/variant-images?imageId=${imageId}`, { method: 'DELETE' })
+      setExistingVariantImages((prev) => prev.filter((img) => img.id !== imageId))
+    } catch {
+      toast({ title: 'Error', description: 'Could not delete image', variant: 'destructive' })
+    }
   }
 
-  function incrementQty() {
-    const next = family === 'nufloor' ? quantity + 20 : quantity + 1
-    setQuantity(next)
+  const handleSaveVariant = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsVariantSaving(true)
+
+    try {
+      // Auto-regenerate size_label if all three dims are present
+      const autoSize =
+        currentVariant.length_mm && currentVariant.width_mm && currentVariant.thickness_mm
+          ? `${currentVariant.length_mm} mm x ${currentVariant.width_mm} mm x ${currentVariant.thickness_mm} mm`
+          : currentVariant.size_label
+
+      // Build clean payload. Omit fields from dropped columns.
+      const payload: any = {
+        id: currentVariant.id,
+        product_id: currentVariant.product_id,
+        sku: currentVariant.sku,
+        size_label: autoSize,
+        thickness_mm: currentVariant.thickness_mm,
+        length_mm: currentVariant.length_mm,
+        width_mm: currentVariant.width_mm,
+        ply_count: currentVariant.ply_count,
+        finish: currentVariant.finish,
+        grade: currentVariant.grade,
+        unit: currentVariant.unit,
+        moq: currentVariant.moq,
+        sort_order: currentVariant.sort_order,
+        unit_price: currentVariant.is_price_on_request ? null : currentVariant.unit_price,
+        base_price_usd: currentVariant.is_price_on_request ? null : currentVariant.base_price_usd,
+        is_active: currentVariant.is_active,
+        is_price_on_request: currentVariant.is_price_on_request,
+        in_stock: currentVariant.in_stock,
+        price_notes: currentVariant.price_notes,
+        core_type: currentVariant.core_type,
+        image_url: currentVariant.image_url,
+      }
+
+      const res = await fetch('/api/admin/product-variants', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        cache: 'no-store',
+      })
+      const saved = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(saved?.error || 'Variant save failed')
+
+      await mutateVariants()
+
+      if (variantImageFiles.length > 0 && currentVariant.product_id) {
+        setIsUploadingVariantImages(true)
+        try {
+          const formData = new FormData()
+          formData.append('variantId', currentVariant.id)
+          formData.append('productId', currentVariant.product_id)
+          variantImageFiles.forEach((f) => formData.append('images', f))
+          const uploadRes = await fetch('/api/admin/variant-images', {
+            method: 'POST',
+            body: formData,
+          })
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json()
+            setExistingVariantImages((prev) => [...prev, ...(uploadData.images || [])])
+          }
+        } finally {
+          setIsUploadingVariantImages(false)
+          setVariantImageFiles([])
+          if (variantImageInputRef.current) variantImageInputRef.current.value = ''
+        }
+      }
+
+      setIsVariantModalOpen(false)
+      setCurrentVariant(INITIAL_VARIANT)
+      setVariantImageFiles([])
+      setExistingVariantImages([])
+      toast({ title: 'Success', description: 'Variant updated' })
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Something went wrong',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsVariantSaving(false)
+    }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <CartDrawer />
-        <main className="flex-1 bg-[#f7f2e8]">
-          <div className="mx-auto max-w-7xl px-4 py-10 lg:px-8 lg:py-12">
-            <div className="rounded-[32px] border border-black/10 bg-white p-8 shadow-sm">
-              <p className="text-muted-foreground">Loading product...</p>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    )
-  }
-
-  if (error || !product) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <CartDrawer />
-        <main className="flex-1 bg-[#f7f2e8]">
-          <div className="mx-auto max-w-7xl px-4 py-10 lg:px-8 lg:py-12">
-            <div className="rounded-[32px] border border-black/10 bg-white p-8 shadow-sm">
-              <div className="text-xl font-semibold text-red-700">
-                {error || 'Product not found.'}
-              </div>
-              <div className="mt-4">
-                <Link
-                  href="/products"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  ← Back to products
-                </Link>
-              </div>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    )
-  }
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+  const isLoading = isLoadingProducts || isLoadingVariants
+  const error = productsError || variantsError
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <CartDrawer />
-      <main className="flex-1 bg-[#f7f2e8] pb-28 lg:pb-0">
-        <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8 lg:py-10">
-          <div className="mb-6 flex flex-col gap-4">
-            <Link
-              href="/products"
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to products
-            </Link>
+    <div className="space-y-6">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="font-serif text-2xl text-foreground">Products</h1>
+          <p className="mt-1 text-muted-foreground">
+            {filteredProducts.length} products, {variants.length} variants
+          </p>
+        </div>
+        <Button onClick={handleOpenAdd} className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+          <Plus className="h-4 w-4" />
+          Add Product
+        </Button>
+      </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span>Products</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-              <span>{categoryLabel}</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-              <span className="text-foreground">{displayProductName}</span>
-            </div>
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {(error as Error).message}
+        </div>
+      )}
+
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Search by product, slug, SKU, finish, core..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Slug</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Product</th>
+                  <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground sm:table-cell">Category</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Base Price</th>
+                  <th className="hidden px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground md:table-cell">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
+                </tr>
+              </thead>
 
-          <div className="mb-6">
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              <button
-                type="button"
-                onClick={() => router.push('/products')}
-                className="shrink-0 rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-foreground"
-              >
-                All Products
-              </button>
+              <tbody className="divide-y divide-border">
+                {filteredProducts.map((product) => {
+                  const productVariants = variantsByProductId[product.id || ''] || []
+                  const expanded = !!expandedProducts[product.id || '']
+                  const hasVariants = productVariants.length > 0
 
-              {allCategories.map((category) => {
-                const slug = normalizeCategorySlug(category.slug || category.name)
-                const label = normalizeCategoryName(category.name)
-                const isActive = slug === normalizeCategorySlug(product.category || '')
-                const targetProduct = categoryRepresentativeProducts.get(slug)
+                  return (
+                    <React.Fragment key={product.id}>
+                      <tr className="transition-colors hover:bg-muted/30">
+                        <td className="px-4 py-3 text-sm font-mono text-foreground">
+                          <div className="flex items-center gap-2">
+                            {hasVariants ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpanded(product.id!)}
+                                className="rounded p-0.5 hover:bg-muted"
+                              >
+                                {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              </button>
+                            ) : (
+                              <span className="inline-block w-5" />
+                            )}
+                            <span>{product.slug || '-'}</span>
+                          </div>
+                        </td>
 
-                return (
-                  <button
-                    key={slug}
-                    type="button"
-                    onClick={() => {
-                      if (targetProduct?.id) {
-                        router.push(`/products/${targetProduct.id}`)
-                      } else {
-                        router.push(`/products?category=${slug}`)
-                      }
-                    }}
-                    className={`shrink-0 rounded-full px-4 py-2 text-sm transition ${
-                      isActive
-                        ? 'bg-[#16361f] text-white'
-                        : 'border border-black/10 bg-white text-foreground'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
-            </div>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            {product.image_url ? (
+                              <img
+                                src={product.image_url}
+                                alt={product.name}
+                                className="h-10 w-10 rounded border border-border object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-10 w-10 items-center justify-center rounded border border-border bg-muted">
+                                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-sm font-medium text-foreground">{product.name || 'Untitled'}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {hasVariants
+                                  ? `${productVariants.length} variant${productVariants.length === 1 ? '' : 's'}`
+                                  : 'No variants'}
+                                {product.moq ? ` , MOQ ${product.moq} ${product.moq_unit}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="hidden px-4 py-3 text-sm text-muted-foreground sm:table-cell">
+                          {product.category_name || '-'}
+                        </td>
+
+                        <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
+                          {product.is_price_on_request
+                            ? 'Quote'
+                            : product.base_price_usd > 0
+                            ? `USD ${product.base_price_usd.toLocaleString()}`
+                            : '-'}
+                        </td>
+
+                        <td className="hidden px-4 py-3 text-center md:table-cell">
+                          <span
+                            className={cn(
+                              'rounded-full px-2 py-0.5 text-xs',
+                              product.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
+                            )}
+                          >
+                            {product.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(product)}>
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => {
+                                setProductToDelete(product.id!)
+                                setIsDeleteAlertOpen(true)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {expanded &&
+                        productVariants.map((variant) => (
+                          <tr key={variant.id} className="border-t border-border bg-muted/20">
+                            <td className="px-4 py-3 text-sm font-mono text-muted-foreground">
+                              <span className="ml-7">{variant.sku || '-'}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                {variant.image_url && (
+                                  <img
+                                    src={variant.image_url}
+                                    alt={variant.sku}
+                                    className="h-8 w-8 rounded border border-border object-cover"
+                                  />
+                                )}
+                                <div className="space-y-1">
+                                  <p className="text-sm font-medium text-foreground">{formatVariantSize(variant)}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {[variant.core_type, variant.ply_count ? `${variant.ply_count} ply` : null, variant.finish, variant.grade]
+                                      .filter(Boolean)
+                                      .join(' , ')}
+                                    {!variant.in_stock ? ' , out of stock' : ''}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="hidden px-4 py-3 text-sm text-muted-foreground sm:table-cell">
+                              {variant.unit} , MOQ {variant.moq || '-'}
+                            </td>
+                            <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
+                              {variant.is_price_on_request || variant.unit_price === null
+                                ? 'Quote'
+                                : `USD ${Number(variant.unit_price).toLocaleString()}`}
+                            </td>
+                            <td className="hidden px-4 py-3 text-center md:table-cell">
+                              <span
+                                className={cn(
+                                  'rounded-full px-2 py-0.5 text-xs',
+                                  variant.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
+                                )}
+                              >
+                                {variant.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenVariantEdit(variant)}>
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                    </React.Fragment>
+                  )
+                })}
+
+                {!isLoading && filteredProducts.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                      No products found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+        )}
+      </div>
 
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
-            <section className="space-y-8">
-              <div className="overflow-hidden rounded-[34px] border border-black/8 bg-white shadow-sm">
-                <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
-                  <div className="relative min-h-[320px] bg-[#efe7d9] sm:min-h-[420px] lg:min-h-[620px]">
-                    <ProductDetailImage
-                      product={product}
-                      variantImages={selectedVariant?.images}
-                    />
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
-                  </div>
+      {/* Product modal */}
+      <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{currentProduct.id ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+            <DialogDescription>
+              Base price is stored in USD. The public site converts to the visitor's local currency.
+            </DialogDescription>
+          </DialogHeader>
 
-                  <div className="p-6 lg:p-8 xl:p-10">
-                    <div className="mb-4 flex flex-wrap items-center gap-3">
-                      <span className="inline-flex rounded-full border border-[#16361f]/15 bg-[#16361f]/8 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-[#16361f]">
-                        {getFamilyBadge(family, categoryLabel)}
-                      </span>
-                    </div>
-
-                    {family !== 'nuwall' ? (
-                      <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl xl:text-5xl">
-                        {displayProductName}
-                      </h1>
-                    ) : (
-                      <h1 className="sr-only">{displayProductName}</h1>
-                    )}
-
-                    <p
-                      className={`${
-                        family !== 'nuwall' ? 'mt-5' : 'mt-2'
-                      } max-w-2xl text-base leading-8 text-muted-foreground`}
-                    >
-                      {descriptionContent.intro}
-                    </p>
-
-                    <div className="mt-6 flex flex-wrap gap-2">
-                      {featureHighlights.map((item) => (
-                        <span
-                          key={item}
-                          className="inline-flex rounded-full border border-black/8 bg-stone-50 px-3.5 py-2 text-sm text-foreground"
-                        >
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-
-                    
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm">
-                  <div className="mb-5">
-                    <h2 className="text-xl font-semibold text-foreground">Best For</h2>
-                  </div>
-
-                  <div className="space-y-3">
-                    {useCases.map((item) => (
-                      <div key={item} className="flex items-start gap-3">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
-                        <p className="text-sm leading-7 text-foreground">{item}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm">
-                  <div className="mb-5">
-                    <h2 className="text-xl font-semibold text-foreground">Product Overview</h2>
-                  </div>
-
-                  <p className="text-sm leading-7 text-foreground/75">
-                    Built for modern projects that require a balance of durability,
-                    clean aesthetics, and sustainable material sourcing.
-                  </p>
-                </div>
-              </div>
-
-              {descriptionContent.highlights.length > 0 && (
-                <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm lg:p-8">
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-semibold text-foreground">Key Highlights</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Main benefits and application strengths
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {descriptionContent.highlights.map((item, index) => (
-                      <div
-                        key={`${item}-${index}`}
-                        className="rounded-[24px] border border-black/8 bg-[#faf6ef] p-5"
+          <form onSubmit={handleSaveProduct} className="grid gap-4 py-4">
+            {/* Hero image */}
+            <div className="flex flex-col gap-2">
+              <Label>Product Hero Image</Label>
+              <div className="flex items-start gap-4">
+                <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border-2 border-dashed border-border bg-muted/50">
+                  {imagePreview ? (
+                    <>
+                      <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="absolute right-1 top-1 rounded-full bg-black/50 p-0.5 text-white hover:bg-black/70"
                       >
-                        <div className="flex items-start gap-3">
-                          <span className="mt-2 inline-block h-2.5 w-2.5 rounded-full bg-[#16361f]" />
-                          <p className="text-sm leading-7 text-foreground">{item}</p>
-                        </div>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <Input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="cursor-pointer" />
+                  <p className="text-xs text-muted-foreground">PNG, JPG, or WEBP under 5MB.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Name + slug */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Slug *</Label>
+                <Input
+                  value={currentProduct.slug}
+                  onChange={(e) => setCurrentProduct({ ...currentProduct, slug: e.target.value })}
+                  placeholder="nubam-boards"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Name *</Label>
+                <Input
+                  value={currentProduct.name}
+                  onChange={(e) => setCurrentProduct({ ...currentProduct, name: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Base price + unit */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Base Price (USD) *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={currentProduct.base_price_usd}
+                  onChange={(e) =>
+                    setCurrentProduct({ ...currentProduct, base_price_usd: Number(e.target.value) || 0 })
+                  }
+                  disabled={currentProduct.is_price_on_request}
+                  required={!currentProduct.is_price_on_request}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Unit</Label>
+                <Input
+                  value={currentProduct.unit}
+                  onChange={(e) => setCurrentProduct({ ...currentProduct, unit: e.target.value })}
+                  placeholder="piece"
+                />
+              </div>
+            </div>
+
+            {/* MOQ, MOQ unit, order increment */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>MOQ</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={currentProduct.moq}
+                  onChange={(e) =>
+                    setCurrentProduct({ ...currentProduct, moq: Number(e.target.value) || 1 })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>MOQ Unit</Label>
+                <Input
+                  value={currentProduct.moq_unit}
+                  onChange={(e) => setCurrentProduct({ ...currentProduct, moq_unit: e.target.value })}
+                  placeholder="piece"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Order Increment</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={currentProduct.order_increment}
+                  onChange={(e) =>
+                    setCurrentProduct({ ...currentProduct, order_increment: Number(e.target.value) || 1 })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">Orders must be multiples of this. Use 1 for no restriction.</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                rows={4}
+                value={currentProduct.description}
+                onChange={(e) => setCurrentProduct({ ...currentProduct, description: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Price Notes</Label>
+              <Input
+                value={currentProduct.price_notes}
+                onChange={(e) => setCurrentProduct({ ...currentProduct, price_notes: e.target.value })}
+                placeholder="Optional notes shown next to the price"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-6 pt-2">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={currentProduct.is_active}
+                  onCheckedChange={(checked) => setCurrentProduct({ ...currentProduct, is_active: checked })}
+                />
+                <Label>Active</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={currentProduct.is_featured}
+                  onCheckedChange={(checked) => setCurrentProduct({ ...currentProduct, is_featured: checked })}
+                />
+                <Label>Featured</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={currentProduct.is_price_on_request}
+                  onCheckedChange={(checked) =>
+                    setCurrentProduct({ ...currentProduct, is_price_on_request: checked })
+                  }
+                />
+                <Label>Price on request</Label>
+              </div>
+            </div>
+
+            {/* Gallery */}
+            <div className="border-t pt-4">
+              <Label className="mb-3 block">Product Gallery Images</Label>
+              {currentProduct.id && existingProductImages.length > 0 && (
+                <div className="mb-4 border-b pb-4">
+                  <p className="mb-2 text-sm font-medium text-foreground">
+                    Existing Images ({existingProductImages.length})
+                  </p>
+                  <div className="grid max-h-40 grid-cols-3 gap-2 overflow-y-auto">
+                    {existingProductImages.map((image) => (
+                      <div key={image.id} className="relative h-24 w-24 overflow-hidden rounded border border-border bg-muted">
+                        <img src={image.image_url} alt={image.alt_text || ''} className="h-full w-full object-cover" />
+                        {image.is_primary && (
+                          <div className="absolute left-0.5 top-0.5 rounded bg-primary/90 px-1.5 py-0.5 text-xs text-white">
+                            Primary
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm lg:p-8">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-semibold text-foreground">Configure Your Product</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Select the required specifications below to prepare your quote.
-                  </p>
-                </div>
-
-                <div className="space-y-8">
-                  {(family === 'nubam-boards' || family === 'nuwall') && (
-                    <>
-                      <OptionPills
-                        label="Core Type"
-                        value={selectedCoreType}
-                        onChange={setSelectedCoreType}
-                        options={coreTypeOptions}
-                      />
-
-                      <OptionPills
-                        label="Thickness"
-                        value={selectedThickness}
-                        onChange={setSelectedThickness}
-                        options={thicknessOptionsForBoards}
-                      />
-
-                      <OptionPills
-                        label="Ply"
-                        value={selectedPly}
-                        onChange={setSelectedPly}
-                        options={plyOptionsForBoards}
-                      />
-                    </>
-                  )}
-
-                  {family === 'nudoor' && nudoorModelProducts.length > 0 && (
-                    <div>
-                      <label className="mb-3 block text-sm font-medium text-foreground">
-                        Model
-                      </label>
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        {nudoorModelProducts.map((item) => {
-                          const label = getNuDoorModelLabel(item.name)
-                          const isActive = item.id === product.id
-
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => router.push(`/products/${item.id}`)}
-                              className={`rounded-[24px] border p-4 text-left transition ${
-                                isActive
-                                  ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
-                                  : 'border-black/10 bg-white hover:border-black/20 hover:bg-stone-50'
-                              }`}
-                            >
-                              <p className="text-sm font-semibold">{label}</p>
-                            </button>
-                          )
-                        })}
-                      </div>
+              <Input
+                ref={multiImageInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleMultipleImageChange}
+                className="cursor-pointer"
+              />
+              {multipleImageFiles.length > 0 && (
+                <div className="mt-2 grid max-h-32 grid-cols-3 gap-2 overflow-y-auto">
+                  {multipleImageFiles.map((file, index) => (
+                    <div key={index} className="relative h-24 w-24 overflow-hidden rounded border border-border bg-muted">
+                      <img src={URL.createObjectURL(file)} alt={file.name} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setMultipleImageFiles((prev) => prev.filter((_, i) => i !== index))}
+                        className="absolute right-0.5 top-0.5 rounded-full bg-black/50 p-0.5 text-white hover:bg-black/70"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
-                  )}
-
-                  {family === 'nufloor' && (
-                    <>
-                      <OptionPills
-                        label="Thickness"
-                        value={selectedThickness}
-                        onChange={setSelectedThickness}
-                        options={floorThicknessOptions}
-                      />
-
-                      <div className="rounded-[24px] border border-black/8 bg-[#faf6ef] p-4 text-sm leading-7 text-foreground/80">
-                        <span className="font-medium text-foreground">Standard build:</span> {selectedPly || '3 Ply'}
-                        <br />
-                        <span className="font-medium text-foreground">Dimensions:</span>{' '}
-                        {resolved.dimensions && resolved.dimensions !== '—'
-                          ? formatDimensions(resolved.dimensions)
-                          : '1220mm × 305mm'}
-                      </div>
-                    </>
-                  )}
-
-                  {family === 'nuslat' && (
-                    <>
-                      <OptionPills
-                        label="Thickness"
-                        value={selectedThickness}
-                        onChange={setSelectedThickness}
-                        options={slatThicknessOptions}
-                      />
-
-                      <OptionPills
-                        label="Length"
-                        value={selectedLength}
-                        onChange={setSelectedLength}
-                        options={slatLengthOptions}
-                      />
-                    </>
-                  )}
-
-                  <div className="rounded-[26px] border border-black/8 bg-[#faf6ef] p-5">
-                    <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-                      <div>
-                        <label className="mb-3 block text-sm font-medium text-foreground">
-                          Quantity
-                        </label>
-
-                        <div className="inline-flex items-center rounded-full border border-black/10 bg-white p-1 shadow-sm">
-                          <button
-                            type="button"
-                            onClick={decrementQty}
-                            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition hover:bg-stone-50"
-                            aria-label="Decrease quantity"
-                          >
-                            <Minus className="h-4 w-4" />
-                          </button>
-
-                          <div className="min-w-[72px] px-3 text-center text-base font-semibold text-foreground">
-                            {quantity}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={incrementQty}
-                            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition hover:bg-stone-50"
-                            aria-label="Increase quantity"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        </div>
-
-                        <div className="mt-3 text-sm text-muted-foreground">
-                          MOQ: {resolved.moq} {resolved.unit}
-                          {family === 'nufloor' ? ' | Must be in multiples of 20' : ''}
-                        </div>
-
-                        {quantityError && (
-                          <p className="mt-2 text-sm text-red-600">{quantityError}</p>
-                        )}
-                      </div>
-
-                      <div className="rounded-[22px] border border-black/8 bg-white p-4 sm:min-w-[220px]">
-                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                          Estimated total
-                        </p>
-                        <p className="mt-2 text-xl font-semibold text-foreground">
-                          {totalUsd != null
-                            ? formatConvertedFromUsd(totalUsd)
-                            : resolved.stockMessage || 'Request Quote'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
+              )}
+            </div>
+
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsProductModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Product
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Variant modal */}
+      <Dialog open={isVariantModalOpen} onOpenChange={setIsVariantModalOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Variant</DialogTitle>
+            <DialogDescription>Prices in USD. Size label is auto-generated from length x width x thickness.</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveVariant} className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Variant SKU</Label>
+                <Input
+                  value={currentVariant.sku}
+                  onChange={(e) => setCurrentVariant({ ...currentVariant, sku: e.target.value })}
+                />
               </div>
-
-              <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm lg:p-8">
-                <div className="mb-5">
-                  <h2 className="text-2xl font-semibold text-foreground">Third-party testing</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    ASTM D1037 mechanical testing (ranges published to avoid cherry-picking).
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
-                    MOR: 22.77–69.44 MPa
-                  </span>
-                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
-                    MOE: 2211.82–10256.71 MPa
-                  </span>
-                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
-                    Compression: 25.19–30.46 MPa
-                  </span>
-                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
-                    Hardness: 3918.33–7377.33 N
-                  </span>
-                </div>
-
-                <p className="mt-4 text-xs leading-6 text-muted-foreground">
-                  Results apply to the specific samples submitted for testing (Oct–Nov 2025) and are
-                  provided for reference. Values may vary by product configuration, thickness, moisture
-                  content, and manufacturing lot.
-                </p>
-
-                <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                  <Link
-                    href="/testing"
-                    className="font-semibold text-primary hover:underline underline-offset-4"
-                  >
-                    View testing page
-                  </Link>
-                  <a
-                    href={DOST_PDF_PATH}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold text-primary hover:underline underline-offset-4"
-                  >
-                    Download DOST results (PDF)
-                  </a>
-                </div>
+              <div className="space-y-2">
+                <Label>Unit</Label>
+                <Input
+                  value={currentVariant.unit}
+                  onChange={(e) => setCurrentVariant({ ...currentVariant, unit: e.target.value })}
+                />
               </div>
-            </section>
+            </div>
 
-            <aside className="hidden xl:block">
-              <div className="sticky top-24 rounded-[30px] bg-[#16241a] p-6 text-white shadow-[0_18px_48px_rgba(0,0,0,0.18)]">
-                <p className="text-xs uppercase tracking-[0.16em] text-white/45">
-                  Configuration summary
-                </p>
-
-                <div className="mt-5 space-y-4">
-                  <div className="rounded-[22px] bg-white/6 p-4">
-                    <p className="text-sm text-white/50">Product</p>
-                    <p className="mt-1 text-lg font-semibold">{resolved.productLabel}</p>
-                  </div>
-
-                  {selectionRows.length > 0 && (
-                    <div className="rounded-[22px] bg-white/6 p-4">
-                      <p className="text-sm text-white/50">Selected configuration</p>
-                      <div className="mt-3 space-y-2.5 text-sm">
-                        {selectionRows.map((row) => (
-                          <div
-                            key={`${row.label}-${row.value}`}
-                            className="flex items-start justify-between gap-4"
-                          >
-                            <span className="text-white/50">{row.label}</span>
-                            <span className="text-right font-medium text-white">
-                              {row.label === 'Dimensions'
-                                ? formatDimensions(row.value)
-                                : row.value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-[22px] bg-white/6 p-4">
-                      <p className="text-xs uppercase tracking-[0.14em] text-white/45">MOQ</p>
-                      <p className="mt-2 text-sm font-medium">
-                        {resolved.moq} {resolved.unit}
-                      </p>
-                    </div>
-
-                    <div className="rounded-[22px] bg-white/6 p-4">
-                      <p className="text-xs uppercase tracking-[0.14em] text-white/45">
-                        Quantity
-                      </p>
-                      <p className="mt-2 text-sm font-medium">
-                        {quantity} {resolved.unit}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[22px] border border-white/10 bg-amber-400/10 p-4">
-                    <p className="text-sm text-amber-100/80">Unit Price</p>
-                    <p className="mt-1 text-2xl font-semibold">
-                      {resolved.priceUsd != null
-                        ? formatConvertedFromUsd(resolved.priceUsd)
-                        : resolved.stockMessage || 'Request Quote'}
-                    </p>
-                  </div>
-
-                  <div className="rounded-[22px] border border-white/10 bg-emerald-400/10 p-4">
-                    <p className="text-sm text-emerald-100/80">Estimated Total</p>
-                    <p className="mt-1 text-xl font-semibold">
-                      {totalUsd != null
-                        ? formatConvertedFromUsd(totalUsd)
-                        : resolved.stockMessage || 'Request Quote'}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleAddToQuote}
-                    disabled={!!quantityError}
-                    className="mt-2 w-full rounded-full bg-white px-4 py-3.5 font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Add to Quote
-                  </button>
-
-                  <a
-                    href={`https://wa.me/60162958983?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    Ask about this product
-                  </a>
-                </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Length (mm)</Label>
+                <Input
+                  type="number"
+                  value={currentVariant.length_mm ?? ''}
+                  onChange={(e) =>
+                    setCurrentVariant({
+                      ...currentVariant,
+                      length_mm: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
+                />
               </div>
-            </aside>
-          </div>
-        </div>
+              <div className="space-y-2">
+                <Label>Width (mm)</Label>
+                <Input
+                  type="number"
+                  value={currentVariant.width_mm ?? ''}
+                  onChange={(e) =>
+                    setCurrentVariant({
+                      ...currentVariant,
+                      width_mm: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Thickness (mm)</Label>
+                <Input
+                  type="number"
+                  value={currentVariant.thickness_mm ?? ''}
+                  onChange={(e) =>
+                    setCurrentVariant({
+                      ...currentVariant,
+                      thickness_mm: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
 
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/8 bg-white/96 px-4 py-3 backdrop-blur lg:hidden">
-          <div className="mx-auto flex max-w-7xl items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                Estimated total
-              </p>
-              <p className="truncate text-base font-semibold text-foreground">
-                {totalUsd != null
-                  ? formatConvertedFromUsd(totalUsd)
-                  : resolved.stockMessage || 'Request Quote'}
-              </p>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Ply Count</Label>
+                <Input
+                  type="number"
+                  value={currentVariant.ply_count ?? ''}
+                  onChange={(e) =>
+                    setCurrentVariant({
+                      ...currentVariant,
+                      ply_count: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Core Type</Label>
+                <Input
+                  value={currentVariant.core_type}
+                  onChange={(e) => setCurrentVariant({ ...currentVariant, core_type: e.target.value })}
+                  placeholder="Horizontal Core"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>MOQ</Label>
+                <Input
+                  type="number"
+                  value={currentVariant.moq ?? ''}
+                  onChange={(e) =>
+                    setCurrentVariant({
+                      ...currentVariant,
+                      moq: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Finish</Label>
+                <Input
+                  value={currentVariant.finish}
+                  onChange={(e) => setCurrentVariant({ ...currentVariant, finish: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Grade</Label>
+                <Input
+                  value={currentVariant.grade}
+                  onChange={(e) => setCurrentVariant({ ...currentVariant, grade: e.target.value })}
+                  placeholder="Light, Composite, Premium"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Base Price (USD)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={currentVariant.base_price_usd ?? ''}
+                  disabled={currentVariant.is_price_on_request}
+                  onChange={(e) => {
+                    const n = e.target.value === '' ? null : Number(e.target.value)
+                    setCurrentVariant({ ...currentVariant, base_price_usd: n, unit_price: n })
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Sort Order</Label>
+                <Input
+                  type="number"
+                  value={currentVariant.sort_order ?? ''}
+                  onChange={(e) =>
+                    setCurrentVariant({
+                      ...currentVariant,
+                      sort_order: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Variant Hero Image URL</Label>
+              <Input
+                value={currentVariant.image_url}
+                onChange={(e) => setCurrentVariant({ ...currentVariant, image_url: e.target.value })}
+                placeholder="https://..."
+              />
               <p className="text-xs text-muted-foreground">
-                MOQ {resolved.moq} {resolved.unit}
+                The main image shown when this variant is selected on the public product page.
+                Leave blank to use the parent product image.
               </p>
             </div>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleAddToQuote}
-                disabled={!!quantityError}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#16361f] px-5 py-3 font-semibold text-white transition hover:bg-[#204a2b] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <ShoppingBag className="h-4 w-4" />
-                Add to Quote
-              </button>
-              <a
-                href={`https://wa.me/60162958983?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-full border border-emerald-600 bg-emerald-600 px-4 py-3 text-stone-50 transition hover:bg-emerald-700"
-                aria-label="Ask about this product on WhatsApp"
-              >
-                <MessageCircle className="h-4 w-4" />
-              </a>
+            <div className="space-y-2">
+              <Label>Price Notes</Label>
+              <Textarea
+                rows={2}
+                value={currentVariant.price_notes}
+                onChange={(e) => setCurrentVariant({ ...currentVariant, price_notes: e.target.value })}
+              />
             </div>
-          </div>
-        </div>
-      </main>
-      <Footer />
+
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={currentVariant.is_active}
+                  onCheckedChange={(checked) => setCurrentVariant({ ...currentVariant, is_active: checked })}
+                />
+                <Label>Active</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={currentVariant.in_stock}
+                  onCheckedChange={(checked) => setCurrentVariant({ ...currentVariant, in_stock: checked })}
+                />
+                <Label>In stock</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={currentVariant.is_price_on_request}
+                  onCheckedChange={(checked) =>
+                    setCurrentVariant({
+                      ...currentVariant,
+                      is_price_on_request: checked,
+                      unit_price: checked ? null : currentVariant.unit_price,
+                      base_price_usd: checked ? null : currentVariant.base_price_usd,
+                    })
+                  }
+                />
+                <Label>Price on request</Label>
+              </div>
+            </div>
+
+            {/* Variant images */}
+            <div className="border-t pt-4 space-y-3">
+              <Label className="block">Variant Gallery Images</Label>
+              <p className="text-xs text-muted-foreground">
+                Additional images shown in the carousel when this variant is selected.
+              </p>
+
+              {existingVariantImages.length > 0 && (
+                <div className="grid grid-cols-4 gap-2">
+                  {existingVariantImages.map((img) => (
+                    <div key={img.id} className="relative h-20 w-20 overflow-hidden rounded-lg border border-border bg-muted">
+                      <img src={img.image_url} alt={img.alt_text || ''} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteVariantImage(img.id)}
+                        className="absolute right-0.5 top-0.5 rounded-full bg-black/50 p-0.5 text-white hover:bg-black/70"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Input
+                ref={variantImageInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleVariantImageChange}
+                className="cursor-pointer"
+              />
+
+              {variantImageFiles.length > 0 && (
+                <div className="grid grid-cols-4 gap-2">
+                  {variantImageFiles.map((f, i) => (
+                    <div key={i} className="relative h-20 w-20 overflow-hidden rounded-lg border border-border bg-muted">
+                      <img src={URL.createObjectURL(f)} alt={f.name} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setVariantImageFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                        className="absolute right-0.5 top-0.5 rounded-full bg-black/50 p-0.5 text-white hover:bg-black/70"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsVariantModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isVariantSaving || isUploadingVariantImages}>
+                {isVariantSaving || isUploadingVariantImages ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isUploadingVariantImages ? 'Uploading...' : 'Saving...'}
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Variant
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will soft-delete the product by setting it to inactive.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
