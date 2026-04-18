@@ -555,7 +555,7 @@ export default function CRMDashboard() {
                               const email = e.target.value
                               const repNameMap: Record<string,string> = {
                                 'mohan@numat.ph': 'Mohan',
-                                'lemuelaseniero@numat.ph': 'Lemuel',
+                                
                                 'bryan@numat.ph': 'Bryan',
                               }
                               const name = repNameMap[email] || email.split('@')[0]
@@ -569,7 +569,7 @@ export default function CRMDashboard() {
                             <option value="">— Unassigned —</option>
                             <option value="mohan@numat.ph">Mohan (International)</option>
                             <option value="bryan@numat.ph">Bryan (Philippines)</option>
-                            <option value="lemuelaseniero@numat.ph">Lemuel (Philippines)</option>
+                            
                           </select>
                         </div>
                       )}
