@@ -210,11 +210,17 @@ export async function PATCH(request: NextRequest) {
 }
 
 // ---------------------------------------------------------------------------
-// DELETE (soft)
+// DELETE (hard)
+//
+// Cascades to product_variants and product_images (both have ON DELETE CASCADE).
+// Pass ?soft=true in the query to soft-delete (mark is_active=false) instead,
+// e.g. for products that have historical quote_items references you want to keep.
 // ---------------------------------------------------------------------------
 export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
+  const soft = searchParams.get('soft') === 'true'
+
   if (!id) return NextResponse.json({ error: 'Product ID is required' }, { status: 400 })
 
   const supabase = await createClient()
@@ -223,8 +229,37 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: authCheck.error }, { status: authCheck.status })
   }
 
-  const { error } = await supabase.from('products').update({ is_active: false }).eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (soft) {
+    const { error } = await supabase.from('products').update({ is_active: false }).eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true, mode: 'soft' })
+  }
 
-  return NextResponse.json({ ok: true })
+  // Hard delete. Variants and product_images cascade automatically.
+  // quote_items has no FK enforcement on product_id, so historical quotes keep their
+  // product_name/product_specs text snapshots even after the product is removed.
+  const { error } = await supabase.from('products').delete().eq('id', id)
+
+  if (error) {
+    // If something unexpected blocks the delete, fall back to soft delete.
+    console.error('Hard delete failed, falling back to soft delete:', error)
+    const { error: softErr } = await supabase
+      .from('products')
+      .update({ is_active: false })
+      .eq('id', id)
+    if (softErr) {
+      return NextResponse.json(
+        { error: `Delete failed and soft delete also failed: ${softErr.message}` },
+        { status: 500 },
+      )
+    }
+    return NextResponse.json({
+      ok: true,
+      mode: 'soft_fallback',
+      note: 'Hard delete blocked by database constraint. Product was marked inactive instead.',
+      reason: error.message,
+    })
+  }
+
+  return NextResponse.json({ ok: true, mode: 'hard' })
 }
