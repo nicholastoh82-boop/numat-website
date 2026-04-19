@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: COLORS.muted,
     marginTop: 4,
-    fontStyle: "italic",
+    fontFamily: "Helvetica-Oblique",
   },
 
   twoCol: { flexDirection: "row", justifyContent: "space-between", marginBottom: 24 },
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     fontSize: 9,
     color: COLORS.body,
-    fontStyle: "italic",
+    fontFamily: "Helvetica-Oblique",
   },
   signatureRow: {
     flexDirection: "row",
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: COLORS.muted,
     marginBottom: 20,
-    fontStyle: "italic",
+    fontFamily: "Helvetica-Oblique",
   },
   signatureLine: {
     fontSize: 9,
@@ -800,7 +800,7 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
               <Text style={styles.bodyText}>
                 Please reference invoice number {data.quote_number} on all payments.
               </Text>
-              <Text style={{ ...styles.bodyText, marginTop: 6, fontStyle: "italic", color: COLORS.muted, fontSize: 9 }}>
+              <Text style={{ ...styles.bodyText, marginTop: 6, color: COLORS.muted, fontSize: 9, fontFamily: "Helvetica-Oblique" }}>
                 This invoice is governed by the Terms and Conditions set out in the related Proforma Invoice accepted by the Customer.
               </Text>
             </>
@@ -818,7 +818,7 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
                 This is a proforma invoice issued for proposal purposes. It is
                 not a tax invoice and does not constitute a demand for payment.
               </Text>
-              <Text style={{ ...styles.bodyText, marginTop: 6, fontStyle: "italic", color: COLORS.green, fontFamily: "Helvetica-Bold" }}>
+              <Text style={{ ...styles.bodyText, marginTop: 6, color: COLORS.green, fontFamily: "Helvetica-Bold" }}>
                 Full Terms and Conditions and signature page follow on page 2.
               </Text>
             </>
