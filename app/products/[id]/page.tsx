@@ -262,7 +262,7 @@ function splitDescriptionContent(
     .replace(/key benefits\s*:?\s*/gi, ' | ')
     .replace(/applications?\s*:?\s*/gi, ' | ')
     .replace(/specifications?\s*:?\s*/gi, ' | ')
-    .replace(/\s*[•·]\s*/g, ' | ')
+    .replace(/\s*[â¢Â·]\s*/g, ' | ')
 
   const parts = withoutLabels
     .split('|')
@@ -308,7 +308,7 @@ function splitDescriptionContent(
     )
   )
 
-  const specsText = Array.from(new Set(specLike)).join(' • ')
+  const specsText = Array.from(new Set(specLike)).join(' â¢ ')
 
   return {
     intro,
@@ -362,15 +362,15 @@ function getFamilyBadge(family: ProductFamily, categoryLabel: string): string {
 function getSelectionRows(resolved: ResolvedQuoteState) {
   const rows = [
     resolved.model ? { label: 'Model', value: resolved.model } : null,
-    resolved.coreType && resolved.coreType !== '—'
+    resolved.coreType && resolved.coreType !== 'â'
       ? { label: 'Core Type', value: resolved.coreType }
       : null,
-    resolved.thickness && resolved.thickness !== '—'
+    resolved.thickness && resolved.thickness !== 'â'
       ? { label: 'Thickness', value: resolved.thickness }
       : null,
-    resolved.ply && resolved.ply !== '—' ? { label: 'Ply', value: resolved.ply } : null,
+    resolved.ply && resolved.ply !== 'â' ? { label: 'Ply', value: resolved.ply } : null,
     resolved.length ? { label: 'Length', value: resolved.length } : null,
-    resolved.dimensions && resolved.dimensions !== '—'
+    resolved.dimensions && resolved.dimensions !== 'â'
       ? { label: 'Dimensions', value: resolved.dimensions }
       : null,
   ].filter(Boolean) as Array<{ label: string; value: string }>
@@ -379,7 +379,7 @@ function getSelectionRows(resolved: ResolvedQuoteState) {
 }
 
 function formatDimensions(value: string) {
-  return value.replace(/\s*x\s*/gi, ' × ')
+  return value.replace(/\s*x\s*/gi, ' Ã ')
 }
 
 function OptionPills({
@@ -553,7 +553,7 @@ export default function ProductDetailPage() {
         const variantsAtGrade = pricedVariants.filter(
           (v) => (v.grade || '').toLowerCase() === grade.toLowerCase(),
         )
-        const allOut = variantsAtGrade.length > 0 && variantsAtGrade.every((v) => v.in_stock === false)
+        const allOut = variantsAtGrade.length > 0 && variantsAtGrade.every((v: any) => v.in_stock === false || v.is_available === false)
         return { label: grade, value: grade, disabled: allOut }
       })
   }, [family, pricedVariants])
@@ -576,7 +576,7 @@ export default function ProductDetailPage() {
           value: thickness,
           disabled: pricedVariants
             .filter((v) => formatThicknessLabel(v.thickness_mm) === thickness)
-            .every((v) => v.in_stock === false),
+            .every((v: any) => v.in_stock === false || v.is_available === false),
         }))
         .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
     }
@@ -597,7 +597,7 @@ export default function ProductDetailPage() {
         value: thickness,
         disabled: scoped
           .filter((v) => formatThicknessLabel(v.thickness_mm) === thickness)
-          .every((v) => v.in_stock === false),
+          .every((v: any) => v.in_stock === false || v.is_available === false),
       }))
       .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
   }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType])
@@ -636,7 +636,7 @@ export default function ProductDetailPage() {
         value: ply,
         disabled: scoped
           .filter((v) => formatPlyLabel(v.ply_count) === ply)
-          .every((v) => v.in_stock === false),
+          .every((v: any) => v.in_stock === false || v.is_available === false),
       }))
       .sort((a, b) => Number(a.value.replace(/\D/g, '')) - Number(b.value.replace(/\D/g, '')))
   }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType, selectedThickness])
@@ -659,7 +659,7 @@ export default function ProductDetailPage() {
 
       const disabled =
         matchingVariants.length === 0 ||
-        matchingVariants.every((v) => v.in_stock === false)
+        matchingVariants.every((v: any) => v.in_stock === false || v.is_available === false)
 
       return { label, value: label, disabled }
     })
@@ -874,7 +874,7 @@ export default function ProductDetailPage() {
           ? selectedModel
           : selectedModel || '',
       coreType: family === 'nudoor' ? 'Horizontal' : selectedCoreType || '',
-      thickness: family === 'nufloor' ? selectedThickness || '—' : selectedThickness || '',
+      thickness: family === 'nufloor' ? selectedThickness || 'â' : selectedThickness || '',
       ply: family === 'nufloor' ? '3 Ply' : selectedPly || '',
       length: family === 'nudoor' ? '8ft' : selectedLength || '',
       dimensions: product?.dimensions || '2440mm x 1220mm',
@@ -895,13 +895,13 @@ export default function ProductDetailPage() {
         productLabel: displayProductName || '',
         model: family === 'nudoor' ? (selectedVariant.grade || '') : (selectedVariant.size_label || ''),
         coreType: selectedVariant.core_type || '',
-        thickness: formatThicknessLabel(selectedVariant.thickness_mm) || '—',
-        ply: formatPlyLabel(selectedVariant.ply_count) || '—',
+        thickness: formatThicknessLabel(selectedVariant.thickness_mm) || 'â',
+        ply: formatPlyLabel(selectedVariant.ply_count) || 'â',
         length: family === 'nuslat' ? selectedVariant.size_label || selectedLength || '' : '',
         dimensions:
           family === 'nufloor' && selectedVariant.thickness_mm
-            ? (selectedVariant.dimensions || product?.dimensions || '—')
-            : selectedVariant.dimensions || product?.dimensions || '—',
+            ? (selectedVariant.dimensions || product?.dimensions || 'â')
+            : selectedVariant.dimensions || product?.dimensions || 'â',
         moq: selectedVariant.min_order_qty || product?.min_order_qty || 1,
         unit: selectedVariant.unit || product?.unit || 'piece',
         priceUsd: selectedVariant.base_price_usd,
@@ -983,11 +983,11 @@ export default function ProductDetailPage() {
   function buildSpecs() {
     const lines = [
       resolved.model ? `Model: ${resolved.model}` : '',
-      resolved.coreType && resolved.coreType !== '—' ? `Core Type: ${resolved.coreType}` : '',
-      resolved.thickness && resolved.thickness !== '—' ? `Thickness: ${resolved.thickness}` : '',
-      resolved.ply && resolved.ply !== '—' ? `Ply: ${resolved.ply}` : '',
+      resolved.coreType && resolved.coreType !== 'â' ? `Core Type: ${resolved.coreType}` : '',
+      resolved.thickness && resolved.thickness !== 'â' ? `Thickness: ${resolved.thickness}` : '',
+      resolved.ply && resolved.ply !== 'â' ? `Ply: ${resolved.ply}` : '',
       resolved.length ? `Length: ${resolved.length}` : '',
-      resolved.dimensions && resolved.dimensions !== '—' ? `Dimensions: ${resolved.dimensions}` : '',
+      resolved.dimensions && resolved.dimensions !== 'â' ? `Dimensions: ${resolved.dimensions}` : '',
       `MOQ: ${resolved.moq} ${resolved.unit}`,
     ].filter(Boolean)
 
@@ -1076,7 +1076,7 @@ export default function ProductDetailPage() {
                   href="/products"
                   className="text-sm text-muted-foreground hover:text-foreground"
                 >
-                  ← Back to products
+                  â Back to products
                 </Link>
               </div>
             </div>
@@ -1310,9 +1310,9 @@ export default function ProductDetailPage() {
                         <span className="font-medium text-foreground">Standard build:</span> {selectedPly || '3 Ply'}
                         <br />
                         <span className="font-medium text-foreground">Dimensions:</span>{' '}
-                        {resolved.dimensions && resolved.dimensions !== '—'
+                        {resolved.dimensions && resolved.dimensions !== 'â'
                           ? formatDimensions(resolved.dimensions)
-                          : '1220mm × 305mm'}
+                          : '1220mm Ã 305mm'}
                       </div>
                     </>
                   )}

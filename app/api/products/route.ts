@@ -154,6 +154,7 @@ export async function GET() {
           is_price_on_request: variant.is_price_on_request ?? false,
           price_notes: variant.price_notes ?? null,
           is_active: variant.is_active ?? true,
+          is_available: variant.is_available ?? true,
           in_stock: variant.in_stock ?? true,
           sort_order: variant.sort_order ?? null,
         })),

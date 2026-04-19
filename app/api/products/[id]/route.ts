@@ -153,6 +153,7 @@ export async function GET(
       size_label: variant.size_label ?? null,
       is_price_on_request: variant.is_price_on_request ?? false,
       price_notes: variant.price_notes ?? null,
+      is_available: variant.is_available ?? true,
       in_stock: variant.in_stock ?? true,
       image_url: variant.image_url ?? null,
       images: combinedImages,
