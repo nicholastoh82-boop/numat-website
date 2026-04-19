@@ -80,29 +80,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: quoteError.message }, { status: 500 })
     }
 
-    // 2. Build line items — supports both catalog items (by product_id) and custom items
-    const catalogIds = items
+    // 2. Build line items — supports both catalog items (by variant_id) and custom items
+    const variantIds = items
       .filter((i: any) => i.product_id && !i.is_custom)
       .map((i: any) => i.product_id)
 
-    let productMap = new Map<string, any>()
-    if (catalogIds.length > 0) {
-      const { data: products } = await supabase
-        .from("products")
-        .select("id, name, category, unit, unit_price, min_order_qty")
-        .in("id", catalogIds)
-      productMap = new Map(products?.map((p: any) => [p.id, p]))
+    let variantMap = new Map<string, any>()
+    if (variantIds.length > 0) {
+      const { data: variants } = await supabase
+        .from("product_variants")
+        .select("id, product_id, sku, size_label, unit, moq, base_price_usd")
+        .in("id", variantIds)
+      variantMap = new Map(variants?.map((v: any) => [v.id, v]))
     }
 
     const rows = items.map((i: any) => {
       const qty = Number(i.quantity)
       const unitPrice = Number(i.unit_price || 0)
 
-      // Custom Order line — product_id is null
+      // Custom Order line — no variant_id, no product_id
       if (i.is_custom || !i.product_id) {
         return {
           quote_id: quote.id,
           product_id: null,
+          variant_id: null,
           product_name: i.product_name || "Custom Order",
           product_specs: i.product_specs || null,
           sku: i.sku || "CUSTOM",
@@ -114,27 +115,28 @@ export async function POST(req: Request) {
         }
       }
 
-      // Catalog item — enforce MOQ unless overridden
-      const product = productMap.get(i.product_id)
-      if (!product) {
-        throw new Error(`Product not found: ${i.product_id}`)
+      // Catalog item — lookup by variant id
+      const variant = variantMap.get(i.product_id)
+      if (!variant) {
+        throw new Error(`Variant not found: ${i.product_id}`)
       }
-      const moq = Number(product.min_order_qty || 1)
+      const moq = Number(variant.moq || 1)
       if (!i.moq_override && qty < moq) {
-        throw new Error(`Minimum order for ${product.name} is ${moq}`)
+        throw new Error(`Minimum order for ${variant.sku} is ${moq}`)
       }
 
       return {
         quote_id: quote.id,
-        product_id: product.id,
-        product_name: product.name,
-        product_specs: i.product_specs || null,
-        sku: i.sku || null,
-        category: product.category,
-        unit: product.unit,
+        product_id: variant.product_id,
+        variant_id: variant.id,
+        product_name: i.product_name || variant.sku,
+        product_specs: i.product_specs || variant.size_label || null,
+        sku: variant.sku,
+        category: i.category || null,
+        unit: variant.unit,
         quantity: qty,
-        unit_price: unitPrice || Number(product.unit_price),
-        total_price: qty * (unitPrice || Number(product.unit_price)),
+        unit_price: unitPrice || Number(variant.base_price_usd),
+        total_price: qty * (unitPrice || Number(variant.base_price_usd)),
       }
     })
 
