@@ -180,6 +180,31 @@ function resolveDisplayCurrency(country: string | null | undefined): CurrencyEnt
   return { currency: "USD", ratePerUsd: 1 };
 }
 
+// Fetch a live USD->currency rate from Frankfurter (same source the website's
+// /api/exchange-rate endpoint uses). Falls back to the hardcoded rate if the
+// network call fails, the currency is unsupported, or the response is invalid.
+// This keeps proforma/invoice totals aligned with the prices customers see
+// on numatbamboo.com (which also reads from Frankfurter).
+async function fetchLiveRate(currency: string, fallbackRate: number): Promise<{ rate: number; source: string }> {
+  if (!currency || currency === "USD") return { rate: 1, source: "usd" };
+  try {
+    const res = await fetch(
+      `https://api.frankfurter.dev/v2/rate/USD/${encodeURIComponent(currency)}`,
+      { cache: "no-store", headers: { Accept: "application/json" } },
+    );
+    if (!res.ok) return { rate: fallbackRate, source: "fallback" };
+    const data = await res.json();
+    const rate =
+      typeof data?.rate === "number" && Number.isFinite(data.rate) && data.rate > 0
+        ? data.rate
+        : null;
+    if (!rate) return { rate: fallbackRate, source: "fallback" };
+    return { rate, source: "frankfurter" };
+  } catch {
+    return { rate: fallbackRate, source: "fallback" };
+  }
+}
+
 // ---------- PDF styles ----------
 const styles = StyleSheet.create({
   page: {
@@ -494,7 +519,8 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
             <Text style={styles.sectionLabel}>Issued by</Text>
             <Text style={styles.repName}>{repName}</Text>
             <Text style={styles.repEmail}>{repEmail}</Text>
-            <Text style={styles.bodyBold}>NUMAT Sustainable Manufacturing</Text>
+            <Text style={styles.bodyBold}>NUMAT Sustainable</Text>
+            <Text style={styles.bodyBold}>Manufacturing Inc.</Text>
             <Text style={styles.bodyText}>Cagayan de Oro, Philippines</Text>
             <Text style={styles.bodyText}>numatbamboo.com</Text>
           </View>
@@ -761,8 +787,14 @@ export async function GET(
   const baseCurrency = (quote.currency || "USD").toUpperCase();
   const fx = resolveDisplayCurrency(leadCountry);
   const baseTotal = parseFloat(String(quote.total || 0));
+  // Fetch live rate from Frankfurter (matches the website's pricing source).
+  // Falls back to hardcoded rate if the API is unavailable.
+  const { rate: liveRate } =
+    fx.currency === baseCurrency
+      ? { rate: 1 }
+      : await fetchLiveRate(fx.currency, fx.ratePerUsd);
   const computedDisplayTotal =
-    fx.currency === baseCurrency ? baseTotal : baseTotal * fx.ratePerUsd;
+    fx.currency === baseCurrency ? baseTotal : baseTotal * liveRate;
 
   // Rep attribution for "Issued by"
   const issuedByEmail = quote.generated_by || null;
