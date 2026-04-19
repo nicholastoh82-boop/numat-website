@@ -218,6 +218,13 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
+  supersedesRow: {
+    fontSize: 9,
+    color: COLORS.muted,
+    marginTop: 4,
+    fontStyle: "italic",
+  },
+
   twoCol: { flexDirection: "row", justifyContent: "space-between", marginBottom: 24 },
   col: { flex: 1 },
   colSpacer: { width: 20 },
@@ -387,6 +394,9 @@ type QuoteData = {
   generated_by: string | null;
   issued_by_name: string | null;
   issued_by_email: string | null;
+  revision_of: string | null;
+  revision_number: number | null;
+  supersedes_quote_number: string | null;
   items: Array<{
     product_name: string;
     product_specs: string | null;
@@ -446,6 +456,11 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
           <View style={styles.headerLeft}>
             <Text style={styles.title}>{docTitle}</Text>
             <Text style={styles.quoteNumber}>{data.quote_number}</Text>
+            {data.supersedes_quote_number ? (
+              <Text style={styles.supersedesRow}>
+                Revision {data.revision_number || 1} · supersedes {data.supersedes_quote_number}
+              </Text>
+            ) : null}
             {isInvoice && data.payment_status === "paid" ? (
               <Text style={{ ...styles.statusBadge, color: "#16A34A" }}>PAID</Text>
             ) : isInvoice && data.payment_status === "overdue" ? (
@@ -753,6 +768,17 @@ export async function GET(
   const issuedByEmail = quote.generated_by || null;
   const issuedByName = repDisplayName(issuedByEmail);
 
+  // If this is a revision, fetch the ancestor's quote_number for the "supersedes" line
+  let supersedesQuoteNumber: string | null = null;
+  if (quote.revision_of) {
+    const { data: ancestor } = await supabase
+      .from("quotes")
+      .select("quote_number")
+      .eq("id", quote.revision_of)
+      .single();
+    supersedesQuoteNumber = ancestor?.quote_number ?? null;
+  }
+
   const enrichedQuote = {
     ...quote,
     currency: baseCurrency,
@@ -760,6 +786,7 @@ export async function GET(
     display_total: computedDisplayTotal,
     issued_by_name: issuedByName,
     issued_by_email: issuedByEmail,
+    supersedes_quote_number: supersedesQuoteNumber,
     items: items || [],
   };
 

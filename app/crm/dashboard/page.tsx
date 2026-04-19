@@ -64,6 +64,7 @@ interface Quote {
   quote_number: string
   doc_type: string
   total: number | string
+  subtotal?: number | string | null
   currency: string | null
   created_at: string
   sent_at: string | null
@@ -71,6 +72,17 @@ interface Quote {
   lead_id: string | null
   customer_name: string | null
   company: string | null
+  notes: string | null
+  phone: string | null
+  customer_tin: string | null
+  customer_address: string | null
+  payment_due_date: string | null
+  po_reference: string | null
+  vat_enabled: boolean | null
+  vat_rate: number | string | null
+  revision_of: string | null
+  superseded_by: string | null
+  revision_number: number
 }
 
 const PIPELINE_STAGES = ['new','contacted','qualified','proposal_sent','meeting_booked','won','lost']
@@ -226,7 +238,13 @@ export default function CRMDashboard() {
   const [repFilter, setRepFilter] = useState('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
-  const [quoteModal, setQuoteModal] = useState<{ lead: Lead; docType: 'proforma_invoice' | 'invoice' } | null>(null)
+  const [quoteModal, setQuoteModal] = useState<{
+    lead: Lead;
+    docType: 'proforma_invoice' | 'invoice';
+    mode: 'create' | 'edit' | 'revise';
+    sourceQuoteId?: string;
+    sourceQuoteNumber?: string;
+  } | null>(null)
   const [quoteLineItems, setQuoteLineItems] = useState<QuoteLineItem[]>([])
   const [quoteNotes, setQuoteNotes] = useState('')
   const [quoteSubmitting, setQuoteSubmitting] = useState(false)
@@ -296,7 +314,7 @@ export default function CRMDashboard() {
   const loadQuotes = useCallback(async () => {
     const { data } = await supabase
       .from('quotes')
-      .select('id, quote_number, doc_type, total, currency, created_at, sent_at, email, lead_id, customer_name, company')
+      .select('id, quote_number, doc_type, total, subtotal, currency, created_at, sent_at, email, lead_id, customer_name, company, notes, phone, customer_tin, customer_address, payment_due_date, po_reference, vat_enabled, vat_rate, revision_of, superseded_by, revision_number')
       .not('lead_id', 'is', null)
       .order('created_at', { ascending: false })
     if (data) {
@@ -353,7 +371,7 @@ export default function CRMDashboard() {
 
   const openQuoteModal = (lead: Lead, docType: 'proforma_invoice' | 'invoice', e: React.MouseEvent) => {
     e.stopPropagation()
-    setQuoteModal({ lead, docType })
+    setQuoteModal({ lead, docType, mode: 'create' })
     setQuoteNotes('')
     // Default payment due date = today + 30 days for invoices
     const due = new Date()
@@ -376,6 +394,97 @@ export default function CRMDashboard() {
       unitPriceUsd: PRODUCT_VARIANTS[0].basePriceUsd,
       exFactoryPhp: PRODUCT_VARIANTS[0].exFactoryPhp,
     }])
+  }
+
+  // Hydrate a quote_items row into a QuoteLineItem suitable for the modal state.
+  // Looks up variant metadata from PRODUCT_VARIANTS when the row is a catalog item;
+  // falls back to the row's stored fields for custom/unknown items.
+  function hydrateLineItem(row: any): QuoteLineItem {
+    const variant = row.variant_id
+      ? PRODUCT_VARIANTS.find(v => v.id === row.variant_id)
+      : null
+    const isCustom = !row.variant_id
+    const qty = Number(row.quantity || 0)
+    const unitPriceUsd = Number(row.unit_price || 0)
+    if (isCustom) {
+      return {
+        lineId: Math.random().toString(36).slice(2),
+        variantId: CUSTOM_VARIANT_ID,
+        isCustom: true,
+        sku: row.sku || 'CUSTOM',
+        productName: row.product_name || 'Custom Order',
+        sizeLabel: '',
+        unit: row.unit || 'piece',
+        moq: 1,
+        qty: Math.max(qty, 1),
+        unitPriceUsd,
+        exFactoryPhp: null,
+        productSpecs: row.product_specs || '',
+      }
+    }
+    return {
+      lineId: Math.random().toString(36).slice(2),
+      variantId: row.variant_id,
+      sku: variant?.sku || row.sku || '',
+      productName: variant?.productName || row.product_name || '',
+      sizeLabel: variant?.sizeLabel || row.product_specs || '',
+      unit: variant?.unit || row.unit || 'piece',
+      moq: variant?.moq || 1,
+      qty,
+      unitPriceUsd,
+      exFactoryPhp: variant?.exFactoryPhp ?? null,
+    }
+  }
+
+  const openEditOrReviseModal = async (
+    lead: Lead,
+    quote: Quote,
+    mode: 'edit' | 'revise',
+    e: React.MouseEvent,
+  ) => {
+    e.stopPropagation()
+    const docType = (quote.doc_type === 'invoice' ? 'invoice' : 'proforma_invoice') as
+      'proforma_invoice' | 'invoice'
+    // Fetch full quote + line items
+    const { data: items, error } = await supabase
+      .from('quote_items')
+      .select('*')
+      .eq('quote_id', quote.id)
+      .order('created_at', { ascending: true })
+    if (error) {
+      showToast('Failed to load quote items for editing', 'error')
+      return
+    }
+    setQuoteModal({
+      lead,
+      docType,
+      mode,
+      sourceQuoteId: quote.id,
+      sourceQuoteNumber: quote.quote_number,
+    })
+    setQuoteNotes(quote.notes || '')
+    setInvoiceCustomerTin(quote.customer_tin || '')
+    setInvoiceCustomerAddress(quote.customer_address || '')
+    setInvoiceDueDate(quote.payment_due_date ? quote.payment_due_date.slice(0, 10) : '')
+    setInvoicePoRef(quote.po_reference || '')
+    setInvoiceVatEnabled(Boolean(quote.vat_enabled))
+    const hydrated: QuoteLineItem[] = (items || []).map(hydrateLineItem)
+    setQuoteLineItems(
+      hydrated.length > 0
+        ? hydrated
+        : [{
+            lineId: Math.random().toString(36).slice(2),
+            variantId: PRODUCT_VARIANTS[0].id,
+            sku: PRODUCT_VARIANTS[0].sku,
+            productName: PRODUCT_VARIANTS[0].productName,
+            sizeLabel: PRODUCT_VARIANTS[0].sizeLabel,
+            unit: PRODUCT_VARIANTS[0].unit,
+            moq: PRODUCT_VARIANTS[0].moq,
+            qty: PRODUCT_VARIANTS[0].moq,
+            unitPriceUsd: PRODUCT_VARIANTS[0].basePriceUsd,
+            exFactoryPhp: PRODUCT_VARIANTS[0].exFactoryPhp,
+          }]
+    )
   }
 
   function updateLineItemVariant(lineId: string, variantId: string) {
@@ -482,7 +591,7 @@ export default function CRMDashboard() {
 
   const submitQuote = async () => {
     if (!quoteModal || !user || quoteLineItems.length === 0) return
-    const { lead, docType } = quoteModal
+    const { lead, docType, mode, sourceQuoteId, sourceQuoteNumber } = quoteModal
     const isInvoice = docType === 'invoice'
 
     // Skip floor check for custom items
@@ -508,10 +617,12 @@ export default function CRMDashboard() {
     }
 
     setQuoteSubmitting(true)
-    const totalUsd = quoteLineItems.reduce((sum, l) => sum + l.qty * l.unitPriceUsd, 0)
+    const subtotalUsdCalc = quoteLineItems.reduce((sum, l) => sum + l.qty * l.unitPriceUsd, 0)
+    const vatAmountCalc = (isInvoice && invoiceVatEnabled) ? subtotalUsdCalc * 0.12 : 0
+    const totalUsd = subtotalUsdCalc + vatAmountCalc
     const totalPhp = Math.round(totalUsd * PHP_TO_USD)
 
-    // Build payload for /api/quote/create
+    // Build line item rows for /api/quote/create (also used for insert on edit)
     const apiItems = quoteLineItems.map(l => ({
       product_id: l.isCustom ? null : l.variantId,
       is_custom: l.isCustom || false,
@@ -525,7 +636,182 @@ export default function CRMDashboard() {
       moq_override: l.isCustom,
     }))
 
+    const docLabel = isInvoice ? 'Invoice' : 'Proforma invoice'
+
     try {
+      // ==================== EDIT MODE: in-place update ====================
+      if (mode === 'edit' && sourceQuoteId) {
+        // 1. Update quotes row (keep quote_number + doc_type + lead_id unchanged)
+        const invoiceFields = isInvoice
+          ? {
+              customer_tin: invoiceCustomerTin || null,
+              customer_address: invoiceCustomerAddress || null,
+              payment_due_date: invoiceDueDate ? new Date(invoiceDueDate).toISOString() : null,
+              po_reference: invoicePoRef || null,
+              vat_enabled: invoiceVatEnabled,
+              vat_rate: 12.0,
+            }
+          : {}
+        const { error: updErr } = await supabase
+          .from('quotes')
+          .update({
+            notes: quoteNotes || null,
+            subtotal: subtotalUsdCalc,
+            total: totalUsd,
+            vat_amount: vatAmountCalc,
+            updated_at: new Date().toISOString(),
+            ...invoiceFields,
+          })
+          .eq('id', sourceQuoteId)
+        if (updErr) throw new Error('Update quotes failed: ' + updErr.message)
+
+        // 2. Delete old quote_items
+        const { error: delErr } = await supabase
+          .from('quote_items')
+          .delete()
+          .eq('quote_id', sourceQuoteId)
+        if (delErr) throw new Error('Delete quote_items failed: ' + delErr.message)
+
+        // 3. Insert new quote_items (build rows, resolving variant refs)
+        const rows = apiItems.map(i => {
+          if (i.is_custom || !i.product_id) {
+            return {
+              quote_id: sourceQuoteId,
+              product_id: null,
+              variant_id: null,
+              product_name: i.product_name || 'Custom Order',
+              product_specs: i.product_specs || null,
+              sku: i.sku || 'CUSTOM',
+              category: i.category || 'Custom',
+              unit: i.unit || 'piece',
+              quantity: i.quantity,
+              unit_price: i.unit_price,
+              total_price: i.quantity * i.unit_price,
+            }
+          }
+          const v = PRODUCT_VARIANTS.find(pv => pv.id === i.product_id)
+          return {
+            quote_id: sourceQuoteId,
+            product_id: null, // we don't have the parent product_id locally; variant_id is enough
+            variant_id: i.product_id,
+            product_name: v?.productName || i.sku,
+            product_specs: v?.sizeLabel || i.product_specs || null,
+            sku: v?.sku || i.sku,
+            category: v?.category || null,
+            unit: v?.unit || i.unit,
+            quantity: i.quantity,
+            unit_price: i.unit_price,
+            total_price: i.quantity * i.unit_price,
+          }
+        })
+        const { error: insErr } = await supabase.from('quote_items').insert(rows)
+        if (insErr) throw new Error('Insert quote_items failed: ' + insErr.message)
+
+        // 4. Optimistic state update
+        setQuotesByLead(prev => {
+          const list = (prev[lead.id] || []).map(q =>
+            q.id === sourceQuoteId
+              ? { ...q, subtotal: subtotalUsdCalc, total: totalUsd, notes: quoteNotes || null }
+              : q
+          )
+          return { ...prev, [lead.id]: list }
+        })
+        showToast(`${docLabel} ${sourceQuoteNumber} updated`)
+        setQuoteModal(null)
+        setQuoteLineItems([])
+        setQuoteNotes('')
+        return
+      }
+
+      // ==================== REVISE MODE: create new revision of sent quote ====================
+      if (mode === 'revise' && sourceQuoteId) {
+        // Identify ancestor: if source is itself a revision, walk up; otherwise source is ancestor
+        const leadQuotes = quotesByLead[lead.id] || []
+        const source = leadQuotes.find(q => q.id === sourceQuoteId)
+        const ancestorId = source?.revision_of || sourceQuoteId
+        // Count existing family members (ancestor + all revisions of it) to compute next rev number
+        const family = leadQuotes.filter(q => q.id === ancestorId || q.revision_of === ancestorId)
+        const nextRev = family.length // family includes the original (rev 0), so count == next rev index
+
+        const res = await fetch('/api/quote/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            doc_type: docType,
+            customer_name: lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Customer',
+            company: lead.company,
+            email: lead.email,
+            phone: lead.phone,
+            notes: quoteNotes,
+            items: apiItems,
+            lead_id: lead.id,
+            currency: 'USD',
+            generated_by: user.email,
+            revision_of: ancestorId,
+            revision_number: nextRev,
+            ...(isInvoice ? {
+              customer_tin: invoiceCustomerTin || null,
+              customer_address: invoiceCustomerAddress || null,
+              payment_due_date: invoiceDueDate ? new Date(invoiceDueDate).toISOString() : null,
+              po_reference: invoicePoRef || null,
+              vat_enabled: invoiceVatEnabled,
+              vat_rate: 12.0,
+            } : {}),
+          }),
+        })
+        const result = await res.json()
+        if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+
+        // Mark the source quote as superseded by the new revision
+        const { error: supErr } = await supabase
+          .from('quotes')
+          .update({ superseded_by: result.quote_id })
+          .eq('id', sourceQuoteId)
+        if (supErr) {
+          // non-fatal; log but continue
+          console.error('Failed to mark source superseded:', supErr.message)
+        }
+
+        // Optimistic state update: add new revision to top, mark source as superseded
+        const newRevQuote: Quote = {
+          id: result.quote_id,
+          quote_number: result.quote_number,
+          doc_type: docType,
+          total: totalUsd,
+          subtotal: subtotalUsdCalc,
+          currency: 'USD',
+          created_at: new Date().toISOString(),
+          sent_at: null,
+          email: lead.email,
+          lead_id: lead.id,
+          customer_name: lead.full_name,
+          company: lead.company,
+          notes: quoteNotes || null,
+          phone: lead.phone,
+          customer_tin: isInvoice ? (invoiceCustomerTin || null) : null,
+          customer_address: isInvoice ? (invoiceCustomerAddress || null) : null,
+          payment_due_date: isInvoice && invoiceDueDate ? new Date(invoiceDueDate).toISOString() : null,
+          po_reference: isInvoice ? (invoicePoRef || null) : null,
+          vat_enabled: isInvoice ? invoiceVatEnabled : false,
+          vat_rate: isInvoice ? 12.0 : null,
+          revision_of: ancestorId,
+          superseded_by: null,
+          revision_number: nextRev,
+        }
+        setQuotesByLead(prev => {
+          const list = [newRevQuote, ...(prev[lead.id] || []).map(q =>
+            q.id === sourceQuoteId ? { ...q, superseded_by: result.quote_id } : q
+          )]
+          return { ...prev, [lead.id]: list }
+        })
+        showToast(`${docLabel} revision ${result.quote_number} issued`)
+        setQuoteModal(null)
+        setQuoteLineItems([])
+        setQuoteNotes('')
+        return
+      }
+
+      // ==================== CREATE MODE: original behavior ====================
       const res = await fetch('/api/quote/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -553,7 +839,6 @@ export default function CRMDashboard() {
       const result = await res.json()
       if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
 
-      const docLabel = isInvoice ? 'Invoice' : 'Proforma invoice'
       const linesSummary = quoteLineItems
         .map(l => `${l.sku} x${l.qty} ${l.unit} @ ${l.unitPriceUsd.toFixed(2)}`)
         .join(', ')
@@ -574,6 +859,7 @@ export default function CRMDashboard() {
         quote_number: result.quote_number,
         doc_type: docType,
         total: totalUsd,
+        subtotal: subtotalUsdCalc,
         currency: 'USD',
         created_at: new Date().toISOString(),
         sent_at: null,
@@ -581,6 +867,17 @@ export default function CRMDashboard() {
         lead_id: lead.id,
         customer_name: lead.full_name,
         company: lead.company,
+        notes: quoteNotes || null,
+        phone: lead.phone,
+        customer_tin: isInvoice ? (invoiceCustomerTin || null) : null,
+        customer_address: isInvoice ? (invoiceCustomerAddress || null) : null,
+        payment_due_date: isInvoice && invoiceDueDate ? new Date(invoiceDueDate).toISOString() : null,
+        po_reference: isInvoice ? (invoicePoRef || null) : null,
+        vat_enabled: isInvoice ? invoiceVatEnabled : false,
+        vat_rate: isInvoice ? 12.0 : null,
+        revision_of: null,
+        superseded_by: null,
+        revision_number: 0,
       }
       setQuotesByLead(prev => ({ ...prev, [lead.id]: [newQuote, ...(prev[lead.id] || [])] }))
       showToast(`${docLabel} ${result.quote_number} issued for ${lead.company || lead.full_name || 'lead'}`)
@@ -588,7 +885,7 @@ export default function CRMDashboard() {
       setQuoteLineItems([])
       setQuoteNotes('')
     } catch (err: any) {
-      showToast(`Failed to issue ${isInvoice ? 'invoice' : 'proforma'}: ${err.message || 'unknown error'}`, 'error')
+      showToast(`Failed: ${err.message || 'unknown error'}`, 'error')
     } finally {
       setQuoteSubmitting(false)
     }
@@ -1033,12 +1330,20 @@ export default function CRMDashboard() {
                             const isInvoice = q.doc_type === 'invoice'
                             const isSent = Boolean(q.sent_at)
                             const isSending = sendingQuoteId === q.id
+                            const isSuperseded = Boolean(q.superseded_by)
+                            const isRevision = (q.revision_number || 0) > 0
                             return (
-                              <div key={q.id} className="flex flex-wrap items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs">
+                              <div key={q.id} className={`flex flex-wrap items-center gap-2 px-3 py-2 border rounded-lg text-xs ${isSuperseded ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-200'}`}>
                                 <span className={`px-1.5 py-0.5 rounded font-semibold ${isInvoice ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                                   {isInvoice ? 'INV' : 'PI'}
                                 </span>
-                                <span className="font-mono text-gray-700">{q.quote_number}</span>
+                                <span className={`font-mono ${isSuperseded ? 'text-gray-500 line-through' : 'text-gray-700'}`}>{q.quote_number}</span>
+                                {isRevision && (
+                                  <span className="px-1.5 py-0.5 rounded font-semibold bg-purple-100 text-purple-700" title={`Revision ${q.revision_number}`}>R{q.revision_number}</span>
+                                )}
+                                {isSuperseded && (
+                                  <span className="px-1.5 py-0.5 rounded font-medium bg-gray-200 text-gray-600">Superseded</span>
+                                )}
                                 <span className="text-gray-300">·</span>
                                 <span className="text-gray-600">{q.currency || 'USD'} {Number(q.total).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                                 <span className="text-gray-300">·</span>
@@ -1046,14 +1351,30 @@ export default function CRMDashboard() {
                                   {isSent ? `✓ Sent ${relDate(q.sent_at)}` : 'Not sent'}
                                 </span>
                                 <div className="flex-1 min-w-2" />
+                                {!isSent && !isSuperseded && (
+                                  <button onClick={e => openEditOrReviseModal(lead, q, 'edit', e)}
+                                    className="px-2.5 py-1 border border-gray-200 rounded hover:bg-gray-50 text-gray-700 font-medium"
+                                    title="Edit this draft in place (quote number unchanged)">
+                                    Edit
+                                  </button>
+                                )}
+                                {isSent && !isSuperseded && (
+                                  <button onClick={e => openEditOrReviseModal(lead, q, 'revise', e)}
+                                    className="px-2.5 py-1 border border-purple-200 rounded hover:bg-purple-50 text-purple-700 font-medium"
+                                    title="Issue a new revision (creates a new record with -R suffix)">
+                                    Revise
+                                  </button>
+                                )}
                                 <button onClick={() => previewQuote(q.id)}
                                   className="px-2.5 py-1 border border-gray-200 rounded hover:bg-gray-50 text-gray-700 font-medium">
                                   Preview
                                 </button>
-                                <button onClick={() => sendQuote(q, lead)} disabled={isSending}
-                                  className={`px-2.5 py-1 rounded font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed ${isSent ? 'bg-gray-500 hover:bg-gray-600' : 'bg-orange-600 hover:bg-orange-700'}`}>
-                                  {isSending ? 'Sending…' : isSent ? 'Resend' : 'Send'}
-                                </button>
+                                {!isSuperseded && (
+                                  <button onClick={() => sendQuote(q, lead)} disabled={isSending}
+                                    className={`px-2.5 py-1 rounded font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed ${isSent ? 'bg-gray-500 hover:bg-gray-600' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                                    {isSending ? 'Sending…' : isSent ? 'Resend' : 'Send'}
+                                  </button>
+                                )}
                               </div>
                             )
                           })}
@@ -1083,23 +1404,41 @@ export default function CRMDashboard() {
       </div>
 
       {quoteModal && (() => {
-        const { lead, docType } = quoteModal
+        const { lead, docType, mode, sourceQuoteNumber } = quoteModal
         const isInvoice = docType === 'invoice'
+        const docLabel = isInvoice ? 'Invoice' : 'Proforma Invoice'
+        const headerText = mode === 'edit'
+          ? `Edit ${docLabel} ${sourceQuoteNumber || ''}`.trim()
+          : mode === 'revise'
+            ? `Revise ${docLabel} (${sourceQuoteNumber || ''})`
+            : `Issue ${docLabel}`
+        const subtitleText = mode === 'edit'
+          ? 'Editing an unsent draft in place. Quote number stays the same.'
+          : mode === 'revise'
+            ? 'Creating a new revision. The original will be marked superseded.'
+            : (isInvoice
+                ? 'Binding demand for payment. A PDF invoice will be emailed to the customer.'
+                : 'Pre-sale proposal. A PDF proforma invoice will be emailed to the customer.')
+        const submitLabel = quoteSubmitting
+          ? (mode === 'edit' ? 'Saving...' : 'Generating PDF...')
+          : mode === 'edit'
+            ? 'Save Changes'
+            : mode === 'revise'
+              ? 'Issue Revision'
+              : (isInvoice ? 'Issue Invoice' : 'Issue Proforma')
         return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
               <h2 className="text-lg font-semibold text-gray-800">
-                Issue {isInvoice ? 'Invoice' : 'Proforma Invoice'}
+                {headerText}
               </h2>
               <p className="text-sm text-gray-500 mt-0.5">
                 {lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ')}
                 {lead.company && ' · ' + lead.company}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">
-                {isInvoice
-                  ? 'Binding demand for payment. A PDF invoice will be emailed to the customer.'
-                  : 'Pre-sale proposal. A PDF proforma invoice will be emailed to the customer.'}
+                {subtitleText}
               </p>
             </div>
 
@@ -1318,8 +1657,8 @@ export default function CRMDashboard() {
                   quoteLineItems.some(l => { if (l.isCustom) return false; const f = floorPriceUsd(l.exFactoryPhp); return f !== null && l.unitPriceUsd < f; }) ||
                   quoteLineItems.some(l => !l.isCustom && l.qty < l.moq) ||
                   (isInvoice && !invoiceDueDate)}
-                className={`flex-1 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${isInvoice ? 'bg-blue-700 hover:bg-blue-800' : 'bg-green-700 hover:bg-green-800'}`}>
-                {quoteSubmitting ? 'Generating PDF...' : isInvoice ? 'Issue Invoice' : 'Issue Proforma'}
+                className={`flex-1 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${mode === 'revise' ? 'bg-purple-700 hover:bg-purple-800' : isInvoice ? 'bg-blue-700 hover:bg-blue-800' : 'bg-green-700 hover:bg-green-800'}`}>
+                {submitLabel}
               </button>
             </div>
           </div>

@@ -31,6 +31,9 @@ export async function POST(req: Request) {
       vat_enabled = false,
       vat_rate = 12.0,
       generated_by,
+      // Revision tracking (set when creating a new revision of a sent quote)
+      revision_of,
+      revision_number,
     } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -71,6 +74,8 @@ export async function POST(req: Request) {
           vat_rate: Number(vat_rate),
           vat_amount: vatAmount,
           generated_by,
+          revision_of: revision_of || null,
+          revision_number: Number(revision_number || 0),
         },
       ])
       .select("id, quote_number")
