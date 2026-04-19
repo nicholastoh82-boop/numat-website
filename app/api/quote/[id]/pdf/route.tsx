@@ -363,6 +363,94 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.line,
     paddingTop: 8,
   },
+
+  // ---------- T&Cs page (proforma page 2) ----------
+  termsPage: {
+    backgroundColor: COLORS.white,
+    color: COLORS.ink,
+    paddingTop: 48,
+    paddingBottom: 48,
+    paddingHorizontal: 48,
+    fontSize: 9,
+    fontFamily: "Helvetica",
+    lineHeight: 1.45,
+  },
+  termsPageHeader: {
+    fontSize: 8,
+    color: COLORS.muted,
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  termsPageTitle: {
+    fontSize: 18,
+    fontFamily: "Helvetica-Bold",
+    color: COLORS.green,
+    letterSpacing: 1,
+    marginBottom: 14,
+  },
+  termsIntro: {
+    fontSize: 9,
+    color: COLORS.body,
+    marginBottom: 14,
+    lineHeight: 1.45,
+  },
+  termsClause: {
+    fontSize: 9,
+    color: COLORS.ink,
+    marginBottom: 8,
+    lineHeight: 1.45,
+  },
+  termsClauseBold: {
+    fontFamily: "Helvetica-Bold",
+    color: COLORS.green,
+  },
+  termsAcceptanceNote: {
+    marginTop: 14,
+    marginBottom: 14,
+    fontSize: 9,
+    color: COLORS.body,
+    fontStyle: "italic",
+  },
+  signatureRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  signatureBlock: {
+    flex: 1,
+    padding: 12,
+    borderWidth: 0.5,
+    borderColor: COLORS.line,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  signatureBlockRight: {
+    flex: 1,
+    padding: 12,
+    borderWidth: 0.5,
+    borderColor: COLORS.line,
+    borderRadius: 4,
+  },
+  signatureHeader: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: COLORS.green,
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  signatureSubheader: {
+    fontSize: 8,
+    color: COLORS.muted,
+    marginBottom: 20,
+    fontStyle: "italic",
+  },
+  signatureLine: {
+    fontSize: 9,
+    marginBottom: 10,
+    color: COLORS.ink,
+  },
 });
 
 // ---------- Helpers ----------
@@ -387,6 +475,56 @@ function formatDate(iso: string | null): string {
     year: "numeric",
   });
 }
+
+// ---------- Terms and Conditions (proforma page 2) ----------
+const TERMS_INTRO =
+  "These Terms and Conditions form part of every transaction with NUMAT Sustainable Manufacturing Inc. (\"NUMAT\") and shall prevail over any inconsistent customer terms unless expressly accepted by NUMAT in writing.";
+
+const TERMS_ACCEPTANCE_NOTE =
+  "By signing below, the Customer confirms that it has read, understood, and agrees to these Terms and Conditions, and that the signatory is duly authorized to bind the Customer.";
+
+const TERMS_CLAUSES: Array<{ title: string; body: string }> = [
+  {
+    title: "Acceptance.",
+    body: "The Customer accepts these Terms by issuing a purchase order, paying any deposit or invoice amount, confirming the order, accepting delivery, or allowing production, mobilization, or installation to proceed.",
+  },
+  {
+    title: "Scope and Pricing.",
+    body: "Only the goods and services expressly stated in NUMAT's quotation or invoice are included. Any change in quantity, dimensions, finish, scope, taxes, freight, site conditions, or timing may be repriced by NUMAT.",
+  },
+  {
+    title: "Payment.",
+    body: "Payment shall be strictly in accordance with the quotation or invoice. Unless NUMAT grants written credit approval, orders may be treated as prepaid, and NUMAT may require full payment before production, release, delivery, turnover, or completion. Payments shall be made in full without set-off, deduction, backcharge, or withholding, except where required by law.",
+  },
+  {
+    title: "Deposits and Cancellation.",
+    body: "Deposits secure production capacity, procurement, scheduling, and commercial commitments and are non-refundable once materials are ordered or allocated, production or coating begins, delivery is booked, or manpower is scheduled. Custom, fabricated, coated, or specially procured items may not be cancelled without NUMAT's written consent.",
+  },
+  {
+    title: "Late Payment and Default.",
+    body: "Overdue balances shall incur 2 percent interest per month or the maximum lawful rate, whichever is lower. Upon default, NUMAT may suspend work, stop delivery, cancel undelivered portions, reallocate stock, refuse further orders, and declare all outstanding balances immediately due.",
+  },
+  {
+    title: "Ownership and Risk.",
+    body: "Title to goods remains with NUMAT until full and cleared payment is received. Risk of loss, damage, theft, breakage, deterioration, or site exposure passes to the Customer upon delivery, unloading, turnover to carrier, site placement, or any delay caused by the Customer.",
+  },
+  {
+    title: "Delivery and Site Conditions.",
+    body: "All schedules are estimates only. NUMAT shall not be liable for delays caused by force majeure, supplier issues, transport problems, permit issues, weather, site inaccessibility, unsafe conditions, measurement changes, or Customer-side delays. Standby time, repeat mobilization, failed delivery, and site-caused extra works shall be chargeable.",
+  },
+  {
+    title: "Variations, Storage, and Extra Charges.",
+    body: "Any change order, out-of-scope work, return trip, special handling, storage, re-delivery, demurrage, overtime, or remobilization required by the Customer or actual site conditions shall be billed separately.",
+  },
+  {
+    title: "Inspection, Acceptance, and Warranty.",
+    body: "The Customer must inspect immediately upon delivery or completion and notify NUMAT in writing within 72 hours of any visible shortage, defect, or damage; otherwise the goods and services are deemed accepted. Any warranty is limited to repair, replacement, or re-performance, at NUMAT's option, and excludes misuse, improper storage, unauthorized alteration, third-party handling, normal wear, and site or substrate defects.",
+  },
+  {
+    title: "Liability, Collection, and Law.",
+    body: "NUMAT shall not be liable for indirect, incidental, consequential, or lost-profit damages, and its total liability shall not exceed the amount actually paid for the affected goods or services. The Customer shall reimburse collection costs and reasonable legal fees. Philippine law shall govern, and exclusive venue shall be the proper courts of the Philippines.",
+  },
+];
 
 // ---------- PDF Component ----------
 type QuoteData = {
@@ -648,10 +786,22 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
           {isInvoice ? (
             <>
               <Text style={styles.bodyText}>
-                Bank: BDO Unibank, Account Name NUMAT Sustainable Manufacturing Inc., Account Number 0123 4567 8901 (USD), 9876 5432 1098 (PHP).
+                Bank: Rizal Commercial Banking Corporation (RCBC)
+              </Text>
+              <Text style={styles.bodyText}>
+                Account Name: NUMAT Sustainable Manufacturing Inc.
+              </Text>
+              <Text style={styles.bodyText}>
+                Account Type: Current Account (PHP)
+              </Text>
+              <Text style={styles.bodyText}>
+                Account Number: 7591406069
               </Text>
               <Text style={styles.bodyText}>
                 Please reference invoice number {data.quote_number} on all payments.
+              </Text>
+              <Text style={{ ...styles.bodyText, marginTop: 6, fontStyle: "italic", color: COLORS.muted, fontSize: 9 }}>
+                This invoice is governed by the Terms and Conditions set out in the related Proforma Invoice accepted by the Customer.
               </Text>
             </>
           ) : (
@@ -667,6 +817,9 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
               <Text style={styles.bodyText}>
                 This is a proforma invoice issued for proposal purposes. It is
                 not a tax invoice and does not constitute a demand for payment.
+              </Text>
+              <Text style={{ ...styles.bodyText, marginTop: 6, fontStyle: "italic", color: COLORS.green, fontFamily: "Helvetica-Bold" }}>
+                Full Terms and Conditions and signature page follow on page 2.
               </Text>
             </>
           )}
@@ -686,6 +839,58 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
           <Text>Engineered bamboo, built to outlast.</Text>
         </View>
       </Page>
+
+      {/* ================================================================ */}
+      {/* Page 2: Terms and Conditions + Signature block (proforma only)   */}
+      {/* ================================================================ */}
+      {!isInvoice ? (
+        <Page size="A4" style={styles.termsPage}>
+          <Text style={styles.termsPageHeader}>
+            Proforma Invoice {data.quote_number} · Terms and Conditions
+          </Text>
+          <Text style={styles.termsPageTitle}>Terms and Conditions</Text>
+          <Text style={styles.termsIntro}>{TERMS_INTRO}</Text>
+
+          {TERMS_CLAUSES.map((clause, idx) => (
+            <Text key={idx} style={styles.termsClause}>
+              <Text style={styles.termsClauseBold}>
+                {idx + 1}. {clause.title}
+              </Text>{" "}
+              {clause.body}
+            </Text>
+          ))}
+
+          <Text style={styles.termsAcceptanceNote}>{TERMS_ACCEPTANCE_NOTE}</Text>
+
+          <View style={styles.signatureRow}>
+            <View style={styles.signatureBlock}>
+              <Text style={styles.signatureHeader}>Accepted for the Customer</Text>
+              <Text style={styles.signatureSubheader}>
+                Authorized signature over printed name
+              </Text>
+              <Text style={styles.signatureLine}>Name: ________________________</Text>
+              <Text style={styles.signatureLine}>Position: _____________________</Text>
+              <Text style={styles.signatureLine}>Date: _________________________</Text>
+            </View>
+            <View style={styles.signatureBlockRight}>
+              <Text style={styles.signatureHeader}>
+                For NUMAT Sustainable Manufacturing Inc.
+              </Text>
+              <Text style={styles.signatureSubheader}>
+                Authorized signature over printed name
+              </Text>
+              <Text style={styles.signatureLine}>Name: ________________________</Text>
+              <Text style={styles.signatureLine}>Position: _____________________</Text>
+              <Text style={styles.signatureLine}>Date: _________________________</Text>
+            </View>
+          </View>
+
+          <View style={styles.footer} fixed>
+            <Text>NUMAT Sustainable Manufacturing Inc. · numatbamboo.com</Text>
+            <Text>Engineered bamboo, built to outlast.</Text>
+          </View>
+        </Page>
+      ) : null}
     </Document>
   );
 };
