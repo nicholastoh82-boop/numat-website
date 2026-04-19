@@ -149,7 +149,8 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
             product_specs: item.specs,
             quantity: item.quantity,
             unit_price: item.unitPrice ?? 0,
-            sku: null,
+            sku: item.sku ?? null,
+            variant_id: item.variantId ?? null,
           })),
         }),
       })

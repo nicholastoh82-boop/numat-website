@@ -45,6 +45,10 @@ interface Lead {
   qty?: number | null
   unit?: string | null
   meeting_link?: string | null
+  last_rep_touch_at?: string | null
+  last_rep_touch_by?: string | null
+  last_rep_touch_subject?: string | null
+  rep_reply_count?: number | null
 }
 
 interface CRMUser {
@@ -146,7 +150,7 @@ export default function CRMDashboard() {
   }, [supabase, router])
 
   const loadLeads = useCallback(async (crmUser: CRMUser) => {
-    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link'
+    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count'
     const PAGE_SIZE = 1000
     const allLeads: Lead[] = []
     let from = 0
@@ -472,6 +476,11 @@ export default function CRMDashboard() {
                           ₱{Number(lead.deal_value_php || 0).toLocaleString()} quoted
                         </span>
                       )}
+                      {(lead.rep_reply_count || 0) > 0 && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium" title={lead.last_rep_touch_subject || 'Rep outbound replies'}>
+                          ✉ {lead.rep_reply_count} rep {lead.rep_reply_count === 1 ? 'reply' : 'replies'}
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5 truncate">
                       {[lead.email, lead.city, lead.country].filter(Boolean).join(' · ')}
@@ -555,7 +564,6 @@ export default function CRMDashboard() {
                               const email = e.target.value
                               const repNameMap: Record<string,string> = {
                                 'mohan@numat.ph': 'Mohan',
-                                
                                 'bryan@numat.ph': 'Bryan',
                               }
                               const name = repNameMap[email] || email.split('@')[0]
@@ -569,7 +577,6 @@ export default function CRMDashboard() {
                             <option value="">— Unassigned —</option>
                             <option value="mohan@numat.ph">Mohan (International)</option>
                             <option value="bryan@numat.ph">Bryan (Philippines)</option>
-                            
                           </select>
                         </div>
                       )}
@@ -614,8 +621,21 @@ export default function CRMDashboard() {
                           Quote issued {new Date(lead.quoted_at).toLocaleDateString('en-PH',{day:'numeric',month:'short',year:'numeric'})}
                           {lead.quote_issued_by && ' by ' + lead.quote_issued_by.split('@')[0]}
                           {lead.deal_value_php && ' · ₱' + Number(lead.deal_value_php).toLocaleString()}
-                          {lead.deal_value_usd && ' / $' + Number(lead.deal_value_usd).toLocaleString()}
+                          {lead.deal_value_usd && ' / \u0024' + Number(lead.deal_value_usd).toLocaleString()}
                           {lead.quote_notes && ' · ' + lead.quote_notes}
+                        </span>
+                      </div>
+                    )}
+                    {(lead.rep_reply_count || 0) > 0 && lead.last_rep_touch_at && (
+                      <div className="mt-3 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-lg text-xs text-emerald-800 flex items-start gap-2">
+                        <span>✉</span>
+                        <span>
+                          Last rep reply {relDate(lead.last_rep_touch_at)}
+                          {lead.last_rep_touch_by && ' by ' + lead.last_rep_touch_by.split('@')[0]}
+                          {' · ' + lead.rep_reply_count + ' total ' + (lead.rep_reply_count === 1 ? 'reply' : 'replies')}
+                          {lead.last_rep_touch_subject && (
+                            <span className="block mt-1 text-emerald-700/80 italic truncate">“{lead.last_rep_touch_subject}”</span>
+                          )}
                         </span>
                       </div>
                     )}
@@ -684,3 +704,4 @@ export default function CRMDashboard() {
     </div>
   )
 }
+

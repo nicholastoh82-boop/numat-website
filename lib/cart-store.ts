@@ -22,6 +22,9 @@ export interface CartItem {
   model?: string
   length?: string
   stockMessage?: string
+
+  variantId?: string | null
+  sku?: string | null
 }
 
 interface CartState {

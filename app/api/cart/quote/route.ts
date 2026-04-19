@@ -25,6 +25,7 @@ interface QuoteItem {
   quantity: number
   unit_price: number
   sku?: string | null
+  variant_id?: string | null
 }
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
@@ -169,6 +170,8 @@ export async function POST(request: NextRequest) {
       quantity: item.quantity,
       unit_price: item.unit_price,
       total_price: item.quantity * item.unit_price,
+      sku: item.sku ?? null,
+      variant_id: item.variant_id ?? null,
     }))
 
     let { error: itemsError } = await supabase.from('quote_items').insert(quoteItems as any)
@@ -181,6 +184,8 @@ export async function POST(request: NextRequest) {
         product_name: item.product_name,
         quantity: item.quantity,
         unit_price: item.unit_price,
+        sku: item.sku ?? null,
+        variant_id: item.variant_id ?? null,
       }))
       ;({ error: itemsError } = await supabase.from('quote_items').insert(minimalItems as any))
     }
@@ -188,15 +193,22 @@ export async function POST(request: NextRequest) {
     if (itemsError) {
       console.error('Quote Items Final Error:', JSON.stringify(itemsError))
       await supabase.from('quotes').delete().eq('id', quoteId)
+
+      const rawMsg = itemsError.message || ''
+      const isFloorBlock = rawMsg.includes('QUOTE FLOOR BLOCKED')
+
       return NextResponse.json(
         {
           ok: false,
-          error: 'Failed to add items',
-          details: itemsError.message,
+          error: isFloorBlock
+            ? 'One or more items are priced below the minimum. Please contact sales to adjust pricing or request an exception.'
+            : 'Failed to add items',
+          details: rawMsg,
           hint: (itemsError as any).hint,
           code: (itemsError as any).code,
+          floor_blocked: isFloorBlock,
         },
-        { status: 500 }
+        { status: isFloorBlock ? 422 : 500 }
       )
     }
 
