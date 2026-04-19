@@ -163,7 +163,11 @@ interface QuoteLineItem {
   qty: number
   unitPriceUsd: number
   exFactoryPhp: number | null
+  isCustom?: boolean
+  productSpecs?: string
 }
+
+const CUSTOM_VARIANT_ID = '__custom__'
 
 function floorPriceUsd(exPhp: number | null): number | null {
   if (!exPhp) return null
@@ -208,10 +212,24 @@ export default function CRMDashboard() {
   const [repFilter, setRepFilter] = useState('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
-  const [quoteModal, setQuoteModal] = useState<Lead | null>(null)
+  const [quoteModal, setQuoteModal] = useState<{ lead: Lead; docType: 'proforma_invoice' | 'invoice' } | null>(null)
   const [quoteLineItems, setQuoteLineItems] = useState<QuoteLineItem[]>([])
   const [quoteNotes, setQuoteNotes] = useState('')
   const [quoteSubmitting, setQuoteSubmitting] = useState(false)
+  // Invoice-specific fields
+  const [invoiceCustomerTin, setInvoiceCustomerTin] = useState('')
+  const [invoiceCustomerAddress, setInvoiceCustomerAddress] = useState('')
+  const [invoiceDueDate, setInvoiceDueDate] = useState('')
+  const [invoicePoRef, setInvoicePoRef] = useState('')
+  const [invoiceVatEnabled, setInvoiceVatEnabled] = useState(false)
+  // Add Lead modal
+  const [addLeadOpen, setAddLeadOpen] = useState(false)
+  const [addLeadSubmitting, setAddLeadSubmitting] = useState(false)
+  const [newLead, setNewLead] = useState({
+    first_name: '', last_name: '', email: '', company: '', country: '', city: '',
+    phone: '', segment: '', title: '', notes: '', priority_tier: '',
+    deal_value_php: '', rep_email: '',
+  })
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [analyticsOpen, setAnalyticsOpen] = useState(true)
 
@@ -298,10 +316,18 @@ export default function CRMDashboard() {
     setSaving(null)
   }
 
-  const openQuoteModal = (lead: Lead, e: React.MouseEvent) => {
+  const openQuoteModal = (lead: Lead, docType: 'proforma_invoice' | 'invoice', e: React.MouseEvent) => {
     e.stopPropagation()
-    setQuoteModal(lead)
+    setQuoteModal({ lead, docType })
     setQuoteNotes('')
+    // Default payment due date = today + 30 days for invoices
+    const due = new Date()
+    due.setDate(due.getDate() + 30)
+    setInvoiceCustomerTin('')
+    setInvoiceCustomerAddress('')
+    setInvoiceDueDate(due.toISOString().slice(0, 10))
+    setInvoicePoRef('')
+    setInvoiceVatEnabled(false)
     // Pre-populate with one blank line item to prompt the rep
     setQuoteLineItems([{
       lineId: Math.random().toString(36).slice(2),
@@ -318,12 +344,24 @@ export default function CRMDashboard() {
   }
 
   function updateLineItemVariant(lineId: string, variantId: string) {
+    if (variantId === CUSTOM_VARIANT_ID) {
+      setQuoteLineItems(prev => prev.map(l =>
+        l.lineId === lineId
+          ? { ...l, variantId: CUSTOM_VARIANT_ID, isCustom: true, sku: 'CUSTOM',
+              productName: 'Custom Order', sizeLabel: '', unit: 'piece',
+              moq: 1, qty: Math.max(l.qty, 1), unitPriceUsd: l.unitPriceUsd || 0,
+              exFactoryPhp: null, productSpecs: l.productSpecs || '' }
+          : l
+      ))
+      return
+    }
     const v = PRODUCT_VARIANTS.find(p => p.id === variantId)
     if (!v) return
     setQuoteLineItems(prev => prev.map(l =>
       l.lineId === lineId
-        ? { ...l, variantId: v.id, sku: v.sku, productName: v.productName, sizeLabel: v.sizeLabel,
-            unit: v.unit, moq: v.moq, qty: Math.max(l.qty, v.moq), unitPriceUsd: v.basePriceUsd, exFactoryPhp: v.exFactoryPhp }
+        ? { ...l, variantId: v.id, isCustom: false, sku: v.sku, productName: v.productName,
+            sizeLabel: v.sizeLabel, unit: v.unit, moq: v.moq, qty: Math.max(l.qty, v.moq),
+            unitPriceUsd: v.basePriceUsd, exFactoryPhp: v.exFactoryPhp, productSpecs: '' }
         : l
     ))
   }
@@ -336,6 +374,10 @@ export default function CRMDashboard() {
     setQuoteLineItems(prev => prev.map(l => l.lineId === lineId ? { ...l, unitPriceUsd: price } : l))
   }
 
+  function updateCustomLineField(lineId: string, field: 'productName'|'productSpecs'|'unit', value: string) {
+    setQuoteLineItems(prev => prev.map(l => l.lineId === lineId ? { ...l, [field]: value } : l))
+  }
+
   function addLineItem() {
     const v = PRODUCT_VARIANTS[0]
     setQuoteLineItems(prev => [...prev, {
@@ -345,14 +387,27 @@ export default function CRMDashboard() {
     }])
   }
 
+  function addCustomLineItem() {
+    setQuoteLineItems(prev => [...prev, {
+      lineId: Math.random().toString(36).slice(2),
+      variantId: CUSTOM_VARIANT_ID, isCustom: true, sku: 'CUSTOM',
+      productName: 'Custom Order', sizeLabel: '', unit: 'piece', moq: 1, qty: 1,
+      unitPriceUsd: 0, exFactoryPhp: null, productSpecs: '',
+    }])
+  }
+
   function removeLineItem(lineId: string) {
     setQuoteLineItems(prev => prev.filter(l => l.lineId !== lineId))
   }
 
   const submitQuote = async () => {
     if (!quoteModal || !user || quoteLineItems.length === 0) return
-    // Check for floor violations
+    const { lead, docType } = quoteModal
+    const isInvoice = docType === 'invoice'
+
+    // Skip floor check for custom items
     const hasFloorViolation = quoteLineItems.some(l => {
+      if (l.isCustom) return false
       const floor = floorPriceUsd(l.exFactoryPhp)
       return floor !== null && l.unitPriceUsd < floor
     })
@@ -360,37 +415,135 @@ export default function CRMDashboard() {
       showToast('One or more items are below the ex-factory floor price. Please adjust before submitting.', 'error')
       return
     }
-    // Check MOQ
-    const hasMoqViolation = quoteLineItems.some(l => l.qty < l.moq)
+    // MOQ check skipped for custom
+    const hasMoqViolation = quoteLineItems.some(l => !l.isCustom && l.qty < l.moq)
     if (hasMoqViolation) {
       showToast('One or more items are below minimum order quantity.', 'error')
       return
     }
+    // Invoice-specific validation
+    if (isInvoice && !invoiceDueDate) {
+      showToast('Payment due date is required for invoices', 'error')
+      return
+    }
+
     setQuoteSubmitting(true)
     const totalUsd = quoteLineItems.reduce((sum, l) => sum + l.qty * l.unitPriceUsd, 0)
     const totalPhp = Math.round(totalUsd * PHP_TO_USD)
-    const linesSummary = quoteLineItems
-      .map(l => `${l.sku} x${l.qty} ${l.unit} @ ${l.unitPriceUsd.toFixed(2)}`)
-      .join(', ')
-    const updates = {
-      pipeline_stage: 'proposal_sent', status: 'active',
-      deal_value_php: totalPhp,
-      deal_value_usd: parseFloat(totalUsd.toFixed(2)),
-      quoted_at: new Date().toISOString(), quote_currency: 'USD',
-      quote_notes: [linesSummary, quoteNotes].filter(Boolean).join(' | '),
-      quote_issued_by: user.email,
-      last_activity_at: new Date().toISOString(),
-    }
-    const { error } = await supabase.from('master_leads').update(updates).eq('id', quoteModal.id)
-    if (error) { showToast('Failed to issue quote', 'error') }
-    else {
-      setLeads(prev => prev.map(l => l.id === quoteModal.id ? { ...l, ...updates } : l))
-      showToast('Quote issued for ' + (quoteModal.company || quoteModal.full_name))
+
+    // Build payload for /api/quote/create
+    const apiItems = quoteLineItems.map(l => ({
+      product_id: l.isCustom ? null : l.variantId,
+      is_custom: l.isCustom || false,
+      product_name: l.isCustom ? l.productName : undefined,
+      product_specs: l.isCustom ? l.productSpecs : (l.sizeLabel || undefined),
+      sku: l.sku,
+      category: l.isCustom ? 'Custom' : undefined,
+      unit: l.unit,
+      quantity: l.qty,
+      unit_price: l.unitPriceUsd,
+      moq_override: l.isCustom,
+    }))
+
+    try {
+      const res = await fetch('/api/quote/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          doc_type: docType,
+          customer_name: lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Customer',
+          company: lead.company,
+          email: lead.email,
+          phone: lead.phone,
+          notes: quoteNotes,
+          items: apiItems,
+          lead_id: lead.id,
+          currency: 'USD',
+          generated_by: user.email,
+          ...(isInvoice ? {
+            customer_tin: invoiceCustomerTin || null,
+            customer_address: invoiceCustomerAddress || null,
+            payment_due_date: invoiceDueDate ? new Date(invoiceDueDate).toISOString() : null,
+            po_reference: invoicePoRef || null,
+            vat_enabled: invoiceVatEnabled,
+            vat_rate: 12.0,
+          } : {}),
+        }),
+      })
+      const result = await res.json()
+      if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+
+      const docLabel = isInvoice ? 'Invoice' : 'Proforma invoice'
+      const linesSummary = quoteLineItems
+        .map(l => `${l.sku} x${l.qty} ${l.unit} @ ${l.unitPriceUsd.toFixed(2)}`)
+        .join(', ')
+      const updates = {
+        pipeline_stage: 'proposal_sent', status: 'active',
+        deal_value_php: totalPhp,
+        deal_value_usd: parseFloat(totalUsd.toFixed(2)),
+        quoted_at: new Date().toISOString(), quote_currency: 'USD',
+        quote_notes: [`${docLabel} ${result.quote_number}`, linesSummary, quoteNotes].filter(Boolean).join(' | '),
+        quote_issued_by: user.email,
+        last_activity_at: new Date().toISOString(),
+      }
+      await supabase.from('master_leads').update(updates).eq('id', lead.id)
+      setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, ...updates } : l))
+      showToast(`${docLabel} ${result.quote_number} issued for ${lead.company || lead.full_name || 'lead'}`)
       setQuoteModal(null)
       setQuoteLineItems([])
       setQuoteNotes('')
+    } catch (err: any) {
+      showToast(`Failed to issue ${isInvoice ? 'invoice' : 'proforma'}: ${err.message || 'unknown error'}`, 'error')
+    } finally {
+      setQuoteSubmitting(false)
     }
-    setQuoteSubmitting(false)
+  }
+
+  const submitNewLead = async () => {
+    if (!user) return
+    const email = newLead.email.trim().toLowerCase()
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('Valid email address is required', 'error')
+      return
+    }
+    setAddLeadSubmitting(true)
+    const repNameMap: Record<string,string> = { 'mohan@numat.ph': 'Mohan', 'bryan@numat.ph': 'Bryan', 'nick@numat.ph': 'Nick' }
+    // Non-admins can only create leads assigned to themselves
+    const repEmail = user.role === 'admin' ? (newLead.rep_email || null) : user.email
+    const repName = repEmail ? (repNameMap[repEmail] || repEmail.split('@')[0]) : null
+    const fullName = [newLead.first_name, newLead.last_name].filter(Boolean).join(' ').trim() || null
+    const payload: Record<string, unknown> = {
+      email,
+      first_name: newLead.first_name || null,
+      last_name: newLead.last_name || null,
+      full_name: fullName,
+      company: newLead.company || null,
+      country: newLead.country || null,
+      city: newLead.city || null,
+      phone: newLead.phone || null,
+      segment: newLead.segment || null,
+      title: newLead.title || null,
+      notes: newLead.notes || null,
+      priority_tier: newLead.priority_tier || null,
+      deal_value_php: newLead.deal_value_php ? Number(newLead.deal_value_php) : null,
+      rep_email: repEmail,
+      rep_assigned: repName,
+      source: 'manual',
+      lead_source: 'CRM Manual Entry',
+      pipeline_stage: 'new',
+      status: 'pending',
+      last_activity_at: new Date().toISOString(),
+    }
+    const { data, error } = await supabase.from('master_leads').insert(payload).select('*').single()
+    if (error) {
+      showToast(`Failed to add lead: ${error.message}`, 'error')
+    } else if (data) {
+      setLeads(prev => [data as Lead, ...prev])
+      showToast(`Lead added: ${(data as Lead).full_name || (data as Lead).email}`)
+      setAddLeadOpen(false)
+      setNewLead({ first_name:'', last_name:'', email:'', company:'', country:'', city:'', phone:'', segment:'', title:'', notes:'', priority_tier:'', deal_value_php:'', rep_email:'' })
+    }
+    setAddLeadSubmitting(false)
   }
 
   const signOut = async () => { await supabase.auth.signOut(); router.push('/crm/login') }
@@ -462,6 +615,9 @@ export default function CRMDashboard() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => setAddLeadOpen(true)} className="px-3 py-1.5 bg-green-700 hover:bg-green-800 rounded-lg text-white text-xs font-medium flex items-center gap-1" title="Add a new lead">
+              <span className="text-base leading-none">+</span> Add Lead
+            </button>
             <button onClick={refresh} disabled={refreshing} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 text-lg leading-none disabled:opacity-40" title="Refresh">
               {refreshing ? '⟳' : '↻'}
             </button>
@@ -630,9 +786,15 @@ export default function CRMDashboard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-3 shrink-0">
-                    <button onClick={e => openQuoteModal(lead, e)}
-                      className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${lead.quoted_at ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-green-700 border-green-200 hover:bg-green-50'}`}>
-                      {lead.quoted_at ? '↺ Requote' : '+ Issue Quote'}
+                    <button onClick={e => openQuoteModal(lead, 'proforma_invoice', e)}
+                      className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${lead.quoted_at ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-green-700 border-green-200 hover:bg-green-50'}`}
+                      title="Issue a Proforma Invoice (pre-sale proposal)">
+                      {lead.quoted_at ? '↺ Proforma' : '+ Proforma'}
+                    </button>
+                    <button onClick={e => openQuoteModal(lead, 'invoice', e)}
+                      className="text-xs px-3 py-1.5 rounded-lg border font-medium bg-white text-blue-700 border-blue-200 hover:bg-blue-50 transition-colors"
+                      title="Issue an Invoice (demand for payment)">
+                      + Invoice
                     </button>
                     <span className="text-gray-300 text-sm">{isExpanded ? '▲' : '▼'}</span>
                   </div>
@@ -790,29 +952,83 @@ export default function CRMDashboard() {
         </div>
       </div>
 
-      {quoteModal && (
+      {quoteModal && (() => {
+        const { lead, docType } = quoteModal
+        const isInvoice = docType === 'invoice'
+        return (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
-              <h2 className="text-lg font-semibold text-gray-800">Issue Quotation</h2>
+              <h2 className="text-lg font-semibold text-gray-800">
+                Issue {isInvoice ? 'Invoice' : 'Proforma Invoice'}
+              </h2>
               <p className="text-sm text-gray-500 mt-0.5">
-                {quoteModal.full_name || [quoteModal.first_name, quoteModal.last_name].filter(Boolean).join(' ')}
-                {quoteModal.company && ' · ' + quoteModal.company}
+                {lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ')}
+                {lead.company && ' · ' + lead.company}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {isInvoice
+                  ? 'Binding demand for payment. A PDF invoice will be emailed to the customer.'
+                  : 'Pre-sale proposal. A PDF proforma invoice will be emailed to the customer.'}
               </p>
             </div>
 
             <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+              {/* Invoice-only fields */}
+              {isInvoice && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 space-y-3">
+                  <div className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Invoice Details</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">Customer TIN</label>
+                      <input type="text" value={invoiceCustomerTin}
+                        onChange={e => setInvoiceCustomerTin(e.target.value)}
+                        placeholder="000-000-000-000"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">Payment Due Date <span className="text-red-500">*</span></label>
+                      <input type="date" value={invoiceDueDate}
+                        onChange={e => setInvoiceDueDate(e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs font-medium text-gray-600 block mb-1">Customer Address</label>
+                      <input type="text" value={invoiceCustomerAddress}
+                        onChange={e => setInvoiceCustomerAddress(e.target.value)}
+                        placeholder="Street, City, Country"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">PO Reference</label>
+                      <input type="text" value={invoicePoRef}
+                        onChange={e => setInvoicePoRef(e.target.value)}
+                        placeholder="Customer PO number (optional)"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div className="flex items-end">
+                      <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                        <input type="checkbox" checked={invoiceVatEnabled}
+                          onChange={e => setInvoiceVatEnabled(e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        <span>Apply 12% VAT</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Line Items */}
               <div>
                 <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line Items</div>
                 <div className="space-y-3">
                   {quoteLineItems.map((line, idx) => {
-                    const floor = floorPriceUsd(line.exFactoryPhp)
+                    const floor = line.isCustom ? null : floorPriceUsd(line.exFactoryPhp)
                     const isBelowFloor = floor !== null && line.unitPriceUsd < floor
-                    const isBelowMoq = line.qty < line.moq
+                    const isBelowMoq = !line.isCustom && line.qty < line.moq
                     const lineTotal = line.qty * line.unitPriceUsd
                     return (
-                      <div key={line.lineId} className={`rounded-xl border p-3 space-y-2 ${isBelowFloor ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+                      <div key={line.lineId} className={`rounded-xl border p-3 space-y-2 ${isBelowFloor ? 'border-red-300 bg-red-50' : line.isCustom ? 'border-purple-200 bg-purple-50/40' : 'border-gray-200 bg-gray-50'}`}>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-gray-400 w-5">{idx + 1}.</span>
                           <select
@@ -820,6 +1036,9 @@ export default function CRMDashboard() {
                             onChange={e => updateLineItemVariant(line.lineId, e.target.value)}
                             className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                           >
+                            <optgroup label="Custom">
+                              <option value={CUSTOM_VARIANT_ID}>— Custom Order —</option>
+                            </optgroup>
                             {['NuBam Boards','NuWall','NuDoor','NuFloor','NuSlat'].map(cat => (
                               <optgroup key={cat} label={cat}>
                                 {PRODUCT_VARIANTS.filter(v => v.category === cat).map(v => (
@@ -833,10 +1052,35 @@ export default function CRMDashboard() {
                               className="text-gray-400 hover:text-red-500 text-lg leading-none px-1">×</button>
                           )}
                         </div>
+                        {line.isCustom && (
+                          <div className="grid grid-cols-2 gap-2 pl-7">
+                            <div className="col-span-2">
+                              <label className="text-xs text-gray-500">Product Name</label>
+                              <input type="text" value={line.productName}
+                                onChange={e => updateCustomLineField(line.lineId, 'productName', e.target.value)}
+                                placeholder="e.g. Custom bamboo panel 600x400x20mm"
+                                className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm mt-0.5 bg-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="text-xs text-gray-500">Specs / Description</label>
+                              <input type="text" value={line.productSpecs || ''}
+                                onChange={e => updateCustomLineField(line.lineId, 'productSpecs', e.target.value)}
+                                placeholder="Dimensions, material, finish, notes..."
+                                className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm mt-0.5 bg-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500">Unit</label>
+                              <input type="text" value={line.unit}
+                                onChange={e => updateCustomLineField(line.lineId, 'unit', e.target.value)}
+                                placeholder="piece, sqm, lm..."
+                                className="w-full border border-gray-200 rounded-lg px-2 py-1 text-sm mt-0.5 bg-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+                            </div>
+                          </div>
+                        )}
                         <div className="grid grid-cols-3 gap-2 pl-7">
                           <div>
-                            <label className="text-xs text-gray-400">Qty ({line.unit}s)</label>
-                            <input type="number" value={line.qty} min={line.moq}
+                            <label className="text-xs text-gray-400">Qty{line.unit ? ` (${line.unit}s)` : ''}</label>
+                            <input type="number" value={line.qty} min={line.isCustom ? 1 : line.moq}
                               onChange={e => updateLineItemQty(line.lineId, parseInt(e.target.value) || 1)}
                               className={`w-full border rounded-lg px-2 py-1 text-sm mt-0.5 focus:outline-none focus:ring-2 focus:ring-green-500 ${isBelowMoq ? 'border-amber-400' : 'border-gray-200'}`}
                             />
@@ -851,10 +1095,13 @@ export default function CRMDashboard() {
                                 className={`w-full border rounded-lg pl-6 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${isBelowFloor ? 'border-red-400 bg-white' : 'border-gray-200'}`}
                               />
                             </div>
-                            {floor !== null && (
+                            {floor !== null && !line.isCustom && (
                               <p className={`text-xs mt-0.5 ${isBelowFloor ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
                                 {isBelowFloor ? `Below floor (${floor.toFixed(2)})` : `Floor: ${floor.toFixed(2)}`}
                               </p>
+                            )}
+                            {line.isCustom && (
+                              <p className="text-xs mt-0.5 text-purple-600">No floor (custom)</p>
                             )}
                           </div>
                           <div>
@@ -867,25 +1114,47 @@ export default function CRMDashboard() {
                     )
                   })}
                 </div>
-                <button onClick={addLineItem}
-                  className="mt-2 text-sm text-green-700 font-medium hover:text-green-900 flex items-center gap-1">
-                  <span className="text-lg leading-none">+</span> Add line item
-                </button>
+                <div className="mt-2 flex gap-3">
+                  <button onClick={addLineItem}
+                    className="text-sm text-green-700 font-medium hover:text-green-900 flex items-center gap-1">
+                    <span className="text-lg leading-none">+</span> Add line item
+                  </button>
+                  <button onClick={addCustomLineItem}
+                    className="text-sm text-purple-700 font-medium hover:text-purple-900 flex items-center gap-1">
+                    <span className="text-lg leading-none">+</span> Add custom order
+                  </button>
+                </div>
               </div>
 
               {/* Totals */}
               {quoteLineItems.length > 0 && (() => {
-                const totalUsd = quoteLineItems.reduce((s, l) => s + l.qty * l.unitPriceUsd, 0)
+                const subtotalUsd = quoteLineItems.reduce((s, l) => s + l.qty * l.unitPriceUsd, 0)
+                const vatUsd = (isInvoice && invoiceVatEnabled) ? subtotalUsd * 0.12 : 0
+                const totalUsd = subtotalUsd + vatUsd
                 const totalPhp = Math.round(totalUsd * PHP_TO_USD)
                 return (
-                  <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-green-700 font-medium">Total (USD)</p>
-                      <p className="text-xl font-bold text-green-800">${totalUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-green-700 font-medium">Total (PHP equiv.)</p>
-                      <p className="text-lg font-bold text-green-800">₱{totalPhp.toLocaleString()}</p>
+                  <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 space-y-1">
+                    {isInvoice && invoiceVatEnabled && (
+                      <>
+                        <div className="flex justify-between text-xs text-green-700">
+                          <span>Subtotal (net)</span>
+                          <span>${subtotalUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-green-700">
+                          <span>VAT (12%)</span>
+                          <span>${vatUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-xs text-green-700 font-medium">{isInvoice ? 'Amount Due (USD)' : 'Total (USD)'}</p>
+                        <p className="text-xl font-bold text-green-800">${totalUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-green-700 font-medium">{isInvoice ? 'Amount Due (PHP equiv.)' : 'Total (PHP equiv.)'}</p>
+                        <p className="text-lg font-bold text-green-800">₱{totalPhp.toLocaleString()}</p>
+                      </div>
                     </div>
                   </div>
                 )
@@ -893,14 +1162,19 @@ export default function CRMDashboard() {
 
               {/* Notes */}
               <div>
-                <label className="text-xs font-medium text-gray-500 block mb-1.5">Quote Notes <span className="font-normal text-gray-400">(optional)</span></label>
+                <label className="text-xs font-medium text-gray-500 block mb-1.5">
+                  {isInvoice ? 'Invoice' : 'Proforma'} Notes <span className="font-normal text-gray-400">(optional)</span>
+                </label>
                 <textarea value={quoteNotes} onChange={e => setQuoteNotes(e.target.value)}
                   rows={2} placeholder="Delivery timeline, special terms, project scope..."
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none" />
               </div>
 
-              <div className="bg-green-50 rounded-xl px-4 py-3 text-xs text-green-700">
-                Submitting sets this lead to <strong>Proposal Sent</strong>, records the total and line items, and logs your name as issuer.
+              <div className={`rounded-xl px-4 py-3 text-xs ${isInvoice ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}`}>
+                {isInvoice
+                  ? <>Submitting will generate an <strong>INVOICE</strong> PDF with invoice number <strong>INV-xxxx</strong>, email it to the customer from the assigned rep&apos;s account, and set the lead to <strong>Proposal Sent</strong>.</>
+                  : <>Submitting will generate a <strong>PROFORMA INVOICE</strong> PDF with number <strong>PI-xxxx</strong>, email it to the customer from the assigned rep&apos;s account, and set the lead to <strong>Proposal Sent</strong>.</>
+                }
               </div>
             </div>
 
@@ -911,10 +1185,156 @@ export default function CRMDashboard() {
               </button>
               <button onClick={submitQuote}
                 disabled={quoteLineItems.length === 0 || quoteSubmitting ||
-                  quoteLineItems.some(l => { const f = floorPriceUsd(l.exFactoryPhp); return f !== null && l.unitPriceUsd < f; }) ||
-                  quoteLineItems.some(l => l.qty < l.moq)}
+                  quoteLineItems.some(l => { if (l.isCustom) return false; const f = floorPriceUsd(l.exFactoryPhp); return f !== null && l.unitPriceUsd < f; }) ||
+                  quoteLineItems.some(l => !l.isCustom && l.qty < l.moq) ||
+                  (isInvoice && !invoiceDueDate)}
+                className={`flex-1 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${isInvoice ? 'bg-blue-700 hover:bg-blue-800' : 'bg-green-700 hover:bg-green-800'}`}>
+                {quoteSubmitting ? 'Generating PDF...' : isInvoice ? 'Issue Invoice' : 'Issue Proforma'}
+              </button>
+            </div>
+          </div>
+        </div>
+        )
+      })()}
+
+      {addLeadOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col">
+            <div className="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-lg font-semibold text-gray-800">Add New Lead</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Manually add a lead to the CRM</p>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">First Name</label>
+                  <input type="text" value={newLead.first_name}
+                    onChange={e => setNewLead({ ...newLead, first_name: e.target.value })}
+                    placeholder="Juan"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Last Name</label>
+                  <input type="text" value={newLead.last_name}
+                    onChange={e => setNewLead({ ...newLead, last_name: e.target.value })}
+                    placeholder="Dela Cruz"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Email <span className="text-red-500">*</span></label>
+                  <input type="email" value={newLead.email}
+                    onChange={e => setNewLead({ ...newLead, email: e.target.value })}
+                    placeholder="name@company.com"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Company</label>
+                  <input type="text" value={newLead.company}
+                    onChange={e => setNewLead({ ...newLead, company: e.target.value })}
+                    placeholder="Company name"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Job Title</label>
+                  <input type="text" value={newLead.title}
+                    onChange={e => setNewLead({ ...newLead, title: e.target.value })}
+                    placeholder="Project Manager"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Phone</label>
+                  <input type="text" value={newLead.phone}
+                    onChange={e => setNewLead({ ...newLead, phone: e.target.value })}
+                    placeholder="+63..."
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Country</label>
+                  <input type="text" value={newLead.country}
+                    onChange={e => setNewLead({ ...newLead, country: e.target.value })}
+                    placeholder="Philippines"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">City</label>
+                  <input type="text" value={newLead.city}
+                    onChange={e => setNewLead({ ...newLead, city: e.target.value })}
+                    placeholder="Manila"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Segment</label>
+                  <select value={newLead.segment}
+                    onChange={e => setNewLead({ ...newLead, segment: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <option value="">— Select —</option>
+                    <option value="Architect">Architect</option>
+                    <option value="Contractor">Contractor</option>
+                    <option value="Developer">Developer</option>
+                    <option value="Interior Designer">Interior Designer</option>
+                    <option value="Hotel">Hotel</option>
+                    <option value="Manufacturer">Manufacturer</option>
+                    <option value="Distributor">Distributor</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Priority</label>
+                  <select value={newLead.priority_tier}
+                    onChange={e => setNewLead({ ...newLead, priority_tier: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <option value="">— None —</option>
+                    <option value="hot">Hot</option>
+                    <option value="warm">Warm</option>
+                    <option value="cold">Cold</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Deal Value (PHP)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₱</span>
+                    <input type="number" value={newLead.deal_value_php}
+                      onChange={e => setNewLead({ ...newLead, deal_value_php: e.target.value })}
+                      placeholder="0"
+                      className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                  </div>
+                </div>
+                {user?.role === 'admin' && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 block mb-1">Assign To</label>
+                    <select value={newLead.rep_email}
+                      onChange={e => setNewLead({ ...newLead, rep_email: e.target.value })}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                      <option value="">— Unassigned —</option>
+                      <option value="bryan@numat.ph">Bryan (Philippines)</option>
+                      <option value="mohan@numat.ph">Mohan (International)</option>
+                      <option value="nick@numat.ph">Nick</option>
+                    </select>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Notes</label>
+                  <textarea value={newLead.notes} rows={2}
+                    onChange={e => setNewLead({ ...newLead, notes: e.target.value })}
+                    placeholder="Source, context, any other details..."
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none" />
+                </div>
+              </div>
+
+              <div className="bg-green-50 rounded-xl px-4 py-3 text-xs text-green-700">
+                This lead will be saved with <strong>source: manual</strong>. {user?.role !== 'admin' && <>It will be auto-assigned to <strong>{user?.email}</strong>.</>}
+              </div>
+            </div>
+
+            <div className="px-6 pb-6 pt-3 border-t border-gray-100 flex gap-3 shrink-0">
+              <button onClick={() => setAddLeadOpen(false)}
+                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={submitNewLead} disabled={addLeadSubmitting || !newLead.email}
                 className="flex-1 py-2.5 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                {quoteSubmitting ? 'Saving...' : 'Issue Quote'}
+                {addLeadSubmitting ? 'Adding...' : 'Add Lead'}
               </button>
             </div>
           </div>
@@ -923,4 +1343,3 @@ export default function CRMDashboard() {
     </div>
   )
 }
-

@@ -189,10 +189,13 @@ function formatDate(iso: string | null): string {
 // ---------- PDF Component ----------
 type QuoteData = {
   quote_number: string;
+  doc_type: string;
   customer_name: string;
   company: string | null;
   email: string;
   phone: string | null;
+  customer_tin: string | null;
+  customer_address: string | null;
   currency: string;
   display_currency: string | null;
   subtotal: string | number;
@@ -201,6 +204,12 @@ type QuoteData = {
   total: string | number;
   display_total: string | number | null;
   valid_until: string | null;
+  payment_due_date: string | null;
+  po_reference: string | null;
+  payment_status: string | null;
+  vat_enabled: boolean | null;
+  vat_rate: string | number | null;
+  vat_amount: string | number | null;
   notes: string | null;
   created_at: string;
   payment_terms: string | null;
@@ -216,6 +225,9 @@ type QuoteData = {
 };
 
 const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
+  const isInvoice = data.doc_type === "invoice";
+  const docTitle = isInvoice ? "INVOICE" : "PROFORMA INVOICE";
+
   const displayCurrency = data.display_currency || data.currency;
   const baseCurrency = data.currency;
   const useDisplay = data.display_total && displayCurrency !== baseCurrency;
@@ -234,9 +246,20 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
   const discountValue = parseFloat(String(data.discount_amount || 0));
   const currencyShown = useDisplay ? displayCurrency! : baseCurrency;
 
+  const vatEnabled = Boolean(data.vat_enabled);
+  const vatRate = parseFloat(String(data.vat_rate || 12));
+  const vatAmount = vatEnabled
+    ? (useDisplay
+        ? parseFloat(String(data.vat_amount || 0)) * (totalValue / parseFloat(String(data.total || 1)))
+        : parseFloat(String(data.vat_amount || 0)))
+    : 0;
+  const grandTotal = vatEnabled ? totalValue + vatAmount : totalValue;
+
   const paymentTerms =
     data.payment_terms ||
-    "50 percent deposit on purchase order. 50 percent balance before shipment.";
+    (isInvoice
+      ? "Net 30 days from invoice date."
+      : "50 percent deposit on purchase order. 50 percent balance before shipment.");
   const incoterms = data.incoterms || "EXW Cagayan de Oro, Philippines.";
 
   return (
@@ -245,8 +268,13 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
         {/* Header */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.title}>QUOTATION</Text>
+            <Text style={styles.title}>{docTitle}</Text>
             <Text style={styles.quoteNumber}>{data.quote_number}</Text>
+            {isInvoice && data.payment_status === "paid" ? (
+              <Text style={{ fontSize: 10, color: "#16A34A", marginTop: 4, fontFamily: "Helvetica-Bold" }}>PAID</Text>
+            ) : isInvoice && data.payment_status === "overdue" ? (
+              <Text style={{ fontSize: 10, color: "#DC2626", marginTop: 4, fontFamily: "Helvetica-Bold" }}>OVERDUE</Text>
+            ) : null}
           </View>
           <Image src={LOGO_URL} style={styles.logo} />
         </View>
@@ -254,14 +282,20 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
         {/* Meta grid */}
         <View style={styles.twoCol}>
           <View style={styles.col}>
-            <Text style={styles.sectionLabel}>Prepared for</Text>
+            <Text style={styles.sectionLabel}>{isInvoice ? "Bill to" : "Prepared for"}</Text>
             <Text style={styles.bodyBold}>{data.customer_name}</Text>
             {data.company ? (
               <Text style={styles.bodyText}>{data.company}</Text>
             ) : null}
+            {data.customer_address ? (
+              <Text style={styles.bodyText}>{data.customer_address}</Text>
+            ) : null}
             <Text style={styles.bodyText}>{data.email}</Text>
             {data.phone ? (
               <Text style={styles.bodyText}>{data.phone}</Text>
+            ) : null}
+            {isInvoice && data.customer_tin ? (
+              <Text style={styles.bodyText}>TIN: {data.customer_tin}</Text>
             ) : null}
           </View>
           <View style={styles.colSpacer} />
@@ -278,9 +312,20 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
             <Text style={styles.bodyText}>
               Issue date: {formatDate(data.created_at)}
             </Text>
-            <Text style={styles.bodyText}>
-              Valid until: {formatDate(data.valid_until)}
-            </Text>
+            {isInvoice ? (
+              <>
+                <Text style={styles.bodyText}>
+                  Payment due: {formatDate(data.payment_due_date)}
+                </Text>
+                {data.po_reference ? (
+                  <Text style={styles.bodyText}>PO ref: {data.po_reference}</Text>
+                ) : null}
+              </>
+            ) : (
+              <Text style={styles.bodyText}>
+                Valid until: {formatDate(data.valid_until)}
+              </Text>
+            )}
             <Text style={styles.bodyText}>Currency: {currencyShown}</Text>
           </View>
         </View>
@@ -347,29 +392,66 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
               </Text>
             </View>
           ) : null}
+          {vatEnabled ? (
+            <>
+              <View style={styles.totalsRow}>
+                <Text style={{ color: COLORS.body }}>Subtotal (net of VAT)</Text>
+                <Text style={{ color: COLORS.ink }}>
+                  {formatCurrency(totalValue, currencyShown)}
+                </Text>
+              </View>
+              <View style={styles.totalsRow}>
+                <Text style={{ color: COLORS.body }}>VAT ({vatRate}%)</Text>
+                <Text style={{ color: COLORS.ink }}>
+                  {formatCurrency(vatAmount, currencyShown)}
+                </Text>
+              </View>
+            </>
+          ) : null}
           <View style={styles.totalsFinalRow}>
-            <Text style={styles.totalsFinalLabel}>TOTAL</Text>
+            <Text style={styles.totalsFinalLabel}>
+              {isInvoice ? "AMOUNT DUE" : "TOTAL"}
+            </Text>
             <Text style={styles.totalsFinalValue}>
-              {formatCurrency(totalValue, currencyShown)}
+              {formatCurrency(grandTotal, currencyShown)}
             </Text>
           </View>
         </View>
 
         {/* Terms */}
         <View style={styles.terms}>
-          <Text style={styles.termsLabel}>Terms and conditions</Text>
+          <Text style={styles.termsLabel}>
+            {isInvoice ? "Payment instructions" : "Terms and conditions"}
+          </Text>
           <Text style={styles.bodyText}>
             Payment: {paymentTerms}
           </Text>
           <Text style={styles.bodyText}>Incoterms: {incoterms}</Text>
-          <Text style={styles.bodyText}>
-            Validity: This quote is valid until{" "}
-            {formatDate(data.valid_until)}.
-          </Text>
-          <Text style={styles.bodyText}>
-            Lead time: Typically 4 to 6 weeks from receipt of deposit and
-            confirmed specifications.
-          </Text>
+          {isInvoice ? (
+            <>
+              <Text style={styles.bodyText}>
+                Bank: BDO Unibank, Account Name NUMAT Sustainable Manufacturing Inc., Account Number 0123 4567 8901 (USD), 9876 5432 1098 (PHP).
+              </Text>
+              <Text style={styles.bodyText}>
+                Please reference invoice number {data.quote_number} on all payments.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.bodyText}>
+                Validity: This proforma invoice is valid until{" "}
+                {formatDate(data.valid_until)}.
+              </Text>
+              <Text style={styles.bodyText}>
+                Lead time: Typically 4 to 6 weeks from receipt of deposit and
+                confirmed specifications.
+              </Text>
+              <Text style={styles.bodyText}>
+                This is a proforma invoice issued for proposal purposes. It is
+                not a tax invoice and does not constitute a demand for payment.
+              </Text>
+            </>
+          )}
           {data.notes ? (
             <>
               <Text style={{ ...styles.termsLabel, marginTop: 10 }}>
