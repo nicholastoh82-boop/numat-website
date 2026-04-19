@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } }
+)
 
 // Supports creating both Proforma Invoices (default) and Invoices.
 // Also supports Custom Order line items (no product_id, manual fields).
 export async function POST(req: Request) {
   try {
-    const supabase = createClient()
     const body = await req.json()
 
     const {
