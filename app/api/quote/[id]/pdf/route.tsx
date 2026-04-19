@@ -368,58 +368,65 @@ const styles = StyleSheet.create({
   termsPage: {
     backgroundColor: COLORS.white,
     color: COLORS.ink,
-    paddingTop: 48,
+    paddingTop: 36,
     paddingBottom: 48,
-    paddingHorizontal: 48,
-    fontSize: 9,
+    paddingHorizontal: 40,
+    fontSize: 8,
     fontFamily: "Helvetica",
-    lineHeight: 1.45,
+    lineHeight: 1.3,
   },
+  termsHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  termsLogo: { width: 90, height: 28, objectFit: "contain" },
   termsPageHeader: {
     fontSize: 8,
     color: COLORS.muted,
-    marginBottom: 8,
     textTransform: "uppercase",
     letterSpacing: 0.8,
+    flex: 1,
   },
   termsPageTitle: {
-    fontSize: 18,
+    fontSize: 14,
     fontFamily: "Helvetica-Bold",
     color: COLORS.green,
     letterSpacing: 1,
-    marginBottom: 14,
+    marginBottom: 8,
   },
   termsIntro: {
-    fontSize: 9,
+    fontSize: 8,
     color: COLORS.body,
-    marginBottom: 14,
-    lineHeight: 1.45,
+    marginBottom: 8,
+    lineHeight: 1.3,
   },
   termsClause: {
-    fontSize: 9,
+    fontSize: 8,
     color: COLORS.ink,
-    marginBottom: 8,
-    lineHeight: 1.45,
+    marginBottom: 3,
+    lineHeight: 1.3,
   },
   termsClauseBold: {
     fontFamily: "Helvetica-Bold",
     color: COLORS.green,
   },
   termsAcceptanceNote: {
-    marginTop: 14,
-    marginBottom: 14,
-    fontSize: 9,
+    marginTop: 6,
+    marginBottom: 10,
+    fontSize: 8,
     color: COLORS.body,
     fontFamily: "Helvetica-Oblique",
   },
   signatureRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 10,
+    marginTop: 4,
   },
   signatureBlock: {
     flex: 1,
-    padding: 12,
+    padding: 10,
     borderWidth: 0.5,
     borderColor: COLORS.line,
     borderRadius: 4,
@@ -427,7 +434,7 @@ const styles = StyleSheet.create({
   },
   signatureBlockRight: {
     flex: 1,
-    padding: 12,
+    padding: 10,
     borderWidth: 0.5,
     borderColor: COLORS.line,
     borderRadius: 4,
@@ -441,14 +448,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   signatureSubheader: {
-    fontSize: 8,
+    fontSize: 7,
     color: COLORS.muted,
-    marginBottom: 20,
+    marginBottom: 10,
     fontFamily: "Helvetica-Oblique",
   },
   signatureLine: {
-    fontSize: 9,
-    marginBottom: 10,
+    fontSize: 8,
+    marginBottom: 7,
     color: COLORS.ink,
   },
 });
@@ -845,9 +852,12 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
       {/* ================================================================ */}
       {!isInvoice ? (
         <Page size="A4" style={styles.termsPage}>
-          <Text style={styles.termsPageHeader}>
-            Proforma Invoice {data.quote_number} · Terms and Conditions
-          </Text>
+          <View style={styles.termsHeaderRow}>
+            <Text style={styles.termsPageHeader}>
+              Proforma Invoice {data.quote_number} · Terms and Conditions
+            </Text>
+            <Image src={LOGO_URL} style={styles.termsLogo} />
+          </View>
           <Text style={styles.termsPageTitle}>Terms and Conditions</Text>
           <Text style={styles.termsIntro}>{TERMS_INTRO}</Text>
 
