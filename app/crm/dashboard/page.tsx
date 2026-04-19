@@ -59,6 +59,32 @@ interface CRMUser {
   is_active: boolean
 }
 
+interface QuoteLineItem {
+  id: string
+  variantId: string
+  productName: string
+  sku: string
+  qty: number
+  unitPriceUsd: number
+  exFactoryPhp: number | null
+  unit: string
+  moq: number
+}
+
+interface ProductVariant {
+  id: string
+  sku: string
+  product_name: string
+  label: string
+  base_price_usd: number
+  ex_factory_php: number | null
+  size_label: string
+  unit: string
+  moq: number
+}
+
+const FX_FLOOR = 55
+
 const PIPELINE_STAGES = ['new','contacted','qualified','proposal_sent','meeting_booked','won','lost']
 const STATUS_OPTIONS = ['pending','active','replied','nurturing','booking_sent','booked','closed','cold_close','bounced','unsubscribed']
 
@@ -130,7 +156,11 @@ export default function CRMDashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
   const [quoteModal, setQuoteModal] = useState<Lead | null>(null)
-  const [quoteForm, setQuoteForm] = useState({ amountPHP: '', amountUSD: '', notes: '' })
+  const [quoteForm, setQuoteForm] = useState({ notes: '' })
+  const [quoteItems, setQuoteItems] = useState<QuoteLineItem[]>([
+    { id: '1', variantId: '', productName: '', sku: '', qty: 10, unitPriceUsd: 0, exFactoryPhp: null, unit: 'piece', moq: 1 }
+  ])
+  const [availableVariants, setAvailableVariants] = useState<ProductVariant[]>([])
   const [quoteSubmitting, setQuoteSubmitting] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [analyticsOpen, setAnalyticsOpen] = useState(true)
@@ -221,34 +251,90 @@ export default function CRMDashboard() {
   const openQuoteModal = (lead: Lead, e: React.MouseEvent) => {
     e.stopPropagation()
     setQuoteModal(lead)
-    setQuoteForm({ amountPHP: lead.deal_value_php?.toString() || '', amountUSD: lead.deal_value_usd?.toString() || '', notes: '' })
+    setQuoteForm({ notes: '' })
+    setQuoteItems([{ id: '1', variantId: '', productName: '', sku: '', qty: 10, unitPriceUsd: 0, exFactoryPhp: null, unit: 'piece', moq: 1 }])
+    // Fetch variants if not already loaded
+    if (availableVariants.length === 0) {
+      fetch('/api/crm/variants')
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setAvailableVariants(data) })
+        .catch(() => {})
+    }
   }
 
-  const handlePHPChange = (val: string) => {
-    const php = parseFloat(val)
-    setQuoteForm(f => ({ ...f, amountPHP: val, amountUSD: val && !isNaN(php) ? (php / PHP_TO_USD).toFixed(2) : f.amountUSD }))
+  const updateQuoteLine = (idx: number, variantId: string) => {
+    const variant = availableVariants.find(v => v.id === variantId)
+    setQuoteItems(prev => prev.map((item, i) => i !== idx ? item : {
+      ...item,
+      variantId: variantId,
+      productName: variant?.product_name || '',
+      sku: variant?.sku || '',
+      unitPriceUsd: variant?.base_price_usd || 0,
+      exFactoryPhp: variant?.ex_factory_php || null,
+      unit: variant?.unit || 'piece',
+      moq: variant?.moq || 1,
+      qty: variant?.moq || item.qty,
+    }))
+  }
+
+  const addQuoteLine = () => {
+    setQuoteItems(prev => [...prev, {
+      id: Date.now().toString(), variantId: '', productName: '', sku: '',
+      qty: 10, unitPriceUsd: 0, exFactoryPhp: null, unit: 'piece', moq: 1
+    }])
+  }
+
+  const isLineValid = (item: QuoteLineItem) => {
+    if (!item.exFactoryPhp || item.unitPriceUsd <= 0) return true
+    return item.unitPriceUsd * FX_FLOOR >= item.exFactoryPhp
   }
 
   const submitQuote = async () => {
-    if (!quoteModal || !user || !quoteForm.amountPHP) return
+    if (!quoteModal || !user) return
+    const validItems = quoteItems.filter(item => item.sku && item.unitPriceUsd > 0)
+    if (validItems.length === 0) { showToast('Add at least one product with a price', 'error'); return }
+    const hasFloorError = validItems.some(item => !isLineValid(item))
+    if (hasFloorError) { showToast('One or more items are below the minimum price floor', 'error'); return }
     setQuoteSubmitting(true)
-    const updates = {
-      pipeline_stage: 'proposal_sent', status: 'active',
-      deal_value_php: parseFloat(quoteForm.amountPHP) || null,
-      deal_value_usd: parseFloat(quoteForm.amountUSD) || null,
-      quoted_at: new Date().toISOString(), quote_currency: 'PHP',
-      quote_notes: quoteForm.notes || null, quote_issued_by: user.email,
-      last_activity_at: new Date().toISOString(),
-    }
-    const { error } = await supabase.from('master_leads').update(updates).eq('id', quoteModal.id)
-    if (error) { showToast('Failed to issue quote', 'error') }
-    else {
+    try {
+      const res = await fetch('/api/crm/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: quoteModal.id,
+          items: validItems.map(item => ({
+            variantId: item.variantId || null,
+            productName: item.productName,
+            sku: item.sku,
+            qty: item.qty,
+            unitPriceUsd: item.unitPriceUsd,
+            exFactoryPhp: item.exFactoryPhp,
+          })),
+          notes: quoteForm.notes || null,
+          issuedBy: user.email,
+        })
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) { showToast(data.error || 'Failed to issue quote', 'error'); return }
+      const grandTotalUsd = validItems.reduce((sum, i) => sum + i.qty * i.unitPriceUsd, 0)
+      const updates = {
+        pipeline_stage: 'proposal_sent' as const, status: 'active',
+        deal_value_php: Math.round(grandTotalUsd * PHP_TO_USD),
+        deal_value_usd: Math.round(grandTotalUsd),
+        quoted_at: new Date().toISOString(), quote_currency: 'USD',
+        quote_notes: quoteForm.notes || null, quote_issued_by: user.email,
+        last_activity_at: new Date().toISOString(),
+      }
       setLeads(prev => prev.map(l => l.id === quoteModal.id ? { ...l, ...updates } : l))
-      showToast('Quote issued for ' + (quoteModal.company || quoteModal.full_name))
+      showToast('Quote #' + data.quoteNumber + ' issued for ' + (quoteModal.company || quoteModal.full_name))
       setQuoteModal(null)
-      setQuoteForm({ amountPHP: '', amountUSD: '', notes: '' })
+      setQuoteForm({ notes: '' })
+      setQuoteItems([{ id: '1', variantId: '', productName: '', sku: '', qty: 10, unitPriceUsd: 0, exFactoryPhp: null, unit: 'piece', moq: 1 }])
+    } catch (err) {
+      showToast('Unexpected error, please try again', 'error')
+    } finally {
+      setQuoteSubmitting(false)
     }
-    setQuoteSubmitting(false)
   }
 
   const signOut = async () => { await supabase.auth.signOut(); router.push('/crm/login') }
@@ -659,24 +745,71 @@ export default function CRMDashboard() {
               </p>
             </div>
             <div className="px-6 py-5 space-y-4">
+              {/* Product line items */}
               <div>
-                <label className="text-xs font-medium text-gray-500 block mb-1.5">Quoted Amount (PHP) <span className="text-red-400">*</span></label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">₱</span>
-                  <input type="number" value={quoteForm.amountPHP} onChange={e => handlePHPChange(e.target.value)}
-                    placeholder="0.00" autoFocus
-                    className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium text-gray-500">Products <span className="text-red-400">*</span></label>
+                  <button type="button" onClick={addQuoteLine}
+                    className="text-xs text-green-700 hover:underline font-medium">+ Add line</button>
                 </div>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 block mb-1.5">USD Equivalent</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
-                  <input type="number" value={quoteForm.amountUSD} onChange={e => setQuoteForm(f => ({ ...f, amountUSD: e.target.value }))}
-                    placeholder="0.00"
-                    className="w-full border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                <div className="grid grid-cols-12 gap-1 text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1 px-1">
+                  <div className="col-span-5">Product / SKU</div>
+                  <div className="col-span-2 text-right">Qty</div>
+                  <div className="col-span-2 text-right">USD / unit</div>
+                  <div className="col-span-2 text-right">Total</div>
+                  <div className="col-span-1"></div>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Auto-calculated at ₱{PHP_TO_USD}/USD. Adjust if needed.</p>
+                {quoteItems.map((item, idx) => (
+                  <div key={item.id} className={`grid grid-cols-12 gap-1 mb-1.5 rounded-lg p-1.5 ${!isLineValid(item) ? 'bg-red-50 border border-red-200' : 'bg-gray-50'}`}>
+                    <div className="col-span-5">
+                      <select value={item.variantId} onChange={e => updateQuoteLine(idx, e.target.value)}
+                        className="w-full border border-gray-200 bg-white rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-green-500">
+                        <option value="">Select product...</option>
+                        {availableVariants.map(v => (
+                          <option key={v.id} value={v.id}>{v.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <input type="number" min={item.moq || 1} value={item.qty}
+                        onChange={e => setQuoteItems(prev => prev.map((l, i) => i === idx ? { ...l, qty: parseInt(e.target.value) || 1 } : l))}
+                        className="w-full border border-gray-200 bg-white rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-green-500" />
+                    </div>
+                    <div className="col-span-2">
+                      <input type="number" step="0.01" min={0} value={item.unitPriceUsd || ''}
+                        onChange={e => setQuoteItems(prev => prev.map((l, i) => i === idx ? { ...l, unitPriceUsd: parseFloat(e.target.value) || 0 } : l))}
+                        className={`w-full border rounded-lg px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 ${!isLineValid(item) ? 'border-red-400 focus:ring-red-400 bg-red-50' : 'border-gray-200 bg-white focus:ring-green-500'}`} />
+                    </div>
+                    <div className="col-span-2 flex items-center justify-end text-xs font-medium text-gray-700">
+                      ${(item.qty * item.unitPriceUsd).toFixed(0)}
+                    </div>
+                    <div className="col-span-1 flex items-center justify-center">
+                      {quoteItems.length > 1 && (
+                        <button type="button" onClick={() => setQuoteItems(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-gray-300 hover:text-red-400 text-base leading-none font-bold">×</button>
+                      )}
+                    </div>
+                    {!isLineValid(item) && (
+                      <div className="col-span-12 text-[10px] text-red-600 px-1">
+                        Floor: min ${item.exFactoryPhp ? (item.exFactoryPhp / FX_FLOOR).toFixed(2) : '—'} USD at ₱{FX_FLOOR}/USD ceiling
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {/* Grand total */}
+                {(() => {
+                  const grandUsd = quoteItems.reduce((s, i) => s + i.qty * i.unitPriceUsd, 0)
+                  const grandPhp = Math.round(grandUsd * PHP_TO_USD)
+                  return grandUsd > 0 ? (
+                    <div className="flex items-center justify-between mt-2 px-1">
+                      <span className="text-xs text-gray-500">Grand Total</span>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-gray-800">${grandUsd.toFixed(2)} USD</div>
+                        <div className="text-[10px] text-gray-400">≈ ₱{grandPhp.toLocaleString()} at ₱{PHP_TO_USD}/USD</div>
+                      </div>
+                    </div>
+                  ) : null
+                })()}
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 block mb-1.5">Quote Notes</label>
@@ -685,7 +818,7 @@ export default function CRMDashboard() {
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none" />
               </div>
               <div className="bg-green-50 rounded-xl px-4 py-3 text-xs text-green-700">
-                Submitting will set this lead to <strong>Proposal Sent</strong>, record the amount and date, and log your name as the issuer.
+                Submitting will set this lead to <strong>Proposal Sent</strong>, create a quote record with line items, and log your name as the issuer. Floor guard is active at ₱55/USD.
               </div>
             </div>
             <div className="px-6 pb-6 flex gap-3">
@@ -693,7 +826,7 @@ export default function CRMDashboard() {
                 className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                 Cancel
               </button>
-              <button onClick={submitQuote} disabled={!quoteForm.amountPHP || quoteSubmitting}
+              <button onClick={submitQuote} disabled={quoteItems.every(i => !i.sku) || quoteItems.some(i => !isLineValid(i)) || quoteSubmitting}
                 className="flex-1 py-2.5 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                 {quoteSubmitting ? 'Saving...' : 'Issue Quote'}
               </button>
