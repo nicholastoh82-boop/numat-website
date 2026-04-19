@@ -59,6 +59,20 @@ interface CRMUser {
   is_active: boolean
 }
 
+interface Quote {
+  id: string
+  quote_number: string
+  doc_type: string
+  total: number | string
+  currency: string | null
+  created_at: string
+  sent_at: string | null
+  email: string | null
+  lead_id: string | null
+  customer_name: string | null
+  company: string | null
+}
+
 const PIPELINE_STAGES = ['new','contacted','qualified','proposal_sent','meeting_booked','won','lost']
 const STATUS_OPTIONS = ['pending','active','replied','nurturing','booking_sent','booked','closed','cold_close','bounced','unsubscribed']
 
@@ -230,6 +244,9 @@ export default function CRMDashboard() {
     phone: '', segment: '', title: '', notes: '', priority_tier: '',
     deal_value_php: '', rep_email: '',
   })
+  // Quotes (documents per lead)
+  const [quotesByLead, setQuotesByLead] = useState<Record<string, Quote[]>>({})
+  const [sendingQuoteId, setSendingQuoteId] = useState<string | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [analyticsOpen, setAnalyticsOpen] = useState(true)
 
@@ -276,20 +293,38 @@ export default function CRMDashboard() {
     setLeads(allLeads)
   }, [supabase])
 
+  const loadQuotes = useCallback(async () => {
+    const { data } = await supabase
+      .from('quotes')
+      .select('id, quote_number, doc_type, total, currency, created_at, sent_at, email, lead_id, customer_name, company')
+      .not('lead_id', 'is', null)
+      .order('created_at', { ascending: false })
+    if (data) {
+      const grouped: Record<string, Quote[]> = {}
+      for (const q of data as Quote[]) {
+        if (!q.lead_id) continue
+        if (!grouped[q.lead_id]) grouped[q.lead_id] = []
+        grouped[q.lead_id].push(q)
+      }
+      setQuotesByLead(grouped)
+    }
+  }, [supabase])
+
   const refresh = async () => {
     if (!user) return
     setRefreshing(true)
     await loadLeads(user)
+    await loadQuotes()
     setRefreshing(false)
   }
 
   useEffect(() => {
     setLoading(true)
     loadUser().then(u => {
-      if (u) loadLeads(u).then(() => setLoading(false))
+      if (u) loadLeads(u).then(() => { setLoading(false); loadQuotes() })
       else setLoading(false)
     })
-  }, [loadUser, loadLeads])
+  }, [loadUser, loadLeads, loadQuotes])
 
   useEffect(() => {
     let result = [...leads]
@@ -400,6 +435,51 @@ export default function CRMDashboard() {
     setQuoteLineItems(prev => prev.filter(l => l.lineId !== lineId))
   }
 
+  const previewQuote = (quoteId: string) => {
+    window.open(`/api/quote/${quoteId}/pdf`, '_blank', 'noopener,noreferrer')
+  }
+
+  const sendQuote = async (quote: Quote, lead: Lead) => {
+    if (sendingQuoteId) return
+    const recipient = quote.email || lead.email
+    const recipientName = quote.customer_name || lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Customer'
+    const docLabel = quote.doc_type === 'invoice' ? 'Invoice' : 'Proforma invoice'
+    const isResend = Boolean(quote.sent_at)
+    const verb = isResend ? 'Resend' : 'Send'
+    if (!window.confirm(`${verb} ${docLabel} ${quote.quote_number} to ${recipient}?`)) return
+    const senderRepEmail = lead.rep_email || 'nick@numat.ph'
+    setSendingQuoteId(quote.id)
+    try {
+      const res = await fetch('https://nicholastoh.app.n8n.cloud/webhook/send-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quote_id: quote.id,
+          quote_number: quote.quote_number,
+          doc_type: quote.doc_type,
+          recipient_email: recipient,
+          recipient_name: recipientName,
+          sender_rep_email: senderRepEmail,
+          sent_by: user?.email || 'crm',
+        }),
+      })
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        throw new Error(`n8n responded ${res.status}: ${txt || res.statusText}`)
+      }
+      const nowIso = new Date().toISOString()
+      setQuotesByLead(prev => {
+        const list = (prev[lead.id] || []).map(q => q.id === quote.id ? { ...q, sent_at: nowIso } : q)
+        return { ...prev, [lead.id]: list }
+      })
+      showToast(`${docLabel} ${quote.quote_number} sent to ${recipient}`)
+    } catch (err: any) {
+      showToast(`Failed to send: ${err?.message || 'unknown error'}`, 'error')
+    } finally {
+      setSendingQuoteId(null)
+    }
+  }
+
   const submitQuote = async () => {
     if (!quoteModal || !user || quoteLineItems.length === 0) return
     const { lead, docType } = quoteModal
@@ -488,6 +568,21 @@ export default function CRMDashboard() {
       }
       await supabase.from('master_leads').update(updates).eq('id', lead.id)
       setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, ...updates } : l))
+      // Optimistically push the new quote into quotesByLead
+      const newQuote: Quote = {
+        id: result.quote_id,
+        quote_number: result.quote_number,
+        doc_type: docType,
+        total: totalUsd,
+        currency: 'USD',
+        created_at: new Date().toISOString(),
+        sent_at: null,
+        email: lead.email,
+        lead_id: lead.id,
+        customer_name: lead.full_name,
+        company: lead.company,
+      }
+      setQuotesByLead(prev => ({ ...prev, [lead.id]: [newQuote, ...(prev[lead.id] || [])] }))
       showToast(`${docLabel} ${result.quote_number} issued for ${lead.company || lead.full_name || 'lead'}`)
       setQuoteModal(null)
       setQuoteLineItems([])
@@ -930,6 +1025,41 @@ export default function CRMDashboard() {
                         </span>
                       </div>
                     )}
+                    {quotesByLead[lead.id] && quotesByLead[lead.id].length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Documents</div>
+                        <div className="space-y-1.5">
+                          {quotesByLead[lead.id].map(q => {
+                            const isInvoice = q.doc_type === 'invoice'
+                            const isSent = Boolean(q.sent_at)
+                            const isSending = sendingQuoteId === q.id
+                            return (
+                              <div key={q.id} className="flex flex-wrap items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs">
+                                <span className={`px-1.5 py-0.5 rounded font-semibold ${isInvoice ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                                  {isInvoice ? 'INV' : 'PI'}
+                                </span>
+                                <span className="font-mono text-gray-700">{q.quote_number}</span>
+                                <span className="text-gray-300">·</span>
+                                <span className="text-gray-600">{q.currency || 'USD'} {Number(q.total).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                                <span className="text-gray-300">·</span>
+                                <span className={isSent ? 'text-emerald-700' : 'text-amber-700'}>
+                                  {isSent ? `✓ Sent ${relDate(q.sent_at)}` : 'Not sent'}
+                                </span>
+                                <div className="flex-1 min-w-2" />
+                                <button onClick={() => previewQuote(q.id)}
+                                  className="px-2.5 py-1 border border-gray-200 rounded hover:bg-gray-50 text-gray-700 font-medium">
+                                  Preview
+                                </button>
+                                <button onClick={() => sendQuote(q, lead)} disabled={isSending}
+                                  className={`px-2.5 py-1 rounded font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed ${isSent ? 'bg-gray-500 hover:bg-gray-600' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                                  {isSending ? 'Sending…' : isSent ? 'Resend' : 'Send'}
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                     {(lead.rep_reply_count || 0) > 0 && lead.last_rep_touch_at && (
                       <div className="mt-3 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-lg text-xs text-emerald-800 flex items-start gap-2">
                         <span>✉</span>
@@ -1343,3 +1473,4 @@ export default function CRMDashboard() {
     </div>
   )
 }
+

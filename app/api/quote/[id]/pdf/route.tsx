@@ -14,6 +14,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import {
   Document,
   Page,
@@ -476,13 +478,52 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Check if the incoming request is from an authenticated CRM user (via Supabase session cookie).
+// Used for in-browser Preview button. Falls back to x-quote-secret header for n8n backend.
+async function isAuthenticatedCrmUser(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies();
+    const authClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll() {},
+        },
+      },
+    );
+    const {
+      data: { user },
+    } = await authClient.auth.getUser();
+    if (!user?.email) return false;
+    const serviceClient = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } },
+    );
+    const { data: crmUser } = await serviceClient
+      .from("crm_users")
+      .select("is_active")
+      .eq("email", user.email)
+      .single();
+    return Boolean(crmUser?.is_active);
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  // Simple secret check so only n8n / CRM can hit this
+  // Auth: allow either (a) x-quote-secret header from n8n, or (b) authenticated CRM user session
   const secret = req.headers.get("x-quote-secret");
-  if (!secret || secret !== process.env.QUOTE_PDF_SECRET) {
+  const isSecretValid = Boolean(secret && secret === process.env.QUOTE_PDF_SECRET);
+  const isCrmUser = isSecretValid ? false : await isAuthenticatedCrmUser();
+  if (!isSecretValid && !isCrmUser) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
