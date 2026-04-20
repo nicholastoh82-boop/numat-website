@@ -321,16 +321,20 @@ async function handleConvertedInvoice({
       100
     )
 
-    // Prevent cumulative deposits from exceeding parent total
-    const existingDepositAmount = activeSiblings
-      .filter((s: any) => s.invoice_type === "deposit")
-      .reduce((sum: number, s: any) => sum + Number(s.total), 0)
+    // Prevent cumulative invoices (deposits + balance + full) from exceeding
+    // the parent total. A deposit is not just bounded by other deposits:
+    // if a balance invoice has already closed out the parent, adding another
+    // deposit on top would over-bill the customer.
+    const existingIssuedAmount = activeSiblings.reduce(
+      (sum: number, s: any) => sum + Number(s.total),
+      0
+    )
     const thisDepositAmount = parentTotal * (pct / 100)
 
-    if (existingDepositAmount + thisDepositAmount > parentTotal + 0.01) {
+    if (existingIssuedAmount + thisDepositAmount > parentTotal + 0.01) {
       return NextResponse.json(
         {
-          error: `Existing deposit invoices total ${parentCurrency} ${existingDepositAmount.toFixed(
+          error: `Existing invoices against this proforma total ${parentCurrency} ${existingIssuedAmount.toFixed(
             2
           )}. Adding a ${pct}% deposit (${parentCurrency} ${thisDepositAmount.toFixed(
             2
