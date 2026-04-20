@@ -567,6 +567,11 @@ type QuoteData = {
   revision_of: string | null;
   revision_number: number | null;
   supersedes_quote_number: string | null;
+  // Commit B: Invoice lifecycle
+  invoice_type: "deposit" | "balance" | "full" | null;
+  converted_from_proforma_id: string | null;
+  parent_proforma_number: string | null;
+  deposit_references: Array<{ quote_number: string; total: string | number }>;
   items: Array<{
     product_name: string;
     product_specs: string | null;
@@ -579,7 +584,17 @@ type QuoteData = {
 
 const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
   const isInvoice = data.doc_type === "invoice";
-  const docTitle = isInvoice ? "INVOICE" : "PROFORMA INVOICE";
+  // Commit B: branch the title by invoice_type
+  //   deposit  -> "DEPOSIT INVOICE"   (partial payment against a proforma)
+  //   balance  -> "FINAL INVOICE"     (remaining balance after deposit)
+  //   full     -> "INVOICE"           (one-shot invoice converted from proforma)
+  //   null     -> "INVOICE"           (standalone invoice, not converted)
+  let docTitle = "PROFORMA INVOICE";
+  if (isInvoice) {
+    if (data.invoice_type === "deposit") docTitle = "DEPOSIT INVOICE";
+    else if (data.invoice_type === "balance") docTitle = "FINAL INVOICE";
+    else docTitle = "INVOICE";
+  }
 
   const displayCurrency = data.display_currency || data.currency;
   const baseCurrency = data.currency;
@@ -629,6 +644,16 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
             {data.supersedes_quote_number ? (
               <Text style={styles.supersedesRow}>
                 Revision {data.revision_number || 1} · supersedes {data.supersedes_quote_number}
+              </Text>
+            ) : null}
+            {data.parent_proforma_number ? (
+              <Text style={styles.supersedesRow}>
+                Issued against Proforma Invoice {data.parent_proforma_number}
+                {data.deposit_references && data.deposit_references.length > 0
+                  ? ` · net of deposit ${data.deposit_references
+                      .map((d) => d.quote_number)
+                      .join(", ")}`
+                  : ""}
               </Text>
             ) : null}
             {isInvoice && data.payment_status === "paid" ? (
@@ -1016,14 +1041,22 @@ export async function GET(
   const fx = resolveDisplayCurrency(leadCountry);
   const baseTotal = parseFloat(String(quote.total || 0));
   const isSent = Boolean(quote.sent_at);
+  // Commit B: converted invoices (deposit/balance/full derived from a sent
+  // proforma) inherit their display values from the parent proforma at
+  // creation time and must NEVER refetch Frankfurter, even as drafts. The
+  // parent proforma is already locked when the rep sent it, so this invoice
+  // is bound to that same locked rate by contract.
+  const isConvertedInvoice = Boolean(quote.converted_from_proforma_id);
+  const useLockedDisplayValues = isSent || isConvertedInvoice;
 
   let computedDisplayTotal: number;
   let effectiveDisplayCurrency: string;
 
-  if (isSent) {
+  if (useLockedDisplayValues) {
     // LOCKED path: use whatever was written when the quote was first rendered
-    // while still a draft. If somehow display_total was never persisted (very
-    // old quote), fall back to baseTotal in baseCurrency to avoid a crash.
+    // while still a draft, or inherited from the parent proforma at creation.
+    // If somehow display_total was never persisted (very old quote), fall
+    // back to baseTotal in baseCurrency to avoid a crash.
     effectiveDisplayCurrency = (quote.display_currency || baseCurrency).toUpperCase();
     const storedTotal = parseFloat(String(quote.display_total || ""));
     computedDisplayTotal = Number.isFinite(storedTotal) && storedTotal > 0 ? storedTotal : baseTotal;
@@ -1055,6 +1088,32 @@ export async function GET(
     supersedesQuoteNumber = ancestor?.quote_number ?? null;
   }
 
+  // Commit B: fetch parent proforma + deposit siblings for lineage rendering
+  let parentProformaNumber: string | null = null;
+  let depositReferences: Array<{ quote_number: string; total: string | number }> = [];
+  if (quote.converted_from_proforma_id) {
+    const { data: parent } = await supabase
+      .from("quotes")
+      .select("quote_number")
+      .eq("id", quote.converted_from_proforma_id)
+      .single();
+    parentProformaNumber = parent?.quote_number ?? null;
+
+    // For balance invoices, reference any deposit invoices issued earlier so
+    // the customer sees the full payment history at a glance.
+    if (quote.invoice_type === "balance") {
+      const { data: siblings } = await supabase
+        .from("quotes")
+        .select("quote_number, invoice_type, total, sent_at")
+        .eq("converted_from_proforma_id", quote.converted_from_proforma_id)
+        .neq("id", quote.id)
+        .is("superseded_by", null);
+      depositReferences = (siblings || [])
+        .filter((s: any) => s.invoice_type === "deposit")
+        .map((s: any) => ({ quote_number: s.quote_number, total: s.total }));
+    }
+  }
+
   const enrichedQuote = {
     ...quote,
     currency: baseCurrency,
@@ -1063,15 +1122,19 @@ export async function GET(
     issued_by_name: issuedByName,
     issued_by_email: issuedByEmail,
     supersedes_quote_number: supersedesQuoteNumber,
+    parent_proforma_number: parentProformaNumber,
+    deposit_references: depositReferences,
     items: items || [],
   };
 
   // ==========================================================================
   // Persist computed display values back to the quote row — DRAFTS ONLY.
-  // Once a quote is sent (sent_at IS NOT NULL), the stored values are treated
-  // as the locked contract and must never be overwritten by subsequent renders.
+  // Once a quote is sent (sent_at IS NOT NULL) OR is a converted invoice
+  // (converted_from_proforma_id IS NOT NULL), the stored values are treated
+  // as the locked contract and must never be overwritten by subsequent
+  // renders.
   // ==========================================================================
-  if (!isSent) {
+  if (!useLockedDisplayValues) {
     const persistPayload: Record<string, unknown> = {
       display_currency: fx.currency,
       display_total: computedDisplayTotal.toFixed(2),
