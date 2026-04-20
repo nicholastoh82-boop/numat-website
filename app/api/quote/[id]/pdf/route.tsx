@@ -997,19 +997,48 @@ export async function GET(
     leadCountry = lead?.country ?? null;
   }
 
-  // Derive display currency from country. Override any stored values so the PDF always
-  // reflects the customer's location, even if the stored currency is stale USD.
+  // ==========================================================================
+  // Currency + rate resolution with sent_at LOCKING
+  //
+  // Draft quotes (sent_at IS NULL): fetch a live FX rate from Frankfurter on
+  //   every render and persist the computed display_total/display_currency +
+  //   30-day default dates back to the quote row. The values stay in sync with
+  //   the market until the rep actually sends the document to the customer.
+  //
+  // Sent quotes (sent_at IS NOT NULL): read the stored display_total +
+  //   display_currency from the quote row as-is. No Frankfurter call. No DB
+  //   write. No date mutation. This guarantees that a customer seeing a PDF
+  //   labeled e.g. "Valid until 19 May 2026, PHP 38,624.00" today will see the
+  //   exact same numbers if they re-open the PDF next week, regardless of FX
+  //   movement. The rep must explicitly Revise the quote to regenerate numbers.
+  // ==========================================================================
   const baseCurrency = (quote.currency || "USD").toUpperCase();
   const fx = resolveDisplayCurrency(leadCountry);
   const baseTotal = parseFloat(String(quote.total || 0));
-  // Fetch live rate from Frankfurter (matches the website's pricing source).
-  // Falls back to hardcoded rate if the API is unavailable.
-  const { rate: liveRate } =
-    fx.currency === baseCurrency
-      ? { rate: 1 }
-      : await fetchLiveRate(fx.currency, fx.ratePerUsd);
-  const computedDisplayTotal =
-    fx.currency === baseCurrency ? baseTotal : baseTotal * liveRate;
+  const isSent = Boolean(quote.sent_at);
+
+  let computedDisplayTotal: number;
+  let effectiveDisplayCurrency: string;
+
+  if (isSent) {
+    // LOCKED path: use whatever was written when the quote was first rendered
+    // while still a draft. If somehow display_total was never persisted (very
+    // old quote), fall back to baseTotal in baseCurrency to avoid a crash.
+    effectiveDisplayCurrency = (quote.display_currency || baseCurrency).toUpperCase();
+    const storedTotal = parseFloat(String(quote.display_total || ""));
+    computedDisplayTotal = Number.isFinite(storedTotal) && storedTotal > 0 ? storedTotal : baseTotal;
+    // Override fx.currency so downstream logic is consistent with stored values
+    fx.currency = effectiveDisplayCurrency;
+  } else {
+    // DRAFT path: fetch live rate, recompute on every render
+    effectiveDisplayCurrency = fx.currency;
+    const { rate: liveRate } =
+      fx.currency === baseCurrency
+        ? { rate: 1 }
+        : await fetchLiveRate(fx.currency, fx.ratePerUsd);
+    computedDisplayTotal =
+      fx.currency === baseCurrency ? baseTotal : baseTotal * liveRate;
+  }
 
   // Rep attribution for "Issued by"
   const issuedByEmail = quote.generated_by || null;
@@ -1038,37 +1067,36 @@ export async function GET(
   };
 
   // ==========================================================================
-  // Persist computed display values back to the quote row so downstream
-  // consumers (email workflow, CRM UI, analytics) all see the EXACT same
-  // numbers as the PDF. Idempotent: each PDF render refreshes the cache.
-  // Also backfill valid_until / payment_due_date with a 30-day default if the
-  // quote was created without them.
+  // Persist computed display values back to the quote row — DRAFTS ONLY.
+  // Once a quote is sent (sent_at IS NOT NULL), the stored values are treated
+  // as the locked contract and must never be overwritten by subsequent renders.
   // ==========================================================================
-  const persistPayload: Record<string, unknown> = {
-    display_currency: fx.currency,
-    display_total: computedDisplayTotal.toFixed(2),
-  };
-  const createdAtMs = quote.created_at ? new Date(quote.created_at).getTime() : Date.now();
-  const thirtyDaysLater = new Date(createdAtMs + 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10); // YYYY-MM-DD
-  if (!quote.valid_until) {
-    persistPayload.valid_until = thirtyDaysLater;
-    enrichedQuote.valid_until = thirtyDaysLater;
-  }
-  if (!quote.payment_due_date) {
-    persistPayload.payment_due_date = thirtyDaysLater;
-    enrichedQuote.payment_due_date = thirtyDaysLater;
-  }
-  // Await the UPDATE so it is guaranteed to complete before the PDF response
-  // is returned and the serverless function potentially shuts down. Single-row
-  // UPDATE on an indexed primary key is fast (~30ms).
-  const { error: persistErr } = await supabase
-    .from("quotes")
-    .update(persistPayload)
-    .eq("id", id);
-  if (persistErr) {
-    console.error("[pdf route] persist display values failed:", persistErr.message);
+  if (!isSent) {
+    const persistPayload: Record<string, unknown> = {
+      display_currency: fx.currency,
+      display_total: computedDisplayTotal.toFixed(2),
+    };
+    const createdAtMs = quote.created_at ? new Date(quote.created_at).getTime() : Date.now();
+    const thirtyDaysLater = new Date(createdAtMs + 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10); // YYYY-MM-DD
+    if (!quote.valid_until) {
+      persistPayload.valid_until = thirtyDaysLater;
+      enrichedQuote.valid_until = thirtyDaysLater;
+    }
+    if (!quote.payment_due_date) {
+      persistPayload.payment_due_date = thirtyDaysLater;
+      enrichedQuote.payment_due_date = thirtyDaysLater;
+    }
+    // Await the UPDATE so it is guaranteed to complete before the PDF response
+    // is returned and the serverless function potentially shuts down.
+    const { error: persistErr } = await supabase
+      .from("quotes")
+      .update(persistPayload)
+      .eq("id", id);
+    if (persistErr) {
+      console.error("[pdf route] persist display values failed:", persistErr.message);
+    }
   }
 
   const buffer = await renderToBuffer(<QuotePDF data={enrichedQuote} />);
