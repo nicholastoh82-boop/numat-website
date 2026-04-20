@@ -87,6 +87,28 @@ interface Quote {
   invoice_type?: 'deposit' | 'balance' | 'full' | null
   converted_from_proforma_id?: string | null
   deposit_percent?: number | null
+  // Commit C: payment status (updated by receipt issuance)
+  payment_status?: 'unpaid' | 'partial' | 'paid' | string | null
+}
+
+// Commit C: a receipt is a payment acknowledgment issued against an invoice.
+// Not a BIR Official Receipt. See /api/receipt/create and /api/receipt/[id]/pdf.
+interface Receipt {
+  id: string
+  receipt_number: string
+  quote_id: string
+  actual_amount: number | string
+  actual_currency: string
+  display_amount: number | string | null
+  display_currency: string | null
+  actual_date: string
+  payment_method: 'wire_transfer' | 'bank_deposit' | 'check' | 'gcash' | 'paymaya' | 'cash' | 'other' | string
+  bank_reference: string | null
+  notes: string | null
+  issued_by: string
+  created_at: string
+  sent_at: string | null
+  superseded_by: string | null
 }
 
 const PIPELINE_STAGES = ['new','contacted','qualified','proposal_sent','meeting_booked','won','lost']
@@ -280,6 +302,18 @@ export default function CRMDashboard() {
   const [convertDueDate, setConvertDueDate] = useState('')
   const [convertNotes, setConvertNotes] = useState('')
   const [convertSubmitting, setConvertSubmitting] = useState(false)
+  // Commit C: Receipts grouped by invoice id
+  const [receiptsByInvoice, setReceiptsByInvoice] = useState<Record<string, Receipt[]>>({})
+  const [receiptModal, setReceiptModal] = useState<{
+    invoice: Quote
+    lead: Lead
+  } | null>(null)
+  const [receiptAmount, setReceiptAmount] = useState('')
+  const [receiptDate, setReceiptDate] = useState('')
+  const [receiptMethod, setReceiptMethod] = useState<'wire_transfer' | 'bank_deposit' | 'check' | 'gcash' | 'paymaya' | 'cash' | 'other'>('wire_transfer')
+  const [receiptBankRef, setReceiptBankRef] = useState('')
+  const [receiptNotes, setReceiptNotes] = useState('')
+  const [receiptSubmitting, setReceiptSubmitting] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [analyticsOpen, setAnalyticsOpen] = useState(true)
 
@@ -329,7 +363,7 @@ export default function CRMDashboard() {
   const loadQuotes = useCallback(async () => {
     const { data } = await supabase
       .from('quotes')
-      .select('id, quote_number, doc_type, total, subtotal, currency, created_at, sent_at, email, lead_id, customer_name, company, notes, phone, customer_tin, customer_address, payment_due_date, po_reference, vat_enabled, vat_rate, revision_of, superseded_by, revision_number, invoice_type, converted_from_proforma_id, deposit_percent')
+      .select('id, quote_number, doc_type, total, subtotal, currency, created_at, sent_at, email, lead_id, customer_name, company, notes, phone, customer_tin, customer_address, payment_due_date, po_reference, vat_enabled, vat_rate, revision_of, superseded_by, revision_number, invoice_type, converted_from_proforma_id, deposit_percent, payment_status')
       .not('lead_id', 'is', null)
       .order('created_at', { ascending: false })
     if (data) {
@@ -343,21 +377,39 @@ export default function CRMDashboard() {
     }
   }, [supabase])
 
+  // Commit C: load all active (non-superseded) receipts and group by their parent invoice id.
+  const loadReceipts = useCallback(async () => {
+    const { data } = await supabase
+      .from('receipts')
+      .select('id, receipt_number, quote_id, actual_amount, actual_currency, display_amount, display_currency, actual_date, payment_method, bank_reference, notes, issued_by, created_at, sent_at, superseded_by')
+      .is('superseded_by', null)
+      .order('created_at', { ascending: false })
+    if (data) {
+      const grouped: Record<string, Receipt[]> = {}
+      for (const r of data as Receipt[]) {
+        if (!grouped[r.quote_id]) grouped[r.quote_id] = []
+        grouped[r.quote_id].push(r)
+      }
+      setReceiptsByInvoice(grouped)
+    }
+  }, [supabase])
+
   const refresh = async () => {
     if (!user) return
     setRefreshing(true)
     await loadLeads(user)
     await loadQuotes()
+    await loadReceipts()
     setRefreshing(false)
   }
 
   useEffect(() => {
     setLoading(true)
     loadUser().then(u => {
-      if (u) loadLeads(u).then(() => { setLoading(false); loadQuotes() })
+      if (u) loadLeads(u).then(() => { setLoading(false); loadQuotes(); loadReceipts() })
       else setLoading(false)
     })
-  }, [loadUser, loadLeads, loadQuotes])
+  }, [loadUser, loadLeads, loadQuotes, loadReceipts])
 
   useEffect(() => {
     let result = [...leads]
@@ -692,6 +744,95 @@ export default function CRMDashboard() {
       showToast(`Failed to convert: ${err?.message || 'unknown error'}`, 'error')
     } finally {
       setConvertSubmitting(false)
+    }
+  }
+
+  // Commit C: open the Issue Receipt modal for a sent, not-fully-paid invoice.
+  // Pre-fills the outstanding balance (invoice total minus previously received)
+  // so the most common case (full payment) is a single click.
+  const openReceiptModal = (invoice: Quote, lead: Lead, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const existing = (receiptsByInvoice[invoice.id] || []).filter(r => !r.superseded_by)
+    const cumulative = existing.reduce((sum, r) => sum + Number(r.actual_amount || 0), 0)
+    const outstanding = Math.max(0, Number(invoice.total || 0) - cumulative)
+    setReceiptModal({ invoice, lead })
+    setReceiptAmount(outstanding.toFixed(2))
+    setReceiptDate(new Date().toISOString().slice(0, 10))
+    setReceiptMethod('wire_transfer')
+    setReceiptBankRef('')
+    setReceiptNotes('')
+  }
+
+  // Commit C: submit the receipt. POSTs to /api/receipt/create, which is
+  // gated server-side to admin-only. Optimistically updates state so the rep
+  // sees the receipt and the updated invoice payment_status immediately.
+  const submitReceipt = async () => {
+    if (!receiptModal || !user) return
+    const { invoice, lead } = receiptModal
+    const parsedAmount = parseFloat(receiptAmount)
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      showToast('Amount must be a positive number', 'error')
+      return
+    }
+    if (!receiptDate) {
+      showToast('Payment date is required', 'error')
+      return
+    }
+    setReceiptSubmitting(true)
+    try {
+      const res = await fetch('/api/receipt/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quote_id: invoice.id,
+          actual_amount: parsedAmount,
+          actual_date: receiptDate,
+          payment_method: receiptMethod,
+          bank_reference: receiptBankRef || undefined,
+          notes: receiptNotes || undefined,
+        }),
+      })
+      const result = await res.json()
+      if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+
+      // Optimistic update: add the new receipt and refresh invoice payment_status
+      const newReceipt: Receipt = {
+        id: result.receipt_id,
+        receipt_number: result.receipt_number,
+        quote_id: invoice.id,
+        actual_amount: result.actual_amount,
+        actual_currency: result.actual_currency,
+        display_amount: result.display_amount,
+        display_currency: result.display_currency,
+        actual_date: receiptDate,
+        payment_method: receiptMethod,
+        bank_reference: receiptBankRef || null,
+        notes: receiptNotes || null,
+        issued_by: user.email,
+        created_at: new Date().toISOString(),
+        sent_at: null,
+        superseded_by: null,
+      }
+      setReceiptsByInvoice(prev => ({
+        ...prev,
+        [invoice.id]: [newReceipt, ...(prev[invoice.id] || [])],
+      }))
+      setQuotesByLead(prev => {
+        const list = (prev[lead.id] || []).map(q =>
+          q.id === invoice.id
+            ? { ...q, payment_status: result.invoice_payment_status }
+            : q
+        )
+        return { ...prev, [lead.id]: list }
+      })
+
+      const statusLabel = result.invoice_payment_status === 'paid' ? 'PAID IN FULL' : 'partial payment'
+      showToast(`Receipt ${result.receipt_number} issued for ${invoice.quote_number} (${statusLabel})`)
+      setReceiptModal(null)
+    } catch (err: any) {
+      showToast(`Failed to issue receipt: ${err?.message || 'unknown error'}`, 'error')
+    } finally {
+      setReceiptSubmitting(false)
     }
   }
 
@@ -1438,8 +1579,17 @@ export default function CRMDashboard() {
                             const isSending = sendingQuoteId === q.id
                             const isSuperseded = Boolean(q.superseded_by)
                             const isRevision = (q.revision_number || 0) > 0
+                            // Commit C: compute payment state from receipts
+                            const receiptsForInvoice = (receiptsByInvoice[q.id] || []).filter(r => !r.superseded_by)
+                            const cumulativeReceived = receiptsForInvoice.reduce((s, r) => s + Number(r.actual_amount || 0), 0)
+                            const invoiceTotal = Number(q.total || 0)
+                            const outstanding = Math.max(0, invoiceTotal - cumulativeReceived)
+                            const isPaid = isInvoice && receiptsForInvoice.length > 0 && outstanding <= 0.01
+                            const isPartial = isInvoice && receiptsForInvoice.length > 0 && outstanding > 0.01
+                            const canIssueReceipt = isInvoice && isSent && !isSuperseded && !isPaid && user?.role === 'admin'
                             return (
-                              <div key={q.id} className={`flex flex-wrap items-center gap-2 px-3 py-2 border rounded-lg text-xs ${isSuperseded ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-200'}`}>
+                              <div key={q.id}>
+                              <div className={`flex flex-wrap items-center gap-2 px-3 py-2 border rounded-lg text-xs ${isSuperseded ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-200'}`}>
                                 <span className={`px-1.5 py-0.5 rounded font-semibold ${isInvoice ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
                                   {isInvoice ? 'INV' : 'PI'}
                                 </span>
@@ -1458,6 +1608,12 @@ export default function CRMDashboard() {
                                   <span className="px-1.5 py-0.5 rounded font-semibold bg-slate-100 text-slate-700">
                                     Full
                                   </span>
+                                )}
+                                {isPaid && (
+                                  <span className="px-1.5 py-0.5 rounded font-semibold bg-green-100 text-green-700" title="Invoice fully paid">✓ PAID</span>
+                                )}
+                                {isPartial && (
+                                  <span className="px-1.5 py-0.5 rounded font-semibold bg-amber-100 text-amber-800" title={`Outstanding: ${q.currency || 'USD'} ${outstanding.toFixed(2)}`}>Partial</span>
                                 )}
                                 {isRevision && (
                                   <span className="px-1.5 py-0.5 rounded font-semibold bg-purple-100 text-purple-700" title={`Revision ${q.revision_number}`}>R{q.revision_number}</span>
@@ -1486,6 +1642,13 @@ export default function CRMDashboard() {
                                     → Invoice
                                   </button>
                                 )}
+                                {canIssueReceipt && (
+                                  <button onClick={e => openReceiptModal(q, lead, e)}
+                                    className="px-2.5 py-1 border border-green-300 rounded hover:bg-green-50 text-green-700 font-medium"
+                                    title="Issue a Payment Acknowledgment (admin only)">
+                                    + Receipt
+                                  </button>
+                                )}
                                 {isSent && !isSuperseded && (
                                   <button onClick={e => openEditOrReviseModal(lead, q, 'revise', e)}
                                     className="px-2.5 py-1 border border-purple-200 rounded hover:bg-purple-50 text-purple-700 font-medium"
@@ -1503,6 +1666,38 @@ export default function CRMDashboard() {
                                     {isSending ? 'Sending…' : isSent ? 'Resend' : 'Send'}
                                   </button>
                                 )}
+                              </div>
+                              {/* Commit C: nested receipt rows under each invoice */}
+                              {receiptsForInvoice.length > 0 && (
+                                <div className="ml-4 mt-1 mb-1 space-y-1">
+                                  {receiptsForInvoice.map(r => {
+                                    const displayAmt = r.display_amount ? Number(r.display_amount) : Number(r.actual_amount)
+                                    const displayCcy = r.display_currency || r.actual_currency
+                                    const methodLabel = ({
+                                      wire_transfer: 'Wire', bank_deposit: 'Deposit', check: 'Check',
+                                      gcash: 'GCash', paymaya: 'PayMaya', cash: 'Cash', other: 'Other',
+                                    } as Record<string, string>)[r.payment_method] || r.payment_method
+                                    return (
+                                      <div key={r.id} className="flex flex-wrap items-center gap-2 px-3 py-1.5 border-l-2 border-green-300 bg-green-50/40 rounded-r text-xs">
+                                        <span className="px-1.5 py-0.5 rounded font-semibold bg-green-100 text-green-700" title="Payment acknowledgment (not a BIR Official Receipt)">RCPT</span>
+                                        <span className="font-mono text-gray-700">{r.receipt_number}</span>
+                                        <span className="text-gray-300">·</span>
+                                        <span className="text-gray-700 font-medium">{displayCcy} {displayAmt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                                        <span className="text-gray-300">·</span>
+                                        <span className="text-gray-500">{methodLabel}</span>
+                                        {r.bank_reference && (<><span className="text-gray-300">·</span><span className="text-gray-500 font-mono">{r.bank_reference}</span></>)}
+                                        <span className="text-gray-300">·</span>
+                                        <span className="text-gray-500">Paid {relDate(r.actual_date)}</span>
+                                        <div className="flex-1 min-w-2" />
+                                        <button onClick={() => window.open(`/api/receipt/${r.id}/pdf`, '_blank', 'noopener,noreferrer')}
+                                          className="px-2 py-0.5 border border-gray-200 rounded hover:bg-white text-gray-700 font-medium">
+                                          Preview
+                                        </button>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
                               </div>
                             )
                           })}
@@ -1963,6 +2158,126 @@ export default function CRMDashboard() {
               <button onClick={submitConvert} disabled={submitDisabled}
                 className={`flex-1 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${convertType === 'deposit' ? 'bg-emerald-700 hover:bg-emerald-800' : convertType === 'balance' ? 'bg-indigo-700 hover:bg-indigo-800' : 'bg-slate-700 hover:bg-slate-800'}`}>
                 {convertSubmitting ? 'Converting...' : `Issue ${convertType === 'deposit' ? 'Deposit' : convertType === 'balance' ? 'Balance' : 'Full'} Invoice`}
+              </button>
+            </div>
+          </div>
+        </div>
+        )
+      })()}
+
+      {receiptModal && (() => {
+        const { invoice, lead } = receiptModal
+        const currency = invoice.currency || 'USD'
+        const existing = (receiptsByInvoice[invoice.id] || []).filter(r => !r.superseded_by)
+        const cumulative = existing.reduce((sum, r) => sum + Number(r.actual_amount || 0), 0)
+        const invoiceTotal = Number(invoice.total || 0)
+        const outstanding = Math.max(0, invoiceTotal - cumulative)
+        const parsedEntered = parseFloat(receiptAmount)
+        const wouldExceed = Number.isFinite(parsedEntered) && parsedEntered > outstanding + 0.01
+        const wouldSettleInFull = Number.isFinite(parsedEntered) && Math.abs(parsedEntered - outstanding) < 0.01
+        const submitDisabled = receiptSubmitting || !Number.isFinite(parsedEntered) || parsedEntered <= 0 || wouldExceed || !receiptDate
+        return (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-lg font-semibold text-gray-800">Issue Payment Receipt</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Against <span className="font-mono">{invoice.quote_number}</span>
+                {' · '}
+                {lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ')}
+                {lead.company && ' · ' + lead.company}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Invoice total {currency} {invoiceTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {cumulative > 0 && (
+                  <> · already received {currency} {cumulative.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+                )}
+                {' · outstanding '}
+                <strong>{currency} {outstanding.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              </p>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+              {/* Amount */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">
+                  Amount Received ({currency}) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-mono">{currency}</span>
+                  <input type="number" step="0.01" min="0" value={receiptAmount}
+                    onChange={e => setReceiptAmount(e.target.value)}
+                    className={`w-full border rounded-lg pl-14 pr-3 py-2 text-sm focus:outline-none focus:ring-2 ${wouldExceed ? 'border-red-400 focus:ring-red-500' : 'border-gray-200 focus:ring-green-500'}`} />
+                </div>
+                {wouldExceed && (
+                  <p className="text-xs text-red-600 font-medium mt-1">
+                    Would exceed outstanding balance ({currency} {outstanding.toFixed(2)}).
+                  </p>
+                )}
+                {wouldSettleInFull && !wouldExceed && (
+                  <p className="text-xs text-green-700 font-medium mt-1">✓ Settles invoice in full.</p>
+                )}
+              </div>
+
+              {/* Date + method */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Payment Date <span className="text-red-500">*</span></label>
+                  <input type="date" value={receiptDate}
+                    onChange={e => setReceiptDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Payment Method <span className="text-red-500">*</span></label>
+                  <select value={receiptMethod}
+                    onChange={e => setReceiptMethod(e.target.value as any)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <option value="wire_transfer">Wire Transfer</option>
+                    <option value="bank_deposit">Bank Deposit</option>
+                    <option value="check">Check</option>
+                    <option value="gcash">GCash</option>
+                    <option value="paymaya">PayMaya</option>
+                    <option value="cash">Cash</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Bank reference */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">
+                  Bank Reference / Transaction ID <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <input type="text" value={receiptBankRef}
+                  onChange={e => setReceiptBankRef(e.target.value)}
+                  placeholder="e.g. SWIFT ref, check number, GCash ref"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">
+                  Notes <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <textarea value={receiptNotes} rows={2}
+                  onChange={e => setReceiptNotes(e.target.value)}
+                  placeholder="Any context for this payment..."
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none" />
+              </div>
+
+              <div className="rounded-xl px-4 py-3 text-xs bg-amber-50 text-amber-800 border border-amber-200">
+                <strong>Commercial acknowledgment, not a BIR OR.</strong> This Payment Acknowledgment is a commercial record only. A BIR-issued Official Receipt will be issued separately if the customer requests one. The receipt will use the locked FX rate from the invoice so amounts match across documents.
+              </div>
+            </div>
+
+            <div className="px-6 pb-6 pt-3 border-t border-gray-100 flex gap-3 shrink-0">
+              <button onClick={() => setReceiptModal(null)}
+                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={submitReceipt} disabled={submitDisabled}
+                className="flex-1 py-2.5 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                {receiptSubmitting ? 'Issuing...' : wouldSettleInFull ? 'Settle in Full' : 'Issue Receipt'}
               </button>
             </div>
           </div>
