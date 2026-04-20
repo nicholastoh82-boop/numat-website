@@ -1037,6 +1037,40 @@ export async function GET(
     items: items || [],
   };
 
+  // ==========================================================================
+  // Persist computed display values back to the quote row so downstream
+  // consumers (email workflow, CRM UI, analytics) all see the EXACT same
+  // numbers as the PDF. Idempotent: each PDF render refreshes the cache.
+  // Also backfill valid_until / payment_due_date with a 30-day default if the
+  // quote was created without them.
+  // ==========================================================================
+  const persistPayload: Record<string, unknown> = {
+    display_currency: fx.currency,
+    display_total: computedDisplayTotal.toFixed(2),
+  };
+  const createdAtMs = quote.created_at ? new Date(quote.created_at).getTime() : Date.now();
+  const thirtyDaysLater = new Date(createdAtMs + 30 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10); // YYYY-MM-DD
+  if (!quote.valid_until) {
+    persistPayload.valid_until = thirtyDaysLater;
+    enrichedQuote.valid_until = thirtyDaysLater;
+  }
+  if (!quote.payment_due_date) {
+    persistPayload.payment_due_date = thirtyDaysLater;
+    enrichedQuote.payment_due_date = thirtyDaysLater;
+  }
+  // Await the UPDATE so it is guaranteed to complete before the PDF response
+  // is returned and the serverless function potentially shuts down. Single-row
+  // UPDATE on an indexed primary key is fast (~30ms).
+  const { error: persistErr } = await supabase
+    .from("quotes")
+    .update(persistPayload)
+    .eq("id", id);
+  if (persistErr) {
+    console.error("[pdf route] persist display values failed:", persistErr.message);
+  }
+
   const buffer = await renderToBuffer(<QuotePDF data={enrichedQuote} />);
 
   return new NextResponse(buffer as unknown as BodyInit, {
