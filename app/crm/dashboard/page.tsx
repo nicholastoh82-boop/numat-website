@@ -658,10 +658,24 @@ export default function CRMDashboard() {
 
   // Commit B: open the Convert-to-Invoice modal for a sent, non-superseded proforma.
   // Pre-fills deposit % from the parent's stored value, due date to today + 30 days.
+  // Commit C UX: auto-detect which tranche the user most likely wants next.
+  // If a Deposit already exists and no Balance has been issued, default to Balance
+  // so the user skips the "click → Invoice, oh wait I need to change the radio" step.
   const openConvertModal = (parent: Quote, lead: Lead, e: React.MouseEvent) => {
     e.stopPropagation()
+    const existingSiblings = (quotesByLead[lead.id] || []).filter(q =>
+      q.doc_type === 'invoice' &&
+      q.converted_from_proforma_id === parent.id &&
+      !q.superseded_by
+    )
+    const hasDeposit = existingSiblings.some(s => s.invoice_type === 'deposit')
+    const hasBalance = existingSiblings.some(s => s.invoice_type === 'balance')
+    const smartDefault: 'deposit' | 'balance' | 'full' =
+      hasDeposit && !hasBalance ? 'balance'
+      : !hasDeposit && hasBalance ? 'deposit'
+      : 'deposit'
     setConvertModal({ parent, lead })
-    setConvertType('deposit')
+    setConvertType(smartDefault)
     setConvertDepositPct(Number(parent.deposit_percent ?? 50))
     setConvertPoRef(parent.po_reference || '')
     const due = new Date()
@@ -1587,6 +1601,21 @@ export default function CRMDashboard() {
                             const isPaid = isInvoice && receiptsForInvoice.length > 0 && outstanding <= 0.01
                             const isPartial = isInvoice && receiptsForInvoice.length > 0 && outstanding > 0.01
                             const canIssueReceipt = isInvoice && isSent && !isSuperseded && !isPaid && user?.role === 'admin'
+                            // Commit C UX: proforma-level tranche status (shown only on proformas that have been converted)
+                            const proformaSiblings = !isInvoice
+                              ? (quotesByLead[lead.id] || []).filter(s =>
+                                  s.doc_type === 'invoice' &&
+                                  s.converted_from_proforma_id === q.id &&
+                                  !s.superseded_by
+                                )
+                              : []
+                            const proformaIssuedSoFar = proformaSiblings.reduce((sum, s) => sum + Number(s.total || 0), 0)
+                            const proformaTotal = Number(q.total || 0)
+                            const proformaHasInvoiced = !isInvoice && proformaSiblings.length > 0
+                            const proformaFullyInvoiced = proformaHasInvoiced && proformaIssuedSoFar >= proformaTotal - 0.01
+                            const proformaPartiallyInvoiced = proformaHasInvoiced && !proformaFullyInvoiced
+                            const proformaInvoicedPct = proformaTotal > 0 ? Math.round((proformaIssuedSoFar / proformaTotal) * 100) : 0
+                            const proformaUninvoiced = Math.max(0, proformaTotal - proformaIssuedSoFar)
                             return (
                               <div key={q.id}>
                               <div className={`flex flex-wrap items-center gap-2 px-3 py-2 border rounded-lg text-xs ${isSuperseded ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-200'}`}>
@@ -1618,6 +1647,17 @@ export default function CRMDashboard() {
                                 {isRevision && (
                                   <span className="px-1.5 py-0.5 rounded font-semibold bg-purple-100 text-purple-700" title={`Revision ${q.revision_number}`}>R{q.revision_number}</span>
                                 )}
+                                {proformaPartiallyInvoiced && (
+                                  <span className="px-1.5 py-0.5 rounded font-semibold bg-amber-100 text-amber-800"
+                                        title={`${q.currency || 'USD'} ${proformaIssuedSoFar.toFixed(2)} of ${proformaTotal.toFixed(2)} invoiced. Uninvoiced balance ${proformaUninvoiced.toFixed(2)}. Click → Invoice to issue the next tranche.`}>
+                                    Partially invoiced {proformaInvoicedPct}%
+                                  </span>
+                                )}
+                                {proformaFullyInvoiced && (
+                                  <span className="px-1.5 py-0.5 rounded font-semibold bg-slate-100 text-slate-700" title="All tranches invoiced">
+                                    Fully invoiced
+                                  </span>
+                                )}
                                 {isSuperseded && (
                                   <span className="px-1.5 py-0.5 rounded font-medium bg-gray-200 text-gray-600">Superseded</span>
                                 )}
@@ -1635,11 +1675,13 @@ export default function CRMDashboard() {
                                     Edit
                                   </button>
                                 )}
-                                {isSent && !isSuperseded && !isInvoice && (
+                                {isSent && !isSuperseded && !isInvoice && !proformaFullyInvoiced && (
                                   <button onClick={e => openConvertModal(q, lead, e)}
-                                    className="px-2.5 py-1 border border-emerald-200 rounded hover:bg-emerald-50 text-emerald-700 font-medium"
-                                    title="Convert this sent proforma into a Deposit, Balance, or Full invoice">
-                                    → Invoice
+                                    className={`px-2.5 py-1 border rounded font-medium ${proformaPartiallyInvoiced ? 'border-amber-300 hover:bg-amber-50 text-amber-700' : 'border-emerald-200 hover:bg-emerald-50 text-emerald-700'}`}
+                                    title={proformaPartiallyInvoiced
+                                      ? `Issue the next tranche (Balance Invoice for ${q.currency || 'USD'} ${proformaUninvoiced.toFixed(2)})`
+                                      : 'Convert this sent proforma into a Deposit, Balance, or Full invoice'}>
+                                    {proformaPartiallyInvoiced ? '→ Next Invoice' : '→ Invoice'}
                                   </button>
                                 )}
                                 {canIssueReceipt && (
