@@ -291,6 +291,7 @@ export default function CRMDashboard() {
   // Quotes (documents per lead)
   const [quotesByLead, setQuotesByLead] = useState<Record<string, Quote[]>>({})
   const [sendingQuoteId, setSendingQuoteId] = useState<string | null>(null)
+  const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null)
   // Commit B: Convert-to-Invoice modal state
   const [convertModal, setConvertModal] = useState<{
     parent: Quote
@@ -656,6 +657,36 @@ export default function CRMDashboard() {
     }
   }
 
+  // Commit C: hard-delete an UNSENT draft quote (proforma or invoice).
+  // For the case where a rep accidentally issued a document against the wrong lead.
+  // Server route enforces: not sent, not superseded, no children, no receipts, no revisions.
+  const deleteQuote = async (quote: Quote, lead: Lead) => {
+    if (deletingQuoteId) return
+    const docLabel = quote.doc_type === 'invoice' ? 'Invoice' : 'Proforma'
+    if (!window.confirm(
+      `Delete ${docLabel} ${quote.quote_number}?\n\nThis permanently removes the draft and all its line items. It cannot be undone.`
+    )) return
+    setDeletingQuoteId(quote.id)
+    try {
+      const res = await fetch('/api/quote/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quote_id: quote.id }),
+      })
+      const result = await res.json()
+      if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+      setQuotesByLead(prev => ({
+        ...prev,
+        [lead.id]: (prev[lead.id] || []).filter(q => q.id !== quote.id),
+      }))
+      showToast(`${docLabel} ${quote.quote_number} deleted`)
+    } catch (err: any) {
+      showToast(`Failed to delete: ${err?.message || 'unknown error'}`, 'error')
+    } finally {
+      setDeletingQuoteId(null)
+    }
+  }
+
   // Commit B: open the Convert-to-Invoice modal for a sent, non-superseded proforma.
   // Pre-fills deposit % from the parent's stored value, due date to today + 30 days.
   // Commit C UX: auto-detect which tranche the user most likely wants next.
@@ -900,79 +931,44 @@ export default function CRMDashboard() {
     const docLabel = isInvoice ? 'Invoice' : 'Proforma invoice'
 
     try {
-      // ==================== EDIT MODE: in-place update ====================
+      // ==================== EDIT MODE: route through server API for consistency ====================
       if (mode === 'edit' && sourceQuoteId) {
-        // 1. Update quotes row (keep quote_number + doc_type + lead_id unchanged)
-        const invoiceFields = isInvoice
-          ? {
+        const res = await fetch('/api/quote/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            quote_id: sourceQuoteId,
+            notes: quoteNotes || null,
+            items: apiItems,
+            ...(isInvoice ? {
               customer_tin: invoiceCustomerTin || null,
               customer_address: invoiceCustomerAddress || null,
               payment_due_date: invoiceDueDate ? new Date(invoiceDueDate).toISOString() : null,
               po_reference: invoicePoRef || null,
               vat_enabled: invoiceVatEnabled,
               vat_rate: 12.0,
-            }
-          : {}
-        const { error: updErr } = await supabase
-          .from('quotes')
-          .update({
-            notes: quoteNotes || null,
-            subtotal: subtotalUsdCalc,
-            total: totalUsd,
-            vat_amount: vatAmountCalc,
-            updated_at: new Date().toISOString(),
-            ...invoiceFields,
-          })
-          .eq('id', sourceQuoteId)
-        if (updErr) throw new Error('Update quotes failed: ' + updErr.message)
-
-        // 2. Delete old quote_items
-        const { error: delErr } = await supabase
-          .from('quote_items')
-          .delete()
-          .eq('quote_id', sourceQuoteId)
-        if (delErr) throw new Error('Delete quote_items failed: ' + delErr.message)
-
-        // 3. Insert new quote_items (build rows, resolving variant refs)
-        const rows = apiItems.map(i => {
-          if (i.is_custom || !i.product_id) {
-            return {
-              quote_id: sourceQuoteId,
-              product_id: null,
-              variant_id: null,
-              product_name: i.product_name || 'Custom Order',
-              product_specs: i.product_specs || null,
-              sku: i.sku || 'CUSTOM',
-              category: i.category || 'Custom',
-              unit: i.unit || 'piece',
-              quantity: i.quantity,
-              unit_price: i.unit_price,
-              total_price: i.quantity * i.unit_price,
-            }
-          }
-          const v = PRODUCT_VARIANTS.find(pv => pv.id === i.product_id)
-          return {
-            quote_id: sourceQuoteId,
-            product_id: null, // we don't have the parent product_id locally; variant_id is enough
-            variant_id: i.product_id,
-            product_name: v?.productName || i.sku,
-            product_specs: v?.sizeLabel || i.product_specs || null,
-            sku: v?.sku || i.sku,
-            category: v?.category || null,
-            unit: v?.unit || i.unit,
-            quantity: i.quantity,
-            unit_price: i.unit_price,
-            total_price: i.quantity * i.unit_price,
-          }
+            } : {}),
+          }),
         })
-        const { error: insErr } = await supabase.from('quote_items').insert(rows)
-        if (insErr) throw new Error('Insert quote_items failed: ' + insErr.message)
+        const result = await res.json()
+        if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
 
-        // 4. Optimistic state update
+        // Optimistic state update using server-returned totals
         setQuotesByLead(prev => {
           const list = (prev[lead.id] || []).map(q =>
             q.id === sourceQuoteId
-              ? { ...q, subtotal: subtotalUsdCalc, total: totalUsd, notes: quoteNotes || null }
+              ? {
+                  ...q,
+                  subtotal: result.subtotal,
+                  total: result.total,
+                  notes: quoteNotes || null,
+                  customer_tin: isInvoice ? (invoiceCustomerTin || null) : q.customer_tin,
+                  customer_address: isInvoice ? (invoiceCustomerAddress || null) : q.customer_address,
+                  payment_due_date: isInvoice && invoiceDueDate ? new Date(invoiceDueDate).toISOString() : q.payment_due_date,
+                  po_reference: isInvoice ? (invoicePoRef || null) : q.po_reference,
+                  vat_enabled: isInvoice ? invoiceVatEnabled : q.vat_enabled,
+                  vat_rate: isInvoice ? 12.0 : q.vat_rate,
+                }
               : q
           )
           return { ...prev, [lead.id]: list }
@@ -1673,6 +1669,14 @@ export default function CRMDashboard() {
                                     className="px-2.5 py-1 border border-gray-200 rounded hover:bg-gray-50 text-gray-700 font-medium"
                                     title="Edit this draft in place (quote number unchanged)">
                                     Edit
+                                  </button>
+                                )}
+                                {!isSent && !isSuperseded && (
+                                  <button onClick={e => { e.stopPropagation(); deleteQuote(q, lead) }}
+                                    disabled={deletingQuoteId === q.id}
+                                    className="px-2.5 py-1 border border-red-200 rounded hover:bg-red-50 text-red-600 font-medium disabled:opacity-50"
+                                    title="Delete this unsent draft (cannot be undone)">
+                                    {deletingQuoteId === q.id ? 'Deleting…' : 'Delete'}
                                   </button>
                                 )}
                                 {isSent && !isSuperseded && !isInvoice && !proformaFullyInvoiced && (
