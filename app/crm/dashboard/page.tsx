@@ -83,6 +83,10 @@ interface Quote {
   revision_of: string | null
   superseded_by: string | null
   revision_number: number
+  // Commit B: invoice lifecycle
+  invoice_type?: 'deposit' | 'balance' | 'full' | null
+  converted_from_proforma_id?: string | null
+  deposit_percent?: number | null
 }
 
 const PIPELINE_STAGES = ['new','contacted','qualified','proposal_sent','meeting_booked','won','lost']
@@ -265,6 +269,17 @@ export default function CRMDashboard() {
   // Quotes (documents per lead)
   const [quotesByLead, setQuotesByLead] = useState<Record<string, Quote[]>>({})
   const [sendingQuoteId, setSendingQuoteId] = useState<string | null>(null)
+  // Commit B: Convert-to-Invoice modal state
+  const [convertModal, setConvertModal] = useState<{
+    parent: Quote
+    lead: Lead
+  } | null>(null)
+  const [convertType, setConvertType] = useState<'deposit' | 'balance' | 'full'>('deposit')
+  const [convertDepositPct, setConvertDepositPct] = useState<number>(50)
+  const [convertPoRef, setConvertPoRef] = useState('')
+  const [convertDueDate, setConvertDueDate] = useState('')
+  const [convertNotes, setConvertNotes] = useState('')
+  const [convertSubmitting, setConvertSubmitting] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [analyticsOpen, setAnalyticsOpen] = useState(true)
 
@@ -314,7 +329,7 @@ export default function CRMDashboard() {
   const loadQuotes = useCallback(async () => {
     const { data } = await supabase
       .from('quotes')
-      .select('id, quote_number, doc_type, total, subtotal, currency, created_at, sent_at, email, lead_id, customer_name, company, notes, phone, customer_tin, customer_address, payment_due_date, po_reference, vat_enabled, vat_rate, revision_of, superseded_by, revision_number')
+      .select('id, quote_number, doc_type, total, subtotal, currency, created_at, sent_at, email, lead_id, customer_name, company, notes, phone, customer_tin, customer_address, payment_due_date, po_reference, vat_enabled, vat_rate, revision_of, superseded_by, revision_number, invoice_type, converted_from_proforma_id, deposit_percent')
       .not('lead_id', 'is', null)
       .order('created_at', { ascending: false })
     if (data) {
@@ -586,6 +601,97 @@ export default function CRMDashboard() {
       showToast(`Failed to send: ${err?.message || 'unknown error'}`, 'error')
     } finally {
       setSendingQuoteId(null)
+    }
+  }
+
+  // Commit B: open the Convert-to-Invoice modal for a sent, non-superseded proforma.
+  // Pre-fills deposit % from the parent's stored value, due date to today + 30 days.
+  const openConvertModal = (parent: Quote, lead: Lead, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setConvertModal({ parent, lead })
+    setConvertType('deposit')
+    setConvertDepositPct(Number(parent.deposit_percent ?? 50))
+    setConvertPoRef(parent.po_reference || '')
+    const due = new Date()
+    due.setDate(due.getDate() + 30)
+    setConvertDueDate(due.toISOString().slice(0, 10))
+    setConvertNotes('')
+  }
+
+  // Commit B: submit the conversion. Calls /api/quote/create with
+  // invoice_type + converted_from_proforma_id. The API inherits all customer
+  // + currency + locked display values from the parent.
+  const submitConvert = async () => {
+    if (!convertModal || !user) return
+    const { parent, lead } = convertModal
+    setConvertSubmitting(true)
+    try {
+      const res = await fetch('/api/quote/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          doc_type: 'invoice',
+          converted_from_proforma_id: parent.id,
+          invoice_type: convertType,
+          deposit_percent: convertType === 'deposit' ? convertDepositPct : undefined,
+          generated_by: user.email,
+          po_reference: convertPoRef || undefined,
+          notes: convertNotes || undefined,
+          payment_due_date: convertDueDate ? new Date(convertDueDate).toISOString() : undefined,
+        }),
+      })
+      const result = await res.json()
+      if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+
+      // Optimistically add the new invoice to the lead's documents list so the rep
+      // sees it immediately without waiting for a refresh.
+      const newInvoice: Quote = {
+        id: result.quote_id,
+        quote_number: result.quote_number,
+        doc_type: 'invoice',
+        total: Number(result.total || 0),
+        subtotal: Number(result.total || 0),
+        currency: parent.currency,
+        created_at: new Date().toISOString(),
+        sent_at: null,
+        email: parent.email,
+        lead_id: parent.lead_id,
+        customer_name: parent.customer_name,
+        company: parent.company,
+        notes: convertNotes || null,
+        phone: parent.phone,
+        customer_tin: parent.customer_tin,
+        customer_address: parent.customer_address,
+        payment_due_date: convertDueDate ? new Date(convertDueDate).toISOString() : null,
+        po_reference: convertPoRef || null,
+        vat_enabled: false,
+        vat_rate: null,
+        revision_of: null,
+        superseded_by: null,
+        revision_number: 0,
+        invoice_type: convertType,
+        converted_from_proforma_id: parent.id,
+        deposit_percent: convertType === 'deposit' ? convertDepositPct : null,
+      }
+      setQuotesByLead(prev => ({
+        ...prev,
+        [lead.id]: [newInvoice, ...(prev[lead.id] || [])],
+      }))
+
+      const typeLabel =
+        convertType === 'deposit'
+          ? `${convertDepositPct}% Deposit`
+          : convertType === 'balance'
+            ? 'Balance'
+            : 'Full'
+      showToast(
+        `${typeLabel} Invoice ${result.quote_number} issued from ${parent.quote_number}`,
+      )
+      setConvertModal(null)
+    } catch (err: any) {
+      showToast(`Failed to convert: ${err?.message || 'unknown error'}`, 'error')
+    } finally {
+      setConvertSubmitting(false)
     }
   }
 
@@ -1338,6 +1444,21 @@ export default function CRMDashboard() {
                                   {isInvoice ? 'INV' : 'PI'}
                                 </span>
                                 <span className={`font-mono ${isSuperseded ? 'text-gray-500 line-through' : 'text-gray-700'}`}>{q.quote_number}</span>
+                                {isInvoice && q.invoice_type === 'deposit' && (
+                                  <span className="px-1.5 py-0.5 rounded font-semibold bg-emerald-100 text-emerald-700" title={`${q.deposit_percent ?? ''}% deposit invoice`}>
+                                    Deposit{q.deposit_percent ? ` ${q.deposit_percent}%` : ''}
+                                  </span>
+                                )}
+                                {isInvoice && q.invoice_type === 'balance' && (
+                                  <span className="px-1.5 py-0.5 rounded font-semibold bg-indigo-100 text-indigo-700">
+                                    Balance
+                                  </span>
+                                )}
+                                {isInvoice && q.invoice_type === 'full' && q.converted_from_proforma_id && (
+                                  <span className="px-1.5 py-0.5 rounded font-semibold bg-slate-100 text-slate-700">
+                                    Full
+                                  </span>
+                                )}
                                 {isRevision && (
                                   <span className="px-1.5 py-0.5 rounded font-semibold bg-purple-100 text-purple-700" title={`Revision ${q.revision_number}`}>R{q.revision_number}</span>
                                 )}
@@ -1356,6 +1477,13 @@ export default function CRMDashboard() {
                                     className="px-2.5 py-1 border border-gray-200 rounded hover:bg-gray-50 text-gray-700 font-medium"
                                     title="Edit this draft in place (quote number unchanged)">
                                     Edit
+                                  </button>
+                                )}
+                                {isSent && !isSuperseded && !isInvoice && (
+                                  <button onClick={e => openConvertModal(q, lead, e)}
+                                    className="px-2.5 py-1 border border-emerald-200 rounded hover:bg-emerald-50 text-emerald-700 font-medium"
+                                    title="Convert this sent proforma into a Deposit, Balance, or Full invoice">
+                                    → Invoice
                                   </button>
                                 )}
                                 {isSent && !isSuperseded && (
@@ -1659,6 +1787,182 @@ export default function CRMDashboard() {
                   (isInvoice && !invoiceDueDate)}
                 className={`flex-1 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${mode === 'revise' ? 'bg-purple-700 hover:bg-purple-800' : isInvoice ? 'bg-blue-700 hover:bg-blue-800' : 'bg-green-700 hover:bg-green-800'}`}>
                 {submitLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+        )
+      })()}
+
+      {convertModal && (() => {
+        const { parent, lead } = convertModal
+        const parentTotal = Number(parent.total || 0)
+        const parentDisplayCurrency = (parent.currency || 'USD')
+        // Sum sibling invoices (to compute balance remaining, etc.)
+        const siblings = (quotesByLead[lead.id] || []).filter(q =>
+          q.doc_type === 'invoice' &&
+          q.converted_from_proforma_id === parent.id &&
+          !q.superseded_by
+        )
+        const issuedSoFar = siblings.reduce((sum, s) => sum + Number(s.total || 0), 0)
+        const depositInvoices = siblings.filter(s => s.invoice_type === 'deposit')
+        const hasExistingDeposit = depositInvoices.length > 0
+        const hasExistingBalance = siblings.some(s => s.invoice_type === 'balance')
+        const remaining = Math.max(0, parentTotal - issuedSoFar)
+        // Preview amount based on selection
+        const previewAmount =
+          convertType === 'deposit'
+            ? parentTotal * (convertDepositPct / 100)
+            : convertType === 'balance'
+              ? remaining
+              : parentTotal
+        const fullBlocked = siblings.length > 0
+        const balanceBlocked = remaining <= 0.01 || hasExistingBalance
+        const depositWouldExceed =
+          issuedSoFar + parentTotal * (convertDepositPct / 100) > parentTotal + 0.01
+        const submitDisabled =
+          convertSubmitting ||
+          !convertDueDate ||
+          (convertType === 'full' && fullBlocked) ||
+          (convertType === 'balance' && balanceBlocked) ||
+          (convertType === 'deposit' && depositWouldExceed)
+        return (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+            <div className="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-lg font-semibold text-gray-800">Convert to Invoice</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                From <span className="font-mono">{parent.quote_number}</span>
+                {' · '}
+                {lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ')}
+                {lead.company && ' · ' + lead.company}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Parent total {parentDisplayCurrency} {parentTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {issuedSoFar > 0 && (
+                  <> · already invoiced {parentDisplayCurrency} {issuedSoFar.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+                )}
+              </p>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+              {/* Invoice type selection */}
+              <div>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Invoice Type</div>
+                <div className="space-y-2">
+                  <label className={`flex items-start gap-3 px-3 py-2 border rounded-lg cursor-pointer ${convertType === 'deposit' ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                    <input type="radio" name="convertType" value="deposit"
+                      checked={convertType === 'deposit'}
+                      onChange={() => setConvertType('deposit')}
+                      className="mt-0.5" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-800">Deposit Invoice</div>
+                      <div className="text-xs text-gray-500">Partial payment (default {parent.deposit_percent ?? 50}%). Secures production capacity.</div>
+                    </div>
+                  </label>
+                  <label className={`flex items-start gap-3 px-3 py-2 border rounded-lg cursor-pointer ${balanceBlocked ? 'opacity-50 cursor-not-allowed' : ''} ${convertType === 'balance' ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                    <input type="radio" name="convertType" value="balance"
+                      checked={convertType === 'balance'}
+                      disabled={balanceBlocked}
+                      onChange={() => setConvertType('balance')}
+                      className="mt-0.5" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-800">Balance Invoice</div>
+                      <div className="text-xs text-gray-500">
+                        {balanceBlocked
+                          ? (hasExistingBalance ? 'Balance already issued.' : 'Nothing remaining.')
+                          : `Remaining after deposit${hasExistingDeposit ? 's' : ''}. Auto-computed from siblings.`}
+                      </div>
+                    </div>
+                  </label>
+                  <label className={`flex items-start gap-3 px-3 py-2 border rounded-lg cursor-pointer ${fullBlocked ? 'opacity-50 cursor-not-allowed' : ''} ${convertType === 'full' ? 'border-slate-500 bg-slate-100' : 'border-gray-200 hover:bg-gray-50'}`}>
+                    <input type="radio" name="convertType" value="full"
+                      checked={convertType === 'full'}
+                      disabled={fullBlocked}
+                      onChange={() => setConvertType('full')}
+                      className="mt-0.5" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-800">Full Invoice</div>
+                      <div className="text-xs text-gray-500">
+                        {fullBlocked
+                          ? 'Blocked: other invoices already exist against this proforma.'
+                          : 'One-shot invoice for the entire proforma total. Copies all line items.'}
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Deposit % slider (only for deposit type) */}
+              {convertType === 'deposit' && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-emerald-800 uppercase tracking-wide">Deposit %</label>
+                    <input type="number" min={1} max={100} value={convertDepositPct}
+                      onChange={e => setConvertDepositPct(Math.max(1, Math.min(100, Number(e.target.value) || 1)))}
+                      className="w-20 border border-emerald-300 rounded-lg px-2 py-1 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                  </div>
+                  <input type="range" min={1} max={100} value={convertDepositPct}
+                    onChange={e => setConvertDepositPct(Number(e.target.value))}
+                    className="w-full accent-emerald-600" />
+                  {depositWouldExceed && (
+                    <p className="text-xs text-red-600 font-medium">
+                      Adding {convertDepositPct}% would exceed parent total. Prior invoices already cover {parentDisplayCurrency} {issuedSoFar.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Amount preview */}
+              <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3">
+                <div className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-1">Invoice Amount</div>
+                <div className="text-2xl font-bold text-blue-800">
+                  {parentDisplayCurrency} {previewAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+                {convertType === 'balance' && depositInvoices.length > 0 && (
+                  <div className="text-xs text-blue-700 mt-1">
+                    Net of {depositInvoices.map(d => d.quote_number).join(', ')} ({parentDisplayCurrency} {issuedSoFar.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                  </div>
+                )}
+              </div>
+
+              {/* Invoice fields */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Payment Due Date <span className="text-red-500">*</span></label>
+                  <input type="date" value={convertDueDate}
+                    onChange={e => setConvertDueDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">PO Reference</label>
+                  <input type="text" value={convertPoRef}
+                    onChange={e => setConvertPoRef(e.target.value)}
+                    placeholder="Customer PO (optional)"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Notes (optional)</label>
+                  <textarea value={convertNotes} rows={2}
+                    onChange={e => setConvertNotes(e.target.value)}
+                    placeholder="Any additional instructions for this invoice..."
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+                </div>
+              </div>
+
+              <div className="rounded-xl px-4 py-3 text-xs bg-amber-50 text-amber-800 border border-amber-200">
+                Customer, TIN, address, and currency are inherited from <strong>{parent.quote_number}</strong>. The invoice is locked to the proforma’s signed FX rate and will not refetch live rates.
+              </div>
+            </div>
+
+            <div className="px-6 pb-6 pt-3 border-t border-gray-100 flex gap-3 shrink-0">
+              <button onClick={() => setConvertModal(null)}
+                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={submitConvert} disabled={submitDisabled}
+                className={`flex-1 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${convertType === 'deposit' ? 'bg-emerald-700 hover:bg-emerald-800' : convertType === 'balance' ? 'bg-indigo-700 hover:bg-indigo-800' : 'bg-slate-700 hover:bg-slate-800'}`}>
+                {convertSubmitting ? 'Converting...' : `Issue ${convertType === 'deposit' ? 'Deposit' : convertType === 'balance' ? 'Balance' : 'Full'} Invoice`}
               </button>
             </div>
           </div>
