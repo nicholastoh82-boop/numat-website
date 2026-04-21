@@ -214,7 +214,7 @@ async function runDealStageNudge() {
     await sendGmail({
       from: "Nick",
       to: g.rep_email,
-      subject: `Daily nudge: ${sorted.length} lead${sorted.length === 1 ? "" : "s"} need action`,
+      subject: `Daily nudge: ${sorted.length} lead${sorted.length === 1 ? " needs" : "s need"} action`,
       html,
     });
     repsNudged++;
