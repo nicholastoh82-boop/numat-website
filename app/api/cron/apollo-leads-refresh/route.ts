@@ -191,7 +191,7 @@ function assignRep(country: string): { rep_assigned: "Bryan" | "Mohan"; rep_emai
 
 async function apolloSearch(seg: Segment): Promise<ApolloPerson[]> {
   const apiKey = required("APOLLO_API_KEY");
-  const res = await fetch("https://api.apollo.io/api/v1/mixed_people/search", {
+  const res = await fetch("https://api.apollo.io/api/v1/mixed_people/api_search", {
     method: "POST",
     headers: {
       "X-Api-Key": apiKey,
@@ -270,19 +270,20 @@ function chunk<T>(arr: T[], size: number): T[][] {
 async function runSegment(seg: Segment, existingIds: Set<string>) {
   const apolloReturned = await apolloSearch(seg);
 
-  // Filter: verified email or has_email flag
-  const withEmail = apolloReturned.filter((p) => p.email_status === "verified" || p.has_email === true);
-  if (withEmail.length === 0) {
-    return { segment: seg.segment, apollo_returned: apolloReturned.length, after_email_filter: 0, new_prospects: 0, inserted: 0 };
+  // The new /mixed_people/api_search endpoint does not return email addresses
+  // or verification flags. We can't pre-filter, so we send all results through
+  // bulk_match enrichment and filter by email presence afterwards.
+  if (apolloReturned.length === 0) {
+    return { segment: seg.segment, apollo_returned: 0, new_prospects: 0, inserted: 0 };
   }
 
-  // Build lead records
-  const records = withEmail.map((p) => toLeadRecord(p, seg.segment));
+  // Build lead records from search results (emails will be empty at this stage)
+  const records = apolloReturned.map((p) => toLeadRecord(p, seg.segment));
 
   // Dedupe against existing apollo_person_ids
   const newRecords = records.filter((r) => !existingIds.has(r.apollo_person_id));
   if (newRecords.length === 0) {
-    return { segment: seg.segment, apollo_returned: apolloReturned.length, after_email_filter: withEmail.length, new_prospects: 0, inserted: 0 };
+    return { segment: seg.segment, apollo_returned: apolloReturned.length, new_prospects: 0, inserted: 0 };
   }
 
   // Enrich emails via bulk_match, in batches of 10
@@ -325,7 +326,7 @@ async function runSegment(seg: Segment, existingIds: Set<string>) {
   // Keep only records with a usable email
   const insertable = enriched.filter((r) => r.email && r.email.includes("@"));
   if (insertable.length === 0) {
-    return { segment: seg.segment, apollo_returned: apolloReturned.length, after_email_filter: withEmail.length, new_prospects: newRecords.length, inserted: 0 };
+    return { segment: seg.segment, apollo_returned: apolloReturned.length, new_prospects: newRecords.length, inserted: 0 };
   }
 
   // Bulk insert — duplicates silently ignored (unique constraint on apollo_person_id in DB)
@@ -334,7 +335,6 @@ async function runSegment(seg: Segment, existingIds: Set<string>) {
   return {
     segment: seg.segment,
     apollo_returned: apolloReturned.length,
-    after_email_filter: withEmail.length,
     new_prospects: newRecords.length,
     inserted: insertable.length,
   };
