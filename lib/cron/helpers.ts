@@ -141,6 +141,11 @@ type SendGmailOpts = {
   html?: string;               // if present, sent as text/html
   text?: string;               // if present (and no html), sent as text/plain
   replyTo?: string;            // optional Reply-To header
+  attachments?: Array<{        // optional file attachments
+    filename: string;
+    mimeType: string;          // e.g. "application/pdf"
+    data: string;              // base64-encoded contents
+  }>;
 };
 
 export async function sendGmail(opts: SendGmailOpts): Promise<string> {
@@ -151,7 +156,7 @@ export async function sendGmail(opts: SendGmailOpts): Promise<string> {
   const accessToken = await getAccessToken(refreshToken);
 
   const subjectEncoded = `=?utf-8?B?${Buffer.from(opts.subject, "utf-8").toString("base64")}?=`;
-  const headers: string[] = [
+  const topHeaders: string[] = [
     `From: ${fromEmail}`,
     `To: ${opts.to}`,
     opts.replyTo ? `Reply-To: ${opts.replyTo}` : null,
@@ -159,17 +164,45 @@ export async function sendGmail(opts: SendGmailOpts): Promise<string> {
     `MIME-Version: 1.0`,
   ].filter(Boolean) as string[];
 
-  let body: string;
-  if (opts.html) {
-    headers.push(`Content-Type: text/html; charset="UTF-8"`);
-    headers.push(`Content-Transfer-Encoding: 8bit`);
-    body = opts.html;
+  let raw: string;
+  const hasAttachments = opts.attachments && opts.attachments.length > 0;
+
+  if (hasAttachments) {
+    // multipart/mixed with body + attachments
+    const boundary = `----=_Part_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+    topHeaders.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
+
+    const bodyContentType = opts.html ? 'text/html; charset="UTF-8"' : 'text/plain; charset="UTF-8"';
+    const bodyContent = opts.html ?? opts.text ?? "";
+
+    const parts: string[] = [];
+    parts.push(`--${boundary}`);
+    parts.push(`Content-Type: ${bodyContentType}`);
+    parts.push(`Content-Transfer-Encoding: 8bit`);
+    parts.push("");
+    parts.push(bodyContent);
+
+    for (const att of opts.attachments!) {
+      parts.push(`--${boundary}`);
+      parts.push(`Content-Type: ${att.mimeType}; name="${att.filename}"`);
+      parts.push(`Content-Disposition: attachment; filename="${att.filename}"`);
+      parts.push(`Content-Transfer-Encoding: base64`);
+      parts.push("");
+      // Gmail expects 76-char lines for base64
+      const wrapped = att.data.replace(/(.{76})/g, "$1\r\n");
+      parts.push(wrapped);
+    }
+    parts.push(`--${boundary}--`);
+    raw = `${topHeaders.join("\r\n")}\r\n\r\n${parts.join("\r\n")}`;
+  } else if (opts.html) {
+    topHeaders.push(`Content-Type: text/html; charset="UTF-8"`);
+    topHeaders.push(`Content-Transfer-Encoding: 8bit`);
+    raw = `${topHeaders.join("\r\n")}\r\n\r\n${opts.html}`;
   } else {
-    headers.push(`Content-Type: text/plain; charset="UTF-8"`);
-    headers.push(`Content-Transfer-Encoding: 8bit`);
-    body = opts.text ?? "";
+    topHeaders.push(`Content-Type: text/plain; charset="UTF-8"`);
+    topHeaders.push(`Content-Transfer-Encoding: 8bit`);
+    raw = `${topHeaders.join("\r\n")}\r\n\r\n${opts.text ?? ""}`;
   }
-  const raw = `${headers.join("\r\n")}\r\n\r\n${body}`;
 
   const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
     method: "POST",
