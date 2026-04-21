@@ -309,11 +309,18 @@ async function runSegment(seg: Segment, existingIds: Set<string>) {
       }
       for (const r of batch) {
         const e = emailMap.get(r.apollo_person_id);
+        const mergedCountry = e?.country || r.country;
+        // Re-assign rep based on the ENRICHED country, not the search-time country,
+        // because Apollo's api_search endpoint often returns empty/different country
+        // and Philippines leads were landing with Mohan instead of Bryan.
+        const rep = assignRep(mergedCountry);
         enriched.push({
           ...r,
           email: e?.email || r.email,
           linkedin_url: e?.linkedin_url || r.linkedin_url,
-          country: e?.country || r.country,
+          country: mergedCountry,
+          rep_assigned: rep.rep_assigned,
+          rep_email: rep.rep_email,
         });
       }
     } catch (err) {
