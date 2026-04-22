@@ -99,13 +99,14 @@ function buildNotificationHtml(args: {
   </div>`;
 }
 
-async function processRep(rep: RepKey): Promise<{ rep: RepKey; scanned: number; processed: number; matched: number }> {
+async function processRep(rep: RepKey): Promise<{ rep: RepKey; scanned: number; processed: number; matched: number; error?: string }> {
   let messages: GmailMessageSummary[];
   try {
     messages = await gmailListInboxSince(rep, POLL_WINDOW_MINUTES, 50);
   } catch (err) {
-    console.error(`poll ${rep} failed:`, err);
-    return { rep, scanned: 0, processed: 0, matched: 0 };
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`poll ${rep} failed:`, errMsg);
+    return { rep, scanned: 0, processed: 0, matched: 0, error: errMsg };
   }
 
   let processed = 0;
