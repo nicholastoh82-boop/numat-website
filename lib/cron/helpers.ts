@@ -286,9 +286,10 @@ function headerValue(headers: Array<{ name: string; value: string }> | undefined
  */
 export async function gmailListInboxSince(rep: RepKey, minutes: number, maxResults = 50): Promise<GmailMessageSummary[]> {
   const accessToken = await repAccessToken(rep);
-  // Gmail's `newer_than` query uses d/h/m/s; we use minutes -> "Ns"
-  const seconds = Math.max(60, Math.floor(minutes * 60));
-  const q = `in:inbox newer_than:${seconds}s`;
+  // Gmail search only supports d/m/y units (where m=months!), not seconds.
+  // Use `after:<epoch_seconds>` for sub-day windows. Rounded to whole seconds.
+  const cutoffEpoch = Math.floor((Date.now() - Math.max(60, minutes * 60) * 1000) / 1000);
+  const q = `in:inbox after:${cutoffEpoch}`;
   const listUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${encodeURIComponent(q)}`;
   const listRes = await fetch(listUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
   if (!listRes.ok) throw new Error(`Gmail list (${rep}) failed: ${listRes.status} ${await listRes.text()}`);
