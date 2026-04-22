@@ -21,7 +21,7 @@ declare global {
   }
 }
 
-const N8N_WEBHOOK = "https://nicholastoh.app.n8n.cloud/webhook/numat-lead";
+const NARA_LEAD_WEBHOOK = "https://numatbamboo.com/api/webhooks/nara-lead";
 const SB_URL = "https://peuwxnrojlfybdymkazj.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBldXd4bnJvamxmeWJkeW1rYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTAzNjMsImV4cCI6MjA4ODI2NjM2M30.qCmHAsm8AqpV-LsnRac631au_Ff8fk1S7Dbeq5O-aGM";
 
@@ -99,7 +99,7 @@ export default function ChatWidget() {
     const handler = (e: MessageEvent) => {
       if (e.data?.event === "calendly.event_scheduled") {
         setMeetingBooked(true);
-        fetch(N8N_WEBHOOK, {
+        fetch(NARA_LEAD_WEBHOOK, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -147,7 +147,7 @@ export default function ChatWidget() {
     const emailMatch = fullConvo.match(
       /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/
     );
-    fetch(N8N_WEBHOOK, {
+    fetch(NARA_LEAD_WEBHOOK, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
