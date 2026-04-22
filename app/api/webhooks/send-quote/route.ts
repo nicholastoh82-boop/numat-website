@@ -94,7 +94,13 @@ export async function POST(req: Request) {
     }
 
     // 2. Generate PDF (existing Next.js endpoint, same deployment)
-    const pdfRes = await fetch(`https://numatbamboo.com/api/quote/${encodeURIComponent(quote.id)}/pdf`);
+    // The PDF route requires automation authentication via x-quote-secret header.
+    // Same value must be set in Vercel as QUOTE_PDF_SECRET env var (which the
+    // /api/quote/[id]/pdf route already reads).
+    const quoteSecret = process.env.QUOTE_PDF_SECRET;
+    const pdfRes = await fetch(`https://numatbamboo.com/api/quote/${encodeURIComponent(quote.id)}/pdf`, {
+      headers: quoteSecret ? { "x-quote-secret": quoteSecret } : {},
+    });
     if (!pdfRes.ok) {
       throw new Error(`PDF generation failed: ${pdfRes.status} ${await pdfRes.text()}`);
     }
