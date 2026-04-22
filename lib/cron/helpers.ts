@@ -215,3 +215,160 @@ export async function sendGmail(opts: SendGmailOpts): Promise<string> {
   }
   return json.id;
 }
+
+// ============================================================================
+// Gmail read / modify (for Reply Handler + Bounce Catcher)
+// ============================================================================
+
+// Requires the rep's OAuth refresh token to have gmail.modify or readonly scope
+// in addition to gmail.send.
+
+export type GmailMessageSummary = {
+  id: string;
+  threadId: string;
+  from: string;
+  subject: string;
+  snippet: string;
+  body: string;          // plain text body (best-effort decoded)
+  date: string;          // RFC 2822 header value
+  labelIds: string[];
+};
+
+async function repAccessToken(rep: RepKey): Promise<string> {
+  const envName = REP_REFRESH_TOKEN_ENV[rep];
+  if (!envName) throw new Error(`Unknown rep: ${rep}`);
+  return getAccessToken(required(envName));
+}
+
+function decodeBase64Url(s: string): string {
+  const padded = s.replace(/-/g, "+").replace(/_/g, "/");
+  try {
+    return Buffer.from(padded, "base64").toString("utf-8");
+  } catch {
+    return "";
+  }
+}
+
+type GmailPayloadPart = {
+  mimeType?: string;
+  body?: { data?: string; size?: number };
+  parts?: GmailPayloadPart[];
+  headers?: Array<{ name: string; value: string }>;
+};
+
+function extractPlainTextBody(payload: GmailPayloadPart | undefined): string {
+  if (!payload) return "";
+  if (payload.mimeType === "text/plain" && payload.body?.data) {
+    return decodeBase64Url(payload.body.data);
+  }
+  if (payload.parts) {
+    // Prefer text/plain; fall back to any first data we find
+    for (const p of payload.parts) {
+      if (p.mimeType === "text/plain" && p.body?.data) return decodeBase64Url(p.body.data);
+    }
+    for (const p of payload.parts) {
+      const inner = extractPlainTextBody(p);
+      if (inner) return inner;
+    }
+  }
+  return "";
+}
+
+function headerValue(headers: Array<{ name: string; value: string }> | undefined, name: string): string {
+  if (!headers) return "";
+  const h = headers.find((x) => x.name.toLowerCase() === name.toLowerCase());
+  return h?.value ?? "";
+}
+
+/**
+ * List inbox messages received in the last `minutes` minutes.
+ * Returns message summaries with full body extracted.
+ */
+export async function gmailListInboxSince(rep: RepKey, minutes: number, maxResults = 50): Promise<GmailMessageSummary[]> {
+  const accessToken = await repAccessToken(rep);
+  // Gmail's `newer_than` query uses d/h/m/s; we use minutes -> "Ns"
+  const seconds = Math.max(60, Math.floor(minutes * 60));
+  const q = `in:inbox newer_than:${seconds}s`;
+  const listUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${encodeURIComponent(q)}`;
+  const listRes = await fetch(listUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!listRes.ok) throw new Error(`Gmail list (${rep}) failed: ${listRes.status} ${await listRes.text()}`);
+  const listJson = (await listRes.json()) as { messages?: Array<{ id: string; threadId: string }> };
+  const ids = listJson.messages ?? [];
+  if (ids.length === 0) return [];
+
+  // Fetch full messages in parallel, capped
+  const summaries = await Promise.all(
+    ids.map(async ({ id }) => {
+      const getRes = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (!getRes.ok) return null;
+      const msg = (await getRes.json()) as {
+        id: string;
+        threadId: string;
+        snippet?: string;
+        labelIds?: string[];
+        payload?: GmailPayloadPart;
+        internalDate?: string;
+      };
+      const headers = msg.payload?.headers;
+      return {
+        id: msg.id,
+        threadId: msg.threadId,
+        from: headerValue(headers, "From"),
+        subject: headerValue(headers, "Subject"),
+        snippet: msg.snippet ?? "",
+        body: extractPlainTextBody(msg.payload),
+        date: headerValue(headers, "Date"),
+        labelIds: msg.labelIds ?? [],
+      } as GmailMessageSummary;
+    })
+  );
+
+  return summaries.filter((x): x is GmailMessageSummary => x !== null);
+}
+
+/**
+ * Mark a Gmail message as read (removes UNREAD label). Best-effort; swallows errors.
+ */
+export async function gmailMarkRead(rep: RepKey, messageId: string): Promise<void> {
+  try {
+    const accessToken = await repAccessToken(rep);
+    await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ removeLabelIds: ["UNREAD"] }),
+    });
+  } catch (err) {
+    console.error(`gmailMarkRead (${rep}, ${messageId}) failed:`, err);
+  }
+}
+
+/**
+ * Add a Gmail label to a message by label ID. Best-effort.
+ */
+export async function gmailAddLabel(rep: RepKey, messageId: string, labelId: string): Promise<void> {
+  try {
+    const accessToken = await repAccessToken(rep);
+    await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ addLabelIds: [labelId] }),
+    });
+  } catch (err) {
+    console.error(`gmailAddLabel (${rep}, ${messageId}, ${labelId}) failed:`, err);
+  }
+}
+
+export const ALL_REPS: RepKey[] = ["Nick", "Mohan", "Bryan"];
+
+export function repEmailFor(rep: RepKey): string {
+  return REP_EMAIL[rep];
+}
