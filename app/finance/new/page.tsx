@@ -1,382 +1,327 @@
-// lib/finance.ts
-// Shared types, labels and helpers for the /finance module.
-// Rule: never use shortforms in the UI. Always expand to full names via the label maps below.
+// app/finance/new/page.tsx
+'use client';
 
-import { createBrowserClient } from "@supabase/ssr";
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  supabase, loadCoaTree, loadAccounts, loadStaff, uploadReceipt, todayISO,
+  ENTRY_TYPE_OPTIONS, EntryType, Account, Staff, Classification, CostCenter, Category, formatMoney
+} from '@/lib/finance';
 
-export function getFinanceSupabase() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+type OutstandingAdvance = { id: string; transaction_date: string; amount: number; description: string | null };
+
+export default function NewTransactionPage() {
+  const router = useRouter();
+
+  const [classifications, setClassifications] = useState<Classification[]>([]);
+  const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
+
+  const [entryType, setEntryType] = useState<EntryType>('expense');
+  const [date, setDate] = useState(todayISO());
+  const [fromAccountId, setFromAccountId] = useState('');
+  const [toAccountId, setToAccountId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState('PHP');
+  const [fxRate, setFxRate] = useState('');
+  const [classificationId, setClassificationId] = useState<number | ''>('');
+  const [costCenterId, setCostCenterId] = useState<number | ''>('');
+  const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [vendor, setVendor] = useState('');
+  const [description, setDescription] = useState('');
+  const [requisitioner, setRequisitioner] = useState('');
+  const [staffId, setStaffId] = useState('');
+  const [prAmount, setPrAmount] = useState('');
+  const [notes, setNotes] = useState('');
+  const [bankRef, setBankRef] = useState('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [outstandingAdvances, setOutstandingAdvances] = useState<OutstandingAdvance[]>([]);
+  const [selectedAdvanceIds, setSelectedAdvanceIds] = useState<string[]>([]);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+
+  useEffect(() => { (async () => {
+    const [tree, accs, staffList] = await Promise.all([loadCoaTree(), loadAccounts(), loadStaff()]);
+    setClassifications(tree.classifications);
+    setCostCenters(tree.costCenters);
+    setCategories(tree.categories);
+    setAccounts(accs);
+    setStaff(staffList);
+  })(); }, []);
+
+  const typeCfg = useMemo(() => ENTRY_TYPE_OPTIONS.find(o => o.value === entryType)!, [entryType]);
+  const filteredCostCenters = useMemo(() => costCenters.filter(c => c.classification_id === classificationId), [costCenters, classificationId]);
+  const filteredCategories = useMemo(() => categories.filter(c => c.cost_center_id === costCenterId), [categories, costCenterId]);
+  const needsCategory = !['transfer','fx_conversion'].includes(entryType);
+  const needsStaff = ['salary','salary_advance'].includes(entryType);
+  const isFxBetweenCurrencies = useMemo(() => {
+    if (entryType !== 'fx_conversion') return false;
+    const from = accounts.find(a => a.id === fromAccountId);
+    const to = accounts.find(a => a.id === toAccountId);
+    return !!(from && to && from.currency !== to.currency);
+  }, [entryType, fromAccountId, toAccountId, accounts]);
+
+  useEffect(() => {
+    const acc = accounts.find(a => a.id === fromAccountId);
+    if (acc && typeCfg.needsFromAccount) setCurrency(acc.currency);
+  }, [fromAccountId, accounts, typeCfg.needsFromAccount]);
+
+  useEffect(() => {
+    if (entryType === 'salary' && staffId) {
+      (async () => {
+        const { data } = await supabase.from('fin_transactions')
+          .select('id, transaction_date, amount, description')
+          .eq('staff_id', staffId)
+          .eq('entry_type', 'salary_advance')
+          .eq('advance_status', 'outstanding')
+          .neq('status', 'reversed')
+          .order('transaction_date');
+        setOutstandingAdvances((data || []) as any);
+      })();
+    } else {
+      setOutstandingAdvances([]);
+      setSelectedAdvanceIds([]);
+    }
+  }, [entryType, staffId]);
+
+  const selectedAdvanceTotal = outstandingAdvances
+    .filter(a => selectedAdvanceIds.includes(a.id))
+    .reduce((s, a) => s + Number(a.amount), 0);
+
+  async function submit() {
+    setErr(null); setOk(null);
+    if (!amount || Number(amount) <= 0) { setErr('Amount must be greater than zero.'); return; }
+    if (typeCfg.needsFromAccount && !fromAccountId) { setErr('Select a From Account.'); return; }
+    if (typeCfg.needsToAccount && !toAccountId) { setErr('Select a To Account.'); return; }
+    if (needsCategory && !categoryId) { setErr('Select a category.'); return; }
+    if (needsStaff && !staffId) { setErr('Select staff.'); return; }
+
+    setSubmitting(true);
+    try {
+      let receipt_url: string | null = null;
+      let receipt_filename: string | null = null;
+      if (receiptFile) {
+        const up = await uploadReceipt(receiptFile, 'txn');
+        if (!up) { setErr('Receipt upload failed.'); setSubmitting(false); return; }
+        receipt_url = up.url;
+        receipt_filename = receiptFile.name;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const payload: any = {
+        transaction_date: date,
+        entry_type: entryType,
+        amount: Number(amount),
+        currency,
+        from_account_id: typeCfg.needsFromAccount ? fromAccountId : null,
+        to_account_id: typeCfg.needsToAccount ? toAccountId : null,
+        fx_rate: isFxBetweenCurrencies && fxRate ? Number(fxRate) : null,
+        category_id: needsCategory && categoryId ? Number(categoryId) : null,
+        vendor_payee: vendor || null,
+        description: description || null,
+        requisitioner: requisitioner || null,
+        staff_id: needsStaff && staffId ? staffId : null,
+        pr_amount: prAmount ? Number(prAmount) : null,
+        bank_reference: bankRef || null,
+        notes: notes || null,
+        receipt_url, receipt_filename,
+        submitted_by: user?.email || null,
+        advance_status: entryType === 'salary_advance' ? 'outstanding' : null,
+      };
+
+      const { data: inserted, error } = await supabase
+        .from('fin_transactions').insert(payload).select('id').single();
+      if (error) throw error;
+
+      if (entryType === 'salary' && selectedAdvanceIds.length > 0) {
+        const { error: e2 } = await supabase.from('fin_transactions')
+          .update({ advance_status: 'settled', settled_by_txn_id: inserted.id })
+          .in('id', selectedAdvanceIds);
+        if (e2) throw e2;
+      }
+
+      setOk('Transaction saved.');
+      setTimeout(() => router.push('/finance'), 600);
+    } catch (e: any) {
+      setErr(e.message || 'Failed to save.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="max-w-3xl">
+      <h1 className="text-2xl font-semibold mb-6">New Transaction</h1>
+
+      <div className="space-y-5 bg-white border border-gray-200 rounded p-6">
+
+        <Row label="Entry Type">
+          <select className={inputCls} value={entryType} onChange={e => {
+            setEntryType(e.target.value as EntryType);
+            setClassificationId(''); setCostCenterId(''); setCategoryId('');
+            setFromAccountId(''); setToAccountId('');
+          }}>
+            {ENTRY_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Row>
+
+        <Row label="Date">
+          <input type="date" className={inputCls} value={date} onChange={e => setDate(e.target.value)} />
+        </Row>
+
+        {typeCfg.needsFromAccount && (
+          <Row label="From Account">
+            <select className={inputCls} value={fromAccountId} onChange={e => setFromAccountId(e.target.value)}>
+              <option value="">Select account.</option>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
+            </select>
+          </Row>
+        )}
+
+        {typeCfg.needsToAccount && (
+          <Row label="To Account">
+            <select className={inputCls} value={toAccountId} onChange={e => setToAccountId(e.target.value)}>
+              <option value="">Select account.</option>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
+            </select>
+          </Row>
+        )}
+
+        <Row label="Amount">
+          <div className="flex gap-2">
+            <input type="number" step="0.01" className={inputCls} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+            <select className={inputCls + ' w-28'} value={currency} onChange={e => setCurrency(e.target.value)}>
+              <option>PHP</option><option>USD</option><option>SGD</option>
+            </select>
+          </div>
+        </Row>
+
+        {isFxBetweenCurrencies && (
+          <Row label="FX Rate">
+            <input type="number" step="0.000001" className={inputCls} value={fxRate} onChange={e => setFxRate(e.target.value)}
+              placeholder="e.g. 56.75 PHP per USD" />
+          </Row>
+        )}
+
+        {needsCategory && (
+          <>
+            <Row label="Classification">
+              <select className={inputCls} value={classificationId}
+                onChange={e => { setClassificationId(Number(e.target.value) || ''); setCostCenterId(''); setCategoryId(''); }}>
+                <option value="">Select classification.</option>
+                {classifications.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </Row>
+
+            {classificationId !== '' && (
+              <Row label="Cost Center">
+                <select className={inputCls} value={costCenterId}
+                  onChange={e => { setCostCenterId(Number(e.target.value) || ''); setCategoryId(''); }}>
+                  <option value="">Select cost center.</option>
+                  {filteredCostCenters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </Row>
+            )}
+
+            {costCenterId !== '' && (
+              <Row label="Category">
+                <select className={inputCls} value={categoryId} onChange={e => setCategoryId(Number(e.target.value) || '')}>
+                  <option value="">Select category.</option>
+                  {filteredCategories.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.ue_bucket ? ` [${c.ue_bucket}]` : ''}
+                    </option>
+                  ))}
+                </select>
+              </Row>
+            )}
+          </>
+        )}
+
+        {needsStaff && (
+          <Row label="Staff">
+            <select className={inputCls} value={staffId} onChange={e => setStaffId(e.target.value)}>
+              <option value="">Select staff.</option>
+              {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.role})</option>)}
+            </select>
+          </Row>
+        )}
+
+        {entryType === 'salary' && outstandingAdvances.length > 0 && (
+          <div className="border border-amber-200 bg-amber-50 rounded p-4">
+            <div className="font-medium mb-2 text-amber-900">Outstanding advances for this staff</div>
+            <div className="text-xs text-amber-800 mb-3">
+              Tick the advances to settle against this salary. Selected total will be deducted.
+            </div>
+            <div className="space-y-1">
+              {outstandingAdvances.map(a => (
+                <label key={a.id} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={selectedAdvanceIds.includes(a.id)}
+                    onChange={e => setSelectedAdvanceIds(prev => e.target.checked ? [...prev, a.id] : prev.filter(x => x !== a.id))} />
+                  <span>{a.transaction_date}, {formatMoney(a.amount)}, {a.description || 'no description'}</span>
+                </label>
+              ))}
+            </div>
+            <div className="mt-3 text-sm text-amber-900 font-medium">
+              Selected advance total: {formatMoney(selectedAdvanceTotal)}
+              <span className="text-amber-700 font-normal"> (this salary payment amount should equal gross salary minus this, or record gross salary here)</span>
+            </div>
+          </div>
+        )}
+
+        <Row label="Vendor or Payee">
+          <input className={inputCls} value={vendor} onChange={e => setVendor(e.target.value)} placeholder="e.g. Ohana Lodging" />
+        </Row>
+
+        <Row label="Description">
+          <input className={inputCls} value={description} onChange={e => setDescription(e.target.value)} placeholder="Short description" />
+        </Row>
+
+        <Row label="Requisitioner">
+          <input className={inputCls} value={requisitioner} onChange={e => setRequisitioner(e.target.value)} placeholder="Who asked for this (Nick, Bryan, Boyet, etc.)" />
+        </Row>
+
+        <Row label="PR Amount (optional)">
+          <input type="number" step="0.01" className={inputCls} value={prAmount} onChange={e => setPrAmount(e.target.value)}
+            placeholder="Original purchase requisition amount for variance tracking" />
+        </Row>
+
+        <Row label="Bank Reference (optional)">
+          <input className={inputCls} value={bankRef} onChange={e => setBankRef(e.target.value)} placeholder="OR number, transfer ref, etc." />
+        </Row>
+
+        <Row label="Receipt Upload">
+          <input type="file" accept="image/*,.pdf" onChange={e => setReceiptFile(e.target.files?.[0] || null)} />
+          {receiptFile && <div className="text-xs text-gray-500 mt-1">{receiptFile.name}</div>}
+        </Row>
+
+        <Row label="Notes">
+          <textarea className={inputCls + ' min-h-[80px]'} value={notes} onChange={e => setNotes(e.target.value)} />
+        </Row>
+
+        {err && <div className="bg-red-50 text-red-700 border border-red-200 rounded px-3 py-2 text-sm">{err}</div>}
+        {ok && <div className="bg-green-50 text-green-700 border border-green-200 rounded px-3 py-2 text-sm">{ok}</div>}
+
+        <div className="flex gap-3">
+          <button onClick={submit} disabled={submitting}
+            className="bg-gray-900 text-white px-5 py-2 rounded hover:bg-gray-800 disabled:opacity-50">
+            {submitting ? 'Saving.' : 'Save Transaction'}
+          </button>
+          <button onClick={() => router.push('/finance')} className="px-5 py-2 rounded border border-gray-300 hover:bg-gray-50">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
-// ---------- Types ----------
-
-export type Account = {
-  id: string;
-  code: string;
-  name: string;
-  currency: "PHP" | "USD" | "SGD";
-  account_type: "bank" | "revolving_fund" | "virtual";
-  opening_balance: number | null;
-  opening_balance_date: string | null;
-  is_active: boolean | null;
-  display_order: number | null;
-};
-
-export type AccountBalance = Account & { current_balance: number };
-
-export type Classification = { id: number; code: string; name: string; display_order: number | null };
-export type CostCenter = { id: number; code: string; name: string; classification_id: number | null };
-export type Category = {
-  id: number;
-  code: string;
-  name: string;
-  ue_bucket: UeBucket | null;
-  is_income: boolean | null;
-  cost_center_id: number | null;
-  pl_account_code: string | null;
-  pl_section: PlSection | null;
-};
-
-export type Staff = {
-  id: string;
-  name: string;
-  email: string | null;
-  role: string | null;
-  default_currency: string | null;
-  is_active: boolean | null;
-};
-
-export type Transaction = {
-  id: string;
-  transaction_date: string;
-  entry_type: EntryType;
-  classification_id: number | null;
-  cost_center_id: number | null;
-  category_id: number | null;
-  ue_bucket: UeBucket | null;
-  amount: number;
-  currency: "PHP" | "USD" | "SGD";
-  from_account_id: string | null;
-  to_account_id: string | null;
-  fx_rate: number | null;
-  vendor_payee: string | null;
-  description: string | null;
-  requisitioner: string | null;
-  receipt_url: string | null;
-  receipt_filename: string | null;
-  staff_id: string | null;
-  revolving_fund_batch_id: string | null;
-  advance_txn_id: string | null;
-  advance_status: AdvanceStatus | null;
-  settled_by_txn_id: string | null;
-  reverses_transaction_id: string | null;
-  bank_reference: string | null;
-  notes: string | null;
-  status: TxStatus | null;
-  submitted_by: string | null;
-  submitted_at: string | null;
-};
-
-export type RevolvingFundBatch = {
-  id: string;
-  batch_number: string;
-  disbursed_on: string;
-  disbursed_amount: number;
-  disbursed_currency: string | null;
-  fund_account_id: string;
-  source_account_id: string;
-  custodian: string | null;
-  disbursed_by: string | null;
-  status: "open" | "liquidating" | "closed" | null;
-  opened_at: string | null;
-  closed_at: string | null;
-  notes: string | null;
-};
-
-export type EntryType =
-  | "expense" | "income" | "transfer" | "fx_conversion"
-  | "salary" | "salary_advance" | "revolving_fund_advance" | "liquidation"
-  | "refund" | "shareholder_advance" | "bank_charge" | "withholding_tax"
-  | "interest_income" | "reversal" | "other";
-
-export type UeBucket = "PP" | "PR" | "RM_PP" | "RM_PR" | "MGT" | "OH" | "NOE" | "REVENUE";
-export type PlSection = "Income" | "Cost of Sales" | "Other Income" | "Expenses" | "Other Expenses";
-export type AdvanceStatus = "outstanding" | "settled" | "written_off";
-export type TxStatus = "pending" | "verified" | "flagged" | "reversed";
-
-// ---------- Full-name label maps (no shortforms) ----------
-
-export const ENTRY_TYPE_LABELS: Record<EntryType, string> = {
-  expense: "Expense",
-  income: "Income (Sale or Receipt)",
-  transfer: "Transfer (Between Accounts)",
-  fx_conversion: "Foreign Exchange Conversion",
-  salary: "Salary Payment",
-  salary_advance: "Salary Advance (Recoverable)",
-  revolving_fund_advance: "Revolving Fund Disbursement",
-  liquidation: "Revolving Fund Liquidation",
-  refund: "Refund Received",
-  shareholder_advance: "Shareholder Advance (Capital In)",
-  bank_charge: "Bank Charge",
-  withholding_tax: "Withholding Tax",
-  interest_income: "Interest Income",
-  reversal: "Reversal (Cancel Prior Entry)",
-  other: "Other",
-};
-
-export const UE_BUCKET_LABELS: Record<UeBucket, string> = {
-  PP: "Pre Processing (Raw Bamboo Stage)",
-  PR: "Processing (Factory Production Stage)",
-  RM_PP: "Repairs and Maintenance, Pre Processing",
-  RM_PR: "Repairs and Maintenance, Processing",
-  MGT: "Management and Administration (Salaries, Statutory, Staff Welfare)",
-  OH: "Overhead (Office, Marketing, Logistics, Utilities)",
-  NOE: "Non Operating Expense (Bank, Legal, Travel, Subscriptions, FX)",
-  REVENUE: "Revenue",
-};
-
-export const UE_BUCKET_SHORT: Record<UeBucket, string> = {
-  PP: "Pre Processing",
-  PR: "Processing",
-  RM_PP: "R and M Pre Processing",
-  RM_PR: "R and M Processing",
-  MGT: "Management and Admin",
-  OH: "Overhead",
-  NOE: "Non Operating",
-  REVENUE: "Revenue",
-};
-
-export const ADVANCE_STATUS_LABELS: Record<AdvanceStatus, string> = {
-  outstanding: "Outstanding (Not Yet Settled)",
-  settled: "Settled",
-  written_off: "Written Off",
-};
-
-export const TX_STATUS_LABELS: Record<TxStatus, string> = {
-  pending: "Pending Review",
-  verified: "Verified",
-  flagged: "Flagged for Review",
-  reversed: "Reversed (Cancelled)",
-};
-
-export const PL_SECTION_ORDER: PlSection[] = [
-  "Income",
-  "Cost of Sales",
-  "Other Income",
-  "Expenses",
-  "Other Expenses",
-];
-
-// ---------- Formatters ----------
-
-export function formatMoney(amount: number | null | undefined, currency: string = "PHP"): string {
-  if (amount === null || amount === undefined || isNaN(Number(amount))) return "";
-  const symbol = currency === "PHP" ? "\u20B1" : currency === "USD" ? "$" : currency === "SGD" ? "S$" : "";
-  return `${symbol}${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-export function formatDate(d: string | null | undefined): string {
-  if (!d) return "";
-  const dt = new Date(d);
-  return dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-export function entryTypeLabel(t: EntryType | string | null | undefined): string {
-  if (!t) return "";
-  return ENTRY_TYPE_LABELS[t as EntryType] ?? String(t);
-}
-
-export function bucketLabel(b: UeBucket | string | null | undefined, short = false): string {
-  if (!b) return "";
-  const map = short ? UE_BUCKET_SHORT : UE_BUCKET_LABELS;
-  return map[b as UeBucket] ?? String(b);
-}
-
-// ---------- Running balance ----------
-
-export type DailyBalancePoint = {
-  date: string;
-  accountCode: string;
-  accountName: string;
-  currency: string;
-  runningBalance: number;
-};
-
-// Given an account (with opening balance) and a sorted list of its txns,
-// produce a daily running balance series.
-export function computeRunningBalance(
-  account: Account,
-  txns: Pick<Transaction, "transaction_date" | "amount" | "from_account_id" | "to_account_id" | "status"> & { id?: string }[] | any[]
-): DailyBalancePoint[] {
-  const points: DailyBalancePoint[] = [];
-  const opening = Number(account.opening_balance || 0);
-
-  // Seed with opening balance on opening_balance_date (or first txn date)
-  const startDate = account.opening_balance_date || (txns[0]?.transaction_date ?? new Date().toISOString().slice(0, 10));
-  points.push({
-    date: startDate,
-    accountCode: account.code,
-    accountName: account.name,
-    currency: account.currency,
-    runningBalance: opening,
-  });
-
-  // Group by day
-  const byDay: Record<string, number> = {};
-  for (const t of txns) {
-    if (t.status === "reversed") continue;
-    const day = t.transaction_date;
-    let delta = 0;
-    if (t.to_account_id === account.id) delta += Number(t.amount);
-    if (t.from_account_id === account.id) delta -= Number(t.amount);
-    if (delta === 0) continue;
-    byDay[day] = (byDay[day] || 0) + delta;
-  }
-
-  let running = opening;
-  const sortedDays = Object.keys(byDay).sort();
-  for (const day of sortedDays) {
-    running += byDay[day];
-    points.push({
-      date: day,
-      accountCode: account.code,
-      accountName: account.name,
-      currency: account.currency,
-      runningBalance: running,
-    });
-  }
-  return points;
-}
-
-// ---------- FX helpers ----------
-
-export type MonthlyFxRate = { year: number; month: number; avg_rate: number; end_rate: number | null };
-
-export async function getPeriodFxRate(startDate: string, endDate: string): Promise<number> {
-  const supabase = getFinanceSupabase();
-  const { data, error } = await supabase.rpc("fin_get_period_fx_rate", { p_start: startDate, p_end: endDate });
-  if (error) throw error;
-  return Number(data);
-}
-
-// ---------- Route helpers ----------
-
-export const FINANCE_NAV = [
-  { href: "/finance", label: "Dashboard" },
-  { href: "/finance/new", label: "Add Transaction" },
-  { href: "/finance/transactions", label: "All Transactions" },
-  { href: "/finance/fund", label: "Revolving Fund" },
-  { href: "/finance/reports", label: "Reports" },
-];
-
-// ---------- Backward compatibility exports ----------
-// Kept for existing /finance/new, /finance/fund, /finance/fund/[id], and layout pages.
-
-// Shared browser client singleton. Existing pages import { supabase } directly.
-export const supabase = getFinanceSupabase();
-
-// Today's date as YYYY-MM-DD (local time).
-export function todayISO(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-// Entry type metadata: which accounts each type requires.
-const ENTRY_TYPE_META: Record<EntryType, { needsFromAccount: boolean; needsToAccount: boolean }> = {
-  expense:                { needsFromAccount: true,  needsToAccount: false },
-  income:                 { needsFromAccount: false, needsToAccount: true  },
-  transfer:               { needsFromAccount: true,  needsToAccount: true  },
-  fx_conversion:          { needsFromAccount: true,  needsToAccount: true  },
-  salary:                 { needsFromAccount: true,  needsToAccount: false },
-  salary_advance:         { needsFromAccount: true,  needsToAccount: false },
-  revolving_fund_advance: { needsFromAccount: true,  needsToAccount: true  },
-  liquidation:            { needsFromAccount: true,  needsToAccount: false },
-  refund:                 { needsFromAccount: false, needsToAccount: true  },
-  shareholder_advance:    { needsFromAccount: false, needsToAccount: true  },
-  bank_charge:            { needsFromAccount: true,  needsToAccount: false },
-  withholding_tax:        { needsFromAccount: true,  needsToAccount: false },
-  interest_income:        { needsFromAccount: false, needsToAccount: true  },
-  reversal:               { needsFromAccount: false, needsToAccount: true  },
-  other:                  { needsFromAccount: false, needsToAccount: false },
-};
-
-// Entry type options for dropdowns, including needs flags for form field gating and validation.
-export const ENTRY_TYPE_OPTIONS: Array<{
-  value: EntryType;
-  label: string;
-  needsFromAccount: boolean;
-  needsToAccount: boolean;
-}> = (Object.keys(ENTRY_TYPE_LABELS) as EntryType[]).map((v) => ({
-  value: v,
-  label: ENTRY_TYPE_LABELS[v],
-  ...ENTRY_TYPE_META[v],
-}));
-
-// Fetch the full chart of accounts tree (classifications > cost centers > categories).
-export async function loadCoaTree(): Promise<{
-  classifications: Classification[];
-  costCenters: CostCenter[];
-  categories: Category[];
-}> {
-  const sb = getFinanceSupabase();
-  const [cls, cc, cat] = await Promise.all([
-    sb.from("fin_classifications").select("*").eq("is_active", true).order("display_order"),
-    sb.from("fin_cost_centers").select("*").eq("is_active", true).order("display_order"),
-    sb.from("fin_categories").select("*").eq("is_active", true).order("display_order"),
-  ]);
-  return {
-    classifications: (cls.data as Classification[]) ?? [],
-    costCenters: (cc.data as CostCenter[]) ?? [],
-    categories: (cat.data as Category[]) ?? [],
-  };
-}
-
-// Fetch all active bank and revolving fund accounts.
-export async function loadAccounts(): Promise<Account[]> {
-  const sb = getFinanceSupabase();
-  const { data } = await sb
-    .from("fin_accounts")
-    .select("*")
-    .eq("is_active", true)
-    .order("display_order");
-  return (data as Account[]) ?? [];
-}
-
-// Fetch all active staff members.
-export async function loadStaff(): Promise<Staff[]> {
-  const sb = getFinanceSupabase();
-  const { data } = await sb
-    .from("fin_staff")
-    .select("*")
-    .eq("is_active", true)
-    .order("display_order");
-  return (data as Staff[]) ?? [];
-}
-
-// Upload a receipt file to the finance_receipts storage bucket and return its public URL.
-export async function uploadReceipt(
-  file: File,
-  prefix: string = "misc"
-): Promise<{ url: string; path: string } | null> {
-  const sb = getFinanceSupabase();
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `${prefix}/${timestamp}_${safeName}`;
-  const { error } = await sb.storage.from("finance_receipts").upload(path, file, {
-    cacheControl: "3600",
-    upsert: false,
-    contentType: file.type || undefined,
-  });
-  if (error) {
-    console.error("uploadReceipt failed:", error);
-    return null;
-  }
-  const { data } = sb.storage.from("finance_receipts").getPublicUrl(path);
-  return { url: data.publicUrl, path };
+const inputCls = 'w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:border-gray-900';
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label className="block"><div className="text-sm font-medium text-gray-700 mb-1">{label}</div>{children}</label>;
 }
