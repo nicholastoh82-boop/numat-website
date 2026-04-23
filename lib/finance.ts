@@ -270,4 +270,91 @@ export const FINANCE_NAV = [
   { href: "/finance/transactions", label: "All Transactions" },
   { href: "/finance/fund", label: "Revolving Fund" },
   { href: "/finance/reports", label: "Reports" },
+
+  
 ];
+// ---------- Backward compatibility exports ----------
+// Kept for existing /finance/new, /finance/fund, /finance/fund/[id], and layout pages.
+// These were part of the previous lib/finance.ts and are re-added here unchanged in behaviour.
+
+// Shared browser client singleton. Existing pages import { supabase } directly.
+export const supabase = getFinanceSupabase();
+
+// Today's date as YYYY-MM-DD (local time).
+export function todayISO(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Entry type options for dropdowns (value + label pairs).
+export const ENTRY_TYPE_OPTIONS: Array<{ value: EntryType; label: string }> =
+  (Object.keys(ENTRY_TYPE_LABELS) as EntryType[]).map((v) => ({
+    value: v,
+    label: ENTRY_TYPE_LABELS[v],
+  }));
+
+// Fetch the full chart of accounts tree (classifications > cost centers > categories).
+export async function loadCoaTree(): Promise<{
+  classifications: Classification[];
+  costCenters: CostCenter[];
+  categories: Category[];
+}> {
+  const sb = getFinanceSupabase();
+  const [cls, cc, cat] = await Promise.all([
+    sb.from("fin_classifications").select("*").eq("is_active", true).order("display_order"),
+    sb.from("fin_cost_centers").select("*").eq("is_active", true).order("display_order"),
+    sb.from("fin_categories").select("*").eq("is_active", true).order("display_order"),
+  ]);
+  return {
+    classifications: (cls.data as Classification[]) ?? [],
+    costCenters: (cc.data as CostCenter[]) ?? [],
+    categories: (cat.data as Category[]) ?? [],
+  };
+}
+
+// Fetch all active bank and revolving fund accounts.
+export async function loadAccounts(): Promise<Account[]> {
+  const sb = getFinanceSupabase();
+  const { data } = await sb
+    .from("fin_accounts")
+    .select("*")
+    .eq("is_active", true)
+    .order("display_order");
+  return (data as Account[]) ?? [];
+}
+
+// Fetch all active staff members.
+export async function loadStaff(): Promise<Staff[]> {
+  const sb = getFinanceSupabase();
+  const { data } = await sb
+    .from("fin_staff")
+    .select("*")
+    .eq("is_active", true)
+    .order("display_order");
+  return (data as Staff[]) ?? [];
+}
+
+// Upload a receipt file to the finance_receipts storage bucket and return its public URL.
+export async function uploadReceipt(
+  file: File,
+  prefix: string = "misc"
+): Promise<{ url: string; path: string } | null> {
+  const sb = getFinanceSupabase();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${prefix}/${timestamp}_${safeName}`;
+  const { error } = await sb.storage.from("finance_receipts").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: file.type || undefined,
+  });
+  if (error) {
+    console.error("uploadReceipt failed:", error);
+    return null;
+  }
+  const { data } = sb.storage.from("finance_receipts").getPublicUrl(path);
+  return { url: data.publicUrl, path };
+}
