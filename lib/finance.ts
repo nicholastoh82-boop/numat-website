@@ -1,10 +1,13 @@
 // lib/finance.ts
 // Shared types, labels and helpers for the /finance module.
-// Rule: never use shortforms in the UI. Always expand to full names via the label maps below.
+// SSR-safe: on the server (Next.js prerender), supabase is a no-op stub.
+// Real usage only happens in the browser via useEffect and event handlers.
 
 import { createBrowserClient } from "@supabase/ssr";
 
-export function getFinanceSupabase() {
+export function getFinanceSupabase(): any {
+  // Server-side (prerender): return a harmless stub so module load never throws.
+  if (typeof window === "undefined") return {} as any;
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -174,7 +177,7 @@ export const PL_SECTION_ORDER: PlSection[] = [
 
 export function formatMoney(amount: number | null | undefined, currency: string = "PHP"): string {
   if (amount === null || amount === undefined || isNaN(Number(amount))) return "";
-  const symbol = currency === "PHP" ? "₱" : currency === "USD" ? "$" : currency === "SGD" ? "S$" : "";
+  const symbol = currency === "PHP" ? "\u20B1" : currency === "USD" ? "$" : currency === "SGD" ? "S$" : "";
   return `${symbol}${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
@@ -205,17 +208,16 @@ export type DailyBalancePoint = {
   runningBalance: number;
 };
 
-// Given an account (with opening balance) and a sorted list of its txns,
-// produce a daily running balance series.
 export function computeRunningBalance(
   account: Account,
-  txns: Pick<Transaction, "transaction_date" | "amount" | "from_account_id" | "to_account_id" | "status">[]
+  txns: any[]
 ): DailyBalancePoint[] {
   const points: DailyBalancePoint[] = [];
   const opening = Number(account.opening_balance || 0);
 
-  // Seed with opening balance one day before first txn (or opening_balance_date)
-  const startDate = account.opening_balance_date || (txns[0]?.transaction_date ?? new Date().toISOString().slice(0, 10));
+  const startDate =
+    account.opening_balance_date ||
+    (txns[0]?.transaction_date ?? new Date().toISOString().slice(0, 10));
   points.push({
     date: startDate,
     accountCode: account.code,
@@ -224,7 +226,6 @@ export function computeRunningBalance(
     runningBalance: opening,
   });
 
-  // Group by day
   const byDay: Record<string, number> = {};
   for (const t of txns) {
     if (t.status === "reversed") continue;
@@ -256,8 +257,8 @@ export function computeRunningBalance(
 export type MonthlyFxRate = { year: number; month: number; avg_rate: number; end_rate: number | null };
 
 export async function getPeriodFxRate(startDate: string, endDate: string): Promise<number> {
-  const supabase = getFinanceSupabase();
-  const { data, error } = await supabase.rpc("fin_get_period_fx_rate", { p_start: startDate, p_end: endDate });
+  const sb = getFinanceSupabase();
+  const { data, error } = await sb.rpc("fin_get_period_fx_rate", { p_start: startDate, p_end: endDate });
   if (error) throw error;
   return Number(data);
 }
@@ -270,50 +271,16 @@ export const FINANCE_NAV = [
   { href: "/finance/transactions", label: "All Transactions" },
   { href: "/finance/fund", label: "Revolving Fund" },
   { href: "/finance/reports", label: "Reports" },
-
-  
 ];
+
 // ---------- Backward compatibility exports ----------
 // Kept for existing /finance/new, /finance/fund, /finance/fund/[id], and layout pages.
-// These were part of the previous lib/finance.ts and are re-added here unchanged in behaviour.
 
-// ---- Lazy supabase singleton (safe for SSR prerender) ----
-// createBrowserClient touches browser-only APIs and will crash if evaluated
-// during Next.js static prerender. This Proxy defers creation until a property
-// is read, which only happens in useEffect/handlers on the client.
-let _sbInstance: ReturnType<typeof getFinanceSupabase> | null = null;
-function _sb() {
-  if (typeof window === "undefined") {
-    // Defensive: if accessed on the server during prerender, return a stub
-    // that no-ops instead of calling createBrowserClient.
-    return null as any;
-  }
-  if (!_sbInstance) _sbInstance = getFinanceSupabase();
-  return _sbInstance;
-}
-export const supabase = new Proxy({} as ReturnType<typeof getFinanceSupabase>, {
-  get(_target, prop) {
-    const instance = _sb();
-    if (!instance) {
-      // Server-side access, return a harmless async stub
-      if (prop === "auth") return { getUser: async () => ({ data: { user: null } }) };
-      if (prop === "from" || prop === "rpc" || prop === "storage") {
-        return () => ({
-          select: () => ({ data: null, error: null }),
-          insert: () => ({ data: null, error: null }),
-          update: () => ({ data: null, error: null }),
-          upload: () => ({ data: null, error: null }),
-          getPublicUrl: () => ({ data: { publicUrl: "" } }),
-          eq: () => ({ data: null, error: null }),
-          single: () => ({ data: null, error: null }),
-          order: () => ({ data: null, error: null }),
-        });
-      }
-      return undefined;
-    }
-    return (instance as any)[prop];
-  },
-});
+// SSR-safe supabase singleton. On the server during prerender, this is an empty
+// object stub so lib/finance.ts module load never throws. All real supabase usage
+// happens inside useEffect and event handlers, which only run in the browser.
+export const supabase: any =
+  typeof window !== "undefined" ? getFinanceSupabase() : ({} as any);
 
 // Today's date as YYYY-MM-DD (local time).
 export function todayISO(): string {
@@ -324,12 +291,36 @@ export function todayISO(): string {
   return `${y}-${m}-${day}`;
 }
 
-// Entry type options for dropdowns (value + label pairs).
-export const ENTRY_TYPE_OPTIONS: Array<{ value: EntryType; label: string }> =
-  (Object.keys(ENTRY_TYPE_LABELS) as EntryType[]).map((v) => ({
-    value: v,
-    label: ENTRY_TYPE_LABELS[v],
-  }));
+// Entry type metadata: which accounts each type requires.
+const ENTRY_TYPE_META: Record<EntryType, { needsFromAccount: boolean; needsToAccount: boolean }> = {
+  expense:                { needsFromAccount: true,  needsToAccount: false },
+  income:                 { needsFromAccount: false, needsToAccount: true  },
+  transfer:               { needsFromAccount: true,  needsToAccount: true  },
+  fx_conversion:          { needsFromAccount: true,  needsToAccount: true  },
+  salary:                 { needsFromAccount: true,  needsToAccount: false },
+  salary_advance:         { needsFromAccount: true,  needsToAccount: false },
+  revolving_fund_advance: { needsFromAccount: true,  needsToAccount: true  },
+  liquidation:            { needsFromAccount: true,  needsToAccount: false },
+  refund:                 { needsFromAccount: false, needsToAccount: true  },
+  shareholder_advance:    { needsFromAccount: false, needsToAccount: true  },
+  bank_charge:            { needsFromAccount: true,  needsToAccount: false },
+  withholding_tax:        { needsFromAccount: true,  needsToAccount: false },
+  interest_income:        { needsFromAccount: false, needsToAccount: true  },
+  reversal:               { needsFromAccount: false, needsToAccount: true  },
+  other:                  { needsFromAccount: false, needsToAccount: false },
+};
+
+// Entry type options for dropdowns, including needs flags for form field gating and validation.
+export const ENTRY_TYPE_OPTIONS: Array<{
+  value: EntryType;
+  label: string;
+  needsFromAccount: boolean;
+  needsToAccount: boolean;
+}> = (Object.keys(ENTRY_TYPE_LABELS) as EntryType[]).map((v) => ({
+  value: v,
+  label: ENTRY_TYPE_LABELS[v],
+  ...ENTRY_TYPE_META[v],
+}));
 
 // Fetch the full chart of accounts tree (classifications > cost centers > categories).
 export async function loadCoaTree(): Promise<{
@@ -350,7 +341,6 @@ export async function loadCoaTree(): Promise<{
   };
 }
 
-// Fetch all active bank and revolving fund accounts.
 export async function loadAccounts(): Promise<Account[]> {
   const sb = getFinanceSupabase();
   const { data } = await sb
@@ -361,7 +351,6 @@ export async function loadAccounts(): Promise<Account[]> {
   return (data as Account[]) ?? [];
 }
 
-// Fetch all active staff members.
 export async function loadStaff(): Promise<Staff[]> {
   const sb = getFinanceSupabase();
   const { data } = await sb
@@ -372,7 +361,6 @@ export async function loadStaff(): Promise<Staff[]> {
   return (data as Staff[]) ?? [];
 }
 
-// Upload a receipt file to the finance_receipts storage bucket and return its public URL.
 export async function uploadReceipt(
   file: File,
   prefix: string = "misc"
