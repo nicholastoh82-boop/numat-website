@@ -6,6 +6,8 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
+  
+
   // With Fluid compute, don't put this client in a global environment
   // variable. Always create a new one on each request.
   const supabase = createServerClient(
@@ -50,6 +52,10 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
+
+    if (!user && !request.nextUrl.pathname.startsWith('/login')) {
+  // redirect to login
+}
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
