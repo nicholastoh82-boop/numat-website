@@ -1,6 +1,5 @@
 // lib/finance.ts
 // NUMAT Finance helpers, SSR-safe, IFRS aligned.
-// Drop this in place of the existing lib/finance.ts.
 
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -20,6 +19,13 @@ export function getSupabase(): SupabaseClient {
         update: async () => ({ data: null, error: null }),
         upsert: async () => ({ data: null, error: null }),
         delete: async () => ({ data: null, error: null }),
+        eq: () => ({ data: [], error: null }),
+        neq: () => ({ data: [], error: null }),
+        gte: () => ({ data: [], error: null }),
+        lte: () => ({ data: [], error: null }),
+        order: () => ({ data: [], error: null }),
+        limit: () => ({ data: [], error: null }),
+        single: async () => ({ data: null, error: null }),
       }),
       rpc: async () => ({ data: null, error: null }),
       storage: {
@@ -27,6 +33,10 @@ export function getSupabase(): SupabaseClient {
           upload: async () => ({ data: null, error: null }),
           getPublicUrl: () => ({ data: { publicUrl: "" } }),
         }),
+      },
+      auth: {
+        getUser: async () => ({ data: { user: null }, error: null }),
+        signOut: async () => ({ error: null }),
       },
     } as unknown as SupabaseClient;
   }
@@ -38,6 +48,9 @@ export function getSupabase(): SupabaseClient {
   }
   return _client;
 }
+
+// Backward compatible alias used by newer dashboard and transactions pages.
+export const getFinanceSupabase = getSupabase;
 
 export const supabase = getSupabase();
 
@@ -82,12 +95,39 @@ export type Account = {
   is_active: boolean | null;
 };
 
+// Shape returned by the fin_account_balances view.
+export type AccountBalance = {
+  id: string;
+  code: string;
+  name: string;
+  currency: Currency;
+  account_type: string;
+  current_balance: number;
+};
+
+export type Classification = {
+  id: number;
+  code: string;
+  name: string;
+  is_active: boolean | null;
+};
+
+export type CostCenter = {
+  id: number;
+  code: string;
+  name: string;
+  classification_id: number | null;
+  is_active: boolean | null;
+};
+
 export type Category = {
   id: number;
   code: string;
   name: string;
+  classification_id: number | null;
   cost_center_id: number | null;
   pl_section: PlSection | null;
+  ue_bucket: string | null;
   is_income: boolean;
   is_active: boolean | null;
 };
@@ -108,18 +148,35 @@ export type Transaction = {
   currency: Currency;
   from_account_id: string | null;
   to_account_id: string | null;
+  classification_id: number | null;
+  cost_center_id: number | null;
   category_id: number | null;
+  ue_bucket: string | null;
   description: string | null;
   vendor_payee: string | null;
+  requisitioner: string | null;
   staff_id: string | null;
   notes: string | null;
   status: "pending" | "verified" | "flagged" | "reversed" | null;
   submitted_by: string | null;
+  submitted_at: string | null;
   advance_status: "outstanding" | "settled" | "written_off" | null;
+  bank_reference: string | null;
+  fx_rate: number | null;
+  receipt_url: string | null;
+  receipt_filename: string | null;
+  revolving_fund_batch_id: string | null;
+  pr_amount: number | null;
+  settled_by_txn_id: string | null;
+};
+
+export type DailyBalancePoint = {
+  date: string;
+  runningBalance: number;
 };
 
 // -----------------------------------------------------------------------------
-// IFRS P&L section order — this is the ONLY valid ordering
+// IFRS P&L section order, this is the ONLY valid ordering.
 // -----------------------------------------------------------------------------
 
 export const PL_SECTION_ORDER: PlSection[] = [
@@ -153,7 +210,7 @@ export const NON_PL_ENTRY_TYPES: EntryType[] = [
 ];
 
 // -----------------------------------------------------------------------------
-// Label maps (used across ledger, dashboard, and P&L report)
+// Label maps
 // -----------------------------------------------------------------------------
 
 export const ENTRY_TYPE_LABELS: Record<EntryType, string> = {
@@ -242,9 +299,21 @@ export const ENTRY_TYPE_META: Record<
   other: { label: "Other", needsFromAccount: false, needsToAccount: false },
 };
 
-export const ENTRY_TYPE_OPTIONS: EntryType[] = Object.keys(
-  ENTRY_TYPE_META
-) as EntryType[];
+export type EntryTypeOption = {
+  value: EntryType;
+  label: string;
+  needsFromAccount: boolean;
+  needsToAccount: boolean;
+};
+
+export const ENTRY_TYPE_OPTIONS: EntryTypeOption[] = (
+  Object.keys(ENTRY_TYPE_META) as EntryType[]
+).map((k) => ({
+  value: k,
+  label: ENTRY_TYPE_META[k].label,
+  needsFromAccount: ENTRY_TYPE_META[k].needsFromAccount,
+  needsToAccount: ENTRY_TYPE_META[k].needsToAccount,
+}));
 
 // -----------------------------------------------------------------------------
 // Formatters
@@ -257,20 +326,49 @@ export function formatMoney(
   if (value === null || value === undefined || value === "") return "";
   const n = typeof value === "string" ? parseFloat(value) : value;
   if (!isFinite(n)) return "";
-  const sym = currency === "USD" ? "$" : currency === "SGD" ? "S$" : "\u20b1";
+  const sym = currency === "USD" ? "$" : currency === "SGD" ? "S$" : "₱";
   return `${sym}${n.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 }
 
+export function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+export function entryTypeLabel(
+  type: EntryType | string | null | undefined
+): string {
+  if (!type) return "";
+  return ENTRY_TYPE_LABELS[type as EntryType] ?? String(type);
+}
+
+export function bucketLabel(
+  code: string | null | undefined,
+  short = false
+): string {
+  if (!code) return "";
+  const map = (short ? UE_BUCKET_LABELS_SHORT : UE_BUCKET_LABELS) as Record<
+    string,
+    string
+  >;
+  return map[code] ?? code;
+}
+
 // -----------------------------------------------------------------------------
-// FX helper — returns monthly avg PHP per USD for a given period.
-// Falls back to a sensible default if the month is not yet populated.
+// FX helper, returns monthly avg PHP per USD for a given period.
 // -----------------------------------------------------------------------------
 
 export async function getPeriodFxRate(
@@ -290,28 +388,25 @@ export async function getPeriodFxRate(
 }
 
 // -----------------------------------------------------------------------------
-// Running balance helper (for the dashboard balance chart)
+// Running balance helper for the dashboard balance chart.
+// New signature: (account, txns) => DailyBalancePoint[]
 // -----------------------------------------------------------------------------
 
 export function computeRunningBalance(
-  openingBalance: number,
-  txs: Array<{
-    transaction_date: string;
-    amount: number;
-    from_account_id: string | null;
-    to_account_id: string | null;
-  }>,
-  accountId: string
-): Array<{ date: string; balance: number }> {
-  let bal = openingBalance || 0;
-  const out: Array<{ date: string; balance: number }> = [];
+  account: Pick<Account, "id" | "opening_balance">,
+  txs: Array<
+    Pick<Transaction, "transaction_date" | "amount" | "from_account_id" | "to_account_id">
+  >
+): DailyBalancePoint[] {
+  let bal = Number(account.opening_balance) || 0;
+  const out: DailyBalancePoint[] = [];
   const sorted = [...txs].sort((a, b) =>
     a.transaction_date.localeCompare(b.transaction_date)
   );
   for (const t of sorted) {
-    if (t.to_account_id === accountId) bal += Number(t.amount) || 0;
-    if (t.from_account_id === accountId) bal -= Number(t.amount) || 0;
-    out.push({ date: t.transaction_date, balance: bal });
+    if (t.to_account_id === account.id) bal += Number(t.amount) || 0;
+    if (t.from_account_id === account.id) bal -= Number(t.amount) || 0;
+    out.push({ date: t.transaction_date, runningBalance: bal });
   }
   return out;
 }
@@ -329,7 +424,7 @@ export const FINANCE_NAV = [
 ];
 
 // -----------------------------------------------------------------------------
-// Data loaders (backward compatible with the old /finance/new and /finance/fund pages)
+// Data loaders
 // -----------------------------------------------------------------------------
 
 export async function loadAccounts(): Promise<Account[]> {
@@ -354,38 +449,56 @@ export async function loadStaff(): Promise<Staff[]> {
 }
 
 export async function loadCoaTree(): Promise<{
-  classifications: Array<{ id: number; code: string; name: string }>;
-  costCenters: Array<{
-    id: number;
-    code: string;
-    name: string;
-    classification_id: number | null;
-  }>;
+  classifications: Classification[];
+  costCenters: CostCenter[];
   categories: Category[];
 }> {
   const [cls, cc, cat] = await Promise.all([
-    supabase.from("fin_classifications").select("*").order("display_order"),
-    supabase.from("fin_cost_centers").select("*").order("display_order"),
-    supabase.from("fin_categories").select("*").eq("is_active", true).order("display_order"),
+    supabase
+      .from("fin_classifications")
+      .select("*")
+      .eq("is_active", true)
+      .order("display_order"),
+    supabase
+      .from("fin_cost_centers")
+      .select("*")
+      .eq("is_active", true)
+      .order("display_order"),
+    supabase
+      .from("fin_categories")
+      .select("*")
+      .eq("is_active", true)
+      .order("display_order"),
   ]);
   return {
-    classifications: (cls.data as any) || [],
-    costCenters: (cc.data as any) || [],
+    classifications: ((cls.data as any) || []) as Classification[],
+    costCenters: ((cc.data as any) || []) as CostCenter[],
     categories: ((cat.data as any) || []) as Category[],
   };
 }
 
+// -----------------------------------------------------------------------------
+// Receipt upload. Returns { url, filename } so callers can persist both.
+// -----------------------------------------------------------------------------
+
 export async function uploadReceipt(
   file: File,
-  relPath: string
-): Promise<string | null> {
+  folder: string
+): Promise<{ url: string; filename: string } | null> {
   try {
+    const ts = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${folder}/${ts}_${safeName}`;
     const { error } = await supabase.storage
       .from("finance_receipts")
-      .upload(relPath, file, { upsert: true });
+      .upload(path, file, { upsert: true });
     if (error) return null;
-    const { data } = supabase.storage.from("finance_receipts").getPublicUrl(relPath);
-    return data.publicUrl || null;
+    const { data } = supabase.storage
+      .from("finance_receipts")
+      .getPublicUrl(path);
+    const url = data?.publicUrl || "";
+    if (!url) return null;
+    return { url, filename: file.name };
   } catch {
     return null;
   }
