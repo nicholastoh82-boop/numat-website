@@ -24,10 +24,11 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   if (!ready) return <div className="min-h-screen bg-white text-gray-900 flex items-center justify-center">Loading.</div>;
 
   const navItems = [
-    { href: '/finance',           label: 'Dashboard' },
-    { href: '/finance/new',       label: 'New Transaction' },
-    { href: '/finance/fund',      label: 'Revolving Fund' },
+    { href: '/finance',              label: 'Dashboard' },
+    { href: '/finance/new',          label: 'New Transaction' },
+    { href: '/finance/fund',         label: 'Revolving Fund' },
     { href: '/finance/transactions', label: 'All Transactions' },
+    { href: '/finance/reports',      label: 'Reports' },
   ];
 
   return (
