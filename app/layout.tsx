@@ -7,7 +7,7 @@ import { CurrencyProvider } from '@/components/providers/currency-provider'
 import CountrySelectorModal from '@/components/country-selector-modal'
 import PublicOnlyWidgets from '@/components/public-only-widgets'
 import Script from 'next/script'
-import './globals.css'
+import '@/app/globals.css'
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -112,6 +112,11 @@ export default function RootLayout({
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
           strategy="afterInteractive"
         />
+        <Script id="contentsquare-bootstrap" strategy="afterInteractive">
+          {`
+            window._uxa = window._uxa || [];
+          `}
+        </Script>
         <Script
           src="https://t.contentsquare.net/uxa/a94870d42bc1e.js"
           strategy="afterInteractive"
@@ -119,7 +124,7 @@ export default function RootLayout({
         <Script id="google-analytics" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
+            window.gtag = window.gtag || function gtag(){ window.dataLayer.push(arguments); };
             gtag('js', new Date());
             gtag('config', '${GA_ID}', {
               page_path: window.location.pathname,

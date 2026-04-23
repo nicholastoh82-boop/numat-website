@@ -137,7 +137,10 @@ export default function PlReportPage() {
     const map: Record<PlSection, PlRow[]> = {
       "Income": [], "Cost of Sales": [], "Other Income": [], "Expenses": [], "Other Expenses": [],
     };
-    for (const r of rows) map[r.section].push(r);
+    for (const r of rows) {
+      if (!PL_SECTION_ORDER.includes(r.section)) continue;
+      map[r.section].push(r);
+    }
     for (const k of Object.keys(map) as PlSection[]) {
       map[k].sort((a, b) => a.account_code.localeCompare(b.account_code));
     }
