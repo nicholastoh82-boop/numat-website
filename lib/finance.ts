@@ -277,8 +277,43 @@ export const FINANCE_NAV = [
 // Kept for existing /finance/new, /finance/fund, /finance/fund/[id], and layout pages.
 // These were part of the previous lib/finance.ts and are re-added here unchanged in behaviour.
 
-// Shared browser client singleton. Existing pages import { supabase } directly.
-export const supabase = getFinanceSupabase();
+// ---- Lazy supabase singleton (safe for SSR prerender) ----
+// createBrowserClient touches browser-only APIs and will crash if evaluated
+// during Next.js static prerender. This Proxy defers creation until a property
+// is read, which only happens in useEffect/handlers on the client.
+let _sbInstance: ReturnType<typeof getFinanceSupabase> | null = null;
+function _sb() {
+  if (typeof window === "undefined") {
+    // Defensive: if accessed on the server during prerender, return a stub
+    // that no-ops instead of calling createBrowserClient.
+    return null as any;
+  }
+  if (!_sbInstance) _sbInstance = getFinanceSupabase();
+  return _sbInstance;
+}
+export const supabase = new Proxy({} as ReturnType<typeof getFinanceSupabase>, {
+  get(_target, prop) {
+    const instance = _sb();
+    if (!instance) {
+      // Server-side access, return a harmless async stub
+      if (prop === "auth") return { getUser: async () => ({ data: { user: null } }) };
+      if (prop === "from" || prop === "rpc" || prop === "storage") {
+        return () => ({
+          select: () => ({ data: null, error: null }),
+          insert: () => ({ data: null, error: null }),
+          update: () => ({ data: null, error: null }),
+          upload: () => ({ data: null, error: null }),
+          getPublicUrl: () => ({ data: { publicUrl: "" } }),
+          eq: () => ({ data: null, error: null }),
+          single: () => ({ data: null, error: null }),
+          order: () => ({ data: null, error: null }),
+        });
+      }
+      return undefined;
+    }
+    return (instance as any)[prop];
+  },
+});
 
 // Today's date as YYYY-MM-DD (local time).
 export function todayISO(): string {
