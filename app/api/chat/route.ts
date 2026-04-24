@@ -49,6 +49,29 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 const N8N_WEBHOOK = 'https://nicholastoh.app.n8n.cloud/webhook/numat-lead'
 const STOP_WORDS = new Set(['a','an','the','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','dare','ought','used','i','me','my','we','our','you','your','he','she','it','they','them','his','her','its','their','what','which','who','whom','this','that','these','those','am','at','by','for','in','of','on','or','to','up','and','but','if','or','nor','so','yet','both','either','neither','not','only','own','same','than','too','very','just','how','when','where','why','all','any','each','few','more','most','other','some','such','no','as'])
 
+// Short greetings, acknowledgements, and yes/no answers never need knowledge base lookup.
+const FILLER_PATTERNS: RegExp[] = [
+  /^(hi|hello|hey|kumusta|kamusta|good (morning|afternoon|evening))[\s!.?]*$/i,
+  /^(thanks|thank you|salamat|ty|thx)[\s!.?]*$/i,
+  /^(ok|okay|sige|alright|got it|cool|nice|great)[\s!.?]*$/i,
+  /^(bye|goodbye|paalam|see you)[\s!.?]*$/i,
+  /^(yes|no|oo|hindi|yeah|nope|sure)[\s!.?]*$/i,
+]
+
+function needsRAG(message: string): boolean {
+  const trimmed = message.trim()
+  if (trimmed.length < 4) return false
+  return !FILLER_PATTERNS.some((p) => p.test(trimmed))
+}
+
+// Keep the most recent N turns so long conversations do not balloon input tokens.
+const MAX_HISTORY_MESSAGES = 6
+
+function truncateHistory(messages: ChatMessage[]): ChatMessage[] {
+  if (messages.length <= MAX_HISTORY_MESSAGES) return messages
+  return messages.slice(-MAX_HISTORY_MESSAGES)
+}
+
 // VE Report context passed from the chat widget when visitor arrives via ?ve_report=TOKEN
 interface VEReportContext {
   company: string
@@ -323,14 +346,20 @@ export async function POST(request: NextRequest) {
       }).then(() => {})
     }
 
-    // Fetch internal guidelines + contextual knowledge in parallel
-    const [internalEntries, { entries: knowledgeEntries, hasResults, keywords }] = await Promise.all([
-      fetchInternalKnowledge(supabase),
-      searchKnowledge(supabase, userQuestion),
-    ])
+    // Always fetch behavioural guidelines. Skip the contextual knowledge search
+    // for short greetings, acknowledgements, and yes or no replies to cut cost and latency.
+    const skipRAG = isVEOpen || !needsRAG(userQuestion)
 
-    // Log unanswered questions
-    if (lastMsg?.role === 'user' && !isVEOpen) {
+    const [internalEntries, ragResult] = await Promise.all([
+      fetchInternalKnowledge(supabase),
+      skipRAG
+        ? Promise.resolve({ entries: [] as KnowledgeEntry[], hasResults: false, keywords: [] as string[] })
+        : searchKnowledge(supabase, userQuestion),
+    ])
+    const { entries: knowledgeEntries, hasResults, keywords } = ragResult
+
+    // Log unanswered questions only when we actually tried to retrieve
+    if (!skipRAG && lastMsg?.role === 'user') {
       if (!hasResults && userQuestion.length > 15) {
         supabase.from('nara_unanswered').insert({ session_id, question: userQuestion }).then(() => {})
       } else if (hasResults) {
@@ -346,6 +375,8 @@ export async function POST(request: NextRequest) {
     )
     const knowledgeIds = knowledgeEntries.map(e => e.id)
 
+    const truncatedMessages = truncateHistory(claudeMessages)
+
     const claudeRes = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
       headers: {
@@ -354,10 +385,16 @@ export async function POST(request: NextRequest) {
         'x-api-key': apiKey,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 500,
-        system: systemPrompt,
-        messages: claudeMessages.map(m => ({ role: m.role, content: m.content })),
+        system: [
+          {
+            type: 'text',
+            text: systemPrompt,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+        messages: truncatedMessages.map(m => ({ role: m.role, content: m.content })),
       }),
     })
 
@@ -396,6 +433,25 @@ export async function POST(request: NextRequest) {
         .update({ completed: true, lead_submitted: true })
         .eq('id', session_id)
         .then(() => {})
+
+      // Fire and forget session analysis. Cron sweeper catches anything that
+      // gets dropped when the serverless function terminates before this resolves.
+      const cronSecret = process.env.CRON_SECRET
+      if (cronSecret) {
+        try {
+          const origin = new URL(request.url).origin
+          fetch(`${origin}/api/nara/analyze-session`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${cronSecret}`,
+            },
+            body: JSON.stringify({ sessionId: session_id }),
+          }).catch(e => console.error('[NARA] analyze-session fire and forget failed:', e))
+        } catch (e) {
+          console.error('[NARA] failed to trigger analyze-session:', e)
+        }
+      }
 
       const fullConvo = [...messages, { role: 'assistant', content: text }]
         .map(m => `${m.role.toUpperCase()}: ${m.content}`)

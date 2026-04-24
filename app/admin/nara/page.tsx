@@ -38,6 +38,7 @@ type ChatSession = {
   completed: boolean
   lead_submitted: boolean
   page_url: string | null
+  session_analyzed_at: string | null
 }
 
 type ChatMessage = {
@@ -439,6 +440,9 @@ function ConversationsTab() {
                       )}
                       {session.completed && !session.lead_submitted && (
                         <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Completed</span>
+                      )}
+                      {session.completed && !session.session_analyzed_at && (
+                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Analysis pending</span>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
