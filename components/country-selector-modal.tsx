@@ -1,12 +1,18 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { useCurrency } from '@/components/providers/currency-provider'
 import { COUNTRY_OPTIONS } from '@/lib/currency'
 import { Button } from '@/components/ui/button'
 
+const PRIVATE_PATHS = ['/admin', '/crm', '/finance']
+
 export default function CountrySelectorModal() {
+  const pathname = usePathname()
   const { showCountryModal, setSelectedCountryCode } = useCurrency()
 
+  const isPrivate = pathname ? PRIVATE_PATHS.some((p) => pathname.startsWith(p)) : false
+  if (isPrivate) return null
   if (!showCountryModal) return null
 
   return (
