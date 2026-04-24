@@ -79,7 +79,7 @@ export type EntryType =
 
 export type PlSection =
   | "Income"
-  | "Cost of Sales"
+  | "Cost of Goods Sold"
   | "Other Income"
   | "Expenses"
   | "Other Expenses";
@@ -182,7 +182,7 @@ export type DailyBalancePoint = {
 
 export const PL_SECTION_ORDER: PlSection[] = [
   "Income",
-  "Cost of Sales",
+  "Cost of Goods Sold",
   "Other Income",
   "Expenses",
   "Other Expenses",
@@ -190,7 +190,7 @@ export const PL_SECTION_ORDER: PlSection[] = [
 
 export const PL_SECTION_LABELS: Record<PlSection, string> = {
   Income: "Income",
-  "Cost of Sales": "Cost of Sales",
+  "Cost of Goods Sold": "Cost of Goods Sold",
   "Other Income": "Other Income",
   Expenses: "Expenses",
   "Other Expenses": "Other Expenses",
