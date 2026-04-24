@@ -7,6 +7,7 @@ import {
   supabase, loadCoaTree, loadAccounts, loadStaff, uploadReceipt, todayISO,
   ENTRY_TYPE_OPTIONS, EntryType, Account, Staff, Classification, CostCenter, Category, formatMoney
 } from '@/lib/finance';
+import CategoryPicker, { buildPickerOptions, type PickerOption } from '@/components/finance/CategoryPicker';
 
 type OutstandingAdvance = { id: string; transaction_date: string; amount: number; description: string | null };
 
@@ -26,9 +27,7 @@ export default function NewTransactionPage() {
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('PHP');
   const [fxRate, setFxRate] = useState('');
-  const [classificationId, setClassificationId] = useState<number | ''>('');
-  const [costCenterId, setCostCenterId] = useState<number | ''>('');
-  const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [pickerValue, setPickerValue] = useState<PickerOption | null>(null);
   const [vendor, setVendor] = useState('');
   const [description, setDescription] = useState('');
   const [requisitioner, setRequisitioner] = useState('');
@@ -54,8 +53,10 @@ export default function NewTransactionPage() {
   })(); }, []);
 
   const typeCfg = useMemo(() => ENTRY_TYPE_OPTIONS.find(o => o.value === entryType)!, [entryType]);
-  const filteredCostCenters = useMemo(() => costCenters.filter(c => c.classification_id === classificationId), [costCenters, classificationId]);
-  const filteredCategories = useMemo(() => categories.filter(c => c.cost_center_id === costCenterId), [categories, costCenterId]);
+  const pickerOptions = useMemo(
+    () => buildPickerOptions(classifications, costCenters, categories),
+    [classifications, costCenters, categories],
+  );
   const needsCategory = !['transfer','fx_conversion'].includes(entryType);
   const needsStaff = ['salary','salary_advance'].includes(entryType);
   const isFxBetweenCurrencies = useMemo(() => {
@@ -97,7 +98,7 @@ export default function NewTransactionPage() {
     if (!amount || Number(amount) <= 0) { setErr('Amount must be greater than zero.'); return; }
     if (typeCfg.needsFromAccount && !fromAccountId) { setErr('Select a From Account.'); return; }
     if (typeCfg.needsToAccount && !toAccountId) { setErr('Select a To Account.'); return; }
-    if (needsCategory && !categoryId) { setErr('Select a category.'); return; }
+    if (needsCategory && !pickerValue) { setErr('Select a category.'); return; }
     if (needsStaff && !staffId) { setErr('Select staff.'); return; }
 
     setSubmitting(true);
@@ -121,7 +122,9 @@ export default function NewTransactionPage() {
         from_account_id: typeCfg.needsFromAccount ? fromAccountId : null,
         to_account_id: typeCfg.needsToAccount ? toAccountId : null,
         fx_rate: isFxBetweenCurrencies && fxRate ? Number(fxRate) : null,
-        category_id: needsCategory && categoryId ? Number(categoryId) : null,
+        category_id: needsCategory && pickerValue ? pickerValue.category_id : null,
+        cost_center_id: needsCategory && pickerValue ? pickerValue.cost_center_id : null,
+        classification_id: needsCategory && pickerValue ? pickerValue.classification_id : null,
         vendor_payee: vendor || null,
         description: description || null,
         requisitioner: requisitioner || null,
@@ -163,7 +166,7 @@ export default function NewTransactionPage() {
         <Row label="Entry Type">
           <select className={inputCls} value={entryType} onChange={e => {
             setEntryType(e.target.value as EntryType);
-            setClassificationId(''); setCostCenterId(''); setCategoryId('');
+            setPickerValue(null);
             setFromAccountId(''); setToAccountId('');
           }}>
             {ENTRY_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -209,38 +212,13 @@ export default function NewTransactionPage() {
         )}
 
         {needsCategory && (
-          <>
-            <Row label="Classification">
-              <select className={inputCls} value={classificationId}
-                onChange={e => { setClassificationId(Number(e.target.value) || ''); setCostCenterId(''); setCategoryId(''); }}>
-                <option value="">Select classification.</option>
-                {classifications.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </Row>
-
-            {classificationId !== '' && (
-              <Row label="Cost Center">
-                <select className={inputCls} value={costCenterId}
-                  onChange={e => { setCostCenterId(Number(e.target.value) || ''); setCategoryId(''); }}>
-                  <option value="">Select cost center.</option>
-                  {filteredCostCenters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </Row>
-            )}
-
-            {costCenterId !== '' && (
-              <Row label="Category">
-                <select className={inputCls} value={categoryId} onChange={e => setCategoryId(Number(e.target.value) || '')}>
-                  <option value="">Select category.</option>
-                  {filteredCategories.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}{c.ue_bucket ? ` [${c.ue_bucket}]` : ''}
-                    </option>
-                  ))}
-                </select>
-              </Row>
-            )}
-          </>
+          <Row label="Category">
+            <CategoryPicker
+              options={pickerOptions}
+              value={pickerValue}
+              onChange={setPickerValue}
+            />
+          </Row>
         )}
 
         {needsStaff && (

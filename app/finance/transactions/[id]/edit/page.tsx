@@ -20,6 +20,10 @@ import {
   type Staff,
   type EntryType,
 } from "@/lib/finance";
+import CategoryPicker, {
+  buildPickerOptions,
+  type PickerOption,
+} from "@/components/finance/CategoryPicker";
 
 export default function EditTransactionPage() {
   const params = useParams<{ id: string }>();
@@ -37,6 +41,7 @@ export default function EditTransactionPage() {
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [pickerValue, setPickerValue] = useState<PickerOption | null>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -81,11 +86,23 @@ export default function EditTransactionPage() {
 
       const txData = t.data as Transaction;
       setTx(txData);
+      const loadedClassifications = (cls.data as Classification[]) ?? [];
+      const loadedCostCenters = (cc.data as CostCenter[]) ?? [];
+      const loadedCategories = (cat.data as Category[]) ?? [];
+
       setAccounts((a.data as Account[]) ?? []);
-      setClassifications((cls.data as Classification[]) ?? []);
-      setCostCenters((cc.data as CostCenter[]) ?? []);
-      setCategories((cat.data as Category[]) ?? []);
+      setClassifications(loadedClassifications);
+      setCostCenters(loadedCostCenters);
+      setCategories(loadedCategories);
       setStaff((st.data as Staff[]) ?? []);
+
+      if (txData.category_id != null) {
+        const opts = buildPickerOptions(loadedClassifications, loadedCostCenters, loadedCategories);
+        const match = opts.find((o) => o.category_id === txData.category_id) ?? null;
+        setPickerValue(match);
+      } else {
+        setPickerValue(null);
+      }
 
       setForm({
         transaction_date: txData.transaction_date,
@@ -111,22 +128,12 @@ export default function EditTransactionPage() {
     })();
   }, [id, supabase]);
 
-  // Cascading: when classification changes, clear cost center and category if they do not fit
-  const visibleCostCenters = useMemo(
-    () =>
-      form.classification_id
-        ? costCenters.filter((c) => String(c.classification_id) === form.classification_id)
-        : costCenters,
-    [costCenters, form.classification_id]
+  const pickerOptions = useMemo(
+    () => buildPickerOptions(classifications, costCenters, categories),
+    [classifications, costCenters, categories],
   );
 
-  const visibleCategories = useMemo(
-    () =>
-      form.cost_center_id
-        ? categories.filter((c) => String(c.cost_center_id) === form.cost_center_id)
-        : categories,
-    [categories, form.cost_center_id]
-  );
+  const needsCategory = !["transfer", "fx_conversion"].includes(form.entry_type);
 
   async function handleSave() {
     if (!tx) return;
@@ -263,46 +270,25 @@ export default function EditTransactionPage() {
           </select>
         </Field>
 
-        <Field label="Classification">
-          <select
-            value={form.classification_id}
-            onChange={(e) => setForm({ ...form, classification_id: e.target.value, cost_center_id: "", category_id: "" })}
-            className="input"
-          >
-            <option value="">None (Unclassified)</option>
-            {classifications.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Cost Center">
-          <select
-            value={form.cost_center_id}
-            onChange={(e) => setForm({ ...form, cost_center_id: e.target.value, category_id: "" })}
-            className="input"
-          >
-            <option value="">None</option>
-            {visibleCostCenters.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Category (Specific)">
-          <select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} className="input">
-            <option value="">None</option>
-            {visibleCategories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </Field>
+        {needsCategory && (
+          <div className="md:col-span-2">
+            <Field label="Category">
+              <CategoryPicker
+                options={pickerOptions}
+                value={pickerValue}
+                onChange={(opt) => {
+                  setPickerValue(opt);
+                  setForm((prev) => ({
+                    ...prev,
+                    classification_id: opt ? String(opt.classification_id) : "",
+                    cost_center_id: opt ? String(opt.cost_center_id) : "",
+                    category_id: opt ? String(opt.category_id) : "",
+                  }));
+                }}
+              />
+            </Field>
+          </div>
+        )}
 
         <Field label="Staff Member (if salary or advance)">
           <select value={form.staff_id} onChange={(e) => setForm({ ...form, staff_id: e.target.value })} className="input">
