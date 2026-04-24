@@ -78,11 +78,11 @@ export type EntryType =
   | "other";
 
 export type PlSection =
-  | "Revenue"
-  | "Cost of Goods Sold"
+  | "Income"
+  | "Cost of Sales"
   | "Other Income"
-  | "Operating Expenses"
-  | "Finance Costs";
+  | "Expenses"
+  | "Other Expenses";
 
 export type Account = {
   id: string;
@@ -127,6 +127,7 @@ export type Category = {
   classification_id: number | null;
   cost_center_id: number | null;
   pl_section: PlSection | null;
+  pl_account_code: string | null;
   ue_bucket: string | null;
   is_income: boolean;
   is_active: boolean | null;
@@ -180,19 +181,19 @@ export type DailyBalancePoint = {
 // -----------------------------------------------------------------------------
 
 export const PL_SECTION_ORDER: PlSection[] = [
-  "Revenue",
-  "Cost of Goods Sold",
+  "Income",
+  "Cost of Sales",
   "Other Income",
-  "Operating Expenses",
-  "Finance Costs",
+  "Expenses",
+  "Other Expenses",
 ];
 
 export const PL_SECTION_LABELS: Record<PlSection, string> = {
-  Revenue: "Revenue",
-  "Cost of Goods Sold": "Cost of Goods Sold",
+  Income: "Income",
+  "Cost of Sales": "Cost of Sales",
   "Other Income": "Other Income",
-  "Operating Expenses": "Operating Expenses",
-  "Finance Costs": "Finance Costs",
+  Expenses: "Expenses",
+  "Other Expenses": "Other Expenses",
 };
 
 // -----------------------------------------------------------------------------
