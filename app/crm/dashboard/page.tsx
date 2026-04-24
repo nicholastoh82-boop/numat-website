@@ -1264,6 +1264,15 @@ export default function CRMDashboard() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {user?.is_active ? (
+              <a
+                href="/crm/schematic-estimator"
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 hidden sm:inline-flex items-center"
+                title="Materials estimator from schematic"
+              >
+                Schematic Estimator
+              </a>
+            ) : null}
             <button onClick={() => setAddLeadOpen(true)} className="px-3 py-1.5 bg-green-700 hover:bg-green-800 rounded-lg text-white text-xs font-medium flex items-center gap-1" title="Add a new lead">
               <span className="text-base leading-none">+</span> Add Lead
             </button>
