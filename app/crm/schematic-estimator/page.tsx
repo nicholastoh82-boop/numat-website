@@ -114,7 +114,6 @@ type Part = {
   length_mm: number;
   width_mm: number;
   sku: string;
-  reasoning?: string;
 };
 
 type HardwareRow = {
@@ -126,7 +125,6 @@ type HardwareRow = {
 
 type Analysis = {
   piece_name?: string;
-  piece_type?: string;
   overall_dimensions?: { width_mm?: number; depth_mm?: number; height_mm?: number; notes?: string };
   parts?: Array<{
     name: string;
@@ -134,9 +132,8 @@ type Analysis = {
     qty: number;
     length_mm: number;
     width_mm: number;
-    reasoning?: string;
   }>;
-  external_components?: Array<{ name: string; qty: number; notes?: string }>;
+  external_components?: Array<{ name: string; qty: number }>;
   assumptions?: string[];
   confidence?: "high" | "medium" | "low";
   notes_for_reviewer?: string;
@@ -179,8 +176,8 @@ function formatNum(n: number, digits = 2): string {
 
 async function compressImage(
   file: File,
-  maxDim = 1600,
-  quality = 0.85,
+  maxDim = 1200,
+  quality = 0.8,
 ): Promise<{ dataUrl: string; base64: string; mediaType: string }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -313,7 +310,6 @@ export default function SchematicEstimatorPage() {
         length_mm: Math.max(1, Number(p.length_mm) || 0),
         width_mm: Math.max(1, Number(p.width_mm) || 0),
         sku: board.sku,
-        reasoning: p.reasoning,
       };
     });
   }
@@ -321,7 +317,7 @@ export default function SchematicEstimatorPage() {
   function hardwareSeedFromAnalysis(a: Analysis): HardwareRow[] {
     const fromAI: HardwareRow[] = (a.external_components ?? []).map((x) => ({
       id: newId(),
-      name: x.name + (x.notes ? ` (${x.notes})` : ""),
+      name: x.name,
       qty: Math.max(0, Number(x.qty) || 0),
       unit: 0,
     }));
@@ -715,11 +711,6 @@ export default function SchematicEstimatorPage() {
                       }}
                     >
                       Confidence: {analysis.confidence}
-                    </span>
-                  )}
-                  {analysis.piece_type && (
-                    <span className="text-xs" style={{ color: MUTED }}>
-                      {analysis.piece_type}
                     </span>
                   )}
                 </div>

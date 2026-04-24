@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-const VISION_MODEL = "claude-sonnet-4-6";
+const VISION_MODEL = "claude-haiku-4-5-20251001";
 
 const SYSTEM_PROMPT = `You are a material estimator for engineered bamboo furniture at NUMAT. You receive a schematic or technical drawing of a furniture piece with dimension labels.
 
@@ -26,10 +26,9 @@ RULES:
 Output schema:
 {
   "piece_name": string,
-  "piece_type": string,
   "overall_dimensions": { "width_mm": number, "depth_mm": number, "height_mm": number, "notes": string },
-  "parts": [{ "name": string, "part_class": string, "qty": number, "length_mm": number, "width_mm": number, "reasoning": string }],
-  "external_components": [{ "name": string, "qty": number, "notes": string }],
+  "parts": [{ "name": string, "part_class": string, "qty": number, "length_mm": number, "width_mm": number }],
+  "external_components": [{ "name": string, "qty": number }],
   "assumptions": [string],
   "confidence": "high" | "medium" | "low",
   "notes_for_reviewer": string
@@ -135,8 +134,14 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: VISION_MODEL,
-        max_tokens: 4000,
-        system: SYSTEM_PROMPT,
+        max_tokens: 2000,
+        system: [
+          {
+            type: "text",
+            text: SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
         messages: [
           {
             role: "user",
