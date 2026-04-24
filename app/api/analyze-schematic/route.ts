@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const VISION_MODEL = "claude-sonnet-4-6";
 
@@ -121,40 +121,63 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Vision API not configured." }, { status: 500 });
   }
 
-  const upstream = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: VISION_MODEL,
-      max_tokens: 4000,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mediaType,
-                data: imageBase64,
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 240_000);
+
+  let upstream: Response;
+  try {
+    upstream = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: VISION_MODEL,
+        max_tokens: 4000,
+        system: SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType,
+                  data: imageBase64,
+                },
               },
-            },
-            {
-              type: "text",
-              text: "Analyse this furniture schematic and return the JSON structure as specified. No prose, no markdown, just the JSON object.",
-            },
-          ],
+              {
+                type: "text",
+                text: "Analyse this furniture schematic and return the JSON structure as specified. No prose, no markdown, just the JSON object.",
+              },
+            ],
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+  } catch (e: any) {
+    clearTimeout(timeout);
+    if (e?.name === "AbortError") {
+      return NextResponse.json(
+        {
+          error:
+            "Vision call timed out after 240 seconds. The schematic may be too complex, or the image too large. Try a simpler or smaller image.",
         },
-      ],
-    }),
-  });
+        { status: 504 },
+      );
+    }
+    return NextResponse.json(
+      { error: "Vision call failed to reach the server.", detail: String(e?.message ?? e).slice(0, 500) },
+      { status: 502 },
+    );
+  }
 
   if (!upstream.ok) {
+    clearTimeout(timeout);
     const errText = await upstream.text().catch(() => "");
     return NextResponse.json(
       { error: "Vision call failed.", status: upstream.status, detail: errText.slice(0, 500) },
@@ -163,6 +186,7 @@ export async function POST(req: NextRequest) {
   }
 
   const payload: any = await upstream.json().catch(() => null);
+  clearTimeout(timeout);
   const block = payload?.content?.find((c: any) => c?.type === "text");
   const rawText: string = block?.text ?? "";
   if (!rawText) {

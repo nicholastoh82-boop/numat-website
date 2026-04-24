@@ -177,16 +177,37 @@ function formatNum(n: number, digits = 2): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
-async function readAsBase64(file: File): Promise<{ base64: string; mediaType: string }> {
-  const dataUrl: string = await new Promise((resolve, reject) => {
+async function compressImage(
+  file: File,
+  maxDim = 1600,
+  quality = 0.85,
+): Promise<{ dataUrl: string; base64: string; mediaType: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(new Error("Could not read file."));
+    reader.onload = (e) => {
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve({
+          dataUrl,
+          base64: dataUrl.split(",")[1],
+          mediaType: "image/jpeg",
+        });
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-  const match = dataUrl.match(/^data:(.+?);base64,(.+)$/);
-  if (!match) throw new Error("Unexpected file encoding.");
-  return { mediaType: match[1], base64: match[2] };
 }
 
 // ----- Page -----
@@ -320,7 +341,7 @@ export default function SchematicEstimatorPage() {
     setAnalysis(null);
     setStatusText("Reading the schematic, this typically takes 10 to 30 seconds.");
     try {
-      const { base64, mediaType } = await readAsBase64(file);
+      const { base64, mediaType } = await compressImage(file);
       const res = await fetch("/api/analyze-schematic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
