@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
+import { newsMetadata } from '@/numat-seo-metadata'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -29,17 +30,7 @@ function formatDate(dateStr: string | null): string {
   })
 }
 
-export const metadata = {
-  title: 'News & Updates | NUMAT Bamboo',
-  description:
-    'The latest news, project updates, product announcements, and industry insights from NUMAT Bamboo — engineered bamboo manufacturer in the Philippines.',
-  openGraph: {
-    title: 'News & Updates | NUMAT Bamboo',
-    description:
-      'The latest news and updates from NUMAT Bamboo, a leading engineered bamboo manufacturer in the Philippines.',
-    type: 'website',
-  },
-}
+export const metadata = newsMetadata
 
 export default async function NewsPage() {
   if (!supabaseUrl || !supabaseServiceRoleKey) {

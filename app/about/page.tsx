@@ -15,16 +15,9 @@ import {
   Zap,
   Globe,
 } from 'lucide-react'
+import { aboutMetadata } from '@/numat-seo-metadata'
 
-export const metadata = {
-  title: 'About NUMAT — Sustainable Bamboo Manufacturing',
-  description: 'NUMAT Sustainable Manufacturing Inc — Singapore-founded, manufacturing in the Philippines. Wavemaker Impact portfolio company producing Sustainable engineered bamboo boards.',
-  openGraph: {
-    title: 'About NUMAT — Sustainable Bamboo Manufacturing',
-    description: 'Singapore-founded, Philippines-manufactured engineered bamboo. Backed by Wavemaker Impact. 50+ local farmers. Export-ready supply.',
-    url: 'https://numatbamboo.com/about',
-  },
-}
+export const metadata = aboutMetadata
 
 export default function AboutPage() {
   return (

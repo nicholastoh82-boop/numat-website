@@ -3,11 +3,9 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
 import { ProductsContent } from '@/components/products/products-content'
+import { productsMetadata } from '@/numat-seo-metadata'
 
-export const metadata = {
-  title: 'Products | NUMAT',
-  description: 'Browse our complete range of premium NuBam engineered bamboo boards for furniture, flooring, doors, structural applications, and more.',
-}
+export const metadata = productsMetadata
 
 import { createClient } from '@supabase/supabase-js'
 

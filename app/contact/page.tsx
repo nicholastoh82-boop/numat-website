@@ -9,16 +9,9 @@ import {
   Clock,
   MessageCircle,
 } from 'lucide-react'
+import { contactMetadata } from '@/numat-seo-metadata'
 
-export const metadata = {
-  title: 'Contact Sales — Get a Quote or Request Samples',
-  description: 'Contact NUMAT for product enquiries, quotes, and technical support. WhatsApp and email support for commercial buyers across Southeast Asia and internationally.',
-  openGraph: {
-    title: 'Contact NUMAT Bamboo Sales',
-    description: 'Get a quote, request samples, or talk to our technical team. Fast response for commercial buyers.',
-    url: 'https://numatbamboo.com/contact',
-  },
-}
+export const metadata = contactMetadata
 
 export default function ContactPage() {
   return (

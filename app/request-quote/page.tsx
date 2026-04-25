@@ -3,12 +3,9 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
 import { CartContent } from '@/components/cart/cart-content'
+import { requestQuoteMetadata } from '@/numat-seo-metadata'
 
-export const metadata = {
-  title: 'Request Quote | NUMAT',
-  description:
-    'Review your selected products and request a commercial quotation from NUMAT.',
-}
+export const metadata = requestQuoteMetadata
 
 export default function RequestQuotePage() {
   return (

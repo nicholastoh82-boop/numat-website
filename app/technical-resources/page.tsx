@@ -11,6 +11,9 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
 import { technicalResourceDetails } from '@/lib/technical-resources-content'
+import { technicalResourcesMetadata } from '@/numat-seo-metadata'
+
+export const metadata = technicalResourcesMetadata
 
 const iconMap = {
   'technical-data-sheets': FileText,

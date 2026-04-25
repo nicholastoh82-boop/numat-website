@@ -8,16 +8,9 @@ import {
   XCircle,
   MinusCircle,
 } from 'lucide-react'
+import { compareMetadata } from '@/numat-seo-metadata'
 
-export const metadata = {
-  title: 'Bamboo vs Plywood vs MDF vs Solid Wood — Material Comparison',
-  description: 'Compare engineered bamboo against plywood, MDF, and solid wood across strength, sustainability, workability, moisture resistance, and cost for commercial applications.',
-  openGraph: {
-    title: 'NuBam vs Plywood vs MDF vs Solid Wood — Full Comparison',
-    description: 'Side-by-side material comparison for architects, furniture manufacturers, and commercial buyers. DOST/ASTM tested data included.',
-    url: 'https://numatbamboo.com/compare',
-  },
-}
+export const metadata = compareMetadata
 
 type Rating = 'excellent' | 'good' | 'average' | 'poor'
 
