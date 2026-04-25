@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NUMAT CEO Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap');
+:root {
+  --green: #1a6b3c; --green-mid: #2a8c52; --green-light: #d6f0e0; --green-xlight: #f0faf4;
+  --navy: #0f2942; --navy-mid: #1e3d6e;
+  --red: #c0392b; --red-bg: #fdf0ee; --red-border: #f5c6c0;
+  --amber: #c97a00; --amber-bg: #fff8e6; --amber-border: #f5d87a;
+  --blue: #1565c0; --blue-bg: #e8f0fb;
+  --text: #1a1a2e; --text-2: #4a5568; --text-3: #8898aa;
+  --border: #e2e8f0; --surface: #f8fafc; --white: #ffffff;
+  --radius: 12px; --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #eef2f7; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); min-height: 100vh; }
+.header { background: var(--navy); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 64px; position: sticky; top: 0; z-index: 100; }
+.header-left { display: flex; align-items: center; gap: 20px; }
+.wordmark { font-family: 'DM Serif Display', serif; font-size: 20px; color: #fff; letter-spacing: 1px; }
+.wordmark span { color: #2a8c52; }
+.header-title { font-size: 13px; color: rgba(255,255,255,0.5); letter-spacing: 0.05em; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 20px; }
+.header-right { display: flex; align-items: center; gap: 14px; }
+.last-updated { font-size: 11px; color: rgba(255,255,255,0.4); font-family: 'DM Mono', monospace; }
+.refresh-btn { padding: 7px 16px; background: #2a8c52; color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
+.refresh-btn:hover { background: #1a6b3c; }
+.refresh-btn:disabled { background: #4a6080; cursor: default; }
+.page { max-width: 1200px; margin: 0 auto; padding: 28px 24px 80px; }
+.loading-screen { text-align: center; padding: 120px 40px; }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--green-mid); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 14px; color: var(--text-3); }
+.error-screen { background: var(--red-bg); border: 1px solid var(--red-border); border-radius: var(--radius); padding: 24px; margin: 20px 0; font-size: 13px; color: var(--red); }
+#dashboard { display: none; }
+.kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 22px; }
+.kpi { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.kpi::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--kpi-color, var(--navy)); }
+.kpi-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-3); margin-bottom: 8px; }
+.kpi-value { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--text); line-height: 1; }
+.kpi-sub { font-size: 11px; color: var(--text-3); margin-top: 5px; }
+.section-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; margin-top: 8px; }
+.section-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--navy); font-weight: normal; }
+.section-sub { font-size: 11px; color: var(--text-3); }
+.grid-3-2 { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-bottom: 20px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px; box-shadow: var(--shadow); }
+.card-title { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-3); margin-bottom: 16px; }
+.card-title.inline { display: flex; justify-content: space-between; align-items: center; }
+.funnel-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.funnel-label { font-size: 12px; color: var(--text-2); width: 120px; flex-shrink: 0; }
+.funnel-bar-wrap { flex: 1; height: 28px; background: var(--surface); border-radius: 4px; overflow: hidden; }
+.funnel-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; display: flex; align-items: center; padding: 0 8px; }
+.funnel-bar span { font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; }
+.funnel-meta { font-size: 11px; color: var(--text-3); width: 100px; text-align: right; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+.pl-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.pl-row:last-child { border-bottom: none; }
+.pl-row.total { border-top: 2px solid var(--border); margin-top: 4px; padding-top: 10px; }
+.pl-label { font-size: 13px; color: var(--text-2); }
+.pl-label.bold { font-weight: 600; color: var(--text); }
+.pl-value { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+.pl-value.green { color: var(--green); }
+.pl-value.red { color: var(--red); }
+.pl-value.amber { color: var(--amber); }
+.acc-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.acc-row:last-child { border-bottom: none; }
+.acc-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.acc-code { font-size: 10px; color: var(--text-3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+.acc-balance { font-family: 'DM Serif Display', serif; font-size: 18px; }
+.acc-currency { font-size: 10px; color: var(--text-3); margin-top: 2px; text-align: right; }
+.ar-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ar-table th { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.ar-table th:last-child { text-align: right; }
+.ar-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+.ar-table td:last-child { text-align: right; font-family: 'DM Mono', monospace; font-weight: 500; }
+.ar-table tr.overdue td { background: var(--red-bg); }
+.status-pill { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+.pill-overdue { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+.pill-outstanding { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+.pill-settled { background: var(--green-light); color: var(--green); }
+.stat-row { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.stat-row:last-child { border-bottom: none; }
+.stat-name { font-size: 13px; color: var(--text-2); }
+.stat-val { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--navy); }
+.seg-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.seg-item:last-child { border-bottom: none; }
+.seg-name { font-size: 13px; color: var(--text-2); }
+.seg-val { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--navy); }
+.seg-count { font-size: 10px; color: var(--text-3); }
+.util-bar-wrap { height: 12px; background: var(--surface); border-radius: 6px; overflow: visible; position: relative; margin: 12px 0 4px; border: 1px solid var(--border); }
+.util-bar { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #1a6b3c, #2a8c52); transition: width 0.8s ease; }
+.util-be-marker { position: absolute; top: -6px; height: 24px; width: 2px; background: var(--amber); border-radius: 1px; }
+.util-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-3); font-family: 'DM Mono', monospace; margin-top: 4px; }
+.rep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rep-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
+.rep-name { font-size: 12px; font-weight: 600; color: var(--navy); margin-bottom: 4px; }
+.rep-val { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--navy); }
+.rep-sub { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+.signal-strip { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
+.signal { display: flex; align-items: center; gap: 8px; background: var(--white); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 12px; color: var(--text-2); box-shadow: var(--shadow); }
+.signal-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-green { background: #22c55e; }
+.dot-amber { background: #f59e0b; }
+.dot-red { background: #ef4444; }
+.dot-blue { background: #3b82f6; }
+footer { font-size: 11px; color: var(--text-3); text-align: center; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="wordmark">NU<span>MAT</span></div>
+    <div class="header-title">CEO Intelligence Dashboard</div>
+  </div>
+  <div class="header-right">
+    <div class="last-updated" id="lastUpdated">Loading...</div>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadDashboard()">&#8635; Refresh</button>
+  </div>
+</div>
+<div class="page">
+  <div id="loadingScreen"><div class="loading-screen"><div class="spinner"></div><div class="loading-text">Loading live data from all systems...</div></div></div>
+  <div id="errorScreen" class="error-screen" style="display:none;"></div>
+  <div id="dashboard">
+    <div class="signal-strip" id="signalStrip"></div>
+    <div class="kpi-strip" id="kpiStrip"></div>
+    <div class="section-header"><div class="section-title">Sales Pipeline</div><div class="section-sub" id="pipelineSub"></div></div>
+    <div class="grid-3-2" style="margin-bottom:20px;">
+      <div class="card"><div class="card-title">Pipeline by Stage</div><div id="funnelContainer"></div></div>
+      <div class="card">
+        <div class="card-title">Rep Performance</div>
+        <div class="rep-grid" id="repGrid"></div>
+        <div style="margin-top:14px;"><div class="card-title">Top Segments</div><div id="segmentList"></div></div>
+      </div>
+    </div>
+    <div class="section-header"><div class="section-title">Financial Health</div><div class="section-sub" id="finSub"></div></div>
+    <div class="grid-3" style="margin-bottom:20px;">
+      <div class="card"><div class="card-title">This Month (Running)</div><div id="currentMonthPL"></div></div>
+      <div class="card"><div class="card-title">Last Full Month</div><div id="lastMonthPL"></div></div>
+      <div class="card"><div class="card-title">Account Balances</div><div id="accountBalances"></div></div>
+    </div>
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title inline"><span>Factory Utilization</span><span id="utilPct" style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);"></span></div>
+      <div class="util-bar-wrap"><div class="util-bar" id="utilBar" style="width:0%;"></div><div class="util-be-marker" id="beMarker"></div></div>
+      <div class="util-labels"><span>0%</span><span id="beLabel"></span><span>100%</span></div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:8px;" id="utilNote"></div>
+    </div>
+    <div class="section-header"><div class="section-title">Accounts Receivable</div><div class="section-sub" id="arSub"></div></div>
+    <div class="card" style="margin-bottom:20px;overflow:hidden;padding:0;">
+      <table class="ar-table"><thead><tr><th>Customer</th><th>Invoice</th><th>Invoice Date</th><th>Due Date</th><th>Status</th><th>Outstanding</th></tr></thead><tbody id="arBody"></tbody></table>
+    </div>
+    <div class="grid-2">
+      <div>
+        <div class="section-header"><div class="section-title">Outreach Performance</div></div>
+        <div class="card"><div id="outreachStats"></div></div>
+      </div>
+      <div>
+        <div class="section-header"><div class="section-title">Quotes &amp; Proposals</div></div>
+        <div class="card"><div id="quotesStats"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<footer id="footerLine" style="display:none;">NUMAT Sustainable Manufacturing Inc. &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; Live data</footer>
+<script>
+const EDGE_URL='https://peuwxnrojlfybdymkazj.supabase.co/functions/v1/ceo-dashboard'
+const SECRET='NUMAT-CEO-2026'
+function p(n){const num=parseFloat(n||0);if(Math.abs(num)>=1e6)return '\u20b1'+(num/1e6).toFixed(2)+'M';if(Math.abs(num)>=1e3)return '\u20b1'+(num/1e3).toFixed(0)+'K';return '\u20b1'+num.toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})}
+function pFull(n){return '\u20b1'+parseFloat(n||0).toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})}
+async function loadDashboard(){
+  document.getElementById('loadingScreen').style.display='block'
+  document.getElementById('dashboard').style.display='none'
+  document.getElementById('errorScreen').style.display='none'
+  document.getElementById('refreshBtn').disabled=true
+  document.getElementById('lastUpdated').textContent='Refreshing...'
+  try{
+    const res=await fetch(EDGE_URL,{headers:{'Authorization':'Bearer '+SECRET}})
+    if(!res.ok)throw new Error('Server responded with '+res.status)
+    const d=await res.json()
+    render(d)
+  }catch(e){
+    document.getElementById('loadingScreen').style.display='none'
+    document.getElementById('errorScreen').style.display='block'
+    document.getElementById('errorScreen').textContent='Could not load: '+e.message
+  }finally{document.getElementById('refreshBtn').disabled=false}
+}
+function render(d){
+  document.getElementById('loadingScreen').style.display='none'
+  document.getElementById('dashboard').style.display='block'
+  document.getElementById('footerLine').style.display='block'
+  const genAt=new Date(d.generated_at)
+  document.getElementById('lastUpdated').textContent='Live as of '+genAt.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})+' '+genAt.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})
+  renderSignals(d);renderKPIs(d);renderPipeline(d);renderFinancial(d);renderAR(d);renderOutreach(d);renderQuotes(d)
+}
+function renderSignals(d){
+  const runway=d.financial.runway_months,util=d.production.current_utilization_pct,arOverdue=d.ar.overdue_count,upcoming=d.sales.upcoming_meetings
+  document.getElementById('signalStrip').innerHTML=[
+    {dot:util>=39.5?'dot-green':util>=25?'dot-amber':'dot-red',label:'Factory at '+util+'% utilization'},
+    {dot:runway>=6?'dot-green':runway>=3?'dot-amber':'dot-red',label:runway.toFixed(1)+' months runway'},
+    {dot:arOverdue===0?'dot-green':'dot-red',label:arOverdue===0?'No overdue AR':arOverdue+' overdue AR invoice'+(arOverdue>1?'s':'')},
+    {dot:upcoming>0?'dot-blue':'dot-amber',label:upcoming>0?upcoming+' meeting'+(upcoming>1?'s':'')+' confirmed':'No meetings booked'},
+  ].map(s=>'<div class="signal"><div class="signal-dot '+s.dot+'"></div>'+s.label+'</div>').join('')
+}
+function renderKPIs(d){
+  const fin=d.financial,runway=fin.runway_months
+  const rc=runway>=6?'#1a6b3c':runway>=3?'#c97a00':'#c0392b'
+  document.getElementById('kpiStrip').innerHTML=[
+    {label:'Total Cash Position',value:p(fin.total_cash_php),sub:'\u20b1'+Math.round(fin.php_cash/1000)+'K PHP + $'+Math.round(fin.usd_cash).toLocaleString()+' USD',color:'#0f2942'},
+    {label:'Cash Runway',value:runway>=99?'\u221e':runway.toFixed(1)+' mo',sub:'Based on last month burn',color:rc},
+    {label:'Active Pipeline',value:p(d.sales.active_pipeline_value_php),sub:d.sales.upcoming_meetings+' meetings confirmed',color:'#1a6b3c'},
+    {label:'AR Outstanding',value:p(d.ar.total_outstanding_php),sub:d.ar.overdue_count>0?d.ar.overdue_count+' overdue':'No overdue invoices',color:d.ar.overdue_count>0?'#c0392b':'#1a6b3c'},
+    {label:'Monthly Burn',value:p(fin.monthly_burn_estimate),sub:'Last full month',color:'#c97a00'},
+  ].map(c=>'<div class="kpi" style="--kpi-color:'+c.color+'"><div class="kpi-label">'+c.label+'</div><div class="kpi-value" style="color:'+c.color+'">'+c.value+'</div><div class="kpi-sub">'+c.sub+'</div></div>').join('')
+}
+function renderPipeline(d){
+  const s=d.sales
+  document.getElementById('pipelineSub').textContent=s.total_leads.toLocaleString()+' total leads'
+  const sc={new:'#94a3b8',contacted:'#64748b',qualified:'#3b82f6',proposal_sent:'#8b5cf6',negotiation:'#f59e0b',closed_won:'#22c55e',closed_lost:'#ef4444'}
+  const mx=Math.max(...s.stage_order.map(st=>s.pipeline_by_stage[st]?.count||0),1)
+  document.getElementById('funnelContainer').innerHTML=s.stage_order.filter(st=>s.pipeline_by_stage[st]?.count>0).map(st=>{
+    const dt=s.pipeline_by_stage[st]||{count:0,value_php:0}
+    const w=Math.max((dt.count/mx)*100,3)
+    return '<div class="funnel-row"><div class="funnel-label">'+s.stage_labels[st]+'</div><div class="funnel-bar-wrap"><div class="funnel-bar" style="width:'+w+'%;background:'+(sc[st]||'#64748b')+'"><span>'+dt.count+'</span></div></div><div class="funnel-meta">'+(dt.value_php>0?p(dt.value_php):'\u2014')+'</div></div>'
+  }).join('')||'<div style="color:var(--text-3);padding:20px 0;font-size:13px;">No pipeline data</div>'
+  document.getElementById('repGrid').innerHTML=['Bryan','Mohan'].map(r=>{const rb=s.rep_breakdown[r]||{count:0,value:0};return '<div class="rep-card"><div class="rep-name">'+r+'</div><div class="rep-val">'+rb.count+'</div><div class="rep-sub">leads &nbsp;|&nbsp; '+p(rb.value)+'</div></div>'}).join('')
+  const segs=Object.entries(s.by_segment).sort((a,b)=>b[1].value-a[1].value).slice(0,5)
+  document.getElementById('segmentList').innerHTML=segs.map(([n,dt])=>'<div class="seg-item"><div><div class="seg-name">'+n+'</div><div class="seg-count">'+dt.count+' leads</div></div><div class="seg-val">'+(dt.value>0?p(dt.value):'\u2014')+'</div></div>').join('')||'<div style="color:var(--text-3);font-size:12px;padding:8px 0;">No data</div>'
+}
+function renderFinancial(d){
+  const fin=d.financial
+  document.getElementById('finSub').textContent='PHP/USD '+d.fx.php_per_usd.toFixed(2)
+  function plH(pl){const nc=pl.net>=0?'green':'red';return '<div class="pl-row"><div class="pl-label">Revenue / Income</div><div class="pl-value green">'+pFull(pl.income)+'</div></div><div class="pl-row"><div class="pl-label">Operating Expenses</div><div class="pl-value red">'+pFull(pl.expenses)+'</div></div><div class="pl-row"><div class="pl-label">Salaries</div><div class="pl-value amber">'+pFull(pl.salaries||0)+'</div></div><div class="pl-row total"><div class="pl-label bold">Net</div><div class="pl-value '+nc+'">'+(pl.net>=0?'+':'')+pFull(pl.net)+'</div></div>'}
+  document.getElementById('currentMonthPL').innerHTML=plH(fin.current_month)
+  document.getElementById('lastMonthPL').innerHTML=plH(fin.last_month)
+  document.getElementById('accountBalances').innerHTML=fin.account_balances.map(a=>{const sym=a.currency==='PHP'?'\u20b1':a.currency==='USD'?'$':'';return '<div class="acc-row"><div><div class="acc-name">'+a.name+'</div><div class="acc-code">'+a.code+'</div></div><div><div class="acc-balance" style="color:'+(a.balance>=0?'var(--navy)':'var(--red)')+'">'+sym+Math.abs(a.balance).toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})+'</div><div class="acc-currency">'+a.currency+'</div></div></div>'}).join('')
+  const util=d.production.current_utilization_pct,beUtil=d.production.break_even_util_pct
+  document.getElementById('utilPct').textContent=util+'%'
+  setTimeout(()=>{document.getElementById('utilBar').style.width=Math.min(util,100)+'%';document.getElementById('beMarker').style.left=Math.min(beUtil,99)+'%'},100)
+  document.getElementById('beLabel').textContent='Break-even: '+beUtil+'%'
+  document.getElementById('utilNote').textContent='Full capacity: '+d.production.full_capacity_veneers.toLocaleString()+' veneers/month. '+(util<beUtil?(beUtil-util).toFixed(1)+' points short of break-even.':'Above break-even.')
+}
+function renderAR(d){
+  const ar=d.ar,today=new Date().toISOString().slice(0,10)
+  document.getElementById('arSub').textContent=p(ar.total_outstanding_php)+' outstanding'+(ar.overdue_count>0?' \u00b7 '+p(ar.overdue_total_php)+' overdue':'')
+  if(!ar.records||ar.records.length===0){document.getElementById('arBody').innerHTML='<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-3);">No AR records</td></tr>';return}
+  document.getElementById('arBody').innerHTML=ar.records.map(r=>{
+    const od=r.due_date<today&&!['settled','written_off'].includes(r.status)
+    const sp=od?'<span class="status-pill pill-overdue">Overdue</span>':r.status==='settled'?'<span class="status-pill pill-settled">Settled</span>':'<span class="status-pill pill-outstanding">Outstanding</span>'
+    const oa=parseFloat(r.outstanding_amount||0)
+    return '<tr class="'+(od?'overdue':'')+'"><td style="font-weight:500;">'+esc(r.customer)+'</td><td style="font-size:12px;">'+esc(r.invoice_number||'\u2014')+'</td><td style="font-size:12px;">'+(r.invoice_date||'\u2014')+'</td><td style="font-size:12px;'+(od?'color:var(--red);font-weight:600;':'')+'">'+(r.due_date||'\u2014')+'</td><td>'+sp+'</td><td style="font-weight:'+(oa>0?'600':'400')+';color:'+(oa>0?(od?'var(--red)':'var(--navy)'):'var(--text-3)')+'">'+(oa>0?pFull(oa):'\u2014')+'</td></tr>'
+  }).join('')
+}
+function renderOutreach(d){
+  const o=d.outreach
+  document.getElementById('outreachStats').innerHTML=[
+    {label:'Emails Sent (Last 3 Months)',val:o.sent_total.toLocaleString()},
+    {label:'Sent This Month',val:o.sent_this_month.toLocaleString()},
+    {label:'Sent Last Month',val:o.sent_last_month.toLocaleString()},
+    {label:'Total Replies',val:o.replies_total.toLocaleString()},
+    {label:'Reply Rate',val:o.reply_rate_pct+'%'},
+    {label:'Upcoming Meetings',val:o.upcoming_meetings.toLocaleString()},
+  ].map(r=>'<div class="stat-row"><div class="stat-name">'+r.label+'</div><div class="stat-val">'+r.val+'</div></div>').join('')
+}
+function renderQuotes(d){
+  const q=d.quotes
+  let html=[
+    {label:'Open Proformas Value',val:p(q.proformas_total_php)},
+    {label:'Unpaid Invoices',val:q.invoices_unpaid_count+' invoice'+(q.invoices_unpaid_count!==1?'s':'')},
+    {label:'Unpaid Invoice Value',val:p(q.invoices_unpaid_total_php)},
+  ].map(r=>'<div class="stat-row"><div class="stat-name">'+r.label+'</div><div class="stat-val">'+r.val+'</div></div>').join('')
+  if(q.recent&&q.recent.length>0){
+    html+='<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;"><div class="card-title" style="margin-bottom:8px;">Recent</div>'+q.recent.slice(0,5).map(qt=>'<div class="stat-row" style="align-items:flex-start;"><div><div class="stat-name" style="font-weight:500;">'+esc(qt.company||qt.customer_name||'Unknown')+'</div><div style="font-size:10px;color:var(--text-3);margin-top:2px;">'+(qt.doc_type==='invoice'?'Invoice':'Proforma')+' \u00b7 '+(qt.created_at||'').slice(0,10)+' \u00b7 <span style="color:'+(qt.payment_status==='paid'?'var(--green)':qt.payment_status==='unpaid'?'var(--amber)':'var(--text-3)')+';">'+(qt.payment_status||qt.status)+'</span></div></div><div class="stat-val">'+p(qt.total)+'</div></div>').join('')+'</div>'
+  }
+  document.getElementById('quotesStats').innerHTML=html
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+loadDashboard()
+</script>
+</body>
+</html>
