@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NUMAT CEO Dashboard</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap');
+:root{--green:#1a6b3c;--green-mid:#2a8c52;--green-light:#d6f0e0;--navy:#0f2942;--red:#c0392b;--red-bg:#fdf0ee;--red-border:#f5c6c0;--amber:#c97a00;--amber-bg:#fff8e6;--amber-border:#f5d87a;--text:#1a1a2e;--text-2:#4a5568;--text-3:#8898aa;--border:#e2e8f0;--surface:#f8fafc;--white:#ffffff;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#eef2f7;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);min-height:100vh}
+.header{background:var(--navy);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100}
+.header-left{display:flex;align-items:center;gap:20px}
+.wordmark{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;letter-spacing:1px}
+.wordmark span{color:#2a8c52}
+.header-title{font-size:13px;color:rgba(255,255,255,.5);border-left:1px solid rgba(255,255,255,.15);padding-left:20px}
+.header-right{display:flex;align-items:center;gap:14px}
+.last-updated{font-size:11px;color:rgba(255,255,255,.4);font-family:'DM Mono',monospace}
+.refresh-btn{padding:7px 16px;background:#2a8c52;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.refresh-btn:hover{background:#1a6b3c}.refresh-btn:disabled{background:#4a6080;cursor:default}
+.page{max-width:1200px;margin:0 auto;padding:28px 24px 80px}
+.loading-screen{text-align:center;padding:120px 40px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--green-mid);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;color:var(--text-3)}
+.error-screen{background:var(--red-bg);border:1px solid var(--red-border);border-radius:var(--radius);padding:24px;margin:20px 0;font-size:13px;color:var(--red)}
+#dashboard{display:none}
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
+.kpi{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--kpi-color,var(--navy))}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px}
+.kpi-value{font-family:'DM Serif Display',serif;font-size:24px;line-height:1}
+.kpi-sub{font-size:11px;color:var(--text-3);margin-top:5px}
+.section-header{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;margin-top:8px}
+.section-title{font-family:'DM Serif Display',serif;font-size:17px;color:var(--navy);font-weight:normal}
+.section-sub{font-size:11px;color:var(--text-3)}
+.grid-3-2{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:20px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow)}
+.card-title{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin-bottom:16px}
+.card-title.inline{display:flex;justify-content:space-between;align-items:center}
+.signal-strip{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap}
+.signal{display:flex;align-items:center;gap:8px;background:var(--white);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;color:var(--text-2);box-shadow:var(--shadow)}
+.signal-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-green{background:#22c55e}.dot-amber{background:#f59e0b}.dot-red{background:#ef4444}.dot-blue{background:#3b82f6}
+.funnel-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.funnel-label{font-size:12px;color:var(--text-2);width:120px;flex-shrink:0}
+.funnel-bar-wrap{flex:1;height:28px;background:var(--surface);border-radius:4px;overflow:hidden}
+.funnel-bar{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 8px}
+.funnel-bar span{font-size:11px;font-weight:600;color:#fff;white-space:nowrap}
+.funnel-meta{font-size:11px;color:var(--text-3);width:100px;text-align:right;flex-shrink:0;font-family:'DM Mono',monospace}
+.pl-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.pl-row:last-child{border-bottom:none}.pl-row.total{border-top:2px solid var(--border);margin-top:4px;padding-top:10px}
+.pl-label{font-size:13px;color:var(--text-2)}.pl-label.bold{font-weight:600;color:var(--text)}
+.pl-value{font-family:'DM Mono',monospace;font-size:13px;font-weight:500}
+.pl-value.green{color:var(--green)}.pl-value.red{color:var(--red)}.pl-value.amber{color:var(--amber)}
+.acc-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.acc-row:last-child{border-bottom:none}
+.acc-name{font-size:13px;font-weight:500}.acc-code{font-size:10px;color:var(--text-3);margin-top:2px;font-family:'DM Mono',monospace}
+.acc-balance{font-family:'DM Serif Display',serif;font-size:18px}.acc-currency{font-size:10px;color:var(--text-3);margin-top:2px;text-align:right}
+.util-bar-wrap{height:12px;background:var(--surface);border-radius:6px;overflow:visible;position:relative;margin:12px 0 4px;border:1px solid var(--border)}
+.util-bar{height:100%;border-radius:6px;background:linear-gradient(90deg,#1a6b3c,#2a8c52);transition:width .8s ease}
+.util-be-marker{position:absolute;top:-6px;height:24px;width:2px;background:var(--amber);border-radius:1px}
+.util-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);font-family:'DM Mono',monospace;margin-top:4px}
+.rep-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rep-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.rep-name{font-size:12px;font-weight:600;color:var(--navy);margin-bottom:4px}
+.rep-val{font-family:'DM Serif Display',serif;font-size:20px;color:var(--navy)}
+.rep-sub{font-size:11px;color:var(--text-3);margin-top:3px}
+.seg-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.seg-item:last-child{border-bottom:none}
+.seg-name{font-size:13px;color:var(--text-2)}.seg-val{font-size:12px;font-family:'DM Mono',monospace;color:var(--navy)}.seg-count{font-size:10px;color:var(--text-3)}
+.ar-table{width:100%;border-collapse:collapse;font-size:13px}
+.ar-table th{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface);white-space:nowrap}
+.ar-table th:last-child{text-align:right}.ar-table td{padding:9px 12px;border-bottom:1px solid var(--border)}
+.ar-table td:last-child{text-align:right;font-family:'DM Mono',monospace;font-weight:500}
+.ar-table tr.overdue td{background:var(--red-bg)}
+.status-pill{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px}
+.pill-overdue{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.pill-outstanding{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.pill-settled{background:var(--green-light);color:var(--green)}
+.stat-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--border)}
+.stat-row:last-child{border-bottom:none}
+.stat-name{font-size:13px;color:var(--text-2)}.stat-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--navy)}
+
+/* ── Invoice P&L ─────────────────────────── */
+.invoice-grid{display:flex;flex-direction:column;gap:16px;margin-bottom:20px}
+.invoice-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.invoice-card.profit{border-left:4px solid #22c55e}
+.invoice-card.loss{border-left:4px solid var(--red)}
+.invoice-card.breakeven{border-left:4px solid var(--amber)}
+.invoice-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+.invoice-header:hover{background:var(--surface)}
+.invoice-company{font-weight:600;font-size:15px;color:var(--navy)}
+.invoice-meta{font-size:11px;color:var(--text-3);margin-top:2px}
+.invoice-verdict{display:flex;align-items:center;gap:16px}
+.verdict-badge{font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;white-space:nowrap}
+.verdict-profit{background:var(--green-light);color:var(--green)}
+.verdict-loss{background:var(--red-bg);color:var(--red)}
+.verdict-breakeven{background:var(--amber-bg);color:var(--amber)}
+.invoice-totals{text-align:right}
+.invoice-total-value{font-family:'DM Serif Display',serif;font-size:20px;color:var(--navy)}
+.invoice-total-contrib{font-size:12px;font-weight:600;margin-top:2px}
+.invoice-chevron{font-size:16px;color:var(--text-3);transition:transform .2s;margin-left:12px}
+.invoice-chevron.open{transform:rotate(180deg)}
+.invoice-body{display:none}
+.invoice-body.open{display:block}
+
+/* Line item table */
+.line-table{width:100%;border-collapse:collapse}
+.line-table th{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);padding:10px 20px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface)}
+.line-table th.r{text-align:right}
+.line-table td{padding:12px 20px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
+.line-table tr:last-child td{border-bottom:none}
+.line-table td.r{text-align:right;font-family:'DM Mono',monospace;vertical-align:top}
+.line-product{font-weight:500;color:var(--navy)}
+.line-sku{font-size:10px;color:var(--text-3);font-family:'DM Mono',monospace;margin-top:2px}
+
+/* Price / cost cells with label+value stacked */
+.price-cell{text-align:right}
+.price-cell .val{font-family:'DM Mono',monospace;font-weight:600;font-size:14px;display:block}
+.price-cell .lbl{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);display:block;margin-top:2px}
+
+/* Cost breakdown for fabricated items */
+.cost-breakdown{margin-top:6px;padding:6px 8px;background:var(--surface);border-radius:5px;border:1px solid var(--border);display:inline-block;text-align:left}
+.cost-breakdown-row{display:flex;align-items:baseline;gap:6px;font-size:10px;line-height:1.6}
+.cost-breakdown-label{color:var(--text-3);min-width:60px}
+.cost-breakdown-val{font-family:'DM Mono',monospace;font-weight:600;color:var(--text-2)}
+.cost-breakdown-note{color:var(--text-3);font-style:italic;font-size:9px}
+.cost-breakdown-total{border-top:1px solid var(--border);margin-top:3px;padding-top:3px;font-weight:600}
+
+.margin-pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;white-space:nowrap}
+.mp-profit{background:var(--green-light);color:var(--green)}
+.mp-warn{background:var(--amber-bg);color:var(--amber)}
+.mp-loss{background:var(--red-bg);color:var(--red)}
+
+.invoice-footer{display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid var(--border);background:var(--surface)}
+.inv-foot-cell{padding:14px 20px;border-right:1px solid var(--border)}
+.inv-foot-cell:last-child{border-right:none}
+.inv-foot-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px}
+.inv-foot-val{font-family:'DM Serif Display',serif;font-size:18px}
+.invoice-guidance{margin:0 20px 16px;padding:10px 14px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:6px;font-size:12px;color:#7a5500;line-height:1.6}
+.invoice-guidance.good{background:var(--green-light);border-color:#a3d9b8;color:var(--green)}
+.empty-invoices{text-align:center;padding:48px 24px;color:var(--text-3);font-size:14px}
+.empty-invoices strong{display:block;font-size:16px;color:var(--text-2);margin-bottom:8px}
+.context-note{font-size:11px;color:var(--text-3);padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;line-height:1.7;margin-bottom:20px}
+footer{font-size:11px;color:var(--text-3);text-align:center;margin-top:40px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="wordmark">NU<span>MAT</span></div>
+    <div class="header-title">CEO Intelligence Dashboard</div>
+  </div>
+  <div class="header-right">
+    <div class="last-updated" id="lastUpdated">Loading...</div>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadDashboard()">&#8635; Refresh</button>
+  </div>
+</div>
+
+<div class="page">
+  <div id="loadingScreen"><div class="loading-screen"><div class="spinner"></div><div class="loading-text">Loading live data...</div></div></div>
+  <div id="errorScreen" class="error-screen" style="display:none;"></div>
+  <div id="dashboard">
+    <div class="signal-strip" id="signalStrip"></div>
+    <div class="kpi-strip" id="kpiStrip"></div>
+    <div class="section-header"><div class="section-title">Sales Pipeline</div><div class="section-sub" id="pipelineSub"></div></div>
+    <div class="grid-3-2" style="margin-bottom:20px;">
+      <div class="card"><div class="card-title">Pipeline by Stage</div><div id="funnelContainer"></div></div>
+      <div class="card">
+        <div class="card-title">Rep Performance</div><div class="rep-grid" id="repGrid"></div>
+        <div style="margin-top:14px;"><div class="card-title">Top Segments</div><div id="segmentList"></div></div>
+      </div>
+    </div>
+    <div class="section-header"><div class="section-title">Financial Health</div><div class="section-sub" id="finSub"></div></div>
+    <div class="grid-3" style="margin-bottom:20px;">
+      <div class="card"><div class="card-title">This Month (Running)</div><div id="currentMonthPL"></div></div>
+      <div class="card"><div class="card-title">Last Full Month</div><div id="lastMonthPL"></div></div>
+      <div class="card"><div class="card-title">Account Balances</div><div id="accountBalances"></div></div>
+    </div>
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title inline"><span>Factory Utilization</span><span id="utilPct" style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);"></span></div>
+      <div class="util-bar-wrap"><div class="util-bar" id="utilBar" style="width:0%;"></div><div class="util-be-marker" id="beMarker"></div></div>
+      <div class="util-labels"><span>0%</span><span id="beLabel"></span><span>100%</span></div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:8px;" id="utilNote"></div>
+    </div>
+    <div class="section-header"><div class="section-title">Invoice P&amp;L vs Unit Economics</div><div class="section-sub" id="invoicePLSub"></div></div>
+    <div id="invoicePLSection"></div>
+    <div class="section-header"><div class="section-title">Accounts Receivable</div><div class="section-sub" id="arSub"></div></div>
+    <div class="card" style="margin-bottom:20px;overflow:hidden;padding:0;">
+      <table class="ar-table"><thead><tr><th>Customer</th><th>Invoice</th><th>Invoice Date</th><th>Due Date</th><th>Status</th><th>Outstanding</th></tr></thead><tbody id="arBody"></tbody></table>
+    </div>
+    <div class="grid-2">
+      <div><div class="section-header"><div class="section-title">Outreach Performance</div></div><div class="card"><div id="outreachStats"></div></div></div>
+      <div><div class="section-header"><div class="section-title">Open Proformas</div></div><div class="card"><div id="quotesStats"></div></div></div>
+    </div>
+  </div>
+</div>
+<footer id="footerLine" style="display:none;">NUMAT Sustainable Manufacturing Inc. &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; Live data</footer>
+
+<script>
+const EDGE_URL='https://peuwxnrojlfybdymkazj.supabase.co/functions/v1/ceo-dashboard'
+const SECRET='NUMAT-CEO-2026'
+function p(n){const num=parseFloat(n||0);if(Math.abs(num)>=1e6)return '\u20b1'+(num/1e6).toFixed(2)+'M';if(Math.abs(num)>=1e3)return '\u20b1'+(num/1e3).toFixed(0)+'K';return '\u20b1'+num.toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})}
+function pFull(n){return '\u20b1'+parseFloat(n||0).toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})}
+function pSigned(n){const num=parseFloat(n||0);return(num>=0?'+':'')+pFull(num)}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+async function loadDashboard(){
+  document.getElementById('loadingScreen').style.display='block'
+  document.getElementById('dashboard').style.display='none'
+  document.getElementById('errorScreen').style.display='none'
+  document.getElementById('refreshBtn').disabled=true
+  document.getElementById('lastUpdated').textContent='Refreshing...'
+  try{
+    const res=await fetch(EDGE_URL,{headers:{'Authorization':'Bearer '+SECRET}})
+    if(!res.ok)throw new Error('Server error '+res.status)
+    render(await res.json())
+  }catch(e){
+    document.getElementById('loadingScreen').style.display='none'
+    document.getElementById('errorScreen').style.display='block'
+    document.getElementById('errorScreen').textContent='Could not load: '+e.message
+  }finally{document.getElementById('refreshBtn').disabled=false}
+}
+
+function render(d){
+  document.getElementById('loadingScreen').style.display='none'
+  document.getElementById('dashboard').style.display='block'
+  document.getElementById('footerLine').style.display='block'
+  const g=new Date(d.generated_at)
+  document.getElementById('lastUpdated').textContent='Live as of '+g.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})+' '+g.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})
+  renderSignals(d);renderKPIs(d);renderPipeline(d);renderFinancial(d);renderInvoicePL(d);renderAR(d);renderOutreach(d);renderQuotes(d)
+}
+
+function renderSignals(d){
+  const runway=d.financial.runway_months,util=d.production.current_utilization_pct,od=d.ar.overdue_count,um=d.sales.upcoming_meetings
+  document.getElementById('signalStrip').innerHTML=[
+    {dot:util>=39.5?'dot-green':util>=25?'dot-amber':'dot-red',label:'Factory at '+util+'% utilization'},
+    {dot:runway>=6?'dot-green':runway>=3?'dot-amber':'dot-red',label:runway.toFixed(1)+' months runway'},
+    {dot:od===0?'dot-green':'dot-red',label:od===0?'No overdue AR':od+' overdue AR invoice'+(od>1?'s':'')},
+    {dot:um>0?'dot-blue':'dot-amber',label:um>0?um+' meeting'+(um>1?'s':'')+' confirmed':'No meetings booked'},
+  ].map(s=>'<div class="signal"><div class="signal-dot '+s.dot+'"></div>'+s.label+'</div>').join('')
+}
+
+function renderKPIs(d){
+  const fin=d.financial,rw=fin.runway_months,rc=rw>=6?'#1a6b3c':rw>=3?'#c97a00':'#c0392b'
+  document.getElementById('kpiStrip').innerHTML=[
+    {label:'Total Cash',value:p(fin.total_cash_php),sub:'\u20b1'+Math.round(fin.php_cash/1000)+'K PHP + $'+Math.round(fin.usd_cash).toLocaleString()+' USD',color:'#0f2942'},
+    {label:'Cash Runway',value:rw>=99?'\u221e':rw.toFixed(1)+' mo',sub:'Based on last month burn',color:rc},
+    {label:'Active Pipeline',value:p(d.sales.active_pipeline_value_php),sub:d.sales.upcoming_meetings+' meetings confirmed',color:'#1a6b3c'},
+    {label:'AR Outstanding',value:p(d.ar.total_outstanding_php),sub:d.ar.overdue_count>0?d.ar.overdue_count+' overdue':'No overdue invoices',color:d.ar.overdue_count>0?'#c0392b':'#1a6b3c'},
+    {label:'Monthly Burn',value:p(fin.monthly_burn_estimate),sub:'Last full month',color:'#c97a00'},
+  ].map(c=>'<div class="kpi" style="--kpi-color:'+c.color+'"><div class="kpi-label">'+c.label+'</div><div class="kpi-value" style="color:'+c.color+'">'+c.value+'</div><div class="kpi-sub">'+c.sub+'</div></div>').join('')
+}
+
+function renderPipeline(d){
+  const s=d.sales
+  document.getElementById('pipelineSub').textContent=s.total_leads.toLocaleString()+' total leads'
+  const sc={new:'#94a3b8',contacted:'#64748b',qualified:'#3b82f6',proposal_sent:'#8b5cf6',negotiation:'#f59e0b',closed_won:'#22c55e',closed_lost:'#ef4444'}
+  const mx=Math.max(...s.stage_order.map(st=>s.pipeline_by_stage[st]?.count||0),1)
+  document.getElementById('funnelContainer').innerHTML=s.stage_order.filter(st=>s.pipeline_by_stage[st]?.count>0).map(st=>{
+    const dt=s.pipeline_by_stage[st]||{count:0,value_php:0},w=Math.max((dt.count/mx)*100,3)
+    return '<div class="funnel-row"><div class="funnel-label">'+s.stage_labels[st]+'</div><div class="funnel-bar-wrap"><div class="funnel-bar" style="width:'+w+'%;background:'+(sc[st]||'#64748b')+'"><span>'+dt.count+'</span></div></div><div class="funnel-meta">'+(dt.value_php>0?p(dt.value_php):'\u2014')+'</div></div>'
+  }).join('')||'<div style="color:var(--text-3);padding:20px 0;">No pipeline data</div>'
+  document.getElementById('repGrid').innerHTML=['Bryan','Mohan'].map(r=>{const rb=s.rep_breakdown[r]||{count:0,value:0};return '<div class="rep-card"><div class="rep-name">'+r+'</div><div class="rep-val">'+rb.count+'</div><div class="rep-sub">leads &nbsp;|&nbsp; '+p(rb.value)+'</div></div>'}).join('')
+  const segs=Object.entries(s.by_segment).sort((a,b)=>b[1].value-a[1].value).slice(0,5)
+  document.getElementById('segmentList').innerHTML=segs.map(([n,dt])=>'<div class="seg-item"><div><div class="seg-name">'+n+'</div><div class="seg-count">'+dt.count+' leads</div></div><div class="seg-val">'+(dt.value>0?p(dt.value):'\u2014')+'</div></div>').join('')||'<div style="color:var(--text-3);font-size:12px;padding:8px 0;">No data</div>'
+}
+
+function renderFinancial(d){
+  const fin=d.financial
+  document.getElementById('finSub').textContent='PHP/USD '+d.fx.php_per_usd.toFixed(2)
+  function plH(pl){const nc=pl.net>=0?'green':'red';return '<div class="pl-row"><div class="pl-label">Revenue / Income</div><div class="pl-value green">'+pFull(pl.income)+'</div></div><div class="pl-row"><div class="pl-label">Operating Expenses</div><div class="pl-value red">'+pFull(pl.expenses)+'</div></div><div class="pl-row"><div class="pl-label">Salaries</div><div class="pl-value amber">'+pFull(pl.salaries||0)+'</div></div><div class="pl-row total"><div class="pl-label bold">Net</div><div class="pl-value '+nc+'">'+(pl.net>=0?'+':'')+pFull(pl.net)+'</div></div>'}
+  document.getElementById('currentMonthPL').innerHTML=plH(fin.current_month)
+  document.getElementById('lastMonthPL').innerHTML=plH(fin.last_month)
+  document.getElementById('accountBalances').innerHTML=fin.account_balances.map(a=>{const sym=a.currency==='PHP'?'\u20b1':a.currency==='USD'?'$':'';return '<div class="acc-row"><div><div class="acc-name">'+a.name+'</div><div class="acc-code">'+a.code+'</div></div><div><div class="acc-balance" style="color:'+(a.balance>=0?'var(--navy)':'var(--red)')+'">'+sym+Math.abs(a.balance).toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})+'</div><div class="acc-currency">'+a.currency+'</div></div></div>'}).join('')
+  const util=d.production.current_utilization_pct,be=d.production.break_even_util_pct
+  document.getElementById('utilPct').textContent=util+'%'
+  setTimeout(()=>{document.getElementById('utilBar').style.width=Math.min(util,100)+'%';document.getElementById('beMarker').style.left=Math.min(be,99)+'%'},100)
+  document.getElementById('beLabel').textContent='Break-even: '+be+'%'
+  document.getElementById('utilNote').textContent='Full capacity: '+d.production.full_capacity_veneers.toLocaleString()+' veneers/month. '+(util<be?(be-util).toFixed(1)+' points short of break-even.':'Above break-even.')
+}
+
+function renderInvoicePL(d){
+  const lines=(d.unit_econ&&d.unit_econ.invoice_lines)||[]
+  if(lines.length===0){
+    document.getElementById('invoicePLSub').textContent=''
+    document.getElementById('invoicePLSection').innerHTML='<div class="card"><div class="empty-invoices"><strong>No invoices yet</strong>Invoice P&amp;L will appear here once line items are recorded.</div></div>'
+    return
+  }
+
+  // Group by company + date + doc_type
+  const grouped={}
+  lines.forEach(l=>{
+    const key=l.company+'||'+l.date+'||'+l.doc_type
+    if(!grouped[key])grouped[key]={company:l.company,date:l.date,doc_type:l.doc_type,payment_status:l.payment_status,lines:[]}
+    grouped[key].lines.push(l)
+  })
+  const groups=Object.values(grouped)
+  groups.sort((a,b)=>{if(a.doc_type!==b.doc_type)return a.doc_type==='invoice'?-1:1;return b.date.localeCompare(a.date)})
+
+  let totalRev=0,totalCost=0
+  groups.forEach(g=>g.lines.forEach(l=>{totalRev+=l.total_price_php;totalCost+=l.unit_econ_cost_php*l.quantity}))
+  document.getElementById('invoicePLSub').textContent=groups.length+' document'+(groups.length>1?'s':'')+' \u00b7 Total sell value: '+p(totalRev)+' \u00b7 Net contribution: '+pSigned(totalRev-totalCost)
+
+  let html='<div class="invoice-grid">'
+
+  groups.forEach(g=>{
+    const gRev=g.lines.reduce((s,l)=>s+l.total_price_php,0)
+    const gCost=g.lines.reduce((s,l)=>s+l.unit_econ_cost_php*l.quantity,0)
+    const gContrib=gRev-gCost
+    const gMargin=gRev>0?(gContrib/gRev*100):0
+    const isProfit=gContrib>0,isLoss=gContrib<0
+    const cardClass=isProfit?'profit':isLoss?'loss':'breakeven'
+    const verdictClass=isProfit?'verdict-profit':isLoss?'verdict-loss':'verdict-breakeven'
+    const verdictText=isProfit?'\u2197 PROFITABLE':isLoss?'\u2198 LOSS MAKING':'\u2192 BREAK-EVEN'
+    const contribColor=isProfit?'var(--green)':isLoss?'var(--red)':'var(--amber)'
+    const docLabel=g.doc_type==='invoice'?'Invoice':'Proforma'
+    const docColor=g.doc_type==='invoice'?'var(--green)':'var(--amber)'
+    const payColor=g.payment_status==='paid'?'var(--green)':g.payment_status==='unpaid'?'var(--red)':'var(--text-3)'
+
+    // Build line rows
+    const lineRows=g.lines.map(l=>{
+      const hasCost=l.has_cost_data&&l.unit_econ_cost_php>0
+      const margin=l.margin_pct||0
+      const mpClass=margin>=25?'mp-profit':margin>=0?'mp-warn':'mp-loss'
+      const cColor=l.contribution_per_unit>=0?'var(--green)':'var(--red)'
+
+      // Sell price cell
+      const sellCell='<div class="price-cell"><span class="val">'+pFull(l.unit_price_php)+'</span><span class="lbl">per unit</span></div>'
+
+      // Cost cell: render cost_items array if present, else simple cost
+      let costCell
+      if(hasCost){
+        if(l.cost_items&&l.cost_items.length>0){
+          const itemRows=l.cost_items.map(ci=>
+            '<div class="cost-breakdown-row">'+
+              '<span class="cost-breakdown-label">'+esc(ci.label)+'</span>'+
+              '<span class="cost-breakdown-val">'+pFull(ci.amount_php)+'</span>'+
+            '</div>'+
+            (ci.note?'<div class="cost-breakdown-row"><span class="cost-breakdown-note" style="padding-left:0;color:var(--text-3);font-size:9px;font-style:italic;">'+esc(ci.note)+'</span></div>':'')
+          ).join('')
+          costCell='<div class="price-cell" style="text-align:right;">'+
+            '<span class="val">'+pFull(l.unit_econ_cost_php)+'</span>'+
+            '<span class="lbl">per unit total</span>'+
+            '<div class="cost-breakdown">'+itemRows+
+              '<div class="cost-breakdown-row cost-breakdown-total"><span class="cost-breakdown-label">Total</span><span class="cost-breakdown-val">'+pFull(l.unit_econ_cost_php)+'</span></div>'+
+            '</div>'+
+          '</div>'
+        } else {
+          costCell='<div class="price-cell"><span class="val">'+pFull(l.unit_econ_cost_php)+'</span><span class="lbl">per unit'+(l.cost_note?' \u00b7 '+esc(l.cost_note):'')+'</span></div>'
+        }
+      } else {
+        costCell='<div class="price-cell" style="color:var(--text-3);font-style:italic;font-size:12px;">N/A</div>'
+      }
+
+      const contribCell=hasCost
+        ?'<div class="price-cell"><span class="val" style="color:'+cColor+';">'+pFull(l.contribution_per_unit)+'</span><span class="lbl">per unit</span></div>'
+        :'<span style="color:var(--text-3);">\u2014</span>'
+
+      const marginCell=hasCost?'<span class="margin-pill '+mpClass+'">'+margin.toFixed(1)+'%</span>':'<span style="color:var(--text-3);font-size:11px;">N/A</span>'
+
+      const totalCell=hasCost
+        ?'<div class="price-cell"><span class="val" style="color:'+cColor+';">'+pFull(l.total_contribution)+'</span><span class="lbl">'+l.quantity+' units</span></div>'
+        :'<span style="color:var(--text-3);">\u2014</span>'
+
+      return '<tr>'+
+        '<td><div class="line-product">'+esc(l.product_name)+'</div><div class="line-sku">'+esc(l.sku)+'</div></td>'+
+        '<td class="r" style="font-family:\'DM Mono\',monospace;">'+l.quantity+'</td>'+
+        '<td class="r">'+sellCell+'</td>'+
+        '<td class="r">'+costCell+'</td>'+
+        '<td class="r">'+contribCell+'</td>'+
+        '<td class="r">'+marginCell+'</td>'+
+        '<td class="r">'+totalCell+'</td>'+
+        '</tr>'
+    }).join('')
+
+    let guidance=''
+    const lc=g.lines.filter(l=>l.has_cost_data&&l.unit_econ_cost_php>0)
+    if(isLoss&&lc.length>0){
+      const worst=lc.reduce((b,l)=>l.contribution_per_unit<b.contribution_per_unit?l:b,lc[0])
+      const avgGap=lc.reduce((s,l)=>s+l.quantity,0)>0?Math.abs(gContrib)/lc.reduce((s,l)=>s+l.quantity,0):0
+      guidance='<div class="invoice-guidance">This invoice is loss-making at current production costs. The biggest drag is <strong>'+esc(worst.product_name)+'</strong> at '+pFull(worst.contribution_per_unit)+' per unit. To break even, selling price needs to increase by <strong>'+pFull(avgGap)+' per unit on average</strong>.</div>'
+    } else if(isProfit){
+      guidance='<div class="invoice-guidance good">This invoice contributes positively at a '+gMargin.toFixed(1)+'% margin. Closing more deals at similar pricing accelerates the path to overall break-even.</div>'
+    }
+
+    html+='<div class="invoice-card '+cardClass+'">'+
+      '<div class="invoice-header" onclick="toggleInvoice(this)">'+
+        '<div><div class="invoice-company">'+esc(g.company||'Unknown')+'</div>'+
+          '<div class="invoice-meta"><span style="color:'+docColor+';font-weight:600;">'+docLabel+'</span> \u00b7 '+g.date+' \u00b7 <span style="color:'+payColor+';">'+esc(g.payment_status||'\u2014')+'</span></div>'+
+        '</div>'+
+        '<div class="invoice-verdict">'+
+          '<span class="verdict-badge '+verdictClass+'">'+verdictText+'</span>'+
+          '<div class="invoice-totals">'+
+            '<div class="invoice-total-value">'+pFull(gRev)+'</div>'+
+            '<div class="invoice-total-contrib" style="color:'+contribColor+';">Net: '+pSigned(gContrib)+'</div>'+
+          '</div>'+
+          '<span class="invoice-chevron">\u25be</span>'+
+        '</div>'+
+      '</div>'+
+      '<div class="invoice-body">'+
+        '<table class="line-table"><thead><tr>'+
+          '<th>Product</th><th class="r">Qty</th>'+
+          '<th class="r">Unit Sell Price</th>'+
+          '<th class="r">Unit Cost</th>'+
+          '<th class="r">Contribution / Unit</th>'+
+          '<th class="r">Margin</th>'+
+          '<th class="r">Total Contribution</th>'+
+        '</tr></thead><tbody>'+lineRows+'</tbody></table>'+
+        '<div class="invoice-footer">'+
+          '<div class="inv-foot-cell"><div class="inv-foot-label">Total Revenue</div><div class="inv-foot-val">'+pFull(gRev)+'</div></div>'+
+          '<div class="inv-foot-cell"><div class="inv-foot-label">Total Cost</div><div class="inv-foot-val" style="color:var(--red);">'+pFull(gCost)+'</div></div>'+
+          '<div class="inv-foot-cell"><div class="inv-foot-label">Net Contribution</div><div class="inv-foot-val" style="color:'+contribColor+';">'+pSigned(gContrib)+'</div></div>'+
+          '<div class="inv-foot-cell"><div class="inv-foot-label">Overall Margin</div><div class="inv-foot-val" style="color:'+contribColor+';">'+gMargin.toFixed(1)+'%</div></div>'+
+        '</div>'+guidance+
+      '</div>'+
+    '</div>'
+  })
+
+  html+='</div><div class="context-note"><strong style="color:var(--text-2);">How to read this:</strong> Unit cost = ex-factory price &times; 0.90 (from unit economics Price Structure tab, 10% GM). For fabricated products (tables, chairs), unit cost is the confirmed blended cost including materials and labour. NuSlat cost is ₱11.00 per slat (actual production cost). Click any card to expand the line item detail.</div>'
+  document.getElementById('invoicePLSection').innerHTML=html
+
+  const fb=document.querySelector('.invoice-body'),fc=document.querySelector('.invoice-chevron')
+  if(fb)fb.classList.add('open')
+  if(fc)fc.classList.add('open')
+}
+
+function toggleInvoice(h){
+  const b=h.nextElementSibling,c=h.querySelector('.invoice-chevron')
+  b.classList.toggle('open');c.classList.toggle('open')
+}
+
+function renderAR(d){
+  const ar=d.ar,today=new Date().toISOString().slice(0,10)
+  document.getElementById('arSub').textContent=p(ar.total_outstanding_php)+' outstanding'+(ar.overdue_count>0?' \u00b7 '+p(ar.overdue_total_php)+' overdue':'')
+  if(!ar.records||ar.records.length===0){document.getElementById('arBody').innerHTML='<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-3);">No AR records</td></tr>';return}
+  document.getElementById('arBody').innerHTML=ar.records.map(r=>{
+    const od=r.due_date<today&&!['settled','written_off'].includes(r.status)
+    const sp=od?'<span class="status-pill pill-overdue">Overdue</span>':r.status==='settled'?'<span class="status-pill pill-settled">Settled</span>':'<span class="status-pill pill-outstanding">Outstanding</span>'
+    const oa=parseFloat(r.outstanding_amount||0)
+    return '<tr class="'+(od?'overdue':'')+'"><td style="font-weight:500;">'+esc(r.customer)+'</td><td style="font-size:12px;">'+esc(r.invoice_number||'\u2014')+'</td><td style="font-size:12px;">'+(r.invoice_date||'\u2014')+'</td><td style="font-size:12px;'+(od?'color:var(--red);font-weight:600;':'')+'">'+(r.due_date||'\u2014')+'</td><td>'+sp+'</td><td style="font-weight:'+(oa>0?'600':'400')+';color:'+(oa>0?(od?'var(--red)':'var(--navy)'):'var(--text-3)')+'">'+(oa>0?pFull(oa):'\u2014')+'</td></tr>'
+  }).join('')
+}
+
+function renderOutreach(d){
+  const o=d.outreach
+  document.getElementById('outreachStats').innerHTML=[
+    {label:'Emails Sent (Last 3 Months)',val:o.sent_total.toLocaleString()},
+    {label:'Sent This Month',val:o.sent_this_month.toLocaleString()},
+    {label:'Sent Last Month',val:o.sent_last_month.toLocaleString()},
+    {label:'Total Replies',val:o.replies_total.toLocaleString()},
+    {label:'Reply Rate',val:o.reply_rate_pct+'%'},
+    {label:'Upcoming Meetings',val:o.upcoming_meetings.toLocaleString()},
+  ].map(r=>'<div class="stat-row"><div class="stat-name">'+r.label+'</div><div class="stat-val">'+r.val+'</div></div>').join('')
+}
+
+function renderQuotes(d){
+  const q=d.quotes
+  document.getElementById('quotesStats').innerHTML=[
+    {label:'Total Open Proformas',val:q.proformas_total_php?p(q.proformas_total_php):'\u20b10'},
+    {label:'Unpaid Invoices',val:(q.invoices_unpaid_count||0)+' invoice'+((q.invoices_unpaid_count||0)!==1?'s':'')},
+    {label:'Unpaid Invoice Value',val:q.invoices_unpaid_total_php?p(q.invoices_unpaid_total_php):'\u20b10'},
+  ].map(r=>'<div class="stat-row"><div class="stat-name">'+r.label+'</div><div class="stat-val">'+r.val+'</div></div>').join('')
+}
+
+loadDashboard()
+</script>
+</body>
+</html>
