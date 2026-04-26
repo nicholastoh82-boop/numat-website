@@ -2,7 +2,8 @@ import { Suspense } from 'react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
-import { CartContent } from '@/components/cart/cart-content'
+import { QuoteForm } from '@/components/cart/quote-form'
+import RequestQuoteLoading from './loading'
 import { requestQuoteMetadata } from '@/numat-seo-metadata'
 
 export const metadata = requestQuoteMetadata
@@ -13,8 +14,8 @@ export default function RequestQuotePage() {
       <Header />
       <CartDrawer />
       <main className="flex-1 bg-background">
-        <Suspense>
-          <CartContent />
+        <Suspense fallback={<RequestQuoteLoading />}>
+          <QuoteForm />
         </Suspense>
       </main>
       <Footer />
