@@ -10,26 +10,21 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-function parsePrice(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
-    return value
-  }
+const PUBLIC_PRODUCT_FIELDS =
+  'id, name, slug, description, image_url, is_featured, is_active, category_id'
 
-  if (typeof value === 'string') {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed) && parsed > 0) {
-      return parsed
-    }
-  }
+const PUBLIC_VARIANT_FIELDS =
+  'id, product_id, sku, size_label, length_mm, width_mm, thickness_mm, core_type, ply_count, unit, moq, is_price_on_request, price_notes, is_active, is_available, in_stock, sort_order'
 
-  return null
+const PUBLIC_CACHE_HEADERS = {
+  'Cache-Control': 'public, max-age=300',
 }
 
 export async function GET() {
   try {
     const { data: products, error: productsError } = await supabase
       .from('products')
-      .select('*')
+      .select(PUBLIC_PRODUCT_FIELDS)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
 
@@ -39,7 +34,7 @@ export async function GET() {
     }
 
     if (!products || products.length === 0) {
-      return NextResponse.json([])
+      return NextResponse.json([], { status: 200, headers: PUBLIC_CACHE_HEADERS })
     }
 
     const categoryIds = Array.from(
@@ -73,7 +68,7 @@ export async function GET() {
     if (productIds.length > 0) {
       const { data: variantsData, error: variantsError } = await supabase
         .from('product_variants')
-        .select('*')
+        .select(PUBLIC_VARIANT_FIELDS)
         .in('product_id', productIds)
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
@@ -110,33 +105,14 @@ export async function GET() {
 
       const productVariants = variantsMap.get(product.id) ?? []
 
-      const variantUsdPrices = productVariants
-        .filter((variant) => variant.in_stock !== false)
-        .map((variant) => parsePrice(variant.base_price_usd))
-        .filter((price): price is number => price !== null)
-
-      const productBasePriceUsd = parsePrice(product.base_price_usd)
-
-      const startingPriceUsd =
-        variantUsdPrices.length > 0
-          ? Math.min(...variantUsdPrices)
-          : productBasePriceUsd
-
-      const firstVariant = productVariants[0] ?? null
-
       return {
         id: product.id,
         name: product.name,
         slug: product.slug ?? '',
         description: product.description ?? '',
-        image_url: product.image_url ?? product.image ?? null,
+        image_url: product.image_url ?? null,
         is_featured: product.is_featured ?? false,
-        base_price_usd: productBasePriceUsd,
-        starting_price_usd: startingPriceUsd,
-        min_order_qty: product.min_order_qty ?? firstVariant?.moq ?? 1,
-        unit: product.unit ?? firstVariant?.unit ?? 'sheet',
-        sku: product.sku ?? firstVariant?.sku ?? '',
-        category: category?.name ?? '',
+        is_active: product.is_active ?? true,
         categories: category,
         variants: productVariants.map((variant) => ({
           id: variant.id,
@@ -150,7 +126,6 @@ export async function GET() {
           ply_count: variant.ply_count ?? null,
           unit: variant.unit ?? 'sheet',
           moq: variant.moq ?? 1,
-          base_price_usd: parsePrice(variant.base_price_usd),
           is_price_on_request: variant.is_price_on_request ?? false,
           price_notes: variant.price_notes ?? null,
           is_active: variant.is_active ?? true,
@@ -158,11 +133,10 @@ export async function GET() {
           in_stock: variant.in_stock ?? true,
           sort_order: variant.sort_order ?? null,
         })),
-        created_at: product.created_at ?? null,
       }
     })
 
-    return NextResponse.json(mergedProducts, { status: 200 })
+    return NextResponse.json(mergedProducts, { status: 200, headers: PUBLIC_CACHE_HEADERS })
   } catch (error) {
     console.error('GET /api/products unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error.' }, { status: 500 })
