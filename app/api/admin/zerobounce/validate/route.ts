@@ -1,5 +1,7 @@
 // app/api/admin/zerobounce/validate/route.ts
 //
+// TODO: cost logging via log_service_usage RPC is pending (separate follow up commit).
+//
 // Admin runner that pushes leads from master_leads through the ZeroBounce
 // validateBatch endpoint, then applies verdicts via the
 // public.zerobounce_apply_batch RPC. The RPC writes the suppression rows
