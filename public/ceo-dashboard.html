@@ -9,7 +9,7 @@
 :root{--green:#1a6b3c;--green-mid:#2a8c52;--green-light:#d6f0e0;--navy:#0f2942;--red:#c0392b;--red-bg:#fdf0ee;--red-border:#f5c6c0;--amber:#c97a00;--amber-bg:#fff8e6;--amber-border:#f5d87a;--text:#1a1a2e;--text-2:#4a5568;--text-3:#8898aa;--border:#e2e8f0;--surface:#f8fafc;--white:#ffffff;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#eef2f7;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);min-height:100vh}
-.header{background:var(--navy);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100}
+.header{background:var(--navy);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:64px;position:-webkit-sticky;position:sticky;top:0;z-index:100}
 .header-left{display:flex;align-items:center;gap:20px}
 .wordmark{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;letter-spacing:1px}
 .wordmark span{color:#2a8c52}
@@ -146,6 +146,61 @@ body{background:#eef2f7;font-family:'DM Sans',sans-serif;font-size:14px;color:va
 .empty-invoices strong{display:block;font-size:16px;color:var(--text-2);margin-bottom:8px}
 .context-note{font-size:11px;color:var(--text-3);padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;line-height:1.7;margin-bottom:20px}
 footer{font-size:11px;color:var(--text-3);text-align:center;margin-top:40px}
+
+/* ── Mobile Responsive ─────────────────────────── */
+@media (max-width: 768px) {
+  .header{padding:0 16px;height:56px}
+  .header-title{display:none}
+  .wordmark{font-size:17px}
+  .last-updated{font-size:10px;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .refresh-btn{padding:6px 12px;font-size:11px}
+  .page{padding:16px 12px 60px}
+  .kpi-strip{grid-template-columns:1fr 1fr;gap:10px}
+  .kpi{padding:14px 14px}
+  .kpi-value{font-size:20px}
+  .grid-3-2{grid-template-columns:1fr}
+  .grid-2{grid-template-columns:1fr}
+  .grid-3{grid-template-columns:1fr}
+  .card{padding:16px 14px}
+  .signal-strip{gap:7px}
+  .signal{font-size:11px;padding:5px 10px}
+  .rep-grid{grid-template-columns:1fr 1fr}
+  .section-title{font-size:15px}
+  /* Invoice cards */
+  .invoice-header{flex-direction:column;align-items:flex-start;gap:10px;padding:14px 14px}
+  .invoice-verdict{width:100%;justify-content:space-between}
+  .invoice-company{font-size:14px}
+  .invoice-total-value{font-size:17px}
+  .invoice-chevron{display:none}
+  .invoice-footer{grid-template-columns:1fr 1fr}
+  .inv-foot-cell{padding:10px 14px}
+  .inv-foot-val{font-size:15px}
+  /* Line table: horizontal scroll */
+  .invoice-body.open{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .line-table{min-width:600px}
+  .line-table th,.line-table td{padding:8px 12px;font-size:12px}
+  /* AR table */
+  .ar-table{min-width:520px}
+  .card[style*="padding:0"]{overflow-x:auto}
+  /* Funnel */
+  .funnel-label{width:80px;font-size:11px}
+  .funnel-meta{width:70px;font-size:10px}
+  /* P&L rows */
+  .pl-label{font-size:12px}
+  .pl-value{font-size:12px}
+  /* Util bar */
+  .util-labels{font-size:9px}
+  /* Cost breakdown box */
+  .cost-breakdown{max-width:200px;font-size:9px}
+}
+@media (max-width: 420px) {
+  .kpi-strip{grid-template-columns:1fr 1fr}
+  .kpi-value{font-size:18px}
+  .kpi-label{font-size:9px}
+  .invoice-footer{grid-template-columns:1fr 1fr}
+  .verdict-badge{font-size:10px;padding:3px 8px}
+  .rep-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -189,7 +244,7 @@ footer{font-size:11px;color:var(--text-3);text-align:center;margin-top:40px}
     <div class="section-header"><div class="section-title">Invoice P&amp;L vs Unit Economics</div><div class="section-sub" id="invoicePLSub"></div></div>
     <div id="invoicePLSection"></div>
     <div class="section-header"><div class="section-title">Accounts Receivable</div><div class="section-sub" id="arSub"></div></div>
-    <div class="card" style="margin-bottom:20px;overflow:hidden;padding:0;">
+    <div class="card" style="margin-bottom:20px;overflow:hidden;padding:0;"><div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
       <table class="ar-table"><thead><tr><th>Customer</th><th>Invoice</th><th>Invoice Date</th><th>Due Date</th><th>Status</th><th>Outstanding</th></tr></thead><tbody id="arBody"></tbody></table>
     </div>
     <div class="grid-2">
