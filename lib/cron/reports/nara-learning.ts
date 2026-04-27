@@ -6,6 +6,7 @@
 // nara_training_insights with status='pending_review', and emails Nic a digest.
 
 import { required, sendGmail, supabaseGet, supabasePost } from "@/lib/cron/helpers";
+import { anthropicMessagesUrl, anthropicHeaders } from "@/lib/anthropic";
 
 type NaraSession = {
   session_id: string;
@@ -165,14 +166,9 @@ export async function runNaraWeeklyLearning() {
   };
 
   // Call Claude for insights
-  const anthropicKey = required("ANTHROPIC_API_KEY");
-  const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+  const claudeResponse = await fetch(anthropicMessagesUrl(), {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": anthropicKey,
-      "anthropic-version": "2023-06-01",
-    },
+    headers: anthropicHeaders(),
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
       max_tokens: 3000,

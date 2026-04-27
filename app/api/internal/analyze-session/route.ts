@@ -11,13 +11,13 @@
 // loop trigger cannot drive Claude calls to infinity.
 
 import { createClient } from "@supabase/supabase-js";
+import { anthropicMessagesUrl, anthropicHeaders } from "@/lib/anthropic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const MODEL = "claude-haiku-4-5-20251001";
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
 const SYSTEM_PROMPT = `You analyse a completed chat conversation between a NUMAT website visitor and the NARA assistant. Return STRICT JSON only, no prose, no markdown, no code fences.
 
@@ -155,26 +155,12 @@ export async function POST(req: Request) {
     })
     .join("\n");
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    // Treat missing config as a failure that still breaks any loop
-    await supabase
-      .from("chat_sessions")
-      .update({ outcome: "other", session_analyzed_at: stampNow() })
-      .eq("id", sessionId);
-    return Response.json({ ok: true, session_id: sessionId, status: "parse_failed" });
-  }
-
   // 7. Call Claude with prompt caching on the system prompt
   let rawText = "";
   try {
-    const claudeRes = await fetch(ANTHROPIC_URL, {
+    const claudeRes = await fetch(anthropicMessagesUrl(), {
       method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
+      headers: anthropicHeaders(),
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 1000,

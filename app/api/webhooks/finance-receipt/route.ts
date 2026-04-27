@@ -23,6 +23,7 @@
 // with ai_confidence='n/a' and extracted_by_ai=false.
 
 import { required, sendGmail, supabasePost } from "@/lib/cron/helpers";
+import { anthropicMessagesUrl, anthropicHeaders } from "@/lib/anthropic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,14 +99,9 @@ async function extractFields(body: ReceiptPayload) {
 }
 
 async function callClaudeVision(base64: string, mediaType: string): Promise<VisionResult | null> {
-  const anthropicKey = required("ANTHROPIC_API_KEY");
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch(anthropicMessagesUrl(), {
     method: "POST",
-    headers: {
-      "x-api-key": anthropicKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
+    headers: anthropicHeaders(),
     body: JSON.stringify({
       model: CLAUDE_VISION_MODEL,
       max_tokens: 1024,

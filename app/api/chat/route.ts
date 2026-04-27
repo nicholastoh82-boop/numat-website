@@ -44,8 +44,8 @@ CREATE TABLE nara_unanswered (
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { anthropicMessagesUrl, anthropicHeaders } from '@/lib/anthropic'
 
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 const N8N_WEBHOOK = 'https://nicholastoh.app.n8n.cloud/webhook/numat-lead'
 const STOP_WORDS = new Set(['a','an','the','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','dare','ought','used','i','me','my','we','our','you','your','he','she','it','they','them','his','her','its','their','what','which','who','whom','this','that','these','those','am','at','by','for','in','of','on','or','to','up','and','but','if','or','nor','so','yet','both','either','neither','not','only','own','same','than','too','very','just','how','when','where','why','all','any','each','few','more','most','other','some','such','no','as'])
 
@@ -288,11 +288,6 @@ const VE_OPEN_TRIGGER = '__VE_REPORT_OPEN__'
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'Chat service not configured' }, { status: 503 })
-    }
-
     const body = await request.json()
     const {
       messages,
@@ -377,13 +372,9 @@ export async function POST(request: NextRequest) {
 
     const truncatedMessages = truncateHistory(claudeMessages)
 
-    const claudeRes = await fetch(ANTHROPIC_API_URL, {
+    const claudeRes = await fetch(anthropicMessagesUrl(), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'x-api-key': apiKey,
-      },
+      headers: anthropicHeaders(),
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 500,
