@@ -92,9 +92,14 @@ export async function GET(request: NextRequest) {
         .eq("zb_status", s),
     ),
   );
+  // Match the email filter used by total_with_email so that
+  // null_count plus the by_status buckets reconcile to total_with_email.
+  // Leads without an email are unvalidatable, not pending.
   const nullCountRes = await supabase
     .from("master_leads")
     .select("id", { count: "exact", head: true })
+    .not("email", "is", null)
+    .neq("email", "")
     .is("zb_status", null);
 
   const byStatus: Record<string, number> = {};

@@ -223,6 +223,12 @@ export async function POST(request: NextRequest) {
   let leadsValidated = 0;
   let suppressionRowsAdded = 0;
   let batchesProcessed = 0;
+  // Tracks emails actually shipped to the ZeroBounce API. Credits are
+  // burned at send time regardless of whether the downstream RPC apply
+  // step succeeds, so this drives credits_remaining_estimate. Still an
+  // estimate: ZeroBounce returns free re validations within 5 days for
+  // the same address, which we cannot detect without a follow up call.
+  let totalEmailsSentToZb = 0;
   const errors: Array<{ batch_index: number; message: string }> = [];
 
   for (let i = 0; i < emails.length; i += batch_size) {
@@ -236,6 +242,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      totalEmailsSentToZb += chunk.length;
       const { verdicts } = await validateBatch(chunk);
 
       const payload = verdicts.map((v: ZBVerdict) => ({
@@ -290,7 +297,7 @@ export async function POST(request: NextRequest) {
     leads_validated: leadsValidated,
     by_status: byStatus,
     suppression_rows_added: suppressionRowsAdded,
-    credits_remaining_estimate: Math.max(0, initialCredits - leadsValidated),
+    credits_remaining_estimate: Math.max(0, initialCredits - totalEmailsSentToZb),
     errors,
     done: pendingAfter === 0,
   });
