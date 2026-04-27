@@ -10,6 +10,8 @@
 //
 // Exposes runSessionAnalysis(sessionId) so the cron can invoke directly without HTTP.
 
+import { anthropicMessagesUrl, anthropicHeaders } from "@/lib/anthropic";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -54,8 +56,6 @@ Rules:
 - For user messages: infer everything from content.
 - Skip markers like [VE Report auto-open] as assistant neutral placeholders.
 - Always return exactly one analysis per input message, in ascending idx.`;
-
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
 type Role = "user" | "assistant";
 
@@ -164,14 +164,9 @@ function buildTranscript(messages: ChatMessageRow[]): string {
 }
 
 async function callClaude(transcript: string): Promise<AnalysisResponse | null> {
-  const apiKey = required("ANTHROPIC_API_KEY");
-  const res = await fetch(ANTHROPIC_URL, {
+  const res = await fetch(anthropicMessagesUrl(), {
     method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
+    headers: anthropicHeaders(),
     body: JSON.stringify({
       model: MODEL,
       max_tokens: 4000,

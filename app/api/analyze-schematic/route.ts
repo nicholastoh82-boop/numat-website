@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { anthropicMessagesUrl, anthropicHeaders } from "@/lib/anthropic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -115,23 +116,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "mediaType required." }, { status: 400 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "Vision API not configured." }, { status: 500 });
-  }
-
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 240_000);
 
   let upstream: Response;
   try {
-    upstream = await fetch("https://api.anthropic.com/v1/messages", {
+    upstream = await fetch(anthropicMessagesUrl(), {
       method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
+      headers: anthropicHeaders(),
       body: JSON.stringify({
         model: VISION_MODEL,
         max_tokens: 2000,
