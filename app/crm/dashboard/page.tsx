@@ -180,6 +180,7 @@ const PRODUCT_VARIANTS: ProductVariant[] = [
   { id:'a4b38f1a-e617-42fd-af1b-fc680566e382', sku:'NUDOOR-PREMIUM', productName:'NuDoor', category:'NuDoor', sizeLabel:'2100x800x40mm Premium', unit:'piece', moq:5, basePriceUsd:350, exFactoryPhp:null },
   { id:'276784a7-390b-4ba1-b4b5-ee1fb23be34b', sku:'NUFLOOR-020-3PLY', productName:'NuFloor', category:'NuFloor', sizeLabel:'1220x153x20mm 3PLY', unit:'piece', moq:20, basePriceUsd:15, exFactoryPhp:null },
   { id:'d1ea85f3-75cf-4c41-913d-17806742d677', sku:'NUFLOOR-020-3PLY-1220x305', productName:'NuFloor', category:'NuFloor', sizeLabel:'1220x305x20mm 3PLY', unit:'piece', moq:20, basePriceUsd:15, exFactoryPhp:null },
+  { id:'d9f740ae-e234-4d8e-9991-c6cb7a390dab', sku:'NUFLOOR-016-3PLY-300x1200', productName:'NuFloor', category:'NuFloor', sizeLabel:'300x1200x16mm 3PLY', unit:'piece', moq:10, basePriceUsd:14.53, exFactoryPhp:null },
   { id:'c80f8a43-6552-4aef-b399-c6af9adac3c9', sku:'NUSLAT-3MM-2400L-27W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x27x3mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
   { id:'77feccc2-506a-4702-be57-784b8717d4d0', sku:'NUSLAT-3MM-2400L-25W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x25x3mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
   { id:'7e940a43-6b59-4212-a43f-33b6ab663e91', sku:'NUSLAT-3MM-2400L-26W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x26x3mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
