@@ -1197,6 +1197,7 @@ export default function CRMDashboard() {
       deal_value_php: newLead.deal_value_php ? Number(newLead.deal_value_php) : null,
       rep_email: repEmail,
       rep_assigned: repName,
+      client_id: '33a5efd3-37c1-4c03-b403-dba953b3e4bc',
       source: 'manual',
       lead_source: 'CRM Manual Entry',
       pipeline_stage: 'new',
