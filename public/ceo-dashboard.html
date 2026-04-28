@@ -193,6 +193,7 @@ footer{font-size:11px;color:var(--text-3);text-align:center;margin-top:40px}
 .dual-val .php{font-size:13px;font-weight:600;color:var(--navy);font-family:'DM Mono',monospace}
 .dual-val .usd{font-size:10px;color:var(--text-3);font-family:'DM Mono',monospace;display:block;margin-top:1px}
 
+.mono-sub{font-size:10px;color:var(--text-3);font-family:"DM Mono",monospace;margin-top:2px;}
 @media (max-width: 768px) {
   .header{padding:0 16px;height:56px}
   .header-title{display:none}
@@ -472,6 +473,7 @@ function renderFinancial(d){
 
 function renderInvoicePL(d){
   const lines=(d.unit_econ&&d.unit_econ.invoice_lines)||[]
+  const phpPerUsd=(d.fx&&d.fx.php_per_usd)||58.5
   if(lines.length===0){
     document.getElementById('invoicePLSub').textContent=''
     document.getElementById('invoicePLSection').innerHTML='<div class="card"><div class="empty-invoices"><strong>No invoices yet</strong>Invoice P&amp;L will appear here once line items are recorded.</div></div>'
@@ -541,8 +543,13 @@ function renderInvoicePL(d){
       const mpClass=margin>=25?'mp-profit':margin>=0?'mp-warn':'mp-loss'
       const cColor=l.contribution_per_unit_php>=0?'var(--green)':'var(--red)'
 
-      // Sell price cell \u2014 show in NATIVE currency
-      const sellCell='<div class="price-cell"><span class="val">'+fmtNative(l.native_unit_price,currency)+'</span><span class="lbl">per unit ('+currency+')</span></div>'
+      // Sell price cell - show native + converted
+      const phpEquiv=currency==='USD'?Math.round(l.native_unit_price*phpPerUsd):null
+      const usdEquiv=currency==='PHP'?Math.round(l.native_unit_price/phpPerUsd*100)/100:null
+      const phpConvStr=phpEquiv?'<br><span class="mono-sub">≈ '+p(phpEquiv)+' PHP</span>':''
+      const usdConvStr=usdEquiv?'<br><span class="mono-sub">= $'+usdEquiv.toLocaleString()+' USD</span>':''
+      const sellCell='<div class="price-cell"><span class="val">'+fmtNative(l.native_unit_price,currency)+'</span>'+
+        '<span class="lbl">per unit ('+currency+')'+phpConvStr+usdConvStr+'</span></div>'
 
       // Cost cell \u2014 always in PHP
       let costCell
@@ -615,6 +622,9 @@ function renderInvoicePL(d){
           '<span class="verdict-badge '+verdictClass+'">'+verdictText+'</span>'+
           '<div class="invoice-totals">'+
             '<div class="invoice-total-value">'+fmtNative(gRevNative,currency)+'</div>'+
+            '<div class="mono-sub">'+
+            (currency==='USD'?('≈ '+p(Math.round(gRevNative*phpPerUsd))+' PHP'):('= $'+Math.round(gRevNative/phpPerUsd).toLocaleString()+' USD'))+
+            '</div>'+
             headerCostBadge+
           '</div>'+
           '<span class="invoice-chevron">\u25be</span>'+
@@ -630,7 +640,11 @@ function renderInvoicePL(d){
           '<th class="r">Total Contribution (PHP)</th>'+
         '</tr></thead><tbody>'+lineRows+'</tbody></table>'+
         '<div class="invoice-footer">'+
-          '<div class="inv-foot-cell"><div class="inv-foot-label">'+footerRevLabel+'</div><div class="inv-foot-val">'+fmtNative(gRevNative,currency)+'</div></div>'+
+          '<div class="inv-foot-cell"><div class="inv-foot-label">Revenue</div>'+
+          '<div class="inv-foot-val">'+fmtNative(gRevNative,currency)+'</div>'+
+          '<div class="mono-sub" style="margin-top:3px;">'+
+          (currency==='USD'?('≈ '+p(Math.round(gRevNative*phpPerUsd))+' PHP'):('= $'+Math.round(gRevNative/phpPerUsd).toLocaleString()+' USD'))+
+          '</div></div>'+
           footerCostHtml+footerNetHtml+footerMarginHtml+
         '</div>'+
         guidance+
