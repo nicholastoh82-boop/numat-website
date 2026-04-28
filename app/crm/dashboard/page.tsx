@@ -2470,14 +2470,15 @@ export default function CRMDashboard() {
                     onChange={e => setNewLead({ ...newLead, segment: e.target.value })}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
                     <option value="">— Select —</option>
-                    <option value="Architect">Architect</option>
-                    <option value="Contractor">Contractor</option>
-                    <option value="Developer">Developer</option>
-                    <option value="Interior Designer">Interior Designer</option>
-                    <option value="Hotel">Hotel</option>
-                    <option value="Manufacturer">Manufacturer</option>
-                    <option value="Distributor">Distributor</option>
-                    <option value="Other">Other</option>
+                    <option value="Hotels and Resorts">Hotels and Resorts</option>
+                    <option value="Construction">Construction</option>
+                    <option value="Property Developers">Property Developers</option>
+                    <option value="Architects">Architects</option>
+                    <option value="Interior Designers">Interior Designers</option>
+                    <option value="Furniture Makers">Furniture Makers</option>
+                    <option value="Wood Distributors">Wood Distributors</option>
+                    <option value="Modular Home Manufacturers">Modular Home Manufacturers</option>
+                    <option value="Out of Scope">Out of Scope</option>
                   </select>
                 </div>
                 <div>
