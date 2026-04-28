@@ -1,422 +1,651 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NUMAT Finance — Submit Transaction</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NUMAT Finance Import</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --green:#1D6A47;--green-light:#E8F5EE;--green-mid:#2d8a5e;
-  --amber:#D4860A;--amber-light:#FEF3E2;
-  --red:#C0392B;--red-light:#FDEAEA;
-  --text:#1a1a1a;--text-muted:#6b7280;
-  --border:#e0e0e0;--bg:#f7f7f5;--card:#ffffff;--radius:10px;
-}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);padding:0 0 80px;}
-.header{background:var(--green);padding:20px 24px 18px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;}
-.header-logo{width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:11px;color:white;font-weight:500;letter-spacing:0.5px;}
-.header-text h1{font-size:16px;font-weight:600;color:white;line-height:1.2;}
-.header-text p{font-size:12px;color:rgba(255,255,255,0.65);margin-top:1px;}
-.container{max-width:560px;margin:0 auto;padding:24px 16px;}
-.section-label{font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;margin-top:28px;}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
-.field{padding:14px 16px;border-bottom:1px solid var(--border);}
-.field:last-child{border-bottom:none;}
-.field label{display:block;font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;}
-.field label .req{color:var(--red);margin-left:2px;}
-.field input,.field select,.field textarea{width:100%;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:transparent;border:none;outline:none;appearance:none;-webkit-appearance:none;}
-.field select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0 center;padding-right:20px;}
-.field textarea{resize:none;min-height:60px;line-height:1.5;}
-.amount-row{display:flex;align-items:center;gap:8px;}
-.amount-currency{font-size:15px;font-weight:500;color:var(--green);font-family:'DM Mono',monospace;white-space:nowrap;flex-shrink:0;min-width:36px;}
-.amount-row input{flex:1;}
-.staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;padding:14px 16px;}
-.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 16px;}
-.cur-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;}
-.cur-btn{border:1.5px solid var(--border);border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;}
-.cur-btn.active{border-color:var(--green);background:var(--green-light);}
-.cur-code{font-size:13px;font-weight:700;color:var(--text);}
-.cur-name{font-size:10px;color:var(--text-muted);margin-top:2px;}
-.cur-btn.active .cur-code{color:var(--green);}
-.cur-btn.active .cur-name{color:var(--green-mid);}
-.upload-zone{margin:14px 16px;border:2px dashed var(--border);border-radius:8px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .15s;position:relative;}
-.upload-zone:hover,.upload-zone.dragover{border-color:var(--green);background:var(--green-light);}
-.upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.upload-icon{width:40px;height:40px;background:var(--green-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;}
-.upload-icon svg{width:20px;height:20px;stroke:var(--green);fill:none;stroke-width:1.5;stroke-linecap:round;}
-.upload-zone h3{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px;}
-.upload-zone p{font-size:12px;color:var(--text-muted);}
-.upload-preview{display:none;align-items:center;gap:10px;margin:0 16px 14px;padding:10px 12px;background:var(--green-light);border-radius:8px;border:1px solid #b7ddc8;}
-.upload-preview.show{display:flex;}
-.preview-icon{width:32px;height:32px;background:white;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;}
-.preview-info{flex:1;min-width:0;}
-.preview-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.preview-size{font-size:11px;color:var(--text-muted);}
-.preview-remove{background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:2px 4px;line-height:1;flex-shrink:0;}
-.submit-btn{width:100%;background:var(--green);color:white;border:none;border-radius:var(--radius);padding:16px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-top:24px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
-.submit-btn:hover{background:var(--green-mid);}
-.submit-btn:disabled{background:#9ca3af;cursor:not-allowed;}
-.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap');
+:root{--green:#1a6b3c;--green-mid:#2a8c52;--green-light:#d6f0e0;--navy:#0f2942;--red:#c0392b;--red-bg:#fdf0ee;--amber:#c97a00;--amber-bg:#fff8e6;--text:#1a1a2e;--text-2:#4a5568;--text-3:#8898aa;--border:#e2e8f0;--surface:#f8fafc;--white:#ffffff;--radius:10px;--shadow:0 1px 3px rgba(0,0,0,.06)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#eef2f7;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);min-height:100vh}
+.header{background:var(--navy);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100}
+.wordmark{font-size:18px;color:#fff;font-weight:600;letter-spacing:1px}.wordmark span{color:#2a8c52}
+.header-right{font-size:12px;color:rgba(255,255,255,.4)}
+.page{max-width:1100px;margin:0 auto;padding:24px 16px 80px}
+/* Steps */
+.steps{display:flex;gap:0;margin-bottom:28px;background:var(--white);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow)}
+.step{flex:1;padding:14px 20px;font-size:13px;font-weight:500;color:var(--text-3);border-right:1px solid var(--border);display:flex;align-items:center;gap:10px;transition:background .2s}
+.step:last-child{border-right:none}
+.step.active{background:var(--navy);color:#fff}
+.step.done{background:var(--green-light);color:var(--green)}
+.step-num{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.step.active .step-num{background:rgba(255,255,255,.25)}
+.step.done .step-num{background:var(--green);color:#fff}
+.step:not(.active):not(.done) .step-num{background:var(--border);color:var(--text-3)}
+/* Cards */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:20px}
+.card-title{font-size:13px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin-bottom:16px}
+/* Upload zone */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:48px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--green-mid);background:var(--green-light)}
+.upload-zone .icon{font-size:40px;margin-bottom:12px}
+.upload-zone h3{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:6px}
+.upload-zone p{font-size:12px;color:var(--text-3)}
+#fileInput{display:none}
+/* Buttons */
+.btn{padding:9px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:7px;transition:all .15s}
+.btn-primary{background:var(--navy);color:#fff}.btn-primary:hover{background:#1a3a5c}
+.btn-primary:disabled{background:#aaa;cursor:default}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{background:var(--green-mid)}
+.btn-green:disabled{background:#aaa;cursor:default}
+.btn-outline{background:transparent;color:var(--text-2);border:1px solid var(--border)}.btn-outline:hover{background:var(--surface)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1px solid #f5c6c0}.btn-danger:hover{background:#fae0dc}
+/* Status */
+.status-box{padding:12px 16px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.status-info{background:#e8f4ff;border:1px solid #b3d4f5;color:#1565c0}
+.status-success{background:var(--green-light);border:1px solid #a3d9b8;color:var(--green)}
+.status-error{background:var(--red-bg);border:1px solid #f5c6c0;color:var(--red)}
+.status-warn{background:var(--amber-bg);border:1px solid #f5d87a;color:var(--amber)}
+/* Mapping grid */
+.mapping-grid{display:grid;grid-template-columns:1fr 20px 1fr;gap:8px;align-items:center;margin-bottom:8px}
+.mapping-col{font-size:12px;font-family:'DM Mono',monospace;background:var(--surface);padding:6px 10px;border-radius:5px;border:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-2)}
+.mapping-arrow{text-align:center;color:var(--text-3);font-size:14px}
+.mapping-select{font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--white);color:var(--text);font-family:inherit;cursor:pointer;width:100%}
+.mapping-select:focus{outline:none;border-color:var(--green-mid)}
+/* Preview table */
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.preview{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
+table.preview th{background:var(--navy);color:#fff;padding:8px 10px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;position:sticky;top:0;z-index:2}
+table.preview td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+table.preview tr:hover td{background:var(--surface)}
+table.preview tr.removed td{background:#fdf0ee;text-decoration:line-through;opacity:.5}
+.cell-input{width:100%;border:none;background:transparent;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);padding:2px 4px;border-radius:3px}
+.cell-input:focus{outline:1px solid var(--green-mid);background:var(--white)}
+.cell-select{width:100%;border:none;background:transparent;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;padding:2px}
+.cell-select:focus{outline:1px solid var(--green-mid)}
+.receipt-cell{display:flex;align-items:center;gap:4px}
+.receipt-label{font-size:10px;color:var(--text-3);cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:3px}
+.receipt-label.has-file{color:var(--green);font-weight:600}
+.receipt-input{display:none}
+.remove-btn{background:none;border:none;cursor:pointer;color:var(--text-3);font-size:14px;padding:2px 4px;border-radius:3px;line-height:1}
+.remove-btn:hover{background:var(--red-bg);color:var(--red)}
+/* Summary */
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+.summary-label{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.summary-val{font-size:22px;font-weight:600;color:var(--navy);font-family:'DM Mono',monospace}
+.summary-sub{font-size:11px;color:var(--text-3);margin-top:3px}
+/* Progress */
+.progress-bar{height:4px;background:var(--border);border-radius:2px;margin:8px 0;overflow:hidden}
+.progress-fill{height:100%;background:var(--green-mid);border-radius:2px;transition:width .3s}
+.result-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+.result-row:last-child{border-bottom:none}
+.result-ok{color:var(--green)}.result-err{color:var(--red)}
+/* Loading spinner */
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--green-mid);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:white;padding:12px 20px;border-radius:999px;font-size:14px;font-weight:500;white-space:nowrap;z-index:100;transition:transform .35s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
-.toast.show{transform:translateX(-50%) translateY(0);}
-.toast.ok{background:var(--green);}
-.toast.err{background:var(--red);}
-.ai-badge{display:inline-flex;align-items:center;gap:5px;background:var(--amber-light);color:var(--amber);font-size:10px;font-weight:600;padding:3px 8px;border-radius:999px;border:1px solid #f0c060;text-transform:uppercase;letter-spacing:0.5px;margin-left:8px;}
-.field-hint{font-size:11px;color:var(--text-muted);margin-top:4px;}
-.success-screen{display:none;text-align:center;padding:60px 24px;}
-.success-screen.show{display:block;}
-.check-circle{width:72px;height:72px;background:var(--green-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
-.check-circle svg{width:36px;height:36px;stroke:var(--green);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
-.success-screen h2{font-size:22px;font-weight:600;margin-bottom:8px;}
-.success-screen p{color:var(--text-muted);font-size:14px;line-height:1.6;}
-.new-entry-btn{margin-top:28px;display:inline-block;padding:12px 24px;background:var(--green);color:white;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;}
-#mainForm{display:block;}
+/* Util */
+.flex{display:flex;align-items:center;gap:10px}
+.flex-between{display:flex;align-items:center;justify-content:space-between}
+.mt-16{margin-top:16px}
+.text-sm{font-size:12px;color:var(--text-3)}
+@media(max-width:600px){.steps{flex-direction:column}.step{border-right:none;border-bottom:1px solid var(--border)}.summary-grid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
-
 <div class="header">
-  <div class="header-logo">NM</div>
-  <div class="header-text">
-    <h1>Finance Upload</h1>
-    <p>NUMAT Sustainable Manufacturing</p>
-  </div>
+  <div class="wordmark">NU<span>MAT</span> <span style="font-weight:400;color:rgba(255,255,255,.4);font-size:13px;margin-left:8px;">Finance Import</span></div>
+  <div class="header-right">Bulk transaction upload with receipt attachments</div>
 </div>
 
-<div class="container">
-
-  <div class="success-screen" id="successScreen">
-    <div class="check-circle">
-      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-    </div>
-    <h2>Submitted!</h2>
-    <p>Your transaction has been recorded.<br>The receipt is being processed by AI — data will appear in the system within a minute.</p>
-    <button class="new-entry-btn" onclick="resetForm()">Submit Another</button>
+<div class="page">
+  <!-- Steps -->
+  <div class="steps">
+    <div class="step active" id="step1"><div class="step-num">1</div>Upload File</div>
+    <div class="step" id="step2"><div class="step-num">2</div>Map Columns</div>
+    <div class="step" id="step3"><div class="step-num">3</div>Review &amp; Edit</div>
+    <div class="step" id="step4"><div class="step-num">4</div>Confirm</div>
   </div>
 
-  <div id="mainForm">
-
-    <div class="section-label">Who are you?</div>
+  <!-- STEP 1: Upload -->
+  <div id="panelUpload">
     <div class="card">
-      <div class="staff-grid" id="staffGrid"></div>
-      <div class="field" style="border-top:1px solid var(--border)">
-        <label>Or type your name <span class="req">*</span></label>
-        <input type="text" id="customName" placeholder="Full name" autocomplete="name">
-      </div>
-    </div>
-
-    <div class="section-label">What is this?</div>
-    <div class="card">
-      <div class="type-grid" id="typeGrid"></div>
-    </div>
-
-    <div class="section-label">Transaction details</div>
-    <div class="card">
-      <div class="field">
-        <label>Date <span class="req">*</span></label>
-        <input type="date" id="txDate">
-      </div>
-      <div class="field">
-        <label>Vendor / Client / Person paid</label>
-        <input type="text" id="vendorClient" placeholder="e.g. SM Supermarket, Juan Dela Cruz">
-      </div>
-      <div class="field">
-        <label>Currency <span class="req">*</span></label>
-        <div class="cur-grid">
-          <div class="cur-btn active" id="cur-PHP" onclick="selectCurrency('PHP')">
-            <div class="cur-code">PHP</div><div class="cur-name">Philippine Peso</div>
-          </div>
-          <div class="cur-btn" id="cur-USD" onclick="selectCurrency('USD')">
-            <div class="cur-code">USD</div><div class="cur-name">US Dollar</div>
-          </div>
-          <div class="cur-btn" id="cur-MYR" onclick="selectCurrency('MYR')">
-            <div class="cur-code">MYR</div><div class="cur-name">Malaysian Ringgit</div>
-          </div>
-        </div>
-      </div>
-      <div class="field">
-        <label>Amount <span class="req">*</span></label>
-        <div class="amount-row">
-          <span class="amount-currency" id="currencyLabel">PHP</span>
-          <input type="number" id="amount" placeholder="0.00" step="0.01" min="0">
-        </div>
-      </div>
-      <div class="field">
-        <label>Category</label>
-        <select id="category"><option value="">Select category...</option></select>
-      </div>
-      <div class="field">
-        <label>Description / notes</label>
-        <textarea id="description" placeholder="What was this for? Any extra context..."></textarea>
-      </div>
-    </div>
-
-    <div class="section-label">
-      Receipt or proof of payment
-      <span class="ai-badge">✦ AI reads this</span>
-    </div>
-    <div class="card">
+      <div class="card-title">Upload Transaction File</div>
       <div class="upload-zone" id="uploadZone">
-        <input type="file" id="fileInput" accept="image/*,.pdf" onchange="handleFile(this)">
-        <div class="upload-icon">
-          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        </div>
-        <h3>Tap to upload receipt</h3>
-        <p>Photo, scan, or PDF · handwritten OK</p>
+        <div class="icon">📊</div>
+        <h3>Drop your CSV or Excel file here</h3>
+        <p>Supports .csv, .xlsx, .xls &nbsp;|&nbsp; Any column structure is fine — AI will map it automatically</p>
+        <br>
+        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">Browse Files</button>
+        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls"/>
       </div>
-      <div class="upload-preview" id="uploadPreview">
-        <div class="preview-icon" id="previewIcon">📄</div>
-        <div class="preview-info">
-          <div class="preview-name" id="previewName"></div>
-          <div class="preview-size" id="previewSize"></div>
-        </div>
-        <button class="preview-remove" onclick="removeFile()" title="Remove">×</button>
-      </div>
-      <div class="field">
-        <p class="field-hint">✦ AI will automatically extract date, amount, vendor, and category. Fill fields above only to override.</p>
+      <div class="text-sm mt-16">
+        <strong>Tips:</strong> Your file can have any column headers. The AI will automatically map them to the correct fields.
+        Suggested columns: Date, Amount, Description, Currency, Vendor/Payee, Type, Notes. Receipts can be attached per row in the next step.
       </div>
     </div>
 
-    <button class="submit-btn" id="submitBtn" onclick="submitForm()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      <span id="submitLabel">Submit Transaction</span>
-      <div class="spinner" id="spinner"></div>
-    </button>
+    <!-- Sample template download -->
+    <div class="card">
+      <div class="card-title">Need a template?</div>
+      <p class="text-sm" style="margin-bottom:12px;">Download a pre-formatted CSV template with the correct column headers.</p>
+      <button class="btn btn-outline" onclick="downloadTemplate()">⬇ Download CSV Template</button>
+    </div>
+  </div>
 
+  <!-- STEP 2: Column Mapping -->
+  <div id="panelMapping" style="display:none;">
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:16px;">
+        <div class="card-title" style="margin:0;">Map Columns to Fields</div>
+        <div class="flex">
+          <div class="spinner" id="mappingSpinner" style="display:none;"></div>
+          <span id="mappingStatus" class="text-sm"></span>
+        </div>
+      </div>
+      <div id="statusMapping"></div>
+      <div id="mappingRows"></div>
+      <div class="flex mt-16" style="justify-content:flex-end;gap:10px;">
+        <button class="btn btn-outline" onclick="goStep(1)">← Back</button>
+        <button class="btn btn-primary" id="btnApplyMapping" onclick="applyMapping()">Apply Mapping →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Review & Edit -->
+  <div id="panelReview" style="display:none;">
+    <div class="flex-between" style="margin-bottom:14px;">
+      <div>
+        <div style="font-size:16px;font-weight:600;color:var(--navy);" id="reviewTitle">Review Transactions</div>
+        <div class="text-sm" id="reviewSubtitle"></div>
+      </div>
+      <div class="flex">
+        <button class="btn btn-sm btn-outline" onclick="addRow()">+ Add Row</button>
+        <button class="btn btn-sm btn-outline" onclick="goStep(2)">← Back</button>
+      </div>
+    </div>
+    <div class="status-warn status-box" style="margin-bottom:12px;">
+      <span>✏️</span> <span>You can edit any cell directly. Click the 📎 to attach a receipt image or PDF per row. Rows with strikethrough are excluded from import.</span>
+    </div>
+
+    <!-- Batch receipt upload -->
+    <div class="card" style="padding:14px 18px;margin-bottom:14px;">
+      <div class="flex-between">
+        <div>
+          <div style="font-size:13px;font-weight:600;">Batch Receipt (optional)</div>
+          <div class="text-sm">Attach one file that covers all transactions in this import (e.g. a bank statement PDF)</div>
+        </div>
+        <div class="flex">
+          <label for="batchReceipt" class="btn btn-outline btn-sm" style="cursor:pointer;">📎 Attach</label>
+          <input type="file" id="batchReceipt" style="display:none;" accept="image/*,.pdf"/>
+          <span id="batchReceiptName" class="text-sm"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="table-scroll">
+        <table class="preview" id="previewTable">
+          <thead>
+            <tr>
+              <th style="width:32px;"></th>
+              <th>Date</th>
+              <th>Entry Type</th>
+              <th>Description</th>
+              <th style="width:90px;">Amount</th>
+              <th style="width:60px;">Currency</th>
+              <th>Vendor / Payee</th>
+              <th>From Account</th>
+              <th>To Account</th>
+              <th>Notes</th>
+              <th style="width:70px;">Receipt</th>
+            </tr>
+          </thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="flex mt-16" style="justify-content:flex-end;gap:10px;">
+      <button class="btn btn-outline" onclick="goStep(2)">← Back</button>
+      <button class="btn btn-green" onclick="goStep(4)">Proceed to Confirm →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Confirm & Import -->
+  <div id="panelConfirm" style="display:none;">
+    <div class="card">
+      <div class="card-title">Summary</div>
+      <div class="summary-grid" id="summaryGrid"></div>
+      <div id="confirmStatus"></div>
+      <div class="flex mt-16" style="justify-content:flex-end;gap:10px;" id="confirmButtons">
+        <button class="btn btn-outline" onclick="goStep(3)">← Back</button>
+        <button class="btn btn-green" id="btnImport" onclick="runImport()">✓ Import Transactions</button>
+      </div>
+      <div id="importProgress" style="display:none;">
+        <div class="status-info status-box"><div class="spinner"></div><span id="importProgressText">Uploading receipts...</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      </div>
+      <div id="importResults" style="display:none;"></div>
+    </div>
   </div>
 </div>
-
-<div class="toast" id="toast"></div>
 
 <script>
-// ── CONFIG — update before deploying ─────────────────────
-const N8N_WEBHOOK_URL   = 'https://nicholastoh.app.n8n.cloud/webhook/finance-receipt';
-const SUPABASE_URL      = 'https://peuwxnrojlfybdymkazj.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBldXd4bnJvamxmeWJkeW1rYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTAzNjMsImV4cCI6MjA4ODI2NjM2M30.qCmHAsm8AqpV-LsnRac631au_Ff8fk1S7Dbeq5O-aGM';
-// ─────────────────────────────────────────────────────────
+// ── Config ──────────────────────────────────────────────────────────────
+const SUPA_URL = 'https://peuwxnrojlfybdymkazj.supabase.co'
+const SUPA_KEY = 'sb_publishable_d5KVYfXKCYU6-DsUAcYzzQ_KpdZFcsq'
+const IMPORT_FN = `${SUPA_URL}/functions/v1/finance-import`
+const STORAGE_URL = `${SUPA_URL}/storage/v1/object/finance_receipts`
+const SECRET = 'NUMAT-CEO-2026'
 
-const STAFF = [
-  {name:'Nicholas', initials:'NT', color:'#3B6D11'},
-  {name:'Mark',     initials:'MS', color:'#185FA5'},
-  {name:'Mohan',    initials:'ML', color:'#533AB7'},
-  {name:'Bryan',    initials:'BR', color:'#993C1D'},
-  {name:'Lemuel',   initials:'LA', color:'#854F0B'},
-  {name:'Eugene',   initials:'EG', color:'#0F6E56'},
-  {name:'Boyet',    initials:'BY', color:'#633806'},
-  {name:'Charlie',  initials:'CH', color:'#72243E'},
-  {name:'Francisco',initials:'FC', color:'#3C3489'},
-  {name:'Admin',    initials:'AD', color:'#444441'},
-  {name:'B22',      initials:'B2', color:'#185FA5'},
-];
+const ACCOUNTS = [
+  {id:'', name:'— None —'},
+  {id:'6e55e63d-7f49-400e-90b5-d7b910f302a4', name:'RCBC PHP (Operating)', code:'RCBC_PHP'},
+  {id:'4e77e4e0-9f63-4f42-a981-8899bbbbc42b', name:'OCBC USD (Reserve)', code:'OCBC_USD'},
+  {id:'b5220485-3fc6-4fc7-b862-040ffa3b1121', name:'OCBC SGD (SG Entity)', code:'OCBC_SGD'},
+  {id:'4f8b8faa-4c7e-43e7-85e1-60d88ddc0344', name:'Revolving Fund B22', code:'RF_B22'},
+  {id:'c030e854-fc1c-48fb-8bce-5a9e14cdc1f7', name:'Suspense PHP', code:'HIST_SUSPENSE_PHP'},
+  {id:'d2da2f9e-f114-4422-ae0b-01d0a63ae283', name:'Suspense SGD', code:'HIST_SUSPENSE_SGD'},
+]
+const ENTRY_TYPES = ['expense','income','salary','salary_advance','transfer','bank_charge','fx_conversion','interest_income','refund','reversal','revolving_fund_advance','shareholder_advance','withholding_tax','other']
+const DB_FIELDS = ['transaction_date','description','amount','currency','vendor_payee','entry_type','notes','bank_reference','from_account_id','to_account_id']
+const FIELD_LABELS = {transaction_date:'Date',description:'Description',amount:'Amount',currency:'Currency',vendor_payee:'Vendor/Payee',entry_type:'Entry Type',notes:'Notes',bank_reference:'Bank Ref',from_account_id:'From Account',to_account_id:'To Account'}
 
-const TYPES = [
-  {id:'expense',          label:'Expense',     icon:'🧾'},
-  {id:'petty_cash',       label:'Petty Cash',  icon:'💵'},
-  {id:'sale',             label:'Sale',         icon:'📦'},
-  {id:'payment_received', label:'Payment In',  icon:'💰'},
-  {id:'invoice_sent',     label:'Invoice Out', icon:'📤'},
-  {id:'salary',           label:'Salary',       icon:'👤'},
-];
+// ── State ────────────────────────────────────────────────────────────────
+let rawHeaders = [], rawRows = [], mapping = {}, rows = [], receiptFiles = {}
 
-const CATEGORIES = {
-  expense:          ['Raw Materials','Factory Labor','Utilities','Transport & Logistics','Equipment & Maintenance','Office Supplies','Marketing & Ads','Travel','Professional Fees','Rent','Miscellaneous'],
-  petty_cash:       ['Office Supplies','Transport & Logistics','Miscellaneous','Meals & Entertainment'],
-  sale:             ['Product Sales','Consultation Fee'],
-  payment_received: ['Full Payment','Partial Payment'],
-  invoice_sent:     ['Client Invoice'],
-  salary:           ['Staff Salary','Staff Allowance'],
-};
-
-let selectedStaff    = '';
-let selectedType     = '';
-let selectedCurrency = 'PHP';
-let selectedFile     = null;
-
-function init() {
-  const staffGrid = document.getElementById('staffGrid');
-  STAFF.forEach(s => {
-    const btn = document.createElement('div');
-    btn.dataset.name = s.name;
-    btn.style.cssText = 'border:1.5px solid #e0e0e0;border-radius:8px;padding:10px 8px;text-align:center;cursor:pointer;user-select:none;transition:all .15s;';
-    btn.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;background:${s.color}22;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${s.color};margin:0 auto 6px;">${s.initials}</div><span style="font-size:12px;font-weight:500;color:#1a1a1a;display:block;">${s.name}</span>`;
-    btn.onclick = () => selectStaff(s.name, btn);
-    staffGrid.appendChild(btn);
-  });
-
-  const typeGrid = document.getElementById('typeGrid');
-  TYPES.forEach(t => {
-    const chip = document.createElement('div');
-    chip.dataset.id = t.id;
-    chip.style.cssText = 'border:1.5px solid #e0e0e0;border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;user-select:none;transition:all .15s;';
-    chip.innerHTML = `<span style="font-size:20px;display:block;margin-bottom:4px;line-height:1;">${t.icon}</span><span style="font-size:10px;font-weight:600;color:#6b7280;display:block;text-transform:uppercase;letter-spacing:0.5px;">${t.label}</span>`;
-    chip.onclick = () => selectType(t.id, chip);
-    typeGrid.appendChild(chip);
-  });
-
-  document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
-
-  const zone = document.getElementById('uploadZone');
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-  zone.addEventListener('drop', e => {
-    e.preventDefault(); zone.classList.remove('dragover');
-    if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
-  });
+// ── Step navigation ──────────────────────────────────────────────────────
+function goStep(n) {
+  document.querySelectorAll('.step').forEach((s,i)=>{
+    s.classList.remove('active','done')
+    if(i+1<n) s.classList.add('done')
+    else if(i+1===n) s.classList.add('active')
+  })
+  document.getElementById('panelUpload').style.display = n===1?'block':'none'
+  document.getElementById('panelMapping').style.display = n===2?'block':'none'
+  document.getElementById('panelReview').style.display = n===3?'block':'none'
+  document.getElementById('panelConfirm').style.display = n===4?'block':'none'
+  if(n===4) buildConfirmSummary()
 }
 
-function selectStaff(name, el) {
-  selectedStaff = name;
-  document.getElementById('customName').value = '';
-  document.querySelectorAll('#staffGrid > div').forEach(b => { b.style.borderColor='#e0e0e0'; b.style.background=''; });
-  el.style.borderColor = '#1D6A47';
-  el.style.background  = '#E8F5EE';
+// ── File upload handling ─────────────────────────────────────────────────
+const zone = document.getElementById('uploadZone')
+zone.addEventListener('dragover', e=>{e.preventDefault(); zone.classList.add('drag')})
+zone.addEventListener('dragleave', ()=>zone.classList.remove('drag'))
+zone.addEventListener('drop', e=>{e.preventDefault(); zone.classList.remove('drag'); handleFile(e.dataTransfer.files[0])})
+document.getElementById('fileInput').addEventListener('change', e=>handleFile(e.target.files[0]))
+document.getElementById('batchReceipt').addEventListener('change', e=>{
+  const f = e.target.files[0]
+  document.getElementById('batchReceiptName').textContent = f ? f.name : ''
+  receiptFiles['_batch'] = f || null
+})
+
+function handleFile(file) {
+  if(!file) return
+  const ext = file.name.split('.').pop().toLowerCase()
+  if(!['csv','xlsx','xls'].includes(ext)) { alert('Please upload a CSV or Excel file.'); return }
+
+  const reader = new FileReader()
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'binary', cellDates:true})
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''})
+      if(data.length < 2) { alert('File appears empty or has no data rows.'); return }
+      rawHeaders = data[0].map(h=>String(h).trim()).filter(h=>h)
+      rawRows = data.slice(1).filter(r=>r.some(c=>c!==''))
+      buildMappingUI()
+      goStep(2)
+    } catch(err) { alert('Could not parse file: '+err.message) }
+  }
+  reader.readAsBinaryString(file)
 }
 
-function selectType(id, el) {
-  selectedType = id;
-  document.querySelectorAll('#typeGrid > div').forEach(c => { c.style.borderColor='#e0e0e0'; c.style.background=''; });
-  el.style.borderColor = '#1D6A47';
-  el.style.background  = '#E8F5EE';
-  const cats = CATEGORIES[id] || [];
-  const sel  = document.getElementById('category');
-  sel.innerHTML = '<option value="">Select category...</option>';
-  cats.forEach(c => { const o = document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+// ── Mapping UI ───────────────────────────────────────────────────────────
+function buildMappingUI() {
+  const container = document.getElementById('mappingRows')
+  container.innerHTML = rawHeaders.map((h,i)=>`
+    <div class="mapping-grid">
+      <div class="mapping-col" title="${h}">${h}</div>
+      <div class="mapping-arrow">→</div>
+      <select class="mapping-select" id="map_${i}">
+        <option value="">— ignore —</option>
+        ${DB_FIELDS.map(f=>`<option value="${f}">${FIELD_LABELS[f]||f}</option>`).join('')}
+      </select>
+    </div>`).join('')
+
+  // Auto-map common names
+  const auto = {
+    date:'transaction_date', 'transaction date':'transaction_date', 'txn date':'transaction_date', 'trans date':'transaction_date',
+    description:'description', details:'description', narrative:'description', 'transaction details':'description', memo:'description',
+    amount:'amount', debit:'amount', credit:'amount', value:'amount',
+    currency:'currency', ccy:'currency',
+    'vendor':'vendor_payee', payee:'vendor_payee', merchant:'vendor_payee', 'paid to':'vendor_payee', 'received from':'vendor_payee', party:'vendor_payee',
+    type:'entry_type', category:'entry_type', 'entry type':'entry_type', 'transaction type':'entry_type',
+    notes:'notes', note:'notes', remarks:'notes', comment:'notes', comments:'notes',
+    reference:'bank_reference', ref:'bank_reference', 'bank ref':'bank_reference', 'bank reference':'bank_reference',
+  }
+  rawHeaders.forEach((h,i)=>{
+    const key = h.toLowerCase().trim()
+    if(auto[key]) document.getElementById(`map_${i}`).value = auto[key]
+  })
+  // AI mapping
+  runAIMapping()
 }
 
-function selectCurrency(cur) {
-  selectedCurrency = cur;
-  ['PHP','USD','MYR'].forEach(c => {
-    document.getElementById('cur-'+c).classList.toggle('active', c === cur);
-  });
-  document.getElementById('currencyLabel').textContent = cur;
+async function runAIMapping() {
+  const spinner = document.getElementById('mappingSpinner')
+  const status = document.getElementById('mappingStatus')
+  spinner.style.display = 'inline-block'
+  status.textContent = 'AI mapping columns...'
+  try {
+    const sample = rawRows.slice(0,3).map(r=>Object.fromEntries(rawHeaders.map((h,i)=>[h,r[i]])))
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:600,
+        messages:[{role:'user',content:`I have a spreadsheet with column headers: ${JSON.stringify(rawHeaders)}
+Sample data rows (first 3): ${JSON.stringify(sample)}
+
+Map each header to one of these database fields, or null if no match:
+${DB_FIELDS.map(f=>`- ${f} (${FIELD_LABELS[f]})`).join('\n')}
+
+Rules:
+- transaction_date: any date column
+- amount: any numeric value column (always positive, even if labelled debit)
+- currency: PHP, USD, SGD
+- entry_type must be one of: ${ENTRY_TYPES.join(', ')}
+
+Respond ONLY with a valid JSON object mapping each header to a field name or null. No explanation.
+Example: {"Date":"transaction_date","Amount":"amount","Details":"description","Type":null}`}]
+      })
+    })
+    if(res.ok){
+      const d = await res.json()
+      const text = d.content.find(c=>c.type==='text')?.text||'{}'
+      const clean = text.replace(/```json|```/g,'').trim()
+      const mapped = JSON.parse(clean)
+      rawHeaders.forEach((h,i)=>{
+        const val = mapped[h]
+        if(val && DB_FIELDS.includes(val)) document.getElementById(`map_${i}`).value = val
+      })
+      status.textContent = '✓ AI mapping applied'
+    } else {
+      status.textContent = 'AI unavailable — please map manually'
+    }
+  } catch(e) {
+    status.textContent = 'Manual mapping mode'
+  }
+  spinner.style.display = 'none'
 }
 
-function handleFile(input) { if (input.files[0]) processFile(input.files[0]); }
+// ── Apply mapping → build preview rows ──────────────────────────────────
+function applyMapping() {
+  mapping = {}
+  rawHeaders.forEach((h,i)=>{
+    const v = document.getElementById(`map_${i}`)?.value
+    if(v) mapping[h] = v
+  })
+  if(!Object.values(mapping).includes('transaction_date')) {
+    setStatus('statusMapping','warn','Please map at least a Date column before proceeding.')
+    return
+  }
+  if(!Object.values(mapping).includes('amount')) {
+    setStatus('statusMapping','warn','Please map an Amount column before proceeding.')
+    return
+  }
 
-function processFile(file) {
-  selectedFile = file;
-  document.getElementById('previewName').textContent = file.name;
-  document.getElementById('previewSize').textContent = (file.size/1024).toFixed(1)+' KB';
-  document.getElementById('previewIcon').textContent = file.type.includes('pdf') ? '📄' : '🖼️';
-  document.getElementById('uploadPreview').classList.add('show');
-  document.getElementById('uploadZone').style.display = 'none';
+  rows = rawRows.map((r,idx)=>{
+    const row = {_id:idx, _removed:false, _receiptFile:null}
+    rawHeaders.forEach((h,i)=>{
+      const field = mapping[h]
+      if(!field) return
+      let val = r[i]
+      if(field==='transaction_date'){
+        if(val instanceof Date) val = val.toISOString().slice(0,10)
+        else if(typeof val==='number') {
+          const d = new Date(Math.round((val-25569)*86400*1000))
+          val = d.toISOString().slice(0,10)
+        } else {
+          val = String(val).trim()
+          // try to parse common formats
+          const parsed = new Date(val)
+          if(!isNaN(parsed)) val = parsed.toISOString().slice(0,10)
+        }
+      }
+      if(field==='amount') val = Math.abs(parseFloat(String(val).replace(/[^0-9.-]/g,''))||0)
+      row[field] = val
+    })
+    if(!row.currency) row.currency = 'PHP'
+    if(!row.entry_type) row.entry_type = 'expense'
+    if(!row.from_account_id) row.from_account_id = ''
+    if(!row.to_account_id) row.to_account_id = ''
+    return row
+  }).filter(r=>r.amount>0||r.description)
+
+  if(rows.length===0){alert('No valid data rows found after mapping.'); return}
+  buildPreviewTable()
+  goStep(3)
+  document.getElementById('reviewSubtitle').textContent = `${rows.length} rows detected — edit any cell before importing`
 }
 
-function removeFile() {
-  selectedFile = null;
-  document.getElementById('uploadPreview').classList.remove('show');
-  document.getElementById('uploadZone').style.display = '';
-  document.getElementById('fileInput').value = '';
+// ── Preview table ────────────────────────────────────────────────────────
+function buildPreviewTable() {
+  const tbody = document.getElementById('previewBody')
+  tbody.innerHTML = rows.map((row,i)=>buildRowHtml(row,i)).join('')
 }
 
-function showToast(msg, type='') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast '+type+' show';
-  setTimeout(() => t.classList.remove('show'), 3500);
+function buildRowHtml(row, i) {
+  const accOptions = ACCOUNTS.map(a=>`<option value="${a.id}" ${row.from_account_id===a.id?'selected':''}>${a.name}</option>`).join('')
+  const accOptionsTo = ACCOUNTS.map(a=>`<option value="${a.id}" ${row.to_account_id===a.id?'selected':''}>${a.name}</option>`).join('')
+  const etOptions = ENTRY_TYPES.map(t=>`<option value="${t}" ${row.entry_type===t?'selected':''}>${t}</option>`).join('')
+  const hasReceipt = receiptFiles[i]
+  return `<tr id="row_${i}" class="${row._removed?'removed':''}">
+    <td><button class="remove-btn" title="${row._removed?'Restore':'Remove'}" onclick="toggleRow(${i})">${row._removed?'↩':'✕'}</button></td>
+    <td><input class="cell-input" style="width:100px;" value="${esc(row.transaction_date||'')}" onchange="setField(${i},'transaction_date',this.value)" placeholder="YYYY-MM-DD"/></td>
+    <td><select class="cell-select" onchange="setField(${i},'entry_type',this.value)">${etOptions}</select></td>
+    <td><input class="cell-input" style="min-width:160px;" value="${esc(row.description||'')}" onchange="setField(${i},'description',this.value)"/></td>
+    <td><input class="cell-input" style="width:80px;text-align:right;" value="${row.amount||''}" onchange="setField(${i},'amount',this.value)"/></td>
+    <td><select class="cell-select" onchange="setField(${i},'currency',this.value)">
+      ${['PHP','USD','SGD'].map(c=>`<option ${row.currency===c?'selected':''}>${c}</option>`).join('')}
+    </select></td>
+    <td><input class="cell-input" style="min-width:110px;" value="${esc(row.vendor_payee||'')}" onchange="setField(${i},'vendor_payee',this.value)"/></td>
+    <td><select class="cell-select" onchange="setField(${i},'from_account_id',this.value)">${accOptions}</select></td>
+    <td><select class="cell-select" onchange="setField(${i},'to_account_id',this.value)">${accOptionsTo}</select></td>
+    <td><input class="cell-input" style="min-width:110px;" value="${esc(row.notes||'')}" onchange="setField(${i},'notes',this.value)"/></td>
+    <td>
+      <label class="receipt-label ${hasReceipt?'has-file':''}" for="receipt_${i}" title="${hasReceipt?receiptFiles[i].name:'Attach receipt'}">
+        📎 ${hasReceipt?'1 file':'Add'}
+      </label>
+      <input class="receipt-input" type="file" id="receipt_${i}" accept="image/*,.pdf" onchange="attachReceipt(${i},this)"/>
+    </td>
+  </tr>`
 }
 
-function setLoading(on) {
-  document.getElementById('submitBtn').disabled = on;
-  document.getElementById('spinner').style.display = on ? 'block' : 'none';
-  document.getElementById('submitLabel').textContent = on ? 'Submitting...' : 'Submit Transaction';
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+function setField(i,f,v){rows[i][f]=v}
+function toggleRow(i){rows[i]._removed=!rows[i]._removed; document.getElementById(`row_${i}`).outerHTML=buildRowHtml(rows[i],i)}
+function attachReceipt(i,input){
+  receiptFiles[i]=input.files[0]||null
+  const label = document.querySelector(`label[for="receipt_${i}"]`)
+  if(label){
+    label.textContent = receiptFiles[i]?`📎 1 file`:'📎 Add'
+    label.className = `receipt-label ${receiptFiles[i]?'has-file':''}`
+  }
+}
+function addRow(){
+  const i = rows.length
+  rows.push({_id:i,_removed:false,transaction_date:new Date().toISOString().slice(0,10),entry_type:'expense',currency:'PHP',amount:'',description:'',vendor_payee:'',notes:'',from_account_id:'',to_account_id:''})
+  const tbody = document.getElementById('previewBody')
+  const tr = document.createElement('tr')
+  tr.id=`row_${i}`
+  tr.innerHTML=buildRowHtml(rows[i],i).replace(/^<tr[^>]*>/,'').replace(/<\/tr>$/,'')
+  tbody.appendChild(tr)
 }
 
-async function submitForm() {
-  const staffName = selectedStaff || document.getElementById('customName').value.trim();
-  const txDate    = document.getElementById('txDate').value;
-  const amount    = document.getElementById('amount').value;
+// ── Confirm summary ──────────────────────────────────────────────────────
+function buildConfirmSummary() {
+  const active = rows.filter(r=>!r._removed)
+  const byType = {}
+  let totalPHP=0, totalUSD=0, totalSGD=0
+  active.forEach(r=>{
+    byType[r.entry_type]=(byType[r.entry_type]||0)+1
+    if(r.currency==='PHP') totalPHP+=parseFloat(r.amount||0)
+    else if(r.currency==='USD') totalUSD+=parseFloat(r.amount||0)
+    else if(r.currency==='SGD') totalSGD+=parseFloat(r.amount||0)
+  })
+  const receiptCount = active.filter((_,i)=>receiptFiles[rows.indexOf(rows.find((row,idx)=>idx===rows.indexOf(rows[idx])&&!row._removed))]).length
+  const withReceipts = Object.keys(receiptFiles).filter(k=>k!=='_batch'&&receiptFiles[k]&&!rows[parseInt(k)]?._removed).length
 
-  if (!staffName)                         { showToast('Please select or enter your name','err'); return; }
-  if (!selectedType)                      { showToast('Please select a transaction type','err'); return; }
-  if (!txDate)                            { showToast('Please enter a date','err'); return; }
-  if (!amount || parseFloat(amount) <= 0) { showToast('Please enter a valid amount','err'); return; }
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="summary-card"><div class="summary-label">Transactions</div><div class="summary-val">${active.length}</div><div class="summary-sub">${rows.filter(r=>r._removed).length} excluded</div></div>
+    <div class="summary-card"><div class="summary-label">Total Amounts</div><div class="summary-val" style="font-size:14px;line-height:1.8;">
+      ${totalPHP>0?`₱${totalPHP.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2})}<br>`:''}
+      ${totalUSD>0?`$${totalUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}<br>`:''}
+      ${totalSGD>0?`S$${totalSGD.toLocaleString('en-SG',{minimumFractionDigits:2,maximumFractionDigits:2})}`:''}
+    </div></div>
+    <div class="summary-card"><div class="summary-label">Receipts</div><div class="summary-val">${withReceipts+(receiptFiles['_batch']?1:0)}</div><div class="summary-sub">files to upload${receiptFiles['_batch']?' (incl. batch)':''}</div></div>`
 
-  setLoading(true);
+  const typeBreakdown = Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([t,c])=>`<div class="result-row"><span>${t}</span><span>${c}</span></div>`).join('')
+  document.getElementById('confirmStatus').innerHTML = `<div class="card" style="padding:14px 16px;margin-top:8px;"><div class="card-title">By Entry Type</div>${typeBreakdown}</div>`
+}
+
+// ── Import ───────────────────────────────────────────────────────────────
+async function runImport() {
+  const active = rows.filter(r=>!r._removed)
+  if(active.length===0){alert('No rows to import.'); return}
+
+  document.getElementById('confirmButtons').style.display='none'
+  document.getElementById('importProgress').style.display='block'
+  const prog = document.getElementById('progressFill')
+  const progText = document.getElementById('importProgressText')
+
+  const total = active.length
+  let done = 0
+
+  // Step 1: Upload receipts
+  const receiptUrls = {}
+
+  // Batch receipt
+  if(receiptFiles['_batch']) {
+    progText.textContent = 'Uploading batch receipt...'
+    const url = await uploadReceipt(receiptFiles['_batch'], `batch_${Date.now()}`)
+    if(url) receiptUrls['_batch'] = url
+  }
+
+  // Per-row receipts
+  for(let i=0; i<rows.length; i++){
+    const row = rows[i]
+    if(row._removed) continue
+    if(receiptFiles[i]){
+      progText.textContent = `Uploading receipts... (${done+1}/${total})`
+      const url = await uploadReceipt(receiptFiles[i], `txn_${Date.now()}_${i}`)
+      if(url) receiptUrls[i] = url
+    }
+    done++
+    prog.style.width = Math.round((done/total)*50)+'%'
+  }
+
+  // Step 2: Build payload
+  progText.textContent = 'Inserting transactions...'
+  const batchUrl = receiptUrls['_batch'] || null
+  const payload = active.map((row,idx)=>{
+    const rowIdx = rows.indexOf(row)
+    const t = {
+      transaction_date: row.transaction_date,
+      entry_type: row.entry_type||'expense',
+      amount: parseFloat(row.amount||0),
+      currency: row.currency||'PHP',
+      description: row.description||null,
+      vendor_payee: row.vendor_payee||null,
+      notes: row.notes||null,
+      bank_reference: row.bank_reference||null,
+    }
+    if(row.from_account_id) t.from_account_id = row.from_account_id
+    if(row.to_account_id) t.to_account_id = row.to_account_id
+    const rUrl = receiptUrls[rowIdx] || batchUrl
+    if(rUrl) { t.receipt_url = rUrl; t.receipt_filename = receiptFiles[rowIdx]?.name || receiptFiles['_batch']?.name || null }
+    return t
+  })
+
+  prog.style.width = '70%'
 
   try {
-    let receiptUrl = '';
-    let hasReceipt = false;
+    const res = await fetch(IMPORT_FN, {
+      method:'POST',
+      headers:{'Authorization':`Bearer ${SECRET}`,'Content-Type':'application/json'},
+      body: JSON.stringify({transactions: payload})
+    })
+    const data = await res.json()
+    prog.style.width = '100%'
+    progText.textContent = 'Done!'
 
-    // Step 1 — upload file directly from browser to Supabase Storage
-    if (selectedFile) {
-      const ext      = selectedFile.name.split('.').pop() || 'jpg';
-      const safeName = staffName.replace(/\s+/g,'_')+'_'+txDate+'_'+Date.now()+'.'+ext;
-
-      showToast('Uploading receipt...','');
-
-      const up = await fetch(SUPABASE_URL+'/storage/v1/object/receipts/'+safeName, {
-        method:  'POST',
-        headers: {
-          'Authorization': 'Bearer '+SUPABASE_ANON_KEY,
-          'Content-Type':  selectedFile.type || 'application/octet-stream',
-          'x-upsert':      'true',
-        },
-        body: selectedFile,
-      });
-
-      if (up.ok) {
-        receiptUrl = SUPABASE_URL+'/storage/v1/object/public/receipts/'+safeName;
-        hasReceipt = true;
-        showToast('Receipt uploaded ✓','ok');
-      } else {
-        const e = await up.text();
-        console.error('Upload failed',up.status,e);
-        showToast('Receipt failed ('+up.status+') — submitting without','');
-      }
+    if(data.success){
+      document.getElementById('importResults').style.display='block'
+      document.getElementById('importResults').innerHTML = `
+        <div class="status-success status-box" style="margin-top:16px;">
+          ✅ Successfully imported <strong>${data.inserted}</strong> transaction${data.inserted!==1?'s':''}
+        </div>
+        <div class="card" style="margin-top:12px;padding:14px 16px;">
+          <div class="card-title">Imported Records</div>
+          ${data.transactions.map(t=>`
+            <div class="result-row">
+              <span class="result-ok">✓ ${t.transaction_date} — ${t.description||t.entry_type}</span>
+              <span style="font-family:'DM Mono',monospace;">${t.currency} ${parseFloat(t.amount).toLocaleString()}</span>
+            </div>`).join('')}
+        </div>
+        <div class="flex mt-16">
+          <button class="btn btn-green" onclick="location.reload()">Import Another File</button>
+          <a href="/ceo-dashboard.html" class="btn btn-outline">View Dashboard</a>
+        </div>`
+    } else {
+      throw new Error(data.error||'Unknown error')
     }
-
-    // Step 2 — send JSON to n8n
-    const payload = {
-      staff_name:       staffName,
-      type:             selectedType,
-      transaction_date: txDate,
-      vendor_client:    document.getElementById('vendorClient').value,
-      amount:           parseFloat(amount),
-      currency:         selectedCurrency,
-      category:         document.getElementById('category').value,
-      description:      document.getElementById('description').value,
-      submitted_at:     new Date().toISOString(),
-      has_receipt:      hasReceipt,
-      receipt_url:      receiptUrl,
-    };
-
-    const res = await fetch(N8N_WEBHOOK_URL, {
-      method:  'POST',
-      headers: {'Content-Type':'application/json'},
-      body:    JSON.stringify(payload),
-    });
-
-    if (!res.ok) throw new Error('n8n '+res.status);
-
-    document.getElementById('mainForm').style.display = 'none';
-    document.getElementById('successScreen').classList.add('show');
-
-  } catch(err) {
-    console.error(err);
-    showToast('Failed: '+err.message,'err');
-    setLoading(false);
+  } catch(e) {
+    prog.style.width='100%'
+    document.getElementById('importResults').style.display='block'
+    document.getElementById('importResults').innerHTML = `
+      <div class="status-error status-box" style="margin-top:16px;">⚠️ Import failed: ${e.message}</div>
+      <button class="btn btn-outline mt-16" onclick="document.getElementById('confirmButtons').style.display='flex';document.getElementById('importProgress').style.display='none';document.getElementById('importResults').style.display='none'">Retry</button>`
   }
 }
 
-function resetForm() {
-  selectedStaff=''; selectedType=''; selectedFile=null; selectedCurrency='PHP';
-  document.querySelectorAll('#staffGrid > div').forEach(b=>{b.style.borderColor='#e0e0e0';b.style.background='';});
-  document.querySelectorAll('#typeGrid > div').forEach(c=>{c.style.borderColor='#e0e0e0';c.style.background='';});
-  ['customName','vendorClient','amount','description'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('category').innerHTML='<option value="">Select category...</option>';
-  selectCurrency('PHP');
-  removeFile();
-  document.getElementById('txDate').value=new Date().toISOString().split('T')[0];
-  document.getElementById('mainForm').style.display='block';
-  document.getElementById('successScreen').classList.remove('show');
-  setLoading(false);
+async function uploadReceipt(file, prefix) {
+  const ext = file.name.split('.').pop()
+  const filename = `${prefix}.${ext}`
+  try {
+    const res = await fetch(`${STORAGE_URL}/${filename}`, {
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':`Bearer ${SUPA_KEY}`,'Content-Type':file.type,'x-upsert':'true'},
+      body: file
+    })
+    if(res.ok){
+      return `${SUPA_URL}/storage/v1/object/public/finance_receipts/${filename}`
+    }
+    console.warn('Receipt upload failed:', await res.text())
+    return null
+  } catch(e) { console.warn('Receipt upload error:', e); return null }
 }
 
-init();
+// ── Helpers ──────────────────────────────────────────────────────────────
+function setStatus(id, type, msg) {
+  const el = document.getElementById(id)
+  el.innerHTML = `<div class="status-${type} status-box"><span>${msg}</span></div>`
+}
+
+function downloadTemplate() {
+  const csv = 'Date,Description,Amount,Currency,Vendor/Payee,Entry Type,Notes,Bank Reference\n2026-04-01,Example payment,1000,PHP,Supplier Name,expense,Optional notes,REF123'
+  const a = document.createElement('a')
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+  a.download = 'numat_transactions_template.csv'
+  a.click()
+}
 </script>
 </body>
 </html>
