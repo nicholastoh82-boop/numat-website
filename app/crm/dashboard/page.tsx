@@ -1204,9 +1204,22 @@ export default function CRMDashboard() {
       status: 'pending',
       last_activity_at: new Date().toISOString(),
     }
+    // Check if email already exists before inserting
+    if (payload.email) {
+      const { data: existing } = await supabase.from('master_leads').select('id,full_name,email,pipeline_stage,rep_assigned').eq('email', payload.email).maybeSingle()
+      if (existing) {
+        showToast(`This email already exists in the CRM (${existing.full_name || existing.email} · ${existing.pipeline_stage || 'new'} · ${existing.rep_assigned || 'unassigned'}). Search for them in the lead list.`, 'error')
+        setAddLeadSubmitting(false)
+        return
+      }
+    }
     const { data, error } = await supabase.from('master_leads').insert(payload).select('*').single()
     if (error) {
-      showToast(`Failed to add lead: ${error.message}`, 'error')
+      if (error.message?.includes('idx_master_leads_email_unique') || error.message?.includes('unique')) {
+        showToast(`A lead with this email already exists in the CRM. Search for them in the lead list instead.`, 'error')
+      } else {
+        showToast(`Failed to add lead: ${error.message}`, 'error')
+      }
     } else if (data) {
       setLeads(prev => [data as Lead, ...prev])
       showToast(`Lead added: ${(data as Lead).full_name || (data as Lead).email}`)
