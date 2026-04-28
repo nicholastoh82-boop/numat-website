@@ -194,6 +194,24 @@ footer{font-size:11px;color:var(--text-3);text-align:center;margin-top:40px}
 .dual-val .usd{font-size:10px;color:var(--text-3);font-family:'DM Mono',monospace;display:block;margin-top:1px}
 
 .mono-sub{font-size:10px;color:var(--text-3);font-family:"DM Mono",monospace;margin-top:2px;}
+.chart-wrap{padding:0 4px}
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:140px;margin-bottom:8px}
+.chart-bar-group{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.chart-bar-stack{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;border-radius:4px 4px 0 0;cursor:default;transition:opacity .15s}
+.chart-bar-stack:hover{opacity:.8}
+.chart-bar-php{background:var(--green);border-radius:4px 4px 0 0;width:100%}
+.chart-bar-usd{background:#3b82f6;border-radius:4px 4px 0 0;width:100%;margin-bottom:1px}
+.chart-bar-exp{background:#fca5a5;border-radius:4px 4px 0 0;width:100%}
+.chart-label{font-size:9px;color:var(--text-3);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+.chart-val{font-size:9px;color:var(--text-2);text-align:center;font-family:'DM Mono',monospace;margin-top:1px}
+.chart-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+.chart-legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-2)}
+.chart-legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.trend-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;margin-left:8px}
+.trend-up{background:#dcfce7;color:#16a34a}
+.trend-down{background:#fee2e2;color:#dc2626}
+.trend-flat{background:#f1f5f9;color:#64748b}
+
 @media (max-width: 768px) {
   .header{padding:0 16px;height:56px}
   .header-title{display:none}
@@ -291,7 +309,12 @@ footer{font-size:11px;color:var(--text-3);text-align:center;margin-top:40px}
       <div class="util-labels"><span>0%</span><span id="beLabel"></span><span>100%</span></div>
       <div style="font-size:11px;color:var(--text-3);margin-top:8px;" id="utilNote"></div>
     </div>
-    <div class="section-header"><div class="section-title">Invoice P&amp;L vs Unit Economics</div><div class="section-sub" id="invoicePLSub"></div></div>
+    <div class="section-header">
+  <div class="section-title">Revenue Trend <span id="revTrendBadge"></span></div>
+  <div class="section-sub" id="revTrendSub"></div>
+</div>
+<div id="revTrendSection" style="margin-bottom:20px;"></div>
+<div class="section-header"><div class="section-title">Invoice P&amp;L vs Unit Economics</div><div class="section-sub" id="invoicePLSub"></div></div>
     <div id="invoicePLSection"></div>
     <div class="section-header"><div class="section-title">Accounts Receivable</div><div class="section-sub" id="arSub"></div></div>
     <div class="card" style="margin-bottom:20px;overflow:hidden;padding:0;"><div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
@@ -336,7 +359,7 @@ function render(d){
   document.getElementById('footerLine').style.display='block'
   const g=new Date(d.generated_at)
   document.getElementById('lastUpdated').textContent='Live as of '+g.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})+' '+g.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})
-  renderSignals(d);renderKPIs(d);renderPipeline(d);renderForecast(d);renderFinancial(d);renderInvoicePL(d);renderAR(d);renderOutreach(d);renderQuotes(d)
+  renderSignals(d);renderKPIs(d);renderPipeline(d);renderForecast(d);renderWeightedPipeline(d);renderRevenueTrend(d);renderFinancial(d);renderInvoicePL(d);renderAR(d);renderOutreach(d);renderQuotes(d)
 }
 
 function renderSignals(d){
@@ -367,9 +390,10 @@ function renderPipeline(d){
   const mx=Math.max(...s.stage_order.map(st=>s.pipeline_by_stage[st]?.count||0),1)
   document.getElementById('funnelContainer').innerHTML=s.stage_order.filter(st=>s.pipeline_by_stage[st]?.count>0).map(st=>{
     const dt=s.pipeline_by_stage[st]||{count:0,value_php:0},w=Math.max((dt.count/mx)*100,3)
-    return '<div class="funnel-row"><div class="funnel-label">'+s.stage_labels[st]+'</div><div class="funnel-bar-wrap"><div class="funnel-bar" style="width:'+w+'%;background:'+(sc[st]||'#64748b')+'"><span>'+dt.count+'</span></div></div><div class="funnel-meta">'+(dt.value_php>0?p(dt.value_php):'\u2014')+'</div></div>'
+    const usdStr=dt.value_usd>0?'<div class="mono-sub">$'+Math.round(dt.value_usd).toLocaleString()+' USD</div>':''
+    return '<div class="funnel-row"><div class="funnel-label">'+s.stage_labels[st]+'</div><div class="funnel-bar-wrap"><div class="funnel-bar" style="width:'+w+'%;background:'+(sc[st]||'#64748b')+'"><span>'+dt.count+'</span></div></div><div class="funnel-meta">'+(dt.value_php>0?p(dt.value_php):'\u2014')+usdStr+'</div></div>'
   }).join('')||'<div style="color:var(--text-3);padding:20px 0;">No pipeline data</div>'
-  document.getElementById('repGrid').innerHTML=['Bryan','Mohan'].map(r=>{const rb=s.rep_breakdown[r]||{count:0,value:0};return '<div class="rep-card"><div class="rep-name">'+r+'</div><div class="rep-val">'+rb.count+'</div><div class="rep-sub">leads &nbsp;|&nbsp; '+p(rb.value)+'</div></div>'}).join('')
+  document.getElementById('repGrid').innerHTML=['Bryan','Mohan'].map(r=>{const rb=s.rep_breakdown[r]||{count:0,value_php:0,value_usd:0,value:0};const php=rb.value_php||rb.value||0;const usd=rb.value_usd||0;return '<div class="rep-card"><div class="rep-name">'+r+'</div><div class="rep-val">'+rb.count+'</div><div class="rep-sub">leads &nbsp;|&nbsp; '+p(php)+(usd>0?' <span class="mono-sub" style="display:inline;">&nbsp;+$'+Math.round(usd).toLocaleString()+' USD</span>':'')+'</div></div>'}).join('')
   const segs=Object.entries(s.by_segment).sort((a,b)=>b[1].value-a[1].value).slice(0,5)
   document.getElementById('segmentList').innerHTML=segs.map(([n,dt])=>'<div class="seg-item"><div><div class="seg-name">'+n+'</div><div class="seg-count">'+dt.count+' leads</div></div><div class="seg-val">'+(dt.value>0?p(dt.value):'\u2014')+'</div></div>').join('')||'<div style="color:var(--text-3);font-size:12px;padding:8px 0;">No data</div>'
 }
@@ -455,6 +479,109 @@ function renderWeightedPipeline(d){
 function fmt$(n){
   if(!n||n===0) return '—0'
   return '\$'+parseFloat(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})
+}
+
+function renderRevenueTrend(d){
+  const trend = d.revenue_trend || []
+  if(trend.length === 0){
+    document.getElementById('revTrendSub').textContent = 'No transaction data yet'
+    document.getElementById('revTrendSection').innerHTML =
+      '<div class="card"><div style="color:var(--text-3);text-align:center;padding:24px;font-size:13px;">No revenue data in fin_transactions yet. Upload bank transactions to populate this chart.</div></div>'
+    return
+  }
+  const phpPerUsd = (d.fx&&d.fx.php_per_usd)||58.5
+
+  // Max for bar scaling
+  const maxRev = Math.max(...trend.map(m=>m.revenue_php_total), 1)
+  const maxExp = Math.max(...trend.map(m=>m.expenses_php), 1)
+  const maxVal = Math.max(maxRev, maxExp, 1)
+
+  // Trend badge: compare last 2 months
+  let badgeHtml = ''
+  if(trend.length >= 2){
+    const last = trend[trend.length-1].revenue_php_total
+    const prev = trend[trend.length-2].revenue_php_total
+    if(prev > 0){
+      const chg = Math.round(((last-prev)/prev)*100)
+      const cls = chg > 5 ? 'trend-up' : chg < -5 ? 'trend-down' : 'trend-flat'
+      const icon = chg > 5 ? '▲' : chg < -5 ? '▼' : '→'
+      badgeHtml = '<span class="trend-badge '+cls+'">'+icon+' '+(chg>=0?'+':'')+chg+'% vs prev month</span>'
+    }
+  }
+  document.getElementById('revTrendBadge').innerHTML = badgeHtml
+
+  // Sub: total revenue over period
+  const totalPhp = trend.reduce((s,m)=>s+m.revenue_php,0)
+  const totalUsd = trend.reduce((s,m)=>s+m.revenue_usd,0)
+  const parts = []
+  if(totalPhp>0) parts.push(p(totalPhp)+' PHP')
+  if(totalUsd>0) parts.push('$'+Math.round(totalUsd).toLocaleString()+' USD')
+  document.getElementById('revTrendSub').textContent = trend.length+' months · Total revenue: '+parts.join(' + ')
+
+  // Build bars
+  const barsHtml = trend.map(m=>{
+    const revH = Math.max(Math.round((m.revenue_php_total/maxVal)*120), m.revenue_php_total>0?4:0)
+    const expH = Math.max(Math.round((m.expenses_php/maxVal)*120), m.expenses_php>0?4:0)
+    const phpPct = m.revenue_php_total>0 ? Math.round((m.revenue_php/m.revenue_php_total)*100) : 0
+    const usdPct = 100 - phpPct
+    const isNet = m.net_php >= 0
+    const revLabel = m.revenue_php_total >= 1000000 ? (m.revenue_php_total/1000000).toFixed(1)+'M' :
+                     m.revenue_php_total >= 1000 ? Math.round(m.revenue_php_total/1000)+'K' : m.revenue_php_total > 0 ? m.revenue_php_total.toString() : '—'
+    const expLabel = m.expenses_php >= 1000000 ? (m.expenses_php/1000000).toFixed(1)+'M' :
+                     m.expenses_php >= 1000 ? Math.round(m.expenses_php/1000)+'K' : ''
+    return '<div class="chart-bar-group">'+
+      '<div style="display:flex;gap:3px;align-items:flex-end;height:120px;">'+
+        '<div style="display:flex;flex-direction:column;justify-content:flex-end;height:120px;flex:1;">'+
+          '<div style="font-size:8px;color:var(--text-3);text-align:center;margin-bottom:2px;">'+revLabel+'</div>'+
+          '<div style="height:'+revH+'px;width:100%;border-radius:3px 3px 0 0;overflow:hidden;">'+
+            '<div class="chart-bar-usd" style="height:'+usdPct+'%"></div>'+
+            '<div class="chart-bar-php" style="height:'+phpPct+'%"></div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;justify-content:flex-end;height:120px;flex:1;">'+
+          '<div style="font-size:8px;color:var(--text-3);text-align:center;margin-bottom:2px;">'+expLabel+'</div>'+
+          '<div class="chart-bar-exp" style="height:'+expH+'px;width:100%;border-radius:3px 3px 0 0;"></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="chart-label" style="margin-top:4px;">'+m.label+'</div>'+
+      '<div style="font-size:8px;text-align:center;color:'+(isNet?'var(--green)':'var(--red)')+';">'+(isNet?'+':'')+
+        (m.net_php>=1000000?(m.net_php/1000000).toFixed(1)+'M':m.net_php>=1000?Math.round(m.net_php/1000)+'K':m.net_php.toString())+
+      '</div>'+
+    '</div>'
+  }).join('')
+
+  const legendHtml = '<div class="chart-legend">'+
+    '<div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--green);"></div>Revenue PHP</div>'+
+    '<div class="chart-legend-item"><div class="chart-legend-dot" style="background:#3b82f6;"></div>Revenue USD (converted)</div>'+
+    '<div class="chart-legend-item"><div class="chart-legend-dot" style="background:#fca5a5;"></div>Expenses PHP</div>'+
+    '<div class="chart-legend-item" style="color:var(--green);font-weight:600;">+ Net positive</div>'+
+    '<div class="chart-legend-item" style="color:var(--red);font-weight:600;">- Net negative</div>'+
+  '</div>'
+
+  // Table below chart
+  const tableRows = trend.map(m=>{
+    const net = m.net_php
+    const isPos = net >= 0
+    const fmt = n => n>=1000000?(n/1000000).toFixed(2)+'M':n>=1000?Math.round(n/1000)+'K':n.toString()
+    return '<tr>'+
+      '<td style="font-weight:600;">'+m.label+'</td>'+
+      '<td class="r">'+p(m.revenue_php)+(m.revenue_usd>0?'<div class="mono-sub">+$'+Math.round(m.revenue_usd).toLocaleString()+' USD</div>':'')+'</td>'+
+      '<td class="r">'+p(m.revenue_php_total)+'</td>'+
+      '<td class="r" style="color:var(--red);">'+p(m.expenses_php)+'</td>'+
+      '<td class="r" style="font-weight:700;color:'+(isPos?'var(--green)':'var(--red)')+';">'+(isPos?'+':'')+p(net)+'</td>'+
+    '</tr>'
+  }).join('')
+
+  document.getElementById('revTrendSection').innerHTML =
+    '<div class="card">'+
+      '<div class="chart-wrap"><div class="chart-bars">'+barsHtml+'</div>'+legendHtml+'</div>'+
+      '<div style="margin-top:16px;overflow-x:auto;">'+
+        '<table class="wp-table" style="font-size:11px;"><thead><tr>'+
+          '<th>Month</th><th class="r">Revenue (PHP)</th><th class="r">Total Revenue (PHP equiv.)</th>'+
+          '<th class="r">Expenses (PHP)</th><th class="r">Net (PHP)</th>'+
+        '</tr></thead><tbody>'+tableRows+'</tbody></table>'+
+      '</div>'+
+    '</div>'
 }
 
 function renderFinancial(d){
