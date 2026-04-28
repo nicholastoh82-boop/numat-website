@@ -145,6 +145,30 @@ body{background:#eef2f7;font-family:'DM Sans',sans-serif;font-size:14px;color:va
 .empty-invoices{text-align:center;padding:48px 24px;color:var(--text-3);font-size:14px}
 .empty-invoices strong{display:block;font-size:16px;color:var(--text-2);margin-bottom:8px}
 .context-note{font-size:11px;color:var(--text-3);padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;line-height:1.7;margin-bottom:20px}
+
+/* ── Pipeline Forecast ─────────────────────────── */
+.forecast-section{margin-bottom:20px}
+.forecast-month{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
+.forecast-month-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
+.forecast-month-label{font-family:'DM Serif Display',serif;font-size:15px;color:var(--navy);display:flex;align-items:center;gap:10px}
+.forecast-month-total{font-family:'DM Mono',monospace;font-size:16px;font-weight:600;color:var(--navy)}
+.forecast-no-date .forecast-month-header{background:var(--amber-bg)}
+.forecast-no-date .forecast-month-label{color:var(--amber)}
+.forecast-no-date .forecast-month-total{color:var(--amber)}
+.forecast-row{display:grid;grid-template-columns:1fr 140px 90px 90px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--border);gap:12px}
+.forecast-row:last-child{border-bottom:none}
+.forecast-row:hover{background:var(--surface)}
+.forecast-lead-name{font-weight:600;font-size:13px;color:var(--navy)}
+.forecast-company{font-size:11px;color:var(--text-3);margin-top:1px}
+.forecast-amount{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--navy);text-align:right}
+.forecast-rep{font-size:11px;font-weight:600;text-align:center}
+.rep-bryan{background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.rep-mohan{background:#f3e8ff;color:#7e22ce;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.rep-nick{background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.forecast-stage{font-size:10px;font-weight:600;text-align:right}
+.forecast-pi-badge{font-size:9px;background:var(--green-light);color:var(--green);padding:2px 6px;border-radius:4px;font-weight:600;white-space:nowrap}
+.forecast-empty{padding:32px;text-align:center;color:var(--text-3);font-size:13px}
+.forecast-callout{background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:8px;padding:10px 14px;font-size:12px;color:#7a5500;line-height:1.6;margin-bottom:14px}
 footer{font-size:11px;color:var(--text-3);text-align:center;margin-top:40px}
 
 /* ── Mobile Responsive ─────────────────────────── */
@@ -229,6 +253,8 @@ footer{font-size:11px;color:var(--text-3);text-align:center;margin-top:40px}
         <div style="margin-top:14px;"><div class="card-title">Top Segments</div><div id="segmentList"></div></div>
       </div>
     </div>
+    <div class="section-header"><div class="section-title">Sales Pipeline Forecast</div><div class="section-sub" id="forecastSub"></div></div>
+    <div id="forecastSection" class="forecast-section"></div>
     <div class="section-header"><div class="section-title">Financial Health</div><div class="section-sub" id="finSub"></div></div>
     <div class="grid-3" style="margin-bottom:20px;">
       <div class="card"><div class="card-title">This Month (Running)</div><div id="currentMonthPL"></div></div>
@@ -286,7 +312,7 @@ function render(d){
   document.getElementById('footerLine').style.display='block'
   const g=new Date(d.generated_at)
   document.getElementById('lastUpdated').textContent='Live as of '+g.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})+' '+g.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})
-  renderSignals(d);renderKPIs(d);renderPipeline(d);renderFinancial(d);renderInvoicePL(d);renderAR(d);renderOutreach(d);renderQuotes(d)
+  renderSignals(d);renderKPIs(d);renderPipeline(d);renderForecast(d);renderFinancial(d);renderInvoicePL(d);renderAR(d);renderOutreach(d);renderQuotes(d)
 }
 
 function renderSignals(d){
@@ -549,6 +575,56 @@ function renderQuotes(d){
     {label:'Unpaid Invoices',val:(q.invoices_unpaid_count||0)+' invoice'+((q.invoices_unpaid_count||0)!==1?'s':'')},
     {label:'Unpaid Invoice Value',val:q.invoices_unpaid_total_php?p(q.invoices_unpaid_total_php):'\u20b10'},
   ].map(r=>'<div class="stat-row"><div class="stat-name">'+r.label+'</div><div class="stat-val">'+r.val+'</div></div>').join('')
+}
+
+function renderForecast(d){
+  const fc=d.pipeline_forecast
+  if(!fc||fc.deal_count===0){
+    document.getElementById('forecastSub').textContent=''
+    document.getElementById('forecastSection').innerHTML='<div class="card"><div class="forecast-empty">No active pipeline deals with values set. Add deal values to leads in the CRM to populate this forecast.</div></div>'
+    return
+  }
+  document.getElementById('forecastSub').textContent=
+    fc.deal_count+' deal'+(fc.deal_count>1?'s':'')+' · $'+Math.round(fc.total_usd).toLocaleString()+' USD total'
+
+  let html=''
+
+  // Callout if no close dates
+  if(!fc.has_close_dates){
+    html+='<div class="forecast-callout">&#128203; No close dates have been set on any of these deals. Set a <strong>Close Date</strong> on each lead in the CRM to show deals by month. Currently all deals show as unscheduled.</div>'
+  }
+
+  fc.by_month.forEach(group=>{
+    const isNone=!group.close_month
+    html+='<div class="forecast-month '+(isNone?'forecast-no-date':'')+'">'+
+      '<div class="forecast-month-header">'+
+        '<div class="forecast-month-label">'+
+          (isNone?'&#128197; No Date Set':'&#128197; '+esc(group.month_label))+
+          '<span style="font-size:11px;color:var(--text-3);font-family:'DM Sans',sans-serif;font-weight:400;">'+(group.items.length)+' deal'+(group.items.length>1?'s':'')+'</span>'+
+        '</div>'+
+        '<div class="forecast-month-total">$'+Math.round(group.total_usd).toLocaleString()+' USD</div>'+
+      '</div>'+
+      group.items.map(item=>{
+        const repLower=(item.rep||'').toLowerCase()
+        const repClass=repLower.includes('bryan')?'rep-bryan':repLower.includes('mohan')?'rep-mohan':repLower.includes('nick')?'rep-nick':'rep-nick'
+        const stageLabel=({proposal_sent:'Proposal Sent',negotiation:'Negotiation',qualified:'Qualified',meeting_booked:'Meeting Booked'})[item.pipeline_stage]||item.pipeline_stage
+        const stageColor=item.pipeline_stage==='negotiation'?'var(--amber)':item.pipeline_stage==='proposal_sent'?'#8b5cf6':'var(--text-3)'
+        return '<div class="forecast-row">'+
+          '<div>'+
+            '<div class="forecast-lead-name">'+esc(item.name)+
+              (item.has_proforma?'&nbsp;<span class="forecast-pi-badge">PI</span>':'')+
+            '</div>'+
+            (item.company&&item.company!==item.name?'<div class="forecast-company">'+esc(item.company)+'</div>':'')+
+          '</div>'+
+          '<div class="forecast-amount">$'+item.amount_usd.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})+'</div>'+
+          '<div class="forecast-rep"><span class="'+repClass+'">'+esc(item.rep||'Unassigned')+'</span></div>'+
+          '<div class="forecast-stage" style="color:'+stageColor+';">'+esc(stageLabel)+'</div>'+
+        '</div>'
+      }).join('')+
+    '</div>'
+  })
+
+  document.getElementById('forecastSection').innerHTML=html
 }
 
 loadDashboard()
