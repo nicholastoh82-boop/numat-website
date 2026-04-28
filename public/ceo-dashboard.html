@@ -172,6 +172,27 @@ body{background:#eef2f7;font-family:'DM Sans',sans-serif;font-size:14px;color:va
 footer{font-size:11px;color:var(--text-3);text-align:center;margin-top:40px}
 
 /* ── Mobile Responsive ─────────────────────────── */
+
+.wp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px}
+.wp-totals{display:flex;gap:20px;flex-wrap:wrap}
+.wp-total-block{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 18px;min-width:140px}
+.wp-total-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px}
+.wp-total-val{font-family:'DM Serif Display',serif;font-size:20px;color:var(--navy)}
+.wp-total-sub{font-size:11px;color:var(--text-3);margin-top:2px;font-family:'DM Mono',monospace}
+.wp-compare{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:8px;font-size:12px;color:var(--amber);margin-bottom:14px}
+.wp-table{width:100%;border-collapse:collapse;font-size:12px}
+.wp-table th{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);padding:8px 12px;text-align:left;border-bottom:2px solid var(--border);background:var(--surface)}
+.wp-table th.r{text-align:right}
+.wp-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.wp-table td.r{text-align:right;font-family:'DM Mono',monospace}
+.wp-table tr.total-row td{background:var(--surface);font-weight:700;border-top:2px solid var(--border)}
+.wp-table tr.won-row td{background:var(--green-light)}
+.stage-badge{display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600}
+.weight-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-left:6px}
+.weight-bar-fill{height:100%;border-radius:3px}
+.dual-val .php{font-size:13px;font-weight:600;color:var(--navy);font-family:'DM Mono',monospace}
+.dual-val .usd{font-size:10px;color:var(--text-3);font-family:'DM Mono',monospace;display:block;margin-top:1px}
+
 @media (max-width: 768px) {
   .header{padding:0 16px;height:56px}
   .header-title{display:none}
@@ -255,7 +276,9 @@ footer{font-size:11px;color:var(--text-3);text-align:center;margin-top:40px}
     </div>
     <div class="section-header"><div class="section-title">Sales Pipeline Forecast</div><div class="section-sub" id="forecastSub"></div></div>
     <div id="forecastSection" class="forecast-section"></div>
-    <div class="section-header"><div class="section-title">Financial Health</div><div class="section-sub" id="finSub"></div></div>
+    <div class="section-header"><div class="section-title">Weighted Pipeline</div><div class="section-sub" id="wpSub"></div></div>
+<div id="weightedPipelineSection" style="margin-bottom:20px;"></div>
+<div class="section-header"><div class="section-title">Financial Health</div><div class="section-sub" id="finSub"></div></div>
     <div class="grid-3" style="margin-bottom:20px;">
       <div class="card"><div class="card-title">This Month (Running)</div><div id="currentMonthPL"></div></div>
       <div class="card"><div class="card-title">Last Full Month</div><div id="lastMonthPL"></div></div>
@@ -348,6 +371,89 @@ function renderPipeline(d){
   document.getElementById('repGrid').innerHTML=['Bryan','Mohan'].map(r=>{const rb=s.rep_breakdown[r]||{count:0,value:0};return '<div class="rep-card"><div class="rep-name">'+r+'</div><div class="rep-val">'+rb.count+'</div><div class="rep-sub">leads &nbsp;|&nbsp; '+p(rb.value)+'</div></div>'}).join('')
   const segs=Object.entries(s.by_segment).sort((a,b)=>b[1].value-a[1].value).slice(0,5)
   document.getElementById('segmentList').innerHTML=segs.map(([n,dt])=>'<div class="seg-item"><div><div class="seg-name">'+n+'</div><div class="seg-count">'+dt.count+' leads</div></div><div class="seg-val">'+(dt.value>0?p(dt.value):'\u2014')+'</div></div>').join('')||'<div style="color:var(--text-3);font-size:12px;padding:8px 0;">No data</div>'
+}
+
+function renderWeightedPipeline(d){
+  const wp = d.weighted_pipeline
+  if(!wp) return
+  const stages = wp.stages || []
+  document.getElementById('wpSub').textContent =
+    'Raw: '+p(wp.total_raw_php)+' ('+fmt$(wp.total_raw_usd)+' USD)'+
+    ' · Weighted expected close: '+p(wp.total_weighted_php)+' ('+fmt$(wp.total_weighted_usd)+' USD)'
+
+  // Colour palette per stage
+  const SC = {
+    new:'#94a3b8', contacted:'#64748b', qualified:'#3b82f6',
+    proposal_sent:'#8b5cf6', meeting_booked:'#f59e0b',
+    negotiation:'#f97316', won:'#22c55e', lost:'#ef4444'
+  }
+
+  // Discount / uplift vs raw
+  const gap = wp.total_raw_php - wp.total_weighted_php
+  const gapPct = wp.total_raw_php > 0 ? Math.round((gap/wp.total_raw_php)*100) : 0
+  const compareHtml = '<div class="wp-compare">'+
+    '<span>⚠️</span>'+
+    '<span>The weighted expected close value is <strong>'+p(wp.total_weighted_php)+'</strong> '+
+    '('+fmt$(wp.total_weighted_usd)+' USD) — <strong>'+gapPct+'%</strong> lower than the raw pipeline of '+p(wp.total_raw_php)+
+    '. This is the probability-adjusted figure the CEO should use for cash flow planning.</span>'+
+  '</div>'
+
+  const rowsHtml = stages.map(s=>{
+    const color = SC[s.stage] || '#64748b'
+    const isWon = s.stage === 'won'
+    const rowClass = isWon ? 'won-row' : ''
+    const phpSell = p(s.raw_php)
+    const usdSell = fmt$(s.raw_usd)
+    const phpWeighted = p(s.weighted_php)
+    const usdWeighted = fmt$(s.weighted_usd)
+    const weightBarHtml = '<div class="weight-bar-wrap"><div class="weight-bar-fill" style="width:'+s.weight_pct+'%;background:'+color+';"></div></div>'
+    return '<tr class="'+rowClass+'">'+
+      '<td><span class="stage-badge" style="background:'+color+'22;color:'+color+';">'+s.label+'</span></td>'+
+      '<td class="r">'+s.count+'</td>'+
+      '<td class="r"><div class="dual-val"><span class="php">'+phpSell+'</span><span class="usd">'+usdSell+' USD</span></div></td>'+
+      '<td class="r"><span style="font-weight:700;color:'+color+';">'+s.weight_pct+'%</span>'+weightBarHtml+'</td>'+
+      '<td class="r"><div class="dual-val"><span class="php" style="color:'+(isWon?'var(--green)':'var(--navy)')+';">'+phpWeighted+'</span><span class="usd">'+usdWeighted+' USD</span></div></td>'+
+    '</tr>'
+  }).join('')
+
+  // Won row as separate callout
+  const wonStage = stages.find(s=>s.stage==='won')
+  const openStages = stages.filter(s=>s.stage!=='won'&&s.stage!=='lost')
+  const openRawPhp = openStages.reduce((s,r)=>s+r.raw_php,0)
+  const openRawUsd = openStages.reduce((s,r)=>s+r.raw_usd,0)
+  const openWtPhp = openStages.reduce((s,r)=>s+r.weighted_php,0)
+  const openWtUsd = openStages.reduce((s,r)=>s+r.weighted_usd,0)
+
+  const html = compareHtml +
+    '<div class="card" style="padding:0;overflow:hidden;">'+
+    '<table class="wp-table">'+
+    '<thead><tr>'+
+      '<th>Stage</th>'+
+      '<th class="r">Deals</th>'+
+      '<th class="r">Raw Deal Value</th>'+
+      '<th class="r">Close Probability</th>'+
+      '<th class="r">Expected Close Value</th>'+
+    '</tr></thead>'+
+    '<tbody>'+rowsHtml+
+    '<tr class="total-row">'+
+      '<td>Open Pipeline Total</td>'+
+      '<td class="r">'+openStages.reduce((s,r)=>s+r.count,0)+'</td>'+
+      '<td class="r"><div class="dual-val"><span class="php">'+p(openRawPhp)+'</span><span class="usd">'+fmt$(openRawUsd)+' USD</span></div></td>'+
+      '<td class="r"><span style="color:var(--text-3);font-size:11px;">weighted avg</span></td>'+
+      '<td class="r"><div class="dual-val"><span class="php" style="color:var(--green-mid);">'+p(openWtPhp)+'</span><span class="usd">'+fmt$(openWtUsd)+' USD</span></div></td>'+
+    '</tr>'+
+    '</tbody></table>'+
+    '<div style="padding:10px 16px;background:var(--surface);border-top:1px solid var(--border);font-size:11px;color:var(--text-3);">'+
+      'Weights: New 5% · Contacted 10% · Qualified 30% · Proposal Sent 40% · Meeting Booked 55% · Negotiation 65% · Won 100%. '+
+      'Expected close value = probability that a deal in this stage converts to revenue. Excludes already-Won deals from open pipeline total.'+
+    '</div>'+
+    '</div>'
+  document.getElementById('weightedPipelineSection').innerHTML = html
+}
+
+function fmt$(n){
+  if(!n||n===0) return '—0'
+  return '\$'+parseFloat(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})
 }
 
 function renderFinancial(d){
