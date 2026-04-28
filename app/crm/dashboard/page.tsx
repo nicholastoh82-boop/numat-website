@@ -292,6 +292,9 @@ export default function CRMDashboard() {
   const [quotesByLead, setQuotesByLead] = useState<Record<string, Quote[]>>({})
   const [sendingQuoteId, setSendingQuoteId] = useState<string | null>(null)
   const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null)
+  // Email editing per document
+  const [editingEmailQuoteId, setEditingEmailQuoteId] = useState<string | null>(null)
+  const [editingEmailValue, setEditingEmailValue] = useState('')
   // Commit B: Convert-to-Invoice modal state
   const [convertModal, setConvertModal] = useState<{
     parent: Quote
@@ -685,6 +688,22 @@ export default function CRMDashboard() {
     } finally {
       setDeletingQuoteId(null)
     }
+  }
+
+  const saveQuoteEmail = async (quoteId: string, leadId: string) => {
+    const email = editingEmailValue.trim()
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('Invalid email address', 'error')
+      return
+    }
+    const { error } = await supabase.from('quotes').update({ email: email || null }).eq('id', quoteId)
+    if (error) { showToast('Failed to save email', 'error'); return }
+    setQuotesByLead(prev => {
+      const list = (prev[leadId] || []).map(q => q.id === quoteId ? { ...q, email: email || null } : q)
+      return { ...prev, [leadId]: list }
+    })
+    showToast('Recipient email updated')
+    setEditingEmailQuoteId(null)
   }
 
   // Commit B: open the Convert-to-Invoice modal for a sent, non-superseded proforma.
@@ -1722,6 +1741,43 @@ export default function CRMDashboard() {
                                   </button>
                                 )}
                               </div>
+                              {/* Recipient email row */}
+                              {!isSuperseded && (
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border-x border-b border-gray-200 rounded-b text-xs -mt-px">
+                                  <span className="text-gray-400 shrink-0">📧</span>
+                                  {editingEmailQuoteId === q.id ? (
+                                    <>
+                                      <input
+                                        type="email"
+                                        value={editingEmailValue}
+                                        onChange={e => setEditingEmailValue(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') saveQuoteEmail(q.id, lead.id); if (e.key === 'Escape') setEditingEmailQuoteId(null) }}
+                                        className="flex-1 border border-gray-200 rounded px-2 py-0.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-green-500 min-w-0"
+                                        placeholder="Recipient email..."
+                                        autoFocus
+                                      />
+                                      <button onClick={() => saveQuoteEmail(q.id, lead.id)} className="shrink-0 px-2 py-0.5 bg-green-700 text-white rounded text-xs font-medium">Save</button>
+                                      <button onClick={() => setEditingEmailQuoteId(null)} className="shrink-0 px-2 py-0.5 border border-gray-200 rounded text-xs text-gray-600">Cancel</button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className={`truncate ${q.email && q.email !== lead.email ? 'text-amber-700 font-medium' : 'text-gray-500'}`}>
+                                        {q.email || lead.email || '—'}
+                                      </span>
+                                      {q.email && q.email !== lead.email && (
+                                        <span className="shrink-0 text-amber-600 text-xs italic">(override)</span>
+                                      )}
+                                      <button
+                                        onClick={e => { e.stopPropagation(); setEditingEmailQuoteId(q.id); setEditingEmailValue(q.email || lead.email || '') }}
+                                        className="shrink-0 text-gray-400 hover:text-green-700 text-xs px-1 rounded"
+                                        title="Change recipient email for this document"
+                                      >
+                                        ✏️
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                               {/* Commit C: nested receipt rows under each invoice */}
                               {receiptsForInvoice.length > 0 && (
                                 <div className="ml-4 mt-1 mb-1 space-y-1">
