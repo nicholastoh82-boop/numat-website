@@ -630,7 +630,7 @@ export default function CRMDashboard() {
     const senderRepEmail = lead.rep_email || 'nick@numat.ph'
     setSendingQuoteId(quote.id)
     try {
-      const res = await fetch('https://nicholastoh.app.n8n.cloud/webhook/send-quote', {
+      const res = await fetch('/api/crm/send-quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
