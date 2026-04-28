@@ -346,112 +346,144 @@ function renderInvoicePL(d){
     return
   }
 
-  // Group by company + date + doc_type
+  // Group by company + date + doc_type (one quote per group)
   const grouped={}
   lines.forEach(l=>{
     const key=l.company+'||'+l.date+'||'+l.doc_type
-    if(!grouped[key])grouped[key]={company:l.company,date:l.date,doc_type:l.doc_type,payment_status:l.payment_status,lines:[]}
+    if(!grouped[key])grouped[key]={company:l.company,date:l.date,doc_type:l.doc_type,
+      payment_status:l.payment_status,currency:l.native_currency,lines:[]}
     grouped[key].lines.push(l)
   })
   const groups=Object.values(grouped)
   groups.sort((a,b)=>{if(a.doc_type!==b.doc_type)return a.doc_type==='invoice'?-1:1;return b.date.localeCompare(a.date)})
 
-  let totalRev=0,totalCost=0
-  groups.forEach(g=>g.lines.forEach(l=>{totalRev+=l.total_price_php;totalCost+=l.unit_econ_cost_php*l.quantity}))
-  document.getElementById('invoicePLSub').textContent=groups.length+' document'+(groups.length>1?'s':'')+' \u00b7 Total sell value: '+p(totalRev)+' \u00b7 Net contribution: '+pSigned(totalRev-totalCost)
+  // Currency formatter \u2014 use native currency, not PHP conversion
+  const fmtNative=(amount,currency)=>{
+    const n=parseFloat(amount||0)
+    const sym=currency==='PHP'?'\u20b1':currency==='USD'?'$':'SGD '
+    return sym+n.toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})
+  }
+  const fmtNativeSigned=(amount,currency)=>{
+    const n=parseFloat(amount||0)
+    const sym=currency==='PHP'?'\u20b1':currency==='USD'?'$':'SGD '
+    return (n>=0?'+':'')+sym+Math.abs(n).toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})
+  }
+
+  // Summary counts
+  let phpRev=0, usdRev=0
+  groups.forEach(g=>{
+    const rev=g.lines.reduce((s,l)=>s+l.native_total_price,0)
+    if(g.currency==='USD') usdRev+=rev; else phpRev+=rev
+  })
+  const summaryParts=[]
+  if(phpRev>0) summaryParts.push(p(phpRev))
+  if(usdRev>0) summaryParts.push('$'+Math.round(usdRev).toLocaleString()+' USD')
+  document.getElementById('invoicePLSub').textContent=
+    groups.length+' document'+(groups.length>1?'s':'')+' \u00b7 Revenue: '+summaryParts.join(' + ')
 
   let html='<div class="invoice-grid">'
 
   groups.forEach(g=>{
-    const gRev=g.lines.reduce((s,l)=>s+l.total_price_php,0)
-    const gCost=g.lines.reduce((s,l)=>s+l.unit_econ_cost_php*l.quantity,0)
-    const gContrib=gRev-gCost
-    const gMargin=gRev>0?(gContrib/gRev*100):0
-    const isProfit=gContrib>0,isLoss=gContrib<0
-    const cardClass=isProfit?'profit':isLoss?'loss':'breakeven'
-    const verdictClass=isProfit?'verdict-profit':isLoss?'verdict-loss':'verdict-breakeven'
-    const verdictText=isProfit?'\u2197 PROFITABLE':isLoss?'\u2198 LOSS MAKING':'\u2192 BREAK-EVEN'
-    const contribColor=isProfit?'var(--green)':isLoss?'var(--red)':'var(--amber)'
+    const currency=g.currency||'PHP'
+    const gRevNative=g.lines.reduce((s,l)=>s+l.native_total_price,0)
+    const gCostPhp=g.lines.reduce((s,l)=>s+l.unit_econ_cost_php*l.quantity,0)
+    const gRevPhp=g.lines.reduce((s,l)=>s+l.total_price_php,0)
+    const gContribPhp=gRevPhp-gCostPhp
+    const gMarginPct=gRevPhp>0?(gContribPhp/gRevPhp*100):0
+    const anyHasCost=g.lines.some(l=>l.has_cost_data)
+    const isProfit=anyHasCost&&gContribPhp>0
+    const isLoss=anyHasCost&&gContribPhp<0
+    const cardClass=anyHasCost?(isProfit?'profit':isLoss?'loss':'breakeven'):'breakeven'
+    const verdictClass=anyHasCost?(isProfit?'verdict-profit':isLoss?'verdict-loss':'verdict-breakeven'):'verdict-breakeven'
+    const verdictText=!anyHasCost?'\u2014 NO COST DATA':isProfit?'\u2197 PROFITABLE':isLoss?'\u2198 LOSS MAKING':'\u2192 BREAK-EVEN'
+    const contribColor=!anyHasCost?'var(--text-3)':isProfit?'var(--green)':isLoss?'var(--red)':'var(--amber)'
     const docLabel=g.doc_type==='invoice'?'Invoice':'Proforma'
     const docColor=g.doc_type==='invoice'?'var(--green)':'var(--amber)'
     const payColor=g.payment_status==='paid'?'var(--green)':g.payment_status==='unpaid'?'var(--red)':'var(--text-3)'
+    const currencyTag=currency!=='PHP'?'<span style="font-size:10px;background:#e8f4ff;color:#1565c0;padding:2px 6px;border-radius:4px;font-weight:600;margin-left:6px;">'+currency+'</span>':''
 
-    // Build line rows
+    // Line item rows
     const lineRows=g.lines.map(l=>{
       const hasCost=l.has_cost_data&&l.unit_econ_cost_php>0
       const margin=l.margin_pct||0
       const mpClass=margin>=25?'mp-profit':margin>=0?'mp-warn':'mp-loss'
-      const cColor=l.contribution_per_unit>=0?'var(--green)':'var(--red)'
+      const cColor=l.contribution_per_unit_php>=0?'var(--green)':'var(--red)'
 
-      // Sell price cell
-      const sellCell='<div class="price-cell"><span class="val">'+pFull(l.unit_price_php)+'</span><span class="lbl">per unit</span></div>'
+      // Sell price cell \u2014 show in NATIVE currency
+      const sellCell='<div class="price-cell"><span class="val">'+fmtNative(l.native_unit_price,currency)+'</span><span class="lbl">per unit ('+currency+')</span></div>'
 
-      // Cost cell: render cost_items array if present, else simple cost
+      // Cost cell \u2014 always in PHP
       let costCell
       if(hasCost){
         if(l.cost_items&&l.cost_items.length>0){
           const itemRows=l.cost_items.map(ci=>
-            '<div class="cost-breakdown-row">'+
-              '<span class="cost-breakdown-label">'+esc(ci.label)+'</span>'+
-              '<span class="cost-breakdown-val">'+pFull(ci.amount_php)+'</span>'+
-            '</div>'+
-            (ci.note?'<div class="cost-breakdown-row"><span class="cost-breakdown-note" style="padding-left:0;color:var(--text-3);font-size:9px;font-style:italic;">'+esc(ci.note)+'</span></div>':'')
+            '<div class="cost-breakdown-row"><span class="cost-breakdown-label">'+esc(ci.label)+'</span><span class="cost-breakdown-val">'+pFull(ci.amount_php)+'</span></div>'+
+            (ci.note?'<div class="cost-breakdown-row"><span style="color:var(--text-3);font-size:9px;font-style:italic;">'+esc(ci.note)+'</span></div>':'')
           ).join('')
-          costCell='<div class="price-cell" style="text-align:right;">'+
-            '<span class="val">'+pFull(l.unit_econ_cost_php)+'</span>'+
-            '<span class="lbl">per unit total</span>'+
-            '<div class="cost-breakdown">'+itemRows+
-              '<div class="cost-breakdown-row cost-breakdown-total"><span class="cost-breakdown-label">Total</span><span class="cost-breakdown-val">'+pFull(l.unit_econ_cost_php)+'</span></div>'+
-            '</div>'+
-          '</div>'
+          costCell='<div class="price-cell" style="text-align:right;"><span class="val">'+pFull(l.unit_econ_cost_php)+'</span><span class="lbl">per unit (PHP)</span><div class="cost-breakdown">'+itemRows+'<div class="cost-breakdown-row cost-breakdown-total"><span class="cost-breakdown-label">Total</span><span class="cost-breakdown-val">'+pFull(l.unit_econ_cost_php)+'</span></div></div></div>'
         } else {
-          costCell='<div class="price-cell"><span class="val">'+pFull(l.unit_econ_cost_php)+'</span><span class="lbl">per unit'+(l.cost_note?' \u00b7 '+esc(l.cost_note):'')+'</span></div>'
+          costCell='<div class="price-cell"><span class="val">'+pFull(l.unit_econ_cost_php)+'</span><span class="lbl">per unit (PHP)'+(l.cost_note?' \u00b7 '+esc(l.cost_note):'')+'</span></div>'
         }
       } else {
-        costCell='<div class="price-cell" style="color:var(--text-3);font-style:italic;font-size:12px;">N/A</div>'
+        costCell='<div class="price-cell" style="color:var(--text-3);font-size:12px;font-style:italic;">N/A<div style="font-size:9px;margin-top:2px;">No cost data set for this product</div></div>'
       }
 
       const contribCell=hasCost
-        ?'<div class="price-cell"><span class="val" style="color:'+cColor+';">'+pFull(l.contribution_per_unit)+'</span><span class="lbl">per unit</span></div>'
+        ?'<div class="price-cell"><span class="val" style="color:'+cColor+';">'+pFull(l.contribution_per_unit_php)+'</span><span class="lbl">per unit (PHP equiv.)</span></div>'
         :'<span style="color:var(--text-3);">\u2014</span>'
-
       const marginCell=hasCost?'<span class="margin-pill '+mpClass+'">'+margin.toFixed(1)+'%</span>':'<span style="color:var(--text-3);font-size:11px;">N/A</span>'
-
       const totalCell=hasCost
-        ?'<div class="price-cell"><span class="val" style="color:'+cColor+';">'+pFull(l.total_contribution)+'</span><span class="lbl">'+l.quantity+' units</span></div>'
+        ?'<div class="price-cell"><span class="val" style="color:'+cColor+';">'+pFull(l.total_contribution_php)+'</span><span class="lbl">'+l.quantity+' units (PHP)</span></div>'
         :'<span style="color:var(--text-3);">\u2014</span>'
 
-      return '<tr>'+
-        '<td><div class="line-product">'+esc(l.product_name)+'</div><div class="line-sku">'+esc(l.sku)+'</div></td>'+
+      return '<tr><td><div class="line-product">'+esc(l.product_name)+'</div><div class="line-sku">'+esc(l.sku)+'</div></td>'+
         '<td class="r" style="font-family:\'DM Mono\',monospace;">'+l.quantity+'</td>'+
         '<td class="r">'+sellCell+'</td>'+
         '<td class="r">'+costCell+'</td>'+
         '<td class="r">'+contribCell+'</td>'+
         '<td class="r">'+marginCell+'</td>'+
-        '<td class="r">'+totalCell+'</td>'+
-        '</tr>'
+        '<td class="r">'+totalCell+'</td></tr>'
     }).join('')
 
     let guidance=''
     const lc=g.lines.filter(l=>l.has_cost_data&&l.unit_econ_cost_php>0)
     if(isLoss&&lc.length>0){
-      const worst=lc.reduce((b,l)=>l.contribution_per_unit<b.contribution_per_unit?l:b,lc[0])
-      const avgGap=lc.reduce((s,l)=>s+l.quantity,0)>0?Math.abs(gContrib)/lc.reduce((s,l)=>s+l.quantity,0):0
-      guidance='<div class="invoice-guidance">This invoice is loss-making at current production costs. The biggest drag is <strong>'+esc(worst.product_name)+'</strong> at '+pFull(worst.contribution_per_unit)+' per unit. To break even, selling price needs to increase by <strong>'+pFull(avgGap)+' per unit on average</strong>.</div>'
+      const worst=lc.reduce((b,l)=>l.contribution_per_unit_php<b.contribution_per_unit_php?l:b,lc[0])
+      const avgGap=lc.reduce((s,l)=>s+l.quantity,0)>0?Math.abs(gContribPhp)/lc.reduce((s,l)=>s+l.quantity,0):0
+      guidance='<div class="invoice-guidance">This invoice is loss-making at current production costs. Biggest drag: <strong>'+esc(worst.product_name)+'</strong> at '+pFull(worst.contribution_per_unit_php)+'/unit. Break-even requires avg selling price increase of <strong>'+pFull(avgGap)+'/unit</strong>.</div>'
     } else if(isProfit){
-      guidance='<div class="invoice-guidance good">This invoice contributes positively at a '+gMargin.toFixed(1)+'% margin. Closing more deals at similar pricing accelerates the path to overall break-even.</div>'
+      guidance='<div class="invoice-guidance good">This invoice contributes positively at '+gMarginPct.toFixed(1)+'% margin.</div>'
+    } else if(!anyHasCost){
+      guidance='<div class="invoice-guidance" style="background:var(--surface);border-color:var(--border);color:var(--text-3);">Cost data is not yet set for one or more products in this invoice. Add ex_factory_php to the product variant to enable P&amp;L analysis.</div>'
     }
+
+    // Summary footer: Revenue (native) | Cost (PHP) | Net (PHP) | Margin
+    const footerRevLabel=currency!=='PHP'?'Revenue ('+currency+')':'Revenue'
+    const footerCostHtml=anyHasCost
+      ?'<div class="inv-foot-cell"><div class="inv-foot-label">Total Cost (PHP)</div><div class="inv-foot-val" style="color:var(--red);">'+pFull(gCostPhp)+'</div></div>'
+      :'<div class="inv-foot-cell"><div class="inv-foot-label">Total Cost</div><div class="inv-foot-val" style="color:var(--text-3);font-size:14px;font-style:italic;">No data</div></div>'
+    const footerNetHtml=anyHasCost
+      ?'<div class="inv-foot-cell"><div class="inv-foot-label">Net Contribution</div><div class="inv-foot-val" style="color:'+contribColor+';">'+(gContribPhp>=0?'+':'')+pFull(gContribPhp)+'</div></div>'
+      :'<div class="inv-foot-cell"><div class="inv-foot-label">Net Contribution</div><div class="inv-foot-val" style="color:var(--text-3);font-size:14px;font-style:italic;">N/A</div></div>'
+    const footerMarginHtml=anyHasCost
+      ?'<div class="inv-foot-cell"><div class="inv-foot-label">Margin</div><div class="inv-foot-val" style="color:'+contribColor+';">'+gMarginPct.toFixed(1)+'%</div></div>'
+      :'<div class="inv-foot-cell"><div class="inv-foot-label">Margin</div><div class="inv-foot-val" style="color:var(--text-3);font-size:14px;font-style:italic;">N/A</div></div>'
+
+    // Collapsed card shows Revenue + Cost + Net
+    const headerCostBadge=anyHasCost
+      ?'<div style="font-size:11px;color:var(--text-3);margin-top:3px;">Cost: '+pFull(gCostPhp)+' &nbsp;\u00b7&nbsp; Net: <span style="color:'+contribColor+';font-weight:700;">'+(gContribPhp>=0?'+':'')+pFull(gContribPhp)+'</span></div>'
+      :'<div style="font-size:11px;color:var(--text-3);margin-top:3px;">Cost: <em>no data</em></div>'
 
     html+='<div class="invoice-card '+cardClass+'">'+
       '<div class="invoice-header" onclick="toggleInvoice(this)">'+
-        '<div><div class="invoice-company">'+esc(g.company||'Unknown')+'</div>'+
+        '<div><div class="invoice-company">'+esc(g.company||'Unknown')+currencyTag+'</div>'+
           '<div class="invoice-meta"><span style="color:'+docColor+';font-weight:600;">'+docLabel+'</span> \u00b7 '+g.date+' \u00b7 <span style="color:'+payColor+';">'+esc(g.payment_status||'\u2014')+'</span></div>'+
         '</div>'+
         '<div class="invoice-verdict">'+
           '<span class="verdict-badge '+verdictClass+'">'+verdictText+'</span>'+
           '<div class="invoice-totals">'+
-            '<div class="invoice-total-value">'+pFull(gRev)+'</div>'+
-            '<div class="invoice-total-contrib" style="color:'+contribColor+';">Net: '+pSigned(gContrib)+'</div>'+
+            '<div class="invoice-total-value">'+fmtNative(gRevNative,currency)+'</div>'+
+            headerCostBadge+
           '</div>'+
           '<span class="invoice-chevron">\u25be</span>'+
         '</div>'+
@@ -460,29 +492,27 @@ function renderInvoicePL(d){
         '<table class="line-table"><thead><tr>'+
           '<th>Product</th><th class="r">Qty</th>'+
           '<th class="r">Unit Sell Price</th>'+
-          '<th class="r">Unit Cost</th>'+
-          '<th class="r">Contribution / Unit</th>'+
+          '<th class="r">Unit Cost (PHP)</th>'+
+          '<th class="r">Contribution/Unit (PHP equiv.)</th>'+
           '<th class="r">Margin</th>'+
-          '<th class="r">Total Contribution</th>'+
+          '<th class="r">Total Contribution (PHP)</th>'+
         '</tr></thead><tbody>'+lineRows+'</tbody></table>'+
         '<div class="invoice-footer">'+
-          '<div class="inv-foot-cell"><div class="inv-foot-label">Total Revenue</div><div class="inv-foot-val">'+pFull(gRev)+'</div></div>'+
-          '<div class="inv-foot-cell"><div class="inv-foot-label">Total Cost</div><div class="inv-foot-val" style="color:var(--red);">'+pFull(gCost)+'</div></div>'+
-          '<div class="inv-foot-cell"><div class="inv-foot-label">Net Contribution</div><div class="inv-foot-val" style="color:'+contribColor+';">'+pSigned(gContrib)+'</div></div>'+
-          '<div class="inv-foot-cell"><div class="inv-foot-label">Overall Margin</div><div class="inv-foot-val" style="color:'+contribColor+';">'+gMargin.toFixed(1)+'%</div></div>'+
-        '</div>'+guidance+
+          '<div class="inv-foot-cell"><div class="inv-foot-label">'+footerRevLabel+'</div><div class="inv-foot-val">'+fmtNative(gRevNative,currency)+'</div></div>'+
+          footerCostHtml+footerNetHtml+footerMarginHtml+
+        '</div>'+
+        guidance+
       '</div>'+
     '</div>'
   })
 
-  html+='</div><div class="context-note"><strong style="color:var(--text-2);">How to read this:</strong> Unit cost = ex-factory price &times; 0.90 (from unit economics Price Structure tab, 10% GM). For fabricated products (tables, chairs), unit cost is the confirmed blended cost including materials and labour. NuSlat cost is ₱11.00 per slat (actual production cost). Click any card to expand the line item detail.</div>'
+  html+='</div><div class="context-note"><strong style="color:var(--text-2);">How to read this:</strong> Revenue is shown in the invoice\'s issued currency (PHP or USD). Cost is always in PHP (ex-factory \u00d7 0.90). For fabricated products the cost includes materials and labour. Margin = contribution \u00f7 sell price (PHP equivalent). Products marked N/A have no cost data yet. Click any card to expand line items.</div>'
   document.getElementById('invoicePLSection').innerHTML=html
 
   const fb=document.querySelector('.invoice-body'),fc=document.querySelector('.invoice-chevron')
   if(fb)fb.classList.add('open')
   if(fc)fc.classList.add('open')
 }
-
 function toggleInvoice(h){
   const b=h.nextElementSibling,c=h.querySelector('.invoice-chevron')
   b.classList.toggle('open');c.classList.toggle('open')
