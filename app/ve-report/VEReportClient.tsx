@@ -30,10 +30,28 @@ function calcSavings(
   }
 }
 
-function fmt(n: number) {
-  if (n >= 1_000_000) return `₱${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000)     return `₱${(n / 1_000).toFixed(0)}K`
-  return `₱${n}`
+// All source figures are stored as Philippine pesos. The display layer converts
+// to US dollars at PHP_PER_USD, rounds, and formats with comma thousands.
+// Change this single constant to reprice every figure on the page.
+const PHP_PER_USD = 55
+
+function usd(php: number) {
+  const dollars = php / PHP_PER_USD
+  const rounded = Math.round(dollars / 1000) * 1000
+  return `$${rounded.toLocaleString('en-US')}`
+}
+
+function usdPerSqm(php: number) {
+  const dollars = php / PHP_PER_USD
+  return `$${Math.round(dollars).toLocaleString('en-US')}`
+}
+
+function usdRange(loPhp: number, hiPhp: number) {
+  return `${usd(loPhp)} to ${usd(hiPhp)}`
+}
+
+function usdPerSqmRange(loPhp: number, hiPhp: number) {
+  return `${usdPerSqm(loPhp)} to ${usdPerSqm(hiPhp)}`
 }
 
 function useInView(threshold = 0.15) {
@@ -257,19 +275,19 @@ export default function VEReportClient() {
               The Cost Case<br />for <span className="accent">Engineered Bamboo</span>
             </h1>
             <p className="hero-subtitle">
-              A property-specific analysis for {resort} — based on your actual room count, Philippine material benchmarks, and independent research on bamboo performance in tropical buildings.
+              A property specific analysis for {resort}, based on your actual room count, regional material benchmarks, and independent research on bamboo performance in tropical buildings.
             </p>
             <div className="hero-big-number">
               <div className="label">Estimated savings vs imported hardwood</div>
               <div className="number" style={{ animation: heroVisible ? 'numReveal 0.6s ease 0.3s both' : 'none' }}>
-                {fmt(s.refinishLow)} – {fmt(s.refinishHigh)}
+                {usdRange(s.refinishLow, s.refinishHigh)}
               </div>
               <div className="sub">based on {s.sqm.toLocaleString()} sqm across {rooms.toLocaleString()} rooms</div>
             </div>
             <div className="hero-chips">
-              <div className="chip"><strong>{fmt(s.numatCostLo)} – {fmt(s.numatCostHi)}</strong>Estimated NUMAT supply cost</div>
-              <div className="chip"><strong>{fmt(s.totalVsPlywood)}</strong>Savings vs marine plywood (25yr)</div>
-              <div className="chip"><strong>2 – 4 weeks</strong>Delivery from Bukidnon</div>
+              <div className="chip"><strong>{usdRange(s.numatCostLo, s.numatCostHi)}</strong>Estimated NUMAT supply cost</div>
+              <div className="chip"><strong>{usd(s.totalVsPlywood)}</strong>Savings vs marine plywood (25 years)</div>
+              <div className="chip"><strong>2 to 4 weeks</strong>Delivery from Bukidnon</div>
             </div>
           </div>
         </div>
@@ -281,20 +299,20 @@ export default function VEReportClient() {
           <div ref={sec1ref} style={fadeIn(sec1)}>
             <p className="sec-label">Cost Breakdown</p>
             <h2 className="sec-title syne">Where the savings come from</h2>
-            <p className="sec-sub">All figures calculated for {resort} at {rooms.toLocaleString()} rooms ({s.sqm.toLocaleString()} sqm) using independently verified Philippine market benchmarks.</p>
+            <p className="sec-sub">All figures calculated for {resort} at {rooms.toLocaleString()} rooms ({s.sqm.toLocaleString()} sqm) using independently verified regional market benchmarks.</p>
 
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#4b5e70', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>vs Imported Hardwood — Refinishing Cost Avoidance</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#4b5e70', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>vs Imported Hardwood: Refinishing Cost Avoidance</p>
             <div className="breakdown">
-              <div className="brow"><span className="lab">Hardwood professional refinishing: ₱3,500–₱7,000/sqm every 7–15 years</span><span className="val neg">{fmt(s.refinishLow)} – {fmt(s.refinishHigh)}</span></div>
-              <div className="brow"><span className="lab">NUMAT bamboo maintenance: routine sweeping and damp mopping only</span><span className="val pos">₱0</span></div>
-              <div className="brow tot"><span className="lab">Total avoided refinishing costs for {resort}</span><span className="val pos">{fmt(s.refinishLow)} – {fmt(s.refinishHigh)}</span></div>
+              <div className="brow"><span className="lab">Hardwood professional refinishing: {usdPerSqmRange(3500, 7000)} per square meter every 7 to 15 years</span><span className="val neg">{usdRange(s.refinishLow, s.refinishHigh)}</span></div>
+              <div className="brow"><span className="lab">NUMAT bamboo maintenance: routine sweeping and damp mopping only</span><span className="val pos">$0</span></div>
+              <div className="brow tot"><span className="lab">Total avoided refinishing costs for {resort}</span><span className="val pos">{usdRange(s.refinishLow, s.refinishHigh)}</span></div>
             </div>
 
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#4b5e70', marginBottom: 10, marginTop: 20, textTransform: 'uppercase', letterSpacing: '0.06em' }}>vs Marine Plywood — 25-Year Projection</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#4b5e70', marginBottom: 10, marginTop: 20, textTransform: 'uppercase', letterSpacing: '0.06em' }}>vs Marine Plywood: 25 Year Projection</p>
             <div className="breakdown">
-              <div className="brow"><span className="lab">Avoided replacement materials &amp; labour (no 10–15 yr cycle)</span><span className="val pos">{fmt(s.materials)}</span></div>
-              <div className="brow"><span className="lab">Protected room revenue (no renovation downtime)</span><span className="val pos">{fmt(s.roomRevenue)}</span></div>
-              <div className="brow tot"><span className="lab">Total savings vs marine plywood (25 years)</span><span className="val pos">{fmt(s.totalVsPlywood)}</span></div>
+              <div className="brow"><span className="lab">Avoided replacement materials &amp; labour (no 10 to 15 year cycle)</span><span className="val pos">{usd(s.materials)}</span></div>
+              <div className="brow"><span className="lab">Protected room revenue (no renovation downtime)</span><span className="val pos">{usd(s.roomRevenue)}</span></div>
+              <div className="brow tot"><span className="lab">Total savings vs marine plywood (25 years)</span><span className="val pos">{usd(s.totalVsPlywood)}</span></div>
             </div>
           </div>
         </div>
@@ -454,7 +472,7 @@ export default function VEReportClient() {
           </div>
 
           <div className="footnote">
-            <p>All savings figures are property-specific estimates for {resort} ({rooms.toLocaleString()} rooms, {s.sqm.toLocaleString()} sqm), calculated from independently verified benchmarks. Hardwood refinishing rate: ₱3,500–₱7,000/sqm. Marine plywood replacement cycle: 10–15 years. Room revenue loss based on industry-standard occupancy assumptions.</p>
+            <p>All savings figures are property specific estimates for {resort} ({rooms.toLocaleString()} rooms, {s.sqm.toLocaleString()} sqm), calculated from independently verified benchmarks. Hardwood refinishing rate: {usdPerSqmRange(3500, 7000)} per square meter. Marine plywood replacement cycle: 10 to 15 years. Room revenue loss based on industry standard occupancy assumptions.</p>
             <p>Bacterial inhibition: Fabrics Verification Association of Japan. Cooling energy reduction: ScienceDirect, tropical building research. CO₂ sequestration: peer-reviewed bamboo plantation studies.</p>
             <p>Application photos: Pexels (free commercial license). © {new Date().getFullYear()} NUMAT Sustainable Manufacturing Inc. · numatbamboo.com</p>
           </div>
