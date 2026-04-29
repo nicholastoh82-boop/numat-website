@@ -293,8 +293,7 @@ footer{font-size:11px;color:var(--text-3);text-align:center;margin-top:40px}
         <div style="margin-top:14px;"><div class="card-title">Top Segments</div><div id="segmentList"></div></div>
       </div>
     </div>
-    <div class="section-header"><div class="section-title">Sales Pipeline Forecast</div><div class="section-sub" id="forecastSub"></div></div>
-    <div id="forecastSection" class="forecast-section"></div>
+    
     <div class="section-header"><div class="section-title">Weighted Pipeline</div><div class="section-sub" id="wpSub"></div></div>
 <div id="weightedPipelineSection" style="margin-bottom:20px;"></div>
 <div class="section-header"><div class="section-title">Financial Health</div><div class="section-sub" id="finSub"></div></div>
@@ -359,7 +358,7 @@ function render(d){
   document.getElementById('footerLine').style.display='block'
   const g=new Date(d.generated_at)
   document.getElementById('lastUpdated').textContent='Live as of '+g.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})+' '+g.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})
-  renderSignals(d);renderKPIs(d);renderPipeline(d);renderForecast(d);renderWeightedPipeline(d);renderRevenueTrend(d);renderFinancial(d);renderInvoicePL(d);renderAR(d);renderOutreach(d);renderQuotes(d)
+  renderSignals(d);renderKPIs(d);renderPipeline(d);renderWeightedPipeline(d);renderRevenueTrend(d);renderFinancial(d);renderInvoicePL(d);renderAR(d);renderOutreach(d);renderQuotes(d)
 }
 
 function renderSignals(d){
