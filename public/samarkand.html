@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#FAF7F0" />
+<title>NUMAT  |  Engineered bamboo for the built environment</title>
+<meta name="description" content="NUMAT is a Philippines-based engineered bamboo manufacturer. Operating factory, paying customers, multi-quarter revenue growth, backed by Wavemaker Impact." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    /* Light editorial palette */
+    --bg:           #FAF7F0;   /* warm cream */
+    --bg-paper:     #F4F0E6;   /* slightly deeper cream for layered surfaces */
+    --bg-sand:      #EBE2D1;   /* sand for subtle separators */
+    --surface:      #FFFFFF;   /* card surface */
+    --ink:          #0F2419;   /* deep forest green - primary text */
+    --ink-soft:     #2A3D32;   /* softened forest for secondary text */
+    --text:         #2A2A2A;   /* charcoal body */
+    --text-muted:   #6B7060;
+    --text-dim:     #A09F95;
+    --hairline:     #D9D2C2;
+    --hairline-soft:#E8E1D0;
+
+    /* NUMAT brand colors from logo */
+    --green:        #8BC34A;   /* bright bamboo green */
+    --green-deep:   #5BB143;   /* deeper green */
+    --green-glow:   rgba(139, 195, 74, 0.18);
+    --blue:         #2563EB;   /* NU blue */
+    --blue-bright:  #3CACE0;   /* cyan accent */
+    --amber:        #B8732B;   /* bamboo amber for eyebrows */
+    --silver:       #B8B8B8;
+
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body:    'Manrope', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* Subtle paper texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 80% 0%, rgba(139, 195, 74, 0.06), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 0% 60%, rgba(184, 115, 43, 0.04), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  main { position: relative; z-index: 1; }
+
+  /* === Header === */
+  .header {
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .logo-img {
+    height: 38px;
+    width: auto;
+    display: block;
+  }
+  @media (min-width: 768px) {
+    .logo-img { height: 44px; }
+    .header { padding: 28px 40px; }
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-weight: 600;
+    border: 1px solid var(--hairline);
+    padding: 8px 14px;
+    border-radius: 100px;
+    background: var(--surface);
+  }
+  .badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  /* === Hero === */
+  .hero {
+    padding: 32px 24px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+    opacity: 0;
+    animation: fadeUp 0.9s 0.1s ease-out forwards;
+  }
+  @media (min-width: 768px) {
+    .hero { padding: 56px 40px 64px; }
+  }
+  .eyebrow {
+    font-size: 11px;
+    color: var(--amber);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-weight: 600;
+    margin-bottom: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 28px;
+    height: 1px;
+    background: var(--amber);
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(40px, 8.5vw, 80px);
+    line-height: 1.0;
+    letter-spacing: -0.025em;
+    font-weight: 400;
+    color: var(--ink);
+    font-variation-settings: "opsz" 144, "SOFT" 50;
+    max-width: 16ch;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--green-deep);
+    font-weight: 300;
+  }
+  .hero .lede {
+    font-size: clamp(16px, 2.2vw, 19px);
+    color: var(--text);
+    max-width: 580px;
+    line-height: 1.55;
+    margin-top: 28px;
+    font-weight: 400;
+  }
+  .hero .lede strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* === KPI strip (immediate proof of business) === */
+  .kpi-strip {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px 56px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  @media (min-width: 768px) {
+    .kpi-strip {
+      grid-template-columns: repeat(4, 1fr);
+      padding: 0 40px 80px;
+      gap: 20px;
+    }
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    padding: 22px 20px;
+    border-radius: 4px;
+    position: relative;
+    opacity: 0;
+    animation: fadeUp 0.9s ease-out forwards;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .kpi:hover { transform: translateY(-2px); box-shadow: 0 4px 24px rgba(15, 36, 25, 0.06); }
+  .kpi:nth-child(1) { animation-delay: 0.25s; }
+  .kpi:nth-child(2) { animation-delay: 0.35s; }
+  .kpi:nth-child(3) { animation-delay: 0.45s; }
+  .kpi:nth-child(4) { animation-delay: 0.55s; }
+  .kpi::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--green);
+    border-radius: 2px 0 0 2px;
+  }
+  .kpi-num {
+    font-family: var(--font-display);
+    font-size: clamp(32px, 5.5vw, 48px);
+    line-height: 1;
+    color: var(--ink);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .kpi-num .unit {
+    font-size: 0.45em;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-left: 4px;
+    font-weight: 300;
+  }
+  .kpi-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  /* === Hero photo (full bleed) === */
+  .hero-photo {
+    width: 100%;
+    height: clamp(280px, 50vw, 520px);
+    background-color: var(--bg-paper);
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    position: relative;
+  }
+  .hero-photo {
+    position: relative;
+  }
+  .hero-photo::before {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 35%;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.55));
+    pointer-events: none;
+  }
+  .hero-photo-caption {
+    position: absolute;
+    left: 24px;
+    bottom: 18px;
+    color: rgba(255,255,255,0.9);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 600;
+    z-index: 2;
+  }
+  @media (min-width: 768px) {
+    .hero-photo-caption { left: 40px; bottom: 24px; font-size: 12px; }
+  }
+
+  /* === Section base === */
+  section.content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 80px 24px;
+  }
+  @media (min-width: 768px) {
+    section.content { padding: 120px 40px; }
+  }
+  .section-head { margin-bottom: 48px; }
+  .section-head .eyebrow { margin-bottom: 16px; }
+  .section-head h2 {
+    font-family: var(--font-display);
+    font-size: clamp(30px, 5.5vw, 52px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    font-weight: 400;
+    color: var(--ink);
+    max-width: 22ch;
+  }
+  .section-head h2 em {
+    font-style: italic;
+    color: var(--green-deep);
+    font-weight: 300;
+  }
+  .section-head .sub {
+    margin-top: 18px;
+    font-size: 16px;
+    color: var(--text-muted);
+    max-width: 60ch;
+    line-height: 1.6;
+  }
+
+  /* === Traction (chart + numbers) === */
+  .traction {
+    background: var(--bg-paper);
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .traction-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  @media (min-width: 900px) {
+    .traction-grid { grid-template-columns: 1.4fr 1fr; gap: 56px; }
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    padding: 28px 24px;
+    border-radius: 4px;
+  }
+  .chart-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .chart-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--ink);
+    font-weight: 500;
+    line-height: 1.2;
+  }
+  .chart-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .chart-growth {
+    text-align: right;
+  }
+  .chart-growth-num {
+    font-family: var(--font-display);
+    font-size: 32px;
+    color: var(--green-deep);
+    font-weight: 500;
+    line-height: 1;
+  }
+  .chart-growth-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  .chart-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .chart-footnote {
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .traction-stats { display: grid; gap: 20px; }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+    line-height: 1.4;
+    flex: 1;
+    padding-right: 16px;
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 28px;
+    color: var(--ink);
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .stat-value .unit { font-size: 0.55em; color: var(--text-muted); font-style: italic; font-weight: 300; }
+
+  /* === Story === */
+  .story-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+  @media (min-width: 900px) {
+    .story-grid { grid-template-columns: 1.3fr 1fr; gap: 64px; }
+  }
+  .story-prose {
+    font-family: var(--font-display);
+    font-size: clamp(19px, 2.4vw, 24px);
+    line-height: 1.45;
+    color: var(--ink);
+    font-weight: 300;
+    letter-spacing: -0.005em;
+  }
+  .story-prose p { margin-bottom: 22px; }
+  .story-prose strong { font-weight: 500; color: var(--ink); }
+  .story-prose em { color: var(--green-deep); font-style: italic; }
+
+  .founder-card {
+    border: 1px solid var(--hairline);
+    background: var(--surface);
+    padding: 0;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .founder-photo {
+    aspect-ratio: 4/5;
+    background: var(--bg-sand);
+    background-image:
+      repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(184, 115, 43, 0.04) 12px, rgba(184, 115, 43, 0.04) 14px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid var(--hairline);
+    position: relative;
+  }
+  .founder-photo::after {
+    content: 'PHOTO  ·  Mark, founder portrait';
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    background: var(--bg);
+    padding: 8px 14px;
+    border-radius: 3px;
+    border: 1px dashed var(--hairline);
+  }
+  .founder-meta { padding: 24px; }
+  .founder-name {
+    font-family: var(--font-display);
+    font-size: 26px;
+    color: var(--ink);
+    font-weight: 500;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .founder-title {
+    font-size: 13px;
+    color: var(--green-deep);
+    font-style: italic;
+    font-family: var(--font-display);
+    margin-bottom: 14px;
+  }
+  .founder-bio {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  /* === Form (dark green CTA section) === */
+  .connect {
+    background: var(--ink);
+    color: #F5F1E8;
+  }
+  .connect.content {
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
+  @media (min-width: 768px) {
+    .connect.content { padding-top: 120px; padding-bottom: 120px; }
+  }
+  .connect .eyebrow {
+    color: var(--green);
+  }
+  .connect .eyebrow::before {
+    background: var(--green);
+  }
+  .connect h2 { color: #F5F1E8; max-width: 18ch; }
+  .connect h2 em { color: var(--green); }
+  .connect .sub { color: rgba(245, 241, 232, 0.7); }
+
+  .form-shell {
+    margin-top: 40px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 24px;
+    max-width: 640px;
+    backdrop-filter: blur(8px);
+  }
+  @media (min-width: 640px) {
+    .form-shell { padding: 36px; }
+  }
+
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: rgba(245, 241, 232, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .field input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 10px 0 12px;
+    color: #F5F1E8;
+    font-family: var(--font-body);
+    font-size: 16px;
+    transition: border-color 0.2s;
+    outline: none;
+    -webkit-appearance: none;
+  }
+  .field input::placeholder { color: rgba(245, 241, 232, 0.3); }
+  .field input:focus { border-bottom-color: var(--green); }
+
+  .submit {
+    width: 100%;
+    background: var(--green);
+    color: var(--ink);
+    border: none;
+    padding: 18px 24px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    margin-top: 12px;
+    border-radius: 2px;
+    transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+  }
+  .submit:hover { background: #A4D55F; box-shadow: 0 0 32px var(--green-glow); }
+  .submit:active { transform: translateY(1px); }
+  .submit:disabled { opacity: 0.6; cursor: wait; }
+  .submit-arrow { display: inline-block; margin-left: 6px; transition: transform 0.2s; }
+  .submit:hover .submit-arrow { transform: translateX(4px); }
+
+  .form-meta {
+    margin-top: 18px;
+    font-size: 12px;
+    color: rgba(245, 241, 232, 0.4);
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  /* === Success state === */
+  .success { display: none; animation: scaleIn 0.5s ease-out; }
+  .success.visible { display: block; }
+  .success-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--green-glow);
+    border: 1px solid var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    color: var(--green);
+    font-size: 28px;
+  }
+  .success h3 {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 5vw, 40px);
+    line-height: 1.1;
+    margin-bottom: 12px;
+    font-weight: 400;
+    color: #F5F1E8;
+    letter-spacing: -0.01em;
+  }
+  .success h3 em { color: var(--green); font-style: italic; }
+  .success p {
+    color: rgba(245, 241, 232, 0.7);
+    margin-bottom: 28px;
+    font-size: 15px;
+  }
+  .actions { display: grid; gap: 12px; }
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    color: #F5F1E8;
+    text-decoration: none;
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.2s;
+    text-align: left;
+    cursor: pointer;
+  }
+  .action-btn:hover {
+    border-color: var(--green);
+    background: rgba(139, 195, 74, 0.06);
+    transform: translateX(2px);
+  }
+  .action-btn-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+  }
+  .action-btn-icon.whatsapp { background: rgba(37, 211, 102, 0.15); color: #25D366; }
+  .action-btn-icon.contact { background: rgba(60, 172, 224, 0.15); color: var(--blue-bright); }
+  .action-btn-icon.calendar { background: var(--green-glow); color: var(--green); }
+  .action-btn-text { flex: 1; }
+  .action-btn-text strong { display: block; font-weight: 600; margin-bottom: 2px; }
+  .action-btn-text span { font-size: 12px; color: rgba(245, 241, 232, 0.5); font-weight: 400; }
+  .action-btn-arrow { color: rgba(245, 241, 232, 0.3); font-size: 18px; }
+  .pulse { animation: pulse-glow 2s ease-in-out infinite; }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(139, 195, 74, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(139, 195, 74, 0); }
+  }
+  .success-footer {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 12px;
+    color: rgba(245, 241, 232, 0.4);
+  }
+
+  /* === Products === */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  @media (min-width: 768px) {
+    .product-grid { grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  }
+  .product {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .product:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(15, 36, 25, 0.06);
+  }
+  .product-photo {
+    aspect-ratio: 1/1;
+    background-color: var(--bg-paper);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-bottom: 1px solid var(--hairline);
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .product:hover .product-photo {
+    transform: scale(1.03);
+  }
+  .product-meta { padding: 18px 16px; }
+  .product-name {
+    font-family: var(--font-display);
+    font-size: 19px;
+    color: var(--ink);
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .product-name .accent { color: var(--green-deep); font-style: italic; }
+  .product-tag {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* === Why now === */
+  .why-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+    margin-top: 8px;
+  }
+  @media (min-width: 768px) { .why-grid { grid-template-columns: repeat(3, 1fr); gap: 48px; } }
+  .why-item { padding-top: 24px; border-top: 1px solid var(--hairline); }
+  .why-num {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--amber);
+    font-size: 14px;
+    margin-bottom: 14px;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+  }
+  .why-item h3 {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1.2;
+    margin-bottom: 12px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .why-item p {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  /* === Footer === */
+  footer {
+    padding: 56px 24px 40px;
+    border-top: 1px solid var(--hairline);
+    background: var(--bg-paper);
+  }
+  @media (min-width: 768px) { footer { padding: 72px 40px 48px; } }
+  .footer-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    gap: 32px;
+  }
+  @media (min-width: 768px) {
+    .footer-inner { grid-template-columns: 1fr 1fr; align-items: end; }
+  }
+  .footer-tagline {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-style: italic;
+    color: var(--green-deep);
+    line-height: 1.25;
+    margin-bottom: 14px;
+    font-weight: 300;
+  }
+  .footer-meta { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+  .footer-meta strong { color: var(--ink); font-weight: 600; }
+  .footer-right {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    line-height: 1.8;
+    text-align: left;
+  }
+  @media (min-width: 768px) { .footer-right { text-align: right; } }
+  .footer-right a { color: var(--ink); text-decoration: none; }
+  .footer-right a:hover { color: var(--green-deep); }
+
+  /* === Animations === */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="header">
+    <img class="logo-img" id="logo" alt="NUMAT" src="" />
+    <span class="badge">Live at ADB Samarkand</span>
+  </header>
+
+  <!-- =============== HERO =============== -->
+  <section class="hero">
+    <span class="eyebrow">From Nature, For Nature</span>
+    <h1>
+      Engineered bamboo
+      <em>for the built environment.</em>
+    </h1>
+    <p class="lede">
+      An <strong>operating Philippines factory</strong> turning smallholder bamboo into premium structural and finish products. Replacing tropical hardwood, MDF, and concrete in real residential, hospitality, and commercial projects today.
+    </p>
+  </section>
+
+  <!-- =============== KPI strip =============== -->
+  <section class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-num">Sep <span class="unit">24</span></div>
+      <div class="kpi-label">Journey<br>Began</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-num">Aug <span class="unit">25</span></div>
+      <div class="kpi-label">Factory<br>Online</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-num">25<span class="unit">+</span></div>
+      <div class="kpi-label">Active SKUs<br>In Production</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-num">4<span class="unit">continents</span></div>
+      <div class="kpi-label">Active Buyer<br>Pipeline</div>
+    </div>
+  </section>
+
+  <!-- =============== HERO PHOTO =============== -->
+  <div class="hero-photo" style="background-image:url('/samarkand-images/hero_factory.jpg'); background-size:cover; background-position:center;">
+    <div class="hero-photo-caption">Press line, Manolo Fortich factory · Bukidnon, Philippines</div>
+  </div>
+
+  <!-- =============== TRACTION (story + chart) =============== -->
+  <section class="content traction">
+    <div class="section-head">
+      <span class="eyebrow">The Traction</span>
+      <h2>Factory online August 2025. <em>Live revenue every month since.</em></h2>
+      <p class="sub">An operating factory generates revenue every month. Below is the shape of that growth, indexed to our first month of commercial production.</p>
+    </div>
+
+    <div class="traction-grid">
+      <!-- Chart card -->
+      <div class="chart-card">
+        <div class="chart-card-head">
+          <div>
+            <div class="chart-title">Monthly revenue trajectory</div>
+            <div class="chart-subtitle">Indexed: Aug 2025 = 100</div>
+          </div>
+          <div class="chart-growth">
+            <div class="chart-growth-num">+120<span style="font-size:0.6em;color:var(--green-deep);">%</span></div>
+            <div class="chart-growth-label">Growth in 8 months</div>
+          </div>
+        </div>
+
+        <svg class="chart-svg" viewBox="0 0 600 280" preserveAspectRatio="xMidYMid meet" id="chart">
+          <!-- Grid lines + Y-axis labels rendered by JS for crispness -->
+        </svg>
+      </div>
+
+      <!-- Stats column -->
+      <div class="traction-stats">
+        <div class="stat-row">
+          <div class="stat-label">NUMAT founded</div>
+          <div class="stat-value">Sep 24</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Factory commissioned, Manolo Fortich, Bukidnon</div>
+          <div class="stat-value">Aug 25</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Press cycle per board, validated by COO</div>
+          <div class="stat-value">45<span class="unit">min</span></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Enterprise customers, 2026</div>
+          <div class="stat-value">3<span class="unit">+</span></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Active inquiries: Southeast Asia, Australia, EU, Middle East</div>
+          <div class="stat-value">4<span class="unit">regions</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== STORY =============== -->
+  <section class="content">
+    <div class="section-head">
+      <span class="eyebrow">The Story</span>
+      <h2>Demand is the missing link <em>in nature investment.</em></h2>
+    </div>
+
+    <div class="story-grid">
+      <div class="story-prose">
+        <p>
+          Most platforms in this space fund supply: identity, traceability, finance, carbon. Useful, necessary, and not enough.
+        </p>
+        <p>
+          NUMAT was founded in September 2024 on a simple conviction: <strong>none of it pays the farmer until somebody actually buys the bamboo.</strong> So we built the buyer.
+        </p>
+        <p>
+          Eleven months later, in <em>August 2025</em>, the factory in Manolo Fortich came online. Today: paying customers, four continents in the pipeline, growing every month. Backed by Wavemaker Impact.
+        </p>
+      </div>
+
+      <div class="founder-card">
+        <div class="founder-photo"></div>
+        <div class="founder-meta">
+          <div class="founder-name">Mark Sebastian</div>
+          <div class="founder-title">Founder, NUMAT</div>
+          <div class="founder-bio">Founded NUMAT in September 2024 with a conviction that demand is the missing link in nature investment. Built and commissioned the factory in eleven months. At ADB Samarkand all week.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== PRODUCTS =============== -->
+  <section class="content" style="padding-top:0;">
+    <div class="section-head">
+      <span class="eyebrow">The Product Line</span>
+      <h2>Five product families. <em>One material.</em></h2>
+    </div>
+    <div class="product-grid">
+      <div class="product">
+        <div class="product-photo" style="background-image:url('/samarkand-images/product_nubam.jpg');"></div>
+        <div class="product-meta">
+          <div class="product-name"><span class="accent">Nu</span>Bam Boards</div>
+          <div class="product-tag">Structural and surface boards. Furniture, joinery, panels.</div>
+        </div>
+      </div>
+      <div class="product">
+        <div class="product-photo" style="background-image:url('/samarkand-images/product_nuwall.jpg');"></div>
+        <div class="product-meta">
+          <div class="product-name"><span class="accent">Nu</span>Wall</div>
+          <div class="product-tag">Interior wall cladding and acoustic panels.</div>
+        </div>
+      </div>
+      <div class="product">
+        <div class="product-photo" style="background-image:url('/samarkand-images/product_nufloor.jpg');"></div>
+        <div class="product-meta">
+          <div class="product-name"><span class="accent">Nu</span>Floor</div>
+          <div class="product-tag">Engineered bamboo flooring. 300 x 1200 x 16 mm.</div>
+        </div>
+      </div>
+      <div class="product">
+        <div class="product-photo" style="background-image:url('/samarkand-images/product_nudoor.jpg');"></div>
+        <div class="product-meta">
+          <div class="product-name"><span class="accent">Nu</span>Door</div>
+          <div class="product-tag">Solid bamboo door blanks and finished doors.</div>
+        </div>
+      </div>
+      <div class="product">
+        <div class="product-photo" style="background-image:url('/samarkand-images/product_nuslat.jpg');"></div>
+        <div class="product-meta">
+          <div class="product-name"><span class="accent">Nu</span>Slat</div>
+          <div class="product-tag">Decorative slat systems. Ceilings, feature walls.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== WHY NOW =============== -->
+  <section class="content" style="padding-top:0;">
+    <div class="section-head">
+      <span class="eyebrow">Why Now</span>
+      <h2>Three reasons this matters <em>at scale.</em></h2>
+    </div>
+    <div class="why-grid">
+      <div class="why-item">
+        <div class="why-num">01</div>
+        <h3>We are the offtaker.</h3>
+        <p>Smallholder farmers across Mindanao have a buyer with published prices and verified offtake volumes. Income is real, not promised.</p>
+      </div>
+      <div class="why-item">
+        <div class="why-num">02</div>
+        <h3>Carbon that pays.</h3>
+        <p>Bamboo regrows in three to five years versus twenty five for hardwood. Sequestration plus revenue, not sequestration alone.</p>
+      </div>
+      <div class="why-item">
+        <div class="why-num">03</div>
+        <h3>Built for export.</h3>
+        <p>Specifications, lead times, packaging, and supply continuity engineered for international project work. Not a craft brand.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== CONNECT (form section, dark green) =============== -->
+  <section class="content connect" id="connect">
+    <span class="eyebrow">Connect with the Founder</span>
+    <h2>Mark is here. <em>Ready to talk numbers.</em></h2>
+    <p class="sub">
+      Drop your details. Mark follows up within 24 hours with the full data room, the financials, and a calendar slot.
+    </p>
+
+    <div class="form-shell" id="form-shell">
+      <form id="lead-form" novalidate>
+        <div class="field">
+          <label for="name">Full name</label>
+          <input type="text" id="name" name="name" autocomplete="name" required placeholder="Your name" />
+        </div>
+        <div class="field">
+          <label for="company">Company / Organisation</label>
+          <input type="text" id="company" name="company" autocomplete="organization" required placeholder="Where you work" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" autocomplete="email" required placeholder="you@company.com" />
+        </div>
+        <div class="field">
+          <label for="phone">Phone or WhatsApp</label>
+          <input type="tel" id="phone" name="phone" autocomplete="tel" required placeholder="+1 555 0100" />
+        </div>
+        <button type="submit" class="submit" id="submit-btn">
+          Send to Mark<span class="submit-arrow">&rsaquo;</span>
+        </button>
+        <p class="form-meta">
+          One follow up email, no list, no spam. Your details go to Mark only.
+        </p>
+      </form>
+
+      <div class="success" id="success">
+        <div class="success-icon">&#10003;</div>
+        <h3>Mark will be in touch <em>within 24 hours.</em></h3>
+        <p>Three quick wins so this conversation doesn&rsquo;t stop here:</p>
+
+        <div class="actions">
+          <a href="#" class="action-btn pulse" id="action-whatsapp" target="_blank" rel="noopener">
+            <span class="action-btn-icon whatsapp">&#9993;</span>
+            <span class="action-btn-text">
+              <strong>Message Mark on WhatsApp</strong>
+              <span>Open the chat right now, prefilled</span>
+            </span>
+            <span class="action-btn-arrow">&rsaquo;</span>
+          </a>
+
+          <a href="#" class="action-btn" id="action-vcard" download="Mark-Sebastian-NUMAT.vcf">
+            <span class="action-btn-icon contact">&#9742;</span>
+            <span class="action-btn-text">
+              <strong>Save Mark to your phone contacts</strong>
+              <span>vCard download, one tap to save</span>
+            </span>
+            <span class="action-btn-arrow">&rsaquo;</span>
+          </a>
+
+          <a href="https://cal.com/numatnicholas/discovery" class="action-btn" target="_blank" rel="noopener" id="action-cal">
+            <span class="action-btn-icon calendar">&#9743;</span>
+            <span class="action-btn-text">
+              <strong>Book a 15 minute call</strong>
+              <span>Pick any open slot, calendar invite sent</span>
+            </span>
+            <span class="action-btn-arrow">&rsaquo;</span>
+          </a>
+        </div>
+
+        <p class="success-footer">
+          Email already in your inbox with the company one pager and Mark&rsquo;s vCard. Check spam if you do not see it within 60 seconds.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== FOOTER =============== -->
+  <footer>
+    <div class="footer-inner">
+      <div>
+        <div class="footer-tagline">From nature.<br>For nature.</div>
+        <div class="footer-meta">
+          <strong>NUMAT Sustainable Manufacturing Inc.</strong><br>
+          Manolo Fortich, Bukidnon, Mindanao, Philippines<br>
+          <strong>Backed by Wavemaker Impact</strong> (Singapore)
+        </div>
+      </div>
+      <div class="footer-right">
+        <a href="https://numatbamboo.com">numatbamboo.com</a><br>
+        <a href="mailto:mark@numat.ph">mark@numat.ph</a><br>
+        ADB AM 2026 &nbsp;·&nbsp; Samarkand
+      </div>
+    </div>
+  </footer>
+</main>
+
+<script>
+  // ==========================================================================
+  // ⚠️ EDIT BEFORE DEPLOY — Mark's contact details + financial data
+  // ==========================================================================
+
+  const MARK = {
+    fullName: 'Mark Sebastian',
+    firstName: 'Mark',
+    lastName: 'Sebastian',
+    title: 'Founder, NUMAT Sustainable Manufacturing Inc.',
+    org: 'NUMAT Sustainable Manufacturing Inc.',
+    email: 'mark@numat.ph',
+    phone: '+639683606782',          // ← Mark's real phone
+    website: 'https://numatbamboo.com',
+    whatsappNumber: '639683606782'   // ← international format, no plus, no spaces
+  };
+
+  // Quarterly revenue data. Replace with real internal numbers before deploy.
+  // Two display modes:
+  //   'index'    = relative growth, Q1 2024 = 100. Recommended for public.
+  //   'absolute' = real PHP or USD figures. Bolder, more transparent.
+  // Set FINANCIALS.mode and edit FINANCIALS.values accordingly.
+  const FINANCIALS = {
+    mode: 'index',                    // 'index' or 'absolute'
+    unit: '',                         // e.g. 'PHP M' or 'USD K' if mode === 'absolute'
+    // Monthly revenue from factory online (Aug 2025) onward.
+    // Replace these values with verified internal numbers from the CEO dashboard.
+    quarters: [
+      { label: 'Aug 25', value: 100 },
+      { label: 'Sep 25', value: 115 },
+      { label: 'Oct 25', value: 135 },
+      { label: 'Nov 25', value: 150 },
+      { label: 'Dec 25', value: 170 },
+      { label: 'Jan 26', value: 180 },
+      { label: 'Feb 26', value: 200 },
+      { label: 'Mar 26', value: 220 }
+    ]
+  };
+
+  // ==========================================================================
+  // Load logo (inlined as data URI for self-contained HTML)
+  // ==========================================================================
+  document.getElementById('logo').src = '/samarkand-images/numat_logo.png';
+
+  // ==========================================================================
+  // Render the chart
+  // ==========================================================================
+  function renderChart() {
+    const svg = document.getElementById('chart');
+    const W = 600, H = 280;
+    const padL = 36, padR = 12, padT = 16, padB = 36;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+    const data = FINANCIALS.quarters;
+    const maxV = Math.max(...data.map(d => d.value)) * 1.1;
+
+    const barW = innerW / data.length * 0.62;
+    const gap = innerW / data.length;
+
+    // Build gridlines (4 horizontal)
+    let svgInner = '';
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + (innerH * i / 4);
+      const v = Math.round(maxV * (1 - i / 4));
+      svgInner += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" stroke="#E8E1D0" stroke-width="1" />`;
+      svgInner += `<text x="${padL - 8}" y="${y + 4}" font-family="Manrope, sans-serif" font-size="10" fill="#A09F95" text-anchor="end" font-weight="500">${v}</text>`;
+    }
+
+    // Bars
+    data.forEach((d, i) => {
+      const x = padL + i * gap + (gap - barW) / 2;
+      const h = (d.value / maxV) * innerH;
+      const y = padT + innerH - h;
+      const isLatest = i === data.length - 1;
+      const fill = isLatest ? '#5BB143' : '#8BC34A';
+      svgInner += `<rect x="${x}" y="${y}" width="${barW}" height="${h}" fill="${fill}" rx="2" opacity="${isLatest ? 1 : 0.78}">
+        <animate attributeName="height" from="0" to="${h}" dur="0.7s" begin="${0.05 * i}s" fill="freeze" />
+        <animate attributeName="y" from="${padT + innerH}" to="${y}" dur="0.7s" begin="${0.05 * i}s" fill="freeze" />
+      </rect>`;
+      // X label
+      svgInner += `<text x="${x + barW / 2}" y="${H - padB + 18}" font-family="Manrope, sans-serif" font-size="10" fill="#6B7060" text-anchor="middle" font-weight="500">${d.label}</text>`;
+      // Latest value callout
+      if (isLatest) {
+        svgInner += `<text x="${x + barW / 2}" y="${y - 8}" font-family="Fraunces, serif" font-size="14" fill="#0F2419" text-anchor="middle" font-weight="600">${d.value}</text>`;
+      }
+    });
+
+    svg.innerHTML = svgInner;
+  }
+  renderChart();
+
+  // ==========================================================================
+  // vCard generator
+  // ==========================================================================
+  function buildVCard() {
+    return [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `FN:${MARK.fullName}`,
+      `N:${MARK.lastName};${MARK.firstName};;;`,
+      `ORG:${MARK.org}`,
+      `TITLE:${MARK.title}`,
+      `EMAIL;TYPE=INTERNET,WORK:${MARK.email}`,
+      `TEL;TYPE=CELL,VOICE:${MARK.phone}`,
+      `URL:${MARK.website}`,
+      'NOTE:Met at ADB Annual Meetings 2026, Samarkand.',
+      'END:VCARD'
+    ].join('\r\n');
+  }
+  function downloadVCardLink() {
+    const blob = new Blob([buildVCard()], { type: 'text/vcard;charset=utf-8' });
+    document.getElementById('action-vcard').href = URL.createObjectURL(blob);
+  }
+
+  // ==========================================================================
+  // WhatsApp deep link
+  // ==========================================================================
+  function buildWhatsApp(name, company) {
+    const msg = `Hi Mark, this is ${name} from ${company}. We connected via the NUMAT page at ADB Samarkand. Looking forward to your follow up.`;
+    return `https://wa.me/${MARK.whatsappNumber}?text=${encodeURIComponent(msg)}`;
+  }
+
+  // ==========================================================================
+  // Form submission (DEMO — production fetch is commented in)
+  // ==========================================================================
+  document.getElementById('lead-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+      name: form.name.value.trim(),
+      company: form.company.value.trim(),
+      email: form.email.value.trim(),
+      phone: form.phone.value.trim()
+    };
+    if (!data.name || !data.email || !data.company || !data.phone) {
+      alert('Please fill in all four fields so Mark can follow up.');
+      return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = 'Sending&hellip;';
+
+    try {
+      const res = await fetch('/api/leads/adb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'submit failed');
+      }
+    } catch (err) {
+      console.error('Lead submit error:', err);
+      btn.disabled = false;
+      btn.innerHTML = 'Try again<span class="submit-arrow">&rsaquo;</span>';
+      alert('Something went wrong. Please try again or email mark@numat.ph directly.');
+      return;
+    }
+
+    // Personalise the action buttons from form data
+    document.getElementById('action-whatsapp').href = buildWhatsApp(data.name, data.company);
+    downloadVCardLink();
+
+    // Swap form for success
+    form.style.display = 'none';
+    document.querySelector('.form-meta')?.remove();
+    document.getElementById('success').classList.add('visible');
+    document.getElementById('success').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+</script>
+</body>
+</html>
