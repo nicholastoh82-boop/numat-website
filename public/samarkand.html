@@ -647,6 +647,212 @@
     color: rgba(245, 241, 232, 0.4);
   }
 
+  /* === Quick-capture slide-up prompt === */
+  .quick-capture-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 36, 25, 0);
+    backdrop-filter: blur(0px);
+    z-index: 9998;
+    pointer-events: none;
+    transition: background 0.4s ease, backdrop-filter 0.4s ease;
+  }
+  .quick-capture-overlay.visible {
+    background: rgba(15, 36, 25, 0.55);
+    backdrop-filter: blur(4px);
+    pointer-events: auto;
+  }
+
+  .quick-capture {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--ink);
+    color: #F5F1E8;
+    border-top: 2px solid var(--green);
+    padding: 28px 24px calc(28px + env(safe-area-inset-bottom, 0px)) 24px;
+    z-index: 9999;
+    transform: translateY(110%);
+    transition: transform 0.45s cubic-bezier(0.2, 0.85, 0.3, 1);
+    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.45);
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .quick-capture.visible {
+    transform: translateY(0);
+  }
+  @media (min-width: 640px) {
+    .quick-capture {
+      left: 50%;
+      right: auto;
+      bottom: 24px;
+      transform: translate(-50%, calc(100% + 40px));
+      max-width: 480px;
+      width: calc(100% - 48px);
+      border-radius: 8px;
+      border: 1px solid rgba(139, 195, 74, 0.4);
+      border-top: 2px solid var(--green);
+      padding: 32px;
+    }
+    .quick-capture.visible {
+      transform: translate(-50%, 0);
+    }
+  }
+
+  .quick-capture-eyebrow {
+    font-size: 10px;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .quick-capture h3 {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 4.5vw, 28px);
+    line-height: 1.15;
+    color: #F5F1E8;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+  }
+  .quick-capture h3 em {
+    color: var(--green);
+    font-style: italic;
+    font-weight: 300;
+  }
+  .quick-capture .qc-sub {
+    font-size: 14px;
+    color: rgba(245, 241, 232, 0.7);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+  .quick-capture .qc-field {
+    margin-bottom: 12px;
+  }
+  .quick-capture .qc-field input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 14px 16px;
+    color: #F5F1E8;
+    font-family: var(--font-body);
+    font-size: 16px;
+    outline: none;
+    -webkit-appearance: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .quick-capture .qc-field input::placeholder {
+    color: rgba(245, 241, 232, 0.35);
+  }
+  .quick-capture .qc-field input:focus {
+    border-color: var(--green);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .quick-capture .qc-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .quick-capture .qc-submit {
+    flex: 1;
+    min-width: 160px;
+    background: var(--green);
+    color: var(--ink);
+    border: none;
+    padding: 14px 20px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .quick-capture .qc-submit:hover {
+    background: #A4D55F;
+  }
+  .quick-capture .qc-submit:active {
+    transform: translateY(1px);
+  }
+  .quick-capture .qc-submit:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+  .quick-capture .qc-dismiss {
+    background: none;
+    border: none;
+    color: rgba(245, 241, 232, 0.55);
+    font-family: var(--font-body);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 8px 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .quick-capture .qc-dismiss:hover {
+    color: rgba(245, 241, 232, 0.85);
+  }
+  .quick-capture .qc-error {
+    color: #FFB088;
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+  .quick-capture .qc-success {
+    text-align: center;
+    padding: 12px 0;
+  }
+  .quick-capture .qc-success-check {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(139, 195, 74, 0.18);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-size: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+  }
+  .quick-capture .qc-success h4 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: #F5F1E8;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+  .quick-capture .qc-success p {
+    color: rgba(245, 241, 232, 0.65);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .quick-capture .qc-success-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .quick-capture .qc-success-actions a {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #F5F1E8;
+    text-decoration: none;
+    font-size: 13px;
+    padding: 10px 16px;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+  .quick-capture .qc-success-actions a:hover {
+    border-color: var(--green);
+    background: rgba(139, 195, 74, 0.1);
+  }
+
   /* === Products === */
   .product-grid {
     display: grid;
@@ -1074,6 +1280,38 @@
       </div>
     </div>
   </footer>
+
+  <!-- =============== QUICK CAPTURE PROMPT (talk audience) =============== -->
+  <div class="quick-capture-overlay" id="qc-overlay" aria-hidden="true"></div>
+  <aside class="quick-capture" id="qc-prompt" role="dialog" aria-labelledby="qc-headline" aria-hidden="true">
+    <div class="quick-capture-eyebrow">Heard Mark speak today?</div>
+    <h3 id="qc-headline">Get the deck and a <em>personal note from Mark</em>.</h3>
+    <p class="qc-sub">Drop your name and email. Mark sends the NUMAT pitch deck and a follow up within 24 hours.</p>
+
+    <form id="qc-form" novalidate>
+      <div class="qc-field">
+        <input type="text" id="qc-name" name="name" autocomplete="given-name" required placeholder="First name" />
+      </div>
+      <div class="qc-field">
+        <input type="email" id="qc-email" name="email" autocomplete="email" required placeholder="you@company.com" />
+      </div>
+      <div class="qc-actions">
+        <button type="submit" class="qc-submit" id="qc-submit">Send me the deck &rsaquo;</button>
+        <button type="button" class="qc-dismiss" id="qc-dismiss">I&rsquo;ll read first</button>
+      </div>
+      <div class="qc-error" id="qc-error" aria-live="polite"></div>
+    </form>
+
+    <div class="qc-success" id="qc-success" hidden>
+      <div class="qc-success-check">&#10003;</div>
+      <h4>Mark will be in touch shortly.</h4>
+      <p>The deck is on its way to your inbox. While you&rsquo;re here, take a closer look at NUMAT below.</p>
+      <div class="qc-success-actions">
+        <a href="#" id="qc-whatsapp" target="_blank" rel="noopener">Message on WhatsApp</a>
+        <a href="#" id="qc-cal" target="_blank" rel="noopener">Book a 15 min call</a>
+      </div>
+    </div>
+  </aside>
 </main>
 
 <script>
@@ -1197,6 +1435,118 @@
     const msg = `Hi Mark, this is ${name} from ${company}. We connected via the NUMAT page at ADB Samarkand. Looking forward to your follow up.`;
     return `https://wa.me/${MARK.whatsappNumber}?text=${encodeURIComponent(msg)}`;
   }
+
+  // ==========================================================================
+  // Quick capture prompt (post-talk audience) — slide up after 800ms
+  // ==========================================================================
+  (function initQuickCapture() {
+    const STORAGE_KEY = 'numat_qc_state';
+    const STORAGE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+
+    function getState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.t) return null;
+        if (Date.now() - parsed.t > STORAGE_TTL_MS) {
+          localStorage.removeItem(STORAGE_KEY);
+          return null;
+        }
+        return parsed;
+      } catch (_) { return null; }
+    }
+    function setState(kind) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ kind, t: Date.now() })); } catch (_) {}
+    }
+
+    const prior = getState();
+    if (prior) return; // already submitted or dismissed within 24h, no prompt
+
+    const overlay = document.getElementById('qc-overlay');
+    const prompt = document.getElementById('qc-prompt');
+    const form = document.getElementById('qc-form');
+    const errorBox = document.getElementById('qc-error');
+    const submitBtn = document.getElementById('qc-submit');
+    const dismissBtn = document.getElementById('qc-dismiss');
+    const successBox = document.getElementById('qc-success');
+
+    function show() {
+      overlay.classList.add('visible');
+      prompt.classList.add('visible');
+      overlay.setAttribute('aria-hidden', 'false');
+      prompt.setAttribute('aria-hidden', 'false');
+    }
+    function hide() {
+      // Move focus out of the panel before marking it aria-hidden.
+      // Browsers warn if an aria-hidden ancestor contains the focused element.
+      if (prompt.contains(document.activeElement) && document.activeElement.blur) {
+        document.activeElement.blur();
+      }
+      overlay.classList.remove('visible');
+      prompt.classList.remove('visible');
+      overlay.setAttribute('aria-hidden', 'true');
+      prompt.setAttribute('aria-hidden', 'true');
+    }
+    function dismiss() {
+      hide();
+      setState('dismissed');
+    }
+
+    setTimeout(show, 800);
+
+    overlay.addEventListener('click', dismiss);
+    dismissBtn.addEventListener('click', dismiss);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox.textContent = '';
+      const name = form.name.value.trim();
+      const email = form.email.value.trim().toLowerCase();
+      if (!name || !email) {
+        errorBox.textContent = 'Please add your first name and email.';
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errorBox.textContent = 'That email looks off. Mind double checking?';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+
+      try {
+        const res = await fetch('/api/leads/adb', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, source: 'adb_2026_samarkand_talk' }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || 'submit failed');
+        }
+      } catch (err) {
+        console.error('Quick capture submit failed:', err);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send me the deck ›';
+        errorBox.textContent = 'Something went wrong. Please try the full form below or email mark@numat.ph.';
+        return;
+      }
+
+      // Personalise the success state action buttons using the typed values
+      const waMsg = `Hi Mark, this is ${name}. I just heard you speak at ADB Samarkand and signed up for the deck. Looking forward to your follow up.`;
+      document.getElementById('qc-whatsapp').href =
+        `https://wa.me/${MARK.whatsappNumber}?text=${encodeURIComponent(waMsg)}`;
+      document.getElementById('qc-cal').href = 'https://cal.com/numatnicholas/discovery';
+
+      form.style.display = 'none';
+      successBox.hidden = false;
+      setState('submitted');
+
+      // Auto close the prompt after 6s so they can keep reading the page
+      setTimeout(hide, 6000);
+    });
+  })();
 
   // ==========================================================================
   // Form submission (DEMO — production fetch is commented in)

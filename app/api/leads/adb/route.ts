@@ -25,7 +25,16 @@ import path from 'path';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const REQUIRED = ['name', 'email', 'phone', 'company'] as const;
+// Email is the only universally required field. Name comes from quick form OR full form.
+// Phone and company are only required on the full form (validated client-side).
+const REQUIRED = ['name', 'email'] as const;
+
+// Whitelist of accepted source values. Anything else falls back to the default.
+const ALLOWED_SOURCES = new Set([
+  'adb_2026_samarkand',
+  'adb_2026_samarkand_talk',
+]);
+const DEFAULT_SOURCE = 'adb_2026_samarkand';
 
 function isEmail(s: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
@@ -146,8 +155,13 @@ export async function POST(req: Request) {
 
   const name = String(payload.name).trim().slice(0, 200);
   const email = String(payload.email).trim().toLowerCase().slice(0, 200);
-  const phone = String(payload.phone).trim().slice(0, 60);
-  const company = String(payload.company).trim().slice(0, 200);
+  // Optional fields — quick form omits these
+  const phone = payload.phone ? String(payload.phone).trim().slice(0, 60) : '';
+  const company = payload.company ? String(payload.company).trim().slice(0, 200) : '';
+
+  // Source tagging — distinguish quick form (post-talk) from full form
+  const requestedSource = typeof payload.source === 'string' ? payload.source : '';
+  const source = ALLOWED_SOURCES.has(requestedSource) ? requestedSource : DEFAULT_SOURCE;
 
   if (!isEmail(email)) {
     return NextResponse.json({ ok: false, message: 'Invalid email' }, { status: 400 });
@@ -164,16 +178,17 @@ export async function POST(req: Request) {
 
   // NOTE: Field names below match a typical master_leads schema.
   // If the schema check in Section E shows different names, edit this leadRow accordingly.
+  const captureKind = source === 'adb_2026_samarkand_talk' ? 'quick form (post-talk)' : 'full form';
   const leadRow = {
     full_name: name,
     email,
-    phone,
-    company,
-    source: 'adb_2026_samarkand',
+    phone: phone || null,
+    company: company || null,
+    source,
     country: null as string | null,
     segment: null as string | null,
     rep_assigned: 'mark@numat.ph',
-    notes: `Captured via /samarkand landing page. UA: ${userAgent.slice(0, 200)}. IP: ${ip}`,
+    notes: `Captured via /samarkand ${captureKind}. UA: ${userAgent.slice(0, 200)}. IP: ${ip}`,
     created_at: new Date().toISOString(),
   };
 
@@ -241,16 +256,19 @@ export async function POST(req: Request) {
     body: JSON.stringify({
       from: 'NUMAT Leads <noreply@numat.ph>',
       to: process.env.MARK_EMAIL || 'mark@numat.ph',
-      subject: `[ADB lead] ${name} from ${company}`,
+      subject: source === 'adb_2026_samarkand_talk'
+        ? `[ADB talk] ${name}${company ? ' from ' + company : ''}`
+        : `[ADB lead] ${name}${company ? ' from ' + company : ''}`,
       html: `
 <p style="font-family:system-ui,sans-serif;font-size:14px;color:#333;">
   New lead captured at ADB Samarkand:
 </p>
 <table style="font-family:system-ui,sans-serif;font-size:14px;">
   <tr><td style="padding:4px 12px 4px 0;color:#666;">Name</td><td><strong>${escapeHtml(name)}</strong></td></tr>
-  <tr><td style="padding:4px 12px 4px 0;color:#666;">Company</td><td>${escapeHtml(company)}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#666;">Company</td><td>${company ? escapeHtml(company) : '<em style="color:#999;">not provided</em>'}</td></tr>
   <tr><td style="padding:4px 12px 4px 0;color:#666;">Email</td><td><a href="mailto:${email}">${escapeHtml(email)}</a></td></tr>
-  <tr><td style="padding:4px 12px 4px 0;color:#666;">Phone</td><td>${escapeHtml(phone)}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#666;">Phone</td><td>${phone ? escapeHtml(phone) : '<em style="color:#999;">not provided</em>'}</td></tr>
+  <tr><td style="padding:4px 12px 4px 0;color:#666;">Source</td><td>${escapeHtml(source)}</td></tr>
   <tr><td style="padding:4px 12px 4px 0;color:#666;">Captured</td><td>${new Date().toISOString()}</td></tr>
 </table>
 <p style="font-family:system-ui,sans-serif;font-size:13px;color:#888;margin-top:16px;">
