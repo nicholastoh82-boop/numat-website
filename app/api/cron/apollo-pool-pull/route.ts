@@ -9,23 +9,31 @@
 // New rows are stamped with:
 //   source            = 'apollo_pool'
 //   intended_business = 'pool'
-//   enrichment_tier   = 'basic'  (Apollo gives us verified email)
+//   enrichment_tier   = 'basic'  (Apollo bulk_match gives us the email)
 //   source_payload    = full Apollo person object (for audit / re-normalize)
 //   last_enriched_at  = now()
 //
 // Flow per run:
 //   1. Authorize (Bearer CRON_SECRET, constant-time compare)
-//   2. Fetch existing dedup_keys from master_leads (one query, Set for O(1))
+//   2. Fetch existing apollo_person_ids and dedup_keys from master_leads
+//      (two queries, two Sets for O(1) lookup)
 //   3. For each pool segment in parallel:
-//      a. POST Apollo /api/v1/mixed_people/api_search
-//      b. Filter to verified-email prospects
-//      c. Compute dedup_key, skip if already in master_leads
-//      d. Bulk insert remaining rows with resolution=ignore-duplicates
+//      a. POST /api/v1/mixed_people/api_search (returns prospects WITHOUT
+//         emails; the api_search endpoint does not include email fields)
+//      b. Skip prospects whose apollo_person_id is already in master_leads
+//         (cheap pre-filter, saves bulk_match credits on duplicates)
+//      c. Enrich the rest via /api/v1/people/bulk_match in batches of 10
+//         (this is the credit-cost step; ~1 credit per person enriched)
+//      d. Filter to prospects that came back with a usable email
+//      e. Compute dedup_key, skip any that already exist (catches the case
+//         where the same email exists under a different apollo_person_id,
+//         e.g. someone moved companies)
+//      f. Bulk insert remaining rows with resolution=ignore-duplicates
 //   4. Return per-segment + totals JSON summary
 //
-// Schedule: hook this up via Supabase pg_cron or vercel.json, e.g. 6am MYT
-// daily so it runs after sleep but before the existing apollo-leads-refresh
-// at 7am. Conservative per_page=25 to keep Apollo credit burn predictable.
+// Schedule: hook this up via vercel.json or Supabase pg_cron, e.g. 6am MYT
+// daily so it runs before the existing apollo-leads-refresh at 7am.
+// Conservative per_page=25 to keep Apollo credit burn predictable.
 
 import {
   authorized,
@@ -95,6 +103,7 @@ type ApolloPerson = {
   name?: string;
   email?: string;
   email_status?: string;
+  has_email?: boolean;
   title?: string;
   country?: string;
   city?: string;
@@ -112,8 +121,17 @@ type ApolloSearchResponse = {
   pagination?: { page: number; per_page: number; total_entries: number };
 };
 
+type ApolloMatch = {
+  id?: string;
+  email?: string;
+  linkedin_url?: string;
+  country?: string;
+};
+
+type ApolloBulkMatchResponse = { matches?: ApolloMatch[] };
+
 // ============================================================================
-// Apollo search
+// Apollo API
 // ============================================================================
 
 async function apolloSearch(seg: Segment, perPage = 25): Promise<ApolloPerson[]> {
@@ -142,9 +160,41 @@ async function apolloSearch(seg: Segment, perPage = 25): Promise<ApolloPerson[]>
   return data.people ?? [];
 }
 
+async function apolloBulkMatch(
+  details: Array<{
+    id: string;
+    first_name: string;
+    last_name: string;
+    organization_name: string;
+  }>,
+): Promise<ApolloMatch[]> {
+  const apiKey = required("APOLLO_API_KEY");
+  const res = await fetch("https://api.apollo.io/api/v1/people/bulk_match", {
+    method: "POST",
+    headers: {
+      "X-Api-Key": apiKey,
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
+    },
+    body: JSON.stringify({ reveal_personal_emails: false, details }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Apollo bulk_match failed: ${res.status} ${text}`);
+  }
+  const data = (await res.json()) as ApolloBulkMatchResponse;
+  return data.matches ?? [];
+}
+
 // ============================================================================
-// Dedup helpers
+// Helpers
 // ============================================================================
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
 
 function computeDedupKey(
   email?: string,
@@ -162,12 +212,20 @@ function computeDedupKey(
   return null;
 }
 
+async function fetchExistingApolloIds(): Promise<Set<string>> {
+  const rows = await supabaseGetRaw<Array<{ apollo_person_id: string | null }>>(
+    "master_leads?select=apollo_person_id&apollo_person_id=not.is.null&limit=50000",
+  );
+  const set = new Set<string>();
+  for (const r of rows) {
+    if (r.apollo_person_id) set.add(r.apollo_person_id);
+  }
+  return set;
+}
+
 async function fetchExistingDedupKeys(): Promise<Set<string>> {
-  // Pull only dedup_keys from master_leads. ~8.8k rows is fine for a single
-  // GET; if the pool grows past ~50k, switch to a hashed Bloom filter or
-  // per-insert lookup.
   const rows = await supabaseGetRaw<Array<{ dedup_key: string | null }>>(
-    "master_leads?select=dedup_key&dedup_key=not.is.null",
+    "master_leads?select=dedup_key&dedup_key=not.is.null&limit=50000",
   );
   const set = new Set<string>();
   for (const r of rows) {
@@ -184,7 +242,7 @@ type LeadInsert = {
   first_name?: string;
   last_name?: string;
   full_name?: string;
-  email?: string;
+  email: string;
   title?: string;
   company?: string;
   company_domain?: string;
@@ -201,11 +259,9 @@ type LeadInsert = {
 };
 
 function buildLeadInsert(p: ApolloPerson, segName: string): LeadInsert | null {
-  // Only keep verified email prospects. Apollo email_status values:
-  //   verified  = good
-  //   guessed   = pattern matched, not confirmed (skip for pool quality)
-  //   unavailable | locked | null = no email (skip)
-  if (!p.email || p.email_status !== "verified") return null;
+  // p.email is the post-bulk_match email here. Reject anything that doesn't
+  // look like an email address.
+  if (!p.email || !p.email.includes("@")) return null;
 
   const fullName =
     p.name ?? [p.first_name, p.last_name].filter(Boolean).join(" ") ?? undefined;
@@ -238,33 +294,84 @@ function buildLeadInsert(p: ApolloPerson, segName: string): LeadInsert | null {
 type SegmentResult = {
   segment: string;
   fetched: number;
-  verified_email: number;
+  new_prospects: number;       // after apollo_person_id dedup, before enrichment
+  enriched_with_email: number; // how many came back from bulk_match with email
+  skipped_dedup_key: number;   // already exist by email or company|name
   new_inserts: number;
-  skipped_duplicates: number;
   error?: string;
 };
 
 async function processSegment(
   seg: Segment,
-  existingKeys: Set<string>,
+  existingApolloIds: Set<string>,
+  existingDedupKeys: Set<string>,
 ): Promise<SegmentResult> {
   const result: SegmentResult = {
     segment: seg.segment,
     fetched: 0,
-    verified_email: 0,
+    new_prospects: 0,
+    enriched_with_email: 0,
+    skipped_dedup_key: 0,
     new_inserts: 0,
-    skipped_duplicates: 0,
   };
 
   try {
+    // 1. Search Apollo
     const people = await apolloSearch(seg, 25);
     result.fetched = people.length;
 
+    // 2. Skip prospects whose apollo_person_id we've already seen.
+    //    Saves bulk_match credits on duplicates.
+    const newPeople = people.filter((p) => !existingApolloIds.has(p.id));
+    result.new_prospects = newPeople.length;
+    if (newPeople.length === 0) {
+      return result;
+    }
+
+    // Add to existingApolloIds so concurrent segments don't re-enrich the
+    // same person. Apollo can return the same person under multiple
+    // segment searches when filters overlap.
+    for (const p of newPeople) existingApolloIds.add(p.id);
+
+    // 3. Enrich emails via bulk_match in batches of 10. Failures inside a
+    //    batch keep the originals (without email) so we lose nothing
+    //    silently; they just won't pass the email filter at insert time.
+    const enriched: ApolloPerson[] = [];
+    for (const batch of chunk(newPeople, 10)) {
+      const details = batch.map((p) => ({
+        id: p.id,
+        first_name: p.first_name ?? "",
+        last_name: p.last_name ?? "",
+        organization_name: p.organization?.name ?? "",
+      }));
+      try {
+        const matches = await apolloBulkMatch(details);
+        const matchMap = new Map<string, ApolloMatch>();
+        for (const m of matches) {
+          if (m.id) matchMap.set(m.id, m);
+        }
+        for (const p of batch) {
+          const m = matchMap.get(p.id);
+          enriched.push({
+            ...p,
+            email: m?.email ?? p.email,
+            linkedin_url: m?.linkedin_url ?? p.linkedin_url,
+            country: m?.country ?? p.country,
+          });
+        }
+      } catch (err) {
+        console.error(`bulk_match batch failed for ${seg.segment}:`, err);
+        enriched.push(...batch);
+      }
+    }
+
+    // 4. Build inserts. Filter to those with usable email + not already in
+    //    master_leads by dedup_key (catches cross-source duplicates).
     const inserts: LeadInsert[] = [];
-    for (const p of people) {
+    for (const p of enriched) {
       const row = buildLeadInsert(p, seg.segment);
       if (!row) continue;
-      result.verified_email += 1;
+      result.enriched_with_email += 1;
 
       const key = computeDedupKey(
         row.email,
@@ -272,19 +379,16 @@ async function processSegment(
         row.full_name,
         row.linkedin_url,
       );
-      if (key && existingKeys.has(key)) {
-        result.skipped_duplicates += 1;
+      if (key && existingDedupKeys.has(key)) {
+        result.skipped_dedup_key += 1;
         continue;
       }
-      // Prevent duplicates within this single batch as well.
-      if (key) existingKeys.add(key);
+      if (key) existingDedupKeys.add(key);
       inserts.push(row);
     }
 
+    // 5. Insert
     if (inserts.length > 0) {
-      // resolution=ignore-duplicates protects against any DB-level unique
-      // constraints we add later (e.g. on apollo_person_id) without
-      // changing this code.
       await supabasePost(
         "master_leads",
         inserts,
@@ -303,53 +407,78 @@ async function processSegment(
 // Route handler
 // ============================================================================
 
-export async function GET(req: Request) {
+async function handle(req: Request): Promise<Response> {
   if (!authorized(req)) {
     return new Response("Unauthorized", { status: 401 });
   }
 
   const startedAt = new Date().toISOString();
+  const startMs = Date.now();
 
-  let existingKeys: Set<string>;
+  let existingApolloIds: Set<string>;
+  let existingDedupKeys: Set<string>;
   try {
-    existingKeys = await fetchExistingDedupKeys();
+    [existingApolloIds, existingDedupKeys] = await Promise.all([
+      fetchExistingApolloIds(),
+      fetchExistingDedupKeys(),
+    ]);
   } catch (err) {
     return Response.json(
       {
         ok: false,
         started_at: startedAt,
-        error: `Failed to fetch existing dedup keys: ${(err as Error).message}`,
+        error: `Failed to fetch existing dedup state: ${(err as Error).message}`,
       },
       { status: 500 },
     );
   }
 
-  const results = await Promise.all(
-    POOL_SEGMENTS.map((seg) => processSegment(seg, existingKeys)),
-  );
+  // Run segments sequentially rather than in parallel so bulk_match calls
+  // don't double-enrich a person who appears in both segments. Sequential
+  // also avoids hitting Apollo rate limits on adjacent calls.
+  const results: SegmentResult[] = [];
+  for (const seg of POOL_SEGMENTS) {
+    results.push(await processSegment(seg, existingApolloIds, existingDedupKeys));
+  }
 
   const totals = results.reduce(
     (acc, r) => ({
       fetched: acc.fetched + r.fetched,
-      verified_email: acc.verified_email + r.verified_email,
+      new_prospects: acc.new_prospects + r.new_prospects,
+      enriched_with_email: acc.enriched_with_email + r.enriched_with_email,
+      skipped_dedup_key: acc.skipped_dedup_key + r.skipped_dedup_key,
       new_inserts: acc.new_inserts + r.new_inserts,
-      skipped_duplicates: acc.skipped_duplicates + r.skipped_duplicates,
       errors: acc.errors + (r.error ? 1 : 0),
     }),
     {
       fetched: 0,
-      verified_email: 0,
+      new_prospects: 0,
+      enriched_with_email: 0,
+      skipped_dedup_key: 0,
       new_inserts: 0,
-      skipped_duplicates: 0,
       errors: 0,
     },
   );
 
-  return Response.json({
-    ok: totals.errors === 0,
-    started_at: startedAt,
-    finished_at: new Date().toISOString(),
-    totals,
-    by_segment: results,
-  });
+  return Response.json(
+    {
+      ok: totals.errors === 0,
+      started_at: startedAt,
+      finished_at: new Date().toISOString(),
+      ms: Date.now() - startMs,
+      existing_apollo_ids: existingApolloIds.size,
+      existing_dedup_keys: existingDedupKeys.size,
+      totals,
+      by_segment: results,
+    },
+    { status: totals.errors > 0 ? 207 : 200 },
+  );
+}
+
+export async function GET(req: Request) {
+  return handle(req);
+}
+
+export async function POST(req: Request) {
+  return handle(req);
 }
