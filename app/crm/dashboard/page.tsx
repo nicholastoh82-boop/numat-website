@@ -218,6 +218,7 @@ interface QuoteLineItem {
   exFactoryPhp: number | null
   isCustom?: boolean
   productSpecs?: string
+  moqOverride?: boolean
 }
 
 const CUSTOM_VARIANT_ID = '__custom__'
@@ -934,7 +935,7 @@ export default function CRMDashboard() {
       return
     }
     // MOQ check skipped for custom
-    const hasMoqViolation = quoteLineItems.some(l => !l.isCustom && l.qty < l.moq)
+    const hasMoqViolation = quoteLineItems.some(l => !l.isCustom && !l.moqOverride && l.qty < l.moq)
     if (hasMoqViolation) {
       showToast('One or more items are below minimum order quantity.', 'error')
       return
@@ -962,7 +963,7 @@ export default function CRMDashboard() {
       unit: l.unit,
       quantity: l.qty,
       unit_price: l.unitPriceUsd,
-      moq_override: l.isCustom,
+      moq_override: l.isCustom || l.moqOverride || false,
     }))
 
     const docLabel = isInvoice ? 'Invoice' : 'Proforma invoice'
@@ -1979,7 +1980,7 @@ export default function CRMDashboard() {
                   {quoteLineItems.map((line, idx) => {
                     const floor = line.isCustom ? null : floorPriceUsd(line.exFactoryPhp)
                     const isBelowFloor = floor !== null && line.unitPriceUsd < floor
-                    const isBelowMoq = !line.isCustom && line.qty < line.moq
+                    const isBelowMoq = !line.isCustom && !line.moqOverride && line.qty < line.moq
                     const lineTotal = line.qty * line.unitPriceUsd
                     return (
                       <div key={line.lineId} className={`rounded-xl border p-3 space-y-2 ${isBelowFloor ? 'border-red-300 bg-red-50' : line.isCustom ? 'border-purple-200 bg-purple-50/40' : 'border-gray-200 bg-gray-50'}`}>
@@ -2039,6 +2040,14 @@ export default function CRMDashboard() {
                               className={`w-full border rounded-lg px-2 py-1 text-sm mt-0.5 focus:outline-none focus:ring-2 focus:ring-green-500 ${isBelowMoq ? 'border-amber-400' : 'border-gray-200'}`}
                             />
                             {isBelowMoq && <p className="text-xs text-amber-600 mt-0.5">MOQ: {line.moq}</p>}
+                            {!line.isCustom && (
+                              <label className="flex items-center gap-1 mt-1 text-xs text-gray-500 cursor-pointer select-none">
+                                <input type="checkbox" checked={line.moqOverride || false}
+                                  onChange={e => setQuoteLineItems(prev => prev.map(l => l.lineId === line.lineId ? { ...l, moqOverride: e.target.checked } : l))}
+                                  className="w-3 h-3 rounded border-gray-300 text-amber-600 focus:ring-amber-500" />
+                                <span>Override MOQ</span>
+                              </label>
+                            )}
                           </div>
                           <div>
                             <label className="text-xs text-gray-400">Unit Price ({quoteCurrency})</label>
@@ -2059,6 +2068,14 @@ export default function CRMDashboard() {
                             )}
                             {line.isCustom && (
                               <p className="text-xs mt-0.5 text-purple-600">No floor (custom)</p>
+                            )}
+                            {!line.isCustom && quoteCurrency === 'USD' && floor !== null && (
+                              <label className="flex items-center gap-1 mt-1 text-xs text-gray-500 cursor-pointer select-none">
+                                <input type="checkbox" checked={line.priceOverride || false}
+                                  onChange={e => setQuoteLineItems(prev => prev.map(l => l.lineId === line.lineId ? { ...l, priceOverride: e.target.checked } : l))}
+                                  className="w-3 h-3 rounded border-gray-300 text-amber-600 focus:ring-amber-500" />
+                                <span>Override price floor</span>
+                              </label>
                             )}
                           </div>
                           <div>
@@ -2147,7 +2164,7 @@ export default function CRMDashboard() {
               <button onClick={submitQuote}
                 disabled={quoteLineItems.length === 0 || quoteSubmitting ||
                   (quoteCurrency === 'USD' && quoteLineItems.some(l => { if (l.isCustom) return false; const f = floorPriceUsd(l.exFactoryPhp); return f !== null && l.unitPriceUsd < f; })) ||
-                  quoteLineItems.some(l => !l.isCustom && l.qty < l.moq) ||
+                  quoteLineItems.some(l => !l.isCustom && !l.moqOverride && l.qty < l.moq) ||
                   (isInvoice && !invoiceDueDate)}
                 className={`flex-1 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${mode === 'revise' ? 'bg-purple-700 hover:bg-purple-800' : isInvoice ? 'bg-blue-700 hover:bg-blue-800' : 'bg-green-700 hover:bg-green-800'}`}>
                 {submitLabel}
