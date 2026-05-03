@@ -422,24 +422,28 @@
   .story-prose em { color: var(--green-deep); font-style: italic; }
 
   .founder-card {
-    border: 1px solid var(--hairline);
-    background: var(--surface);
-    padding: 0;
-    border-radius: 4px;
-    overflow: hidden;
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
   }
   .founder-photo {
-    aspect-ratio: 1/1;
+    flex: 0 0 140px;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
     background-color: var(--bg-paper);
     background-size: cover;
     background-position: center top;
     background-repeat: no-repeat;
-    border-bottom: 1px solid var(--hairline);
   }
-  .founder-meta { padding: 24px; }
+  .founder-meta {
+    flex: 1;
+    padding-top: 4px;
+    min-width: 0;
+  }
   .founder-name {
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: 24px;
     color: var(--ink);
     font-weight: 500;
     line-height: 1.1;
@@ -450,12 +454,28 @@
     color: var(--green-deep);
     font-style: italic;
     font-family: var(--font-display);
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
   .founder-bio {
     font-size: 13px;
     color: var(--text-muted);
     line-height: 1.6;
+  }
+  @media (max-width: 600px) {
+    .founder-card {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 16px;
+    }
+    .founder-photo {
+      flex: 0 0 160px;
+      width: 160px;
+      height: 160px;
+    }
+    .founder-meta {
+      padding-top: 0;
+    }
   }
 
   /* === Form (dark green CTA section) === */
