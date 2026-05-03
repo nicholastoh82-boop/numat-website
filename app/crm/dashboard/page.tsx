@@ -248,6 +248,15 @@ function mostRecent(...isos: (string | null | undefined)[]): string | null {
 
 const PHP_TO_USD = 56 // ₱/USD rate
 
+// Currency options for invoice/proforma issuance. The 'amount' on the quote
+// is treated as the value entered in the selected currency. Floor checks and
+// PHP equivalent are only meaningful when currency is USD.
+const CURRENCY_OPTIONS = ['USD', 'PHP', 'MYR', 'SGD', 'EUR', 'GBP', 'AUD', 'JPY'] as const
+type QuoteCurrency = typeof CURRENCY_OPTIONS[number]
+const CURRENCY_SYMBOLS: Record<QuoteCurrency, string> = {
+  USD: '$', PHP: '₱', MYR: 'RM', SGD: 'S$', EUR: '€', GBP: '£', AUD: 'A$', JPY: '¥',
+}
+
 export default function CRMDashboard() {
   const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -281,6 +290,8 @@ export default function CRMDashboard() {
   const [invoiceDueDate, setInvoiceDueDate] = useState('')
   const [invoicePoRef, setInvoicePoRef] = useState('')
   const [invoiceVatEnabled, setInvoiceVatEnabled] = useState(false)
+  // Currency selected for the quote/invoice being issued (defaults to USD).
+  const [quoteCurrency, setQuoteCurrency] = useState<QuoteCurrency>('USD')
   // Add Lead modal
   const [addLeadOpen, setAddLeadOpen] = useState(false)
   const [addLeadSubmitting, setAddLeadSubmitting] = useState(false)
@@ -453,6 +464,7 @@ export default function CRMDashboard() {
     setInvoiceDueDate(due.toISOString().slice(0, 10))
     setInvoicePoRef('')
     setInvoiceVatEnabled(false)
+    setQuoteCurrency('USD')
     // Pre-populate with one blank line item to prompt the rep
     setQuoteLineItems([{
       lineId: Math.random().toString(36).slice(2),
@@ -540,6 +552,10 @@ export default function CRMDashboard() {
     setInvoiceDueDate(quote.payment_due_date ? quote.payment_due_date.slice(0, 10) : '')
     setInvoicePoRef(quote.po_reference || '')
     setInvoiceVatEnabled(Boolean(quote.vat_enabled))
+    const existingCurrency = (quote.currency || 'USD').toUpperCase() as QuoteCurrency
+    setQuoteCurrency(
+      (CURRENCY_OPTIONS as readonly string[]).includes(existingCurrency) ? existingCurrency : 'USD'
+    )
     const hydrated: QuoteLineItem[] = (items || []).map(hydrateLineItem)
     setQuoteLineItems(
       hydrated.length > 0
@@ -906,8 +922,9 @@ export default function CRMDashboard() {
     const { lead, docType, mode, sourceQuoteId, sourceQuoteNumber } = quoteModal
     const isInvoice = docType === 'invoice'
 
-    // Skip floor check for custom items
-    const hasFloorViolation = quoteLineItems.some(l => {
+    // Skip floor check for custom items, and skip entirely when currency is not USD
+    // (the floor table is USD-denominated; non-USD prices cannot be compared meaningfully).
+    const hasFloorViolation = quoteCurrency === 'USD' && quoteLineItems.some(l => {
       if (l.isCustom) return false
       const floor = floorPriceUsd(l.exFactoryPhp)
       return floor !== null && l.unitPriceUsd < floor
@@ -1022,7 +1039,7 @@ export default function CRMDashboard() {
             notes: quoteNotes,
             items: apiItems,
             lead_id: lead.id,
-            currency: 'USD',
+            currency: quoteCurrency,
             generated_by: user.email,
             revision_of: ancestorId,
             revision_number: nextRev,
@@ -1056,7 +1073,7 @@ export default function CRMDashboard() {
           doc_type: docType,
           total: totalUsd,
           subtotal: subtotalUsdCalc,
-          currency: 'USD',
+          currency: quoteCurrency,
           created_at: new Date().toISOString(),
           sent_at: null,
           email: lead.email,
@@ -1101,7 +1118,7 @@ export default function CRMDashboard() {
           notes: quoteNotes,
           items: apiItems,
           lead_id: lead.id,
-          currency: 'USD',
+          currency: quoteCurrency,
           generated_by: user.email,
           ...(isInvoice ? {
             customer_tin: invoiceCustomerTin || null,
@@ -1123,7 +1140,7 @@ export default function CRMDashboard() {
         pipeline_stage: 'proposal_sent', status: 'active',
         deal_value_php: totalPhp,
         deal_value_usd: parseFloat(totalUsd.toFixed(2)),
-        quoted_at: new Date().toISOString(), quote_currency: 'USD',
+        quoted_at: new Date().toISOString(), quote_currency: quoteCurrency,
         quote_notes: [`${docLabel} ${result.quote_number}`, linesSummary, quoteNotes].filter(Boolean).join(' | '),
         quote_issued_by: user.email,
         last_activity_at: new Date().toISOString(),
@@ -1137,7 +1154,7 @@ export default function CRMDashboard() {
         doc_type: docType,
         total: totalUsd,
         subtotal: subtotalUsdCalc,
-        currency: 'USD',
+        currency: quoteCurrency,
         created_at: new Date().toISOString(),
         sent_at: null,
         email: lead.email,
@@ -1936,6 +1953,25 @@ export default function CRMDashboard() {
                 </div>
               )}
 
+              {/* Currency selector */}
+              <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-1.5">Currency</label>
+                <div className="flex items-center gap-3">
+                  <select value={quoteCurrency}
+                    onChange={e => setQuoteCurrency(e.target.value as QuoteCurrency)}
+                    className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                    {CURRENCY_OPTIONS.map(c => (
+                      <option key={c} value={c}>{c} ({CURRENCY_SYMBOLS[c]})</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500">
+                    {quoteCurrency === 'USD'
+                      ? 'Default. Floor price checks and PHP equivalent will be shown.'
+                      : `Enter all line item prices in ${quoteCurrency}. Floor checks are skipped.`}
+                  </p>
+                </div>
+              </div>
+
               {/* Line Items */}
               <div>
                 <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line Items</div>
@@ -2005,18 +2041,21 @@ export default function CRMDashboard() {
                             {isBelowMoq && <p className="text-xs text-amber-600 mt-0.5">MOQ: {line.moq}</p>}
                           </div>
                           <div>
-                            <label className="text-xs text-gray-400">Unit Price (USD)</label>
+                            <label className="text-xs text-gray-400">Unit Price ({quoteCurrency})</label>
                             <div className="relative mt-0.5">
-                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{CURRENCY_SYMBOLS[quoteCurrency]}</span>
                               <input type="number" step="0.01" value={line.unitPriceUsd}
                                 onChange={e => updateLineItemPrice(line.lineId, parseFloat(e.target.value) || 0)}
                                 className={`w-full border rounded-lg pl-6 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${isBelowFloor ? 'border-red-400 bg-white' : 'border-gray-200'}`}
                               />
                             </div>
-                            {floor !== null && !line.isCustom && (
+                            {floor !== null && !line.isCustom && quoteCurrency === 'USD' && (
                               <p className={`text-xs mt-0.5 ${isBelowFloor ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
                                 {isBelowFloor ? `Below floor (${floor.toFixed(2)})` : `Floor: ${floor.toFixed(2)}`}
                               </p>
+                            )}
+                            {!line.isCustom && quoteCurrency !== 'USD' && (
+                              <p className="text-xs mt-0.5 text-gray-400">No floor check ({quoteCurrency})</p>
                             )}
                             {line.isCustom && (
                               <p className="text-xs mt-0.5 text-purple-600">No floor (custom)</p>
@@ -2024,8 +2063,10 @@ export default function CRMDashboard() {
                           </div>
                           <div>
                             <label className="text-xs text-gray-400">Line Total</label>
-                            <p className="mt-1 text-sm font-semibold text-gray-800">${lineTotal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</p>
-                            <p className="text-xs text-gray-400">≈ ₱{Math.round(lineTotal * PHP_TO_USD).toLocaleString()}</p>
+                            <p className="mt-1 text-sm font-semibold text-gray-800">{CURRENCY_SYMBOLS[quoteCurrency]}{lineTotal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</p>
+                            {quoteCurrency === 'USD' && (
+                              <p className="text-xs text-gray-400">≈ ₱{Math.round(lineTotal * PHP_TO_USD).toLocaleString()}</p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -2056,23 +2097,25 @@ export default function CRMDashboard() {
                       <>
                         <div className="flex justify-between text-xs text-green-700">
                           <span>Subtotal (net)</span>
-                          <span>${subtotalUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                          <span>{CURRENCY_SYMBOLS[quoteCurrency]}{subtotalUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                         </div>
                         <div className="flex justify-between text-xs text-green-700">
                           <span>VAT (12%)</span>
-                          <span>${vatUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                          <span>{CURRENCY_SYMBOLS[quoteCurrency]}{vatUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                         </div>
                       </>
                     )}
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="text-xs text-green-700 font-medium">{isInvoice ? 'Amount Due (USD)' : 'Total (USD)'}</p>
-                        <p className="text-xl font-bold text-green-800">${totalUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</p>
+                        <p className="text-xs text-green-700 font-medium">{isInvoice ? `Amount Due (${quoteCurrency})` : `Total (${quoteCurrency})`}</p>
+                        <p className="text-xl font-bold text-green-800">{CURRENCY_SYMBOLS[quoteCurrency]}{totalUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-green-700 font-medium">{isInvoice ? 'Amount Due (PHP equiv.)' : 'Total (PHP equiv.)'}</p>
-                        <p className="text-lg font-bold text-green-800">₱{totalPhp.toLocaleString()}</p>
-                      </div>
+                      {quoteCurrency === 'USD' && (
+                        <div className="text-right">
+                          <p className="text-xs text-green-700 font-medium">{isInvoice ? 'Amount Due (PHP equiv.)' : 'Total (PHP equiv.)'}</p>
+                          <p className="text-lg font-bold text-green-800">₱{totalPhp.toLocaleString()}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -2103,7 +2146,7 @@ export default function CRMDashboard() {
               </button>
               <button onClick={submitQuote}
                 disabled={quoteLineItems.length === 0 || quoteSubmitting ||
-                  quoteLineItems.some(l => { if (l.isCustom) return false; const f = floorPriceUsd(l.exFactoryPhp); return f !== null && l.unitPriceUsd < f; }) ||
+                  (quoteCurrency === 'USD' && quoteLineItems.some(l => { if (l.isCustom) return false; const f = floorPriceUsd(l.exFactoryPhp); return f !== null && l.unitPriceUsd < f; })) ||
                   quoteLineItems.some(l => !l.isCustom && l.qty < l.moq) ||
                   (isInvoice && !invoiceDueDate)}
                 className={`flex-1 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${mode === 'revise' ? 'bg-purple-700 hover:bg-purple-800' : isInvoice ? 'bg-blue-700 hover:bg-blue-800' : 'bg-green-700 hover:bg-green-800'}`}>
@@ -2558,4 +2601,3 @@ export default function CRMDashboard() {
     </div>
   )
 }
-
