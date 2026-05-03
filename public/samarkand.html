@@ -429,27 +429,12 @@
     overflow: hidden;
   }
   .founder-photo {
-    aspect-ratio: 4/5;
-    background: var(--bg-sand);
-    background-image:
-      repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(184, 115, 43, 0.04) 12px, rgba(184, 115, 43, 0.04) 14px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    aspect-ratio: 1/1;
+    background-color: var(--bg-paper);
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
     border-bottom: 1px solid var(--hairline);
-    position: relative;
-  }
-  .founder-photo::after {
-    content: 'PHOTO  ·  Mark, founder portrait';
-    color: var(--text-muted);
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-weight: 600;
-    background: var(--bg);
-    padding: 8px 14px;
-    border-radius: 3px;
-    border: 1px dashed var(--hairline);
   }
   .founder-meta { padding: 24px; }
   .founder-name {
@@ -1107,7 +1092,7 @@
       </div>
 
       <div class="founder-card">
-        <div class="founder-photo"></div>
+        <div class="founder-photo" style="background-image:url('/samarkand-images/founder_mark.jpg');"></div>
         <div class="founder-meta">
           <div class="founder-name">Mark Sebastian</div>
           <div class="founder-title">Founder, NUMAT</div>
