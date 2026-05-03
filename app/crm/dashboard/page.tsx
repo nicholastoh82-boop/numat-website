@@ -2069,6 +2069,14 @@ export default function CRMDashboard() {
                             {line.isCustom && (
                               <p className="text-xs mt-0.5 text-purple-600">No floor (custom)</p>
                             )}
+                            {!line.isCustom && quoteCurrency === 'USD' && floor !== null && (
+                              <label className="flex items-center gap-1 mt-1 text-xs text-gray-500 cursor-pointer select-none">
+                                <input type="checkbox" checked={line.priceOverride || false}
+                                  onChange={e => setQuoteLineItems(prev => prev.map(l => l.lineId === line.lineId ? { ...l, priceOverride: e.target.checked } : l))}
+                                  className="w-3 h-3 rounded border-gray-300 text-amber-600 focus:ring-amber-500" />
+                                <span>Override price floor</span>
+                              </label>
+                            )}
                           </div>
                           <div>
                             <label className="text-xs text-gray-400">Line Total</label>
