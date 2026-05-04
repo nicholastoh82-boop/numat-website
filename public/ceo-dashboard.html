@@ -364,9 +364,10 @@ function render(d){
 function renderSignals(d){
   const runway=d.financial.runway_months,util=d.production.current_utilization_pct,od=d.ar.overdue_count,um=d.sales.upcoming_meetings
   const utilHasData=util!==null&&util!==undefined
+  const beUtil=d.production.break_even_util_pct
   const utilSignal=utilHasData
-    ?{dot:util>=39.5?'dot-green':util>=25?'dot-amber':'dot-red',label:'Factory at '+util+'% utilization'}
-    :{dot:'dot-amber',label:'No production data logged'}
+    ?{dot:(beUtil&&util>=beUtil)?'dot-green':util>=25?'dot-amber':'dot-red',label:'Factory at '+util+'% utilization'}
+    :{dot:'dot-amber',label:'No invoiced board volume yet'}
   document.getElementById('signalStrip').innerHTML=[
     utilSignal,
     {dot:runway>=6?'dot-green':runway>=3?'dot-amber':'dot-red',label:runway.toFixed(1)+' months runway'},
@@ -594,19 +595,39 @@ function renderFinancial(d){
   document.getElementById('currentMonthPL').innerHTML=plH(fin.current_month)
   document.getElementById('lastMonthPL').innerHTML=plH(fin.last_month)
   document.getElementById('accountBalances').innerHTML=fin.account_balances.map(a=>{const sym=a.currency==='PHP'?'\u20b1':a.currency==='USD'?'$':'';return '<div class="acc-row"><div><div class="acc-name">'+a.name+'</div><div class="acc-code">'+a.code+'</div></div><div><div class="acc-balance" style="color:'+(a.balance>=0?'var(--navy)':'var(--red)')+'">'+sym+Math.abs(a.balance).toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})+'</div><div class="acc-currency">'+a.currency+'</div></div></div>'}).join('')
-  const util=d.production.current_utilization_pct,be=d.production.break_even_util_pct
+  const prod=d.production
+  const util=prod.current_utilization_pct,be=prod.break_even_util_pct
   const utilHasData=util!==null&&util!==undefined
+  const beHasData=be!==null&&be!==undefined
   document.getElementById('utilPct').textContent=utilHasData?(util+'%'):'No data'
   if(utilHasData){
-    setTimeout(()=>{document.getElementById('utilBar').style.width=Math.min(util,100)+'%';document.getElementById('beMarker').style.left=Math.min(be,99)+'%'},100)
+    setTimeout(()=>{
+      document.getElementById('utilBar').style.width=Math.min(util,100)+'%'
+      if(beHasData) document.getElementById('beMarker').style.left=Math.min(be,99)+'%'
+      else document.getElementById('beMarker').style.display='none'
+    },100)
   } else {
     document.getElementById('utilBar').style.width='0%'
-    document.getElementById('beMarker').style.left=Math.min(be,99)+'%'
+    if(beHasData) document.getElementById('beMarker').style.left=Math.min(be,99)+'%'
+    else document.getElementById('beMarker').style.display='none'
   }
-  document.getElementById('beLabel').textContent='Break-even: '+be+'%'
-  document.getElementById('utilNote').textContent=utilHasData
-    ?('Full capacity: '+d.production.full_capacity_veneers.toLocaleString()+' veneers/month. '+(util<be?(be-util).toFixed(1)+' points short of break-even.':'Above break-even.'))
-    :('Full capacity: '+d.production.full_capacity_veneers.toLocaleString()+' veneers/month. No production logged in fin_monthly_production yet.')
+  document.getElementById('beLabel').textContent=beHasData?('Break-even: '+be+'%'):'Break-even: not computable'
+  // Build the note: basis line + history + break-even commentary.
+  const histHtml=(prod.utilization_history||[]).map(h=>
+    '<span style="display:inline-block;margin-right:14px;"><strong>'+h.label+':</strong> '+h.boards_invoiced+' boards ('+h.utilization_pct+'%)</span>'
+  ).join('')
+  let beNote=''
+  if(beHasData && prod.break_even_boards){
+    beNote='Break-even needs <strong>'+prod.break_even_boards.toLocaleString()+' boards/month</strong> at current avg contribution of \u20b1'+prod.avg_contribution_php_per_board.toLocaleString()+'/board.'
+  } else if(prod.avg_contribution_php_per_board!==null && prod.avg_contribution_php_per_board<=0){
+    beNote='<strong style="color:var(--red);">Break-even cannot be computed: average contribution per board is \u20b1'+prod.avg_contribution_php_per_board.toLocaleString()+' (negative or zero). Boards are selling below ex-factory cost.</strong>'
+  } else {
+    beNote='Break-even not yet computable (no invoiced boards with cost data in last 3 months).'
+  }
+  document.getElementById('utilNote').innerHTML=
+    '<div style="margin-bottom:6px;">'+esc(prod.utilization_basis||'')+' \u00b7 Capacity: '+prod.full_capacity_boards.toLocaleString()+' boards/month</div>'+
+    (histHtml?'<div style="margin-bottom:6px;color:var(--text-2);">'+histHtml+'</div>':'')+
+    '<div>'+beNote+'</div>'
 }
 
 function renderInvoicePL(d){
