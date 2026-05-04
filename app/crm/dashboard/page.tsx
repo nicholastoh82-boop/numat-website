@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
+import GmailConnectPanel from '@/components/crm/GmailConnectPanel'
 
 interface Lead {
   id: string
@@ -1337,6 +1338,21 @@ export default function CRMDashboard() {
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
+        <details className="bg-white rounded-xl border border-gray-200 mb-5 overflow-hidden group">
+          <summary className="cursor-pointer flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors list-none">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-600" />
+              <span className="font-semibold text-gray-800">Gmail connections</span>
+              <span className="text-xs text-gray-400">Per rep OAuth</span>
+            </div>
+            <span className="text-gray-400 text-sm group-open:hidden">Show</span>
+            <span className="text-gray-400 text-sm hidden group-open:inline">Hide</span>
+          </summary>
+          <div className="px-5 pb-5">
+            <GmailConnectPanel />
+          </div>
+        </details>
+
         {user?.role === 'admin' && (
           <div className="bg-white rounded-xl border border-gray-200 mb-5 overflow-hidden">
             <button
