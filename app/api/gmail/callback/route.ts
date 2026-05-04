@@ -15,11 +15,11 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     return NextResponse.redirect(
-      `${baseUrl}/crm?gmail_connect=error&reason=${encodeURIComponent(error)}`
+      `${baseUrl}/crm/dashboard?gmail_connect=error&reason=${encodeURIComponent(error)}`
     );
   }
   if (!code || !state) {
-    return NextResponse.redirect(`${baseUrl}/crm?gmail_connect=error&reason=missing_params`);
+    return NextResponse.redirect(`${baseUrl}/crm/dashboard?gmail_connect=error&reason=missing_params`);
   }
 
   const repEmail = decodeURIComponent(state).toLowerCase();
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   if (!tokenRes.ok) {
     const txt = await tokenRes.text();
     return NextResponse.redirect(
-      `${baseUrl}/crm?gmail_connect=error&reason=${encodeURIComponent(txt)}`
+      `${baseUrl}/crm/dashboard?gmail_connect=error&reason=${encodeURIComponent(txt)}`
     );
   }
 
@@ -60,14 +60,14 @@ export async function GET(req: NextRequest) {
 
   if (profile.email.toLowerCase() !== repEmail) {
     return NextResponse.redirect(
-      `${baseUrl}/crm?gmail_connect=error&reason=email_mismatch`
+      `${baseUrl}/crm/dashboard?gmail_connect=error&reason=email_mismatch`
     );
   }
 
   if (!tokenJson.refresh_token) {
     // This happens if the rep already granted consent before. Force re-consent.
     return NextResponse.redirect(
-      `${baseUrl}/crm?gmail_connect=error&reason=no_refresh_token_revoke_and_retry`
+      `${baseUrl}/crm/dashboard?gmail_connect=error&reason=no_refresh_token_revoke_and_retry`
     );
   }
 
@@ -92,6 +92,6 @@ export async function GET(req: NextRequest) {
     );
 
   return NextResponse.redirect(
-    `${baseUrl}/crm?gmail_connect=success&rep=${encodeURIComponent(repEmail)}`
+    `${baseUrl}/crm/dashboard?gmail_connect=success&rep=${encodeURIComponent(repEmail)}`
   );
 }
