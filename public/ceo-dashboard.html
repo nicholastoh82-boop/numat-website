@@ -363,8 +363,12 @@ function render(d){
 
 function renderSignals(d){
   const runway=d.financial.runway_months,util=d.production.current_utilization_pct,od=d.ar.overdue_count,um=d.sales.upcoming_meetings
+  const utilHasData=util!==null&&util!==undefined
+  const utilSignal=utilHasData
+    ?{dot:util>=39.5?'dot-green':util>=25?'dot-amber':'dot-red',label:'Factory at '+util+'% utilization'}
+    :{dot:'dot-amber',label:'No production data logged'}
   document.getElementById('signalStrip').innerHTML=[
-    {dot:util>=39.5?'dot-green':util>=25?'dot-amber':'dot-red',label:'Factory at '+util+'% utilization'},
+    utilSignal,
     {dot:runway>=6?'dot-green':runway>=3?'dot-amber':'dot-red',label:runway.toFixed(1)+' months runway'},
     {dot:od===0?'dot-green':'dot-red',label:od===0?'No overdue AR':od+' overdue AR invoice'+(od>1?'s':'')},
     {dot:um>0?'dot-blue':'dot-amber',label:um>0?um+' meeting'+(um>1?'s':'')+' confirmed':'No meetings booked'},
@@ -591,10 +595,18 @@ function renderFinancial(d){
   document.getElementById('lastMonthPL').innerHTML=plH(fin.last_month)
   document.getElementById('accountBalances').innerHTML=fin.account_balances.map(a=>{const sym=a.currency==='PHP'?'\u20b1':a.currency==='USD'?'$':'';return '<div class="acc-row"><div><div class="acc-name">'+a.name+'</div><div class="acc-code">'+a.code+'</div></div><div><div class="acc-balance" style="color:'+(a.balance>=0?'var(--navy)':'var(--red)')+'">'+sym+Math.abs(a.balance).toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:0})+'</div><div class="acc-currency">'+a.currency+'</div></div></div>'}).join('')
   const util=d.production.current_utilization_pct,be=d.production.break_even_util_pct
-  document.getElementById('utilPct').textContent=util+'%'
-  setTimeout(()=>{document.getElementById('utilBar').style.width=Math.min(util,100)+'%';document.getElementById('beMarker').style.left=Math.min(be,99)+'%'},100)
+  const utilHasData=util!==null&&util!==undefined
+  document.getElementById('utilPct').textContent=utilHasData?(util+'%'):'No data'
+  if(utilHasData){
+    setTimeout(()=>{document.getElementById('utilBar').style.width=Math.min(util,100)+'%';document.getElementById('beMarker').style.left=Math.min(be,99)+'%'},100)
+  } else {
+    document.getElementById('utilBar').style.width='0%'
+    document.getElementById('beMarker').style.left=Math.min(be,99)+'%'
+  }
   document.getElementById('beLabel').textContent='Break-even: '+be+'%'
-  document.getElementById('utilNote').textContent='Full capacity: '+d.production.full_capacity_veneers.toLocaleString()+' veneers/month. '+(util<be?(be-util).toFixed(1)+' points short of break-even.':'Above break-even.')
+  document.getElementById('utilNote').textContent=utilHasData
+    ?('Full capacity: '+d.production.full_capacity_veneers.toLocaleString()+' veneers/month. '+(util<be?(be-util).toFixed(1)+' points short of break-even.':'Above break-even.'))
+    :('Full capacity: '+d.production.full_capacity_veneers.toLocaleString()+' veneers/month. No production logged in fin_monthly_production yet.')
 }
 
 function renderInvoicePL(d){
