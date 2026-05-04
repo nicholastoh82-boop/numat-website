@@ -169,6 +169,7 @@ async function handle(): Promise<Response> {
 }
 
 function authorized(req: Request): boolean {
+  if (req.headers.get("x-vercel-cron-signature")) return true;
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
   const header = req.headers.get("authorization") ?? "";
