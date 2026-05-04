@@ -5,6 +5,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import GmailConnectPanel from '@/components/crm/GmailConnectPanel'
 import ComposeEmailModal from '@/components/crm/ComposeEmailModal'
+import EmailHistoryDrawer from '@/components/crm/EmailHistoryDrawer'
 
 interface Lead {
   id: string
@@ -339,6 +340,8 @@ export default function CRMDashboard() {
   const [selectedLeadForEmail, setSelectedLeadForEmail] = useState<Lead | null>(null)
   // Set of lowercase rep_emails that have an active Gmail OAuth token.
   const [connectedRepEmails, setConnectedRepEmails] = useState<Set<string>>(new Set())
+  // Email history drawer state. Single shared instance, only one open at a time.
+  const [selectedLeadForHistory, setSelectedLeadForHistory] = useState<{ id: string; name: string } | null>(null)
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
@@ -1564,6 +1567,12 @@ export default function CRMDashboard() {
                         </button>
                       )
                     })()}
+                    <button
+                      onClick={e => { e.stopPropagation(); setSelectedLeadForHistory({ id: lead.id, name: displayName }) }}
+                      title="View email history with this lead"
+                      className="text-xs px-3 py-1.5 rounded-lg border font-medium bg-white text-gray-700 border-gray-200 hover:bg-gray-50 transition-colors">
+                      History
+                    </button>
                     <span className="text-gray-300 text-sm">{isExpanded ? '▲' : '▼'}</span>
                   </div>
                 </div>
@@ -2686,6 +2695,15 @@ export default function CRMDashboard() {
           open={true}
           onClose={() => setSelectedLeadForEmail(null)}
           onSent={() => { setSelectedLeadForEmail(null); refresh() }}
+        />
+      )}
+
+      {selectedLeadForHistory && (
+        <EmailHistoryDrawer
+          leadId={selectedLeadForHistory.id}
+          leadName={selectedLeadForHistory.name}
+          open={true}
+          onClose={() => setSelectedLeadForHistory(null)}
         />
       )}
     </div>
