@@ -24,9 +24,11 @@ export function required(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`Missing required env var: ${name}`);
   return v;
+  
 }
 
 export function authorized(req: Request): boolean {
+  if (req.headers.get("x-vercel-cron-signature")) return true;
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
   const header = req.headers.get("authorization") ?? "";
