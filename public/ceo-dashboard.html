@@ -639,12 +639,18 @@ function renderInvoicePL(d){
     return
   }
 
-  // Group by company + date + doc_type (one quote per group)
+  // Group by quote_id so each invoice/proforma appears as its own card.
+  // (Earlier we grouped by company+date+doc_type which merged two different
+  // customers' proformas issued on the same day with no company set.)
   const grouped={}
   lines.forEach(l=>{
-    const key=l.company+'||'+l.date+'||'+l.doc_type
-    if(!grouped[key])grouped[key]={company:l.company,date:l.date,doc_type:l.doc_type,
-      payment_status:l.payment_status,currency:l.native_currency,lines:[]}
+    const key=l.quote_id||(l.quote_number||'')||(l.company+'||'+l.date+'||'+l.doc_type)
+    if(!grouped[key])grouped[key]={
+      quote_id:l.quote_id,quote_number:l.quote_number||'',
+      customer_name:l.customer_name||l.company||'Unknown',
+      company:l.company||'',date:l.date,doc_type:l.doc_type,
+      payment_status:l.payment_status,currency:l.native_currency,lines:[]
+    }
     grouped[key].lines.push(l)
   })
   const groups=Object.values(grouped)
@@ -774,8 +780,9 @@ function renderInvoicePL(d){
 
     html+='<div class="invoice-card '+cardClass+'">'+
       '<div class="invoice-header" onclick="toggleInvoice(this)">'+
-        '<div><div class="invoice-company">'+esc(g.company||'Unknown')+currencyTag+'</div>'+
-          '<div class="invoice-meta"><span style="color:'+docColor+';font-weight:600;">'+docLabel+'</span> \u00b7 '+g.date+' \u00b7 <span style="color:'+payColor+';">'+esc(g.payment_status||'\u2014')+'</span></div>'+
+        '<div><div class="invoice-company">'+esc(g.customer_name||g.company||'Unknown')+currencyTag+'</div>'+
+          '<div class="invoice-meta">'+(g.quote_number?'<span style="color:var(--text-3);font-family:\'DM Mono\',monospace;font-size:10px;margin-right:6px;">'+esc(g.quote_number)+'</span> \u00b7 ':'')+
+            '<span style="color:'+docColor+';font-weight:600;">'+docLabel+'</span> \u00b7 '+g.date+' \u00b7 <span style="color:'+payColor+';">'+esc(g.payment_status||'\u2014')+'</span></div>'+
         '</div>'+
         '<div class="invoice-verdict">'+
           '<span class="verdict-badge '+verdictClass+'">'+verdictText+'</span>'+
