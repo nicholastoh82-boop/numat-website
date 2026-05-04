@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import GmailConnectPanel from '@/components/crm/GmailConnectPanel'
+import ComposeEmailModal from '@/components/crm/ComposeEmailModal'
 
 interface Lead {
   id: string
@@ -334,6 +335,10 @@ export default function CRMDashboard() {
   const [receiptSubmitting, setReceiptSubmitting] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [analyticsOpen, setAnalyticsOpen] = useState(true)
+  // Compose email modal state. Single shared instance, only one open at a time.
+  const [selectedLeadForEmail, setSelectedLeadForEmail] = useState<Lead | null>(null)
+  // Set of lowercase rep_emails that have an active Gmail OAuth token.
+  const [connectedRepEmails, setConnectedRepEmails] = useState<Set<string>>(new Set())
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
@@ -428,6 +433,24 @@ export default function CRMDashboard() {
       else setLoading(false)
     })
   }, [loadUser, loadLeads, loadQuotes, loadReceipts])
+
+  // Load Gmail OAuth connection status once on mount so we can disable the
+  // per row Email button for reps who have not connected their inbox yet.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/gmail/connect-status', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : { reps: [] })
+      .then((json: { reps?: Array<{ rep_email: string; is_active: boolean }> }) => {
+        if (cancelled) return
+        const set = new Set<string>()
+        for (const r of json.reps ?? []) {
+          if (r.is_active && r.rep_email) set.add(r.rep_email.toLowerCase())
+        }
+        setConnectedRepEmails(set)
+      })
+      .catch(() => { if (!cancelled) setConnectedRepEmails(new Set()) })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     let result = [...leads]
@@ -1522,6 +1545,25 @@ export default function CRMDashboard() {
                       title="Issue an Invoice (demand for payment)">
                       + Invoice
                     </button>
+                    {(() => {
+                      const repCanSend = !!user?.email && connectedRepEmails.has(user.email.toLowerCase())
+                      const noRecipient = !lead.email
+                      const disabled = !repCanSend || noRecipient
+                      const tooltip = noRecipient
+                        ? 'No email on this lead'
+                        : !repCanSend
+                          ? 'Connect Gmail first'
+                          : 'Compose email to this lead'
+                      return (
+                        <button
+                          onClick={e => { e.stopPropagation(); if (!disabled) setSelectedLeadForEmail(lead) }}
+                          disabled={disabled}
+                          title={tooltip}
+                          className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${disabled ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white text-purple-700 border-purple-200 hover:bg-purple-50'}`}>
+                          ✉ Email
+                        </button>
+                      )
+                    })()}
                     <span className="text-gray-300 text-sm">{isExpanded ? '▲' : '▼'}</span>
                   </div>
                 </div>
@@ -2630,6 +2672,21 @@ export default function CRMDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {selectedLeadForEmail && user?.email && (
+        <ComposeEmailModal
+          lead={{
+            id: selectedLeadForEmail.id,
+            full_name: selectedLeadForEmail.full_name,
+            email: selectedLeadForEmail.email,
+            company: selectedLeadForEmail.company,
+          }}
+          repEmail={user.email}
+          open={true}
+          onClose={() => setSelectedLeadForEmail(null)}
+          onSent={() => { setSelectedLeadForEmail(null); refresh() }}
+        />
       )}
     </div>
   )
