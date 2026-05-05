@@ -38,6 +38,7 @@ export default function NewTransactionPage() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [outstandingAdvances, setOutstandingAdvances] = useState<OutstandingAdvance[]>([]);
   const [selectedAdvanceIds, setSelectedAdvanceIds] = useState<string[]>([]);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -50,7 +51,17 @@ export default function NewTransactionPage() {
     setCategories(tree.categories);
     setAccounts(accs);
     setStaff(staffList);
+    // Load current user's roles to gate submission behaviour.
+    // Ops users submit transactions as pending. Everyone else as verified.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: roleRows } = await supabase
+        .from('user_roles').select('role').eq('user_id', user.id);
+      setUserRoles(((roleRows ?? []) as { role: string }[]).map(r => r.role));
+    }
   })(); }, []);
+
+  const isOps = userRoles.includes('ops') && !userRoles.includes('admin') && !userRoles.includes('finance');
 
   const typeCfg = useMemo(() => ENTRY_TYPE_OPTIONS.find(o => o.value === entryType)!, [entryType]);
   const pickerOptions = useMemo(
@@ -135,6 +146,9 @@ export default function NewTransactionPage() {
         receipt_url, receipt_filename,
         submitted_by: user?.email || null,
         advance_status: entryType === 'salary_advance' ? 'outstanding' : null,
+        // Ops users submit as pending for finance/admin to verify.
+        // Everyone else submits as verified (preserves existing behaviour).
+        status: isOps ? 'pending' : 'verified',
       };
 
       const { data: inserted, error } = await supabase
