@@ -5,7 +5,7 @@ import FloatingContactWidget from '@/components/floating-contact-widget'
 import ChatWidget from '@/components/chat-widget'
 import StickyCaptureBar from '@/components/sticky-capture-bar'
 
-const PRIVATE_PATHS = ['/admin', '/crm', '/finance']
+const PRIVATE_PATHS = ['/admin', '/crm', '/finance', '/portal']
 
 export default function PublicOnlyWidgets() {
   const pathname = usePathname()
