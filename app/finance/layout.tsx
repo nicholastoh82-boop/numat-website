@@ -37,6 +37,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   }
 
   const navItems = [
+    { href: '/portal', label: 'Portal' },
     { href: '/finance', label: 'Dashboard' },
     { href: '/finance/new', label: 'New Transaction' },
     { href: '/finance/fund', label: 'Revolving Fund' },

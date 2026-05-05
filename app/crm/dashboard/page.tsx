@@ -1347,6 +1347,13 @@ export default function CRMDashboard() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <a
+              href="/portal"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 hidden sm:inline-flex items-center"
+              title="Back to NUMAT Portal"
+            >
+              Portal
+            </a>
             {user?.is_active ? (
               <a
                 href="/crm/schematic-estimator"
