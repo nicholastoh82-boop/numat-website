@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import GmailConnectPanel from '@/components/crm/GmailConnectPanel'
 import ComposeEmailModal from '@/components/crm/ComposeEmailModal'
 import EmailHistoryDrawer from '@/components/crm/EmailHistoryDrawer'
+import QualificationFormDrawer from '@/components/crm/QualificationFormDrawer'
 
 interface Lead {
   id: string
@@ -52,6 +53,7 @@ interface Lead {
   last_rep_touch_by?: string | null
   last_rep_touch_subject?: string | null
   rep_reply_count?: number | null
+  source_payload?: any
 }
 
 interface CRMUser {
@@ -342,6 +344,8 @@ export default function CRMDashboard() {
   const [connectedRepEmails, setConnectedRepEmails] = useState<Set<string>>(new Set())
   // Email history drawer state. Single shared instance, only one open at a time.
   const [selectedLeadForHistory, setSelectedLeadForHistory] = useState<{ id: string; name: string } | null>(null)
+  // Qualification form drawer state. Single shared instance, only opens for leads with source_payload.
+  const [selectedLeadForForm, setSelectedLeadForForm] = useState<{ id: string; name: string } | null>(null)
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
@@ -358,7 +362,7 @@ export default function CRMDashboard() {
   }, [supabase, router])
 
   const loadLeads = useCallback(async (crmUser: CRMUser) => {
-    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count'
+    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,source_payload'
     const PAGE_SIZE = 1000
     const allLeads: Lead[] = []
     let from = 0
@@ -1573,6 +1577,14 @@ export default function CRMDashboard() {
                       className="text-xs px-3 py-1.5 rounded-lg border font-medium bg-white text-gray-700 border-gray-200 hover:bg-gray-50 transition-colors">
                       History
                     </button>
+                    {lead.source_payload && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setSelectedLeadForForm({ id: lead.id, name: displayName }) }}
+                        title="View full form submission and admin actions"
+                        className="text-xs px-3 py-1.5 rounded-lg border font-medium bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50 transition-colors">
+                        Form
+                      </button>
+                    )}
                     <span className="text-gray-300 text-sm">{isExpanded ? '▲' : '▼'}</span>
                   </div>
                 </div>
@@ -2706,6 +2718,15 @@ export default function CRMDashboard() {
           onClose={() => setSelectedLeadForHistory(null)}
         />
       )}
+
+      <QualificationFormDrawer
+        open={selectedLeadForForm !== null}
+        leadId={selectedLeadForForm?.id || null}
+        leadName={selectedLeadForForm?.name || ''}
+        isAdmin={user?.role === 'admin'}
+        onClose={() => setSelectedLeadForForm(null)}
+        onDeleted={() => { if (user) loadLeads(user) }}
+      />
     </div>
   )
 }
