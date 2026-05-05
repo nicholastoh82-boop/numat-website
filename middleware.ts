@@ -28,6 +28,10 @@ const RATE_LIMITED_ROUTES = [
   '/api/request-quote',
 ]
 
+// Routes that require an authenticated session.
+// Defence in depth on top of the client side or layout based checks.
+const AUTH_GATED_PREFIXES = ['/admin', '/portal']
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -62,9 +66,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Edge gate for /admin: server side redirect to the login page if no session.
-  // Defence in depth on top of the client side check in app/admin/layout.tsx.
-  if (pathname.startsWith('/admin')) {
+  // Edge gate for protected sections: server side redirect to login if no session.
+  if (AUTH_GATED_PREFIXES.some((p) => pathname.startsWith(p))) {
     const res = NextResponse.next({ request })
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -87,7 +90,10 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      const loginUrl = new URL('/auth/login', request.url)
+      // /admin sends to /auth/login (existing pattern).
+      // /portal sends to /crm/login (matches the rest of the operator app).
+      const loginPath = pathname.startsWith('/portal') ? '/crm/login' : '/auth/login'
+      const loginUrl = new URL(loginPath, request.url)
       loginUrl.searchParams.set('redirectTo', pathname)
       return NextResponse.redirect(loginUrl)
     }
@@ -103,7 +109,7 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - images - .svg, .png, .jpg, .jpeg, .gif, .webp
+     * - images: .svg, .png, .jpg, .jpeg, .gif, .webp
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
