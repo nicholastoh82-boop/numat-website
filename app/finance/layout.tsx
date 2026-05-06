@@ -49,7 +49,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   return (
     <div className="flex min-h-screen bg-white">
       <PortalSidebar />
-      <div className="flex-1 min-w-0 min-h-screen bg-white text-gray-900">
+      <div className="flex-1 min-w-0 min-h-screen bg-white text-gray-900 pt-14 md:pt-0">
       <header className="border border-gray-200 border-t-0 border-x-0 bg-white">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
