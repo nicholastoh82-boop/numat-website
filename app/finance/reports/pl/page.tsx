@@ -516,16 +516,16 @@ export default function PLReportPage() {
     return (
       <>
         <tr className="bg-neutral-50">
-          <td className="px-4 py-3 font-semibold text-neutral-900" colSpan={2}>
+          <td className="px-2 md:px-4 py-3 font-semibold text-neutral-900" colSpan={2}>
             {PL_SECTION_LABELS[section]}
           </td>
-          <td className="px-4 py-3"></td>
-          <td className="px-4 py-3"></td>
+          <td className="px-2 md:px-4 py-3"></td>
+          <td className="px-2 md:px-4 py-3"></td>
         </tr>
 
         {bucket.lines.length === 0 && (
           <tr>
-            <td colSpan={4} className="px-4 py-2 pl-10 text-sm text-neutral-500">
+            <td colSpan={4} className="px-2 md:px-4 py-2 pl-6 md:pl-10 text-sm text-neutral-500">
               No activity in this section for the selected period.
             </td>
           </tr>
@@ -544,7 +544,7 @@ export default function PLReportPage() {
                 className="cursor-pointer hover:bg-neutral-50"
                 onClick={() => toggleLine(lineKey)}
               >
-                <td className="px-4 py-2 pl-6" colSpan={2}>
+                <td className="px-2 md:px-4 py-2 pl-4 md:pl-6" colSpan={2}>
                   <span className="inline-flex items-center gap-2 text-neutral-800">
                     <Chevron open={open} />
                     <span>{line.pl_account_code}</span>
@@ -553,17 +553,17 @@ export default function PLReportPage() {
                     </span>
                   </span>
                 </td>
-                <td className="px-4 py-2 text-right tabular-nums">
+                <td className="px-2 md:px-4 py-2 text-right tabular-nums">
                   {peso(displayLineAmt)}
                 </td>
-                <td className="px-4 py-2 text-right tabular-nums text-neutral-600">
+                <td className="px-2 md:px-4 py-2 text-right tabular-nums text-neutral-600">
                   {usd(displayLineAmt / usdRate)}
                 </td>
               </tr>
 
               {open && (
                 <tr>
-                  <td colSpan={4} className="bg-neutral-50 px-4 py-3">
+                  <td colSpan={4} className="bg-neutral-50 px-2 md:px-4 py-3">
                     <div className="rounded-md border border-neutral-200 bg-white p-3">
                       <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
                         Breakdown for {line.pl_account_code}
@@ -689,13 +689,13 @@ export default function PLReportPage() {
         })}
 
         <tr className="bg-neutral-50">
-          <td className="px-4 py-2 pl-6 font-semibold text-neutral-800" colSpan={2}>
+          <td className="px-2 md:px-4 py-2 pl-4 md:pl-6 font-semibold text-neutral-800" colSpan={2}>
             Total for {PL_SECTION_LABELS[section]}
           </td>
-          <td className="px-4 py-2 text-right font-semibold tabular-nums">
+          <td className="px-2 md:px-4 py-2 text-right font-semibold tabular-nums">
             {peso(displaySub)}
           </td>
-          <td className="px-4 py-2 text-right font-semibold tabular-nums text-neutral-600">
+          <td className="px-2 md:px-4 py-2 text-right font-semibold tabular-nums text-neutral-600">
             {usd(displaySub / usdRate)}
           </td>
         </tr>
@@ -861,17 +861,17 @@ export default function PLReportPage() {
           )}
 
           {!loading && !error && (
-            <div className="mt-5 overflow-hidden rounded-md border border-neutral-200">
-              <table className="w-full text-sm">
+            <div className="mt-5 overflow-x-auto rounded-md border border-neutral-200">
+              <table className="w-full text-sm min-w-[560px]">
                 <thead className="bg-neutral-100 text-left text-xs uppercase tracking-wider text-neutral-600">
                   <tr>
-                    <th className="px-4 py-3 font-medium" colSpan={2}>
+                    <th className="px-2 md:px-4 py-3 font-medium" colSpan={2}>
                       Line item
                     </th>
-                    <th className="px-4 py-3 text-right font-medium">
+                    <th className="px-2 md:px-4 py-3 text-right font-medium">
                       Amount (PHP)
                     </th>
-                    <th className="px-4 py-3 text-right font-medium">
+                    <th className="px-2 md:px-4 py-3 text-right font-medium">
                       Amount (USD)
                     </th>
                   </tr>
@@ -887,7 +887,7 @@ export default function PLReportPage() {
                     >
                       Gross Profit
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                    <td className="px-2 md:px-4 py-3 text-right font-semibold tabular-nums">
                       {peso(grossProfit)}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums text-neutral-700">
