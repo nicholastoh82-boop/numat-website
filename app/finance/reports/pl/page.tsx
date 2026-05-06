@@ -520,7 +520,7 @@ export default function PLReportPage() {
             {PL_SECTION_LABELS[section]}
           </td>
           <td className="px-2 md:px-4 py-3"></td>
-          <td className="px-2 md:px-4 py-3"></td>
+          <td className="hidden md:table-cell px-2 md:px-4 py-3"></td>
         </tr>
 
         {bucket.lines.length === 0 && (
@@ -553,10 +553,10 @@ export default function PLReportPage() {
                     </span>
                   </span>
                 </td>
-                <td className="px-2 md:px-4 py-2 text-right tabular-nums">
+                <td className="whitespace-nowrap px-2 md:px-4 py-2 text-right tabular-nums">
                   {peso(displayLineAmt)}
                 </td>
-                <td className="px-2 md:px-4 py-2 text-right tabular-nums text-neutral-600">
+                <td className="hidden md:table-cell px-2 md:px-4 py-2 text-right tabular-nums text-neutral-600">
                   {usd(displayLineAmt / usdRate)}
                 </td>
               </tr>
@@ -692,10 +692,10 @@ export default function PLReportPage() {
           <td className="px-2 md:px-4 py-2 pl-4 md:pl-6 font-semibold text-neutral-800" colSpan={2}>
             Total for {PL_SECTION_LABELS[section]}
           </td>
-          <td className="px-2 md:px-4 py-2 text-right font-semibold tabular-nums">
+          <td className="whitespace-nowrap px-2 md:px-4 py-2 text-right font-semibold tabular-nums">
             {peso(displaySub)}
           </td>
-          <td className="px-2 md:px-4 py-2 text-right font-semibold tabular-nums text-neutral-600">
+          <td className="hidden md:table-cell px-2 md:px-4 py-2 text-right font-semibold tabular-nums text-neutral-600">
             {usd(displaySub / usdRate)}
           </td>
         </tr>
@@ -871,7 +871,7 @@ export default function PLReportPage() {
                     <th className="px-2 md:px-4 py-3 text-right font-medium">
                       Amount (PHP)
                     </th>
-                    <th className="px-2 md:px-4 py-3 text-right font-medium">
+                    <th className="hidden md:table-cell px-2 md:px-4 py-3 text-right font-medium">
                       Amount (USD)
                     </th>
                   </tr>
@@ -882,15 +882,15 @@ export default function PLReportPage() {
 
                   <tr className="bg-neutral-100">
                     <td
-                      className="px-4 py-3 font-semibold text-neutral-900"
+                      className="px-2 md:px-4 py-3 font-semibold text-neutral-900"
                       colSpan={2}
                     >
                       Gross Profit
                     </td>
-                    <td className="px-2 md:px-4 py-3 text-right font-semibold tabular-nums">
+                    <td className="whitespace-nowrap px-2 md:px-4 py-3 text-right font-semibold tabular-nums">
                       {peso(grossProfit)}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-neutral-700">
+                    <td className="hidden md:table-cell px-4 py-3 text-right font-semibold tabular-nums text-neutral-700">
                       {usd(grossProfit / usdRate)}
                     </td>
                   </tr>
@@ -901,15 +901,15 @@ export default function PLReportPage() {
 
                   <tr className="bg-neutral-900 text-white">
                     <td
-                      className="px-4 py-4 text-base font-semibold"
+                      className="px-2 md:px-4 py-4 text-base font-semibold"
                       colSpan={2}
                     >
                       Net earnings
                     </td>
-                    <td className="px-4 py-4 text-right text-base font-semibold tabular-nums">
+                    <td className="whitespace-nowrap px-4 py-4 text-right text-base font-semibold tabular-nums">
                       {peso(netEarnings)}
                     </td>
-                    <td className="px-4 py-4 text-right text-base font-semibold tabular-nums">
+                    <td className="hidden md:table-cell px-2 md:px-4 py-4 text-right text-base font-semibold tabular-nums">
                       {usd(netEarnings / usdRate)}
                     </td>
                   </tr>
