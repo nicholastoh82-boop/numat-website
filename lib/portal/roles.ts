@@ -47,11 +47,10 @@ export async function getPortalUser(): Promise<PortalUser | null> {
   }
 }
 
-/* Redirects to login if no auth session. Does NOT redirect on missing role,
-   so the layout never collides with the access denied page. */
+/* Redirects to portal login if no auth session. */
 export async function requirePortalUser(): Promise<PortalUser> {
   const user = await getPortalUser()
-  if (!user) redirect('/crm/login?redirectTo=/portal')
+  if (!user) redirect('/portal/login?redirectTo=/portal')
   return user
 }
 

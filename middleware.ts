@@ -2,8 +2,6 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// In memory IP rate limiter. Best effort across edge worker instances.
-// For strict cross instance limits, swap the ipMap for an Upstash Redis backed store.
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX = 10
 const ipMap = new Map<string, { count: number; resetAt: number }>()
@@ -28,14 +26,15 @@ const RATE_LIMITED_ROUTES = [
   '/api/request-quote',
 ]
 
-// Routes that require an authenticated session.
-// Defence in depth on top of the client side or layout based checks.
 const AUTH_GATED_PREFIXES = ['/admin', '/portal']
+
+// Paths under /portal that should NOT trigger an auth redirect
+// (the login page itself, and access denied which handles its own rendering).
+const PORTAL_PUBLIC_PATHS = ['/portal/login']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Rate limiting on POST to form and AI endpoints.
   if (
     request.method === 'POST' &&
     RATE_LIMITED_ROUTES.some((r) => pathname.startsWith(r))
@@ -66,8 +65,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Edge gate for protected sections: server side redirect to login if no session.
-  if (AUTH_GATED_PREFIXES.some((p) => pathname.startsWith(p))) {
+  // Skip auth gate for public portal paths (login, etc.)
+  const isPortalPublic = PORTAL_PUBLIC_PATHS.some((p) => pathname.startsWith(p))
+
+  if (
+    !isPortalPublic &&
+    AUTH_GATED_PREFIXES.some((p) => pathname.startsWith(p))
+  ) {
     const res = NextResponse.next({ request })
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -90,9 +94,9 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      // /admin sends to /auth/login (existing pattern).
-      // /portal sends to /crm/login (matches the rest of the operator app).
-      const loginPath = pathname.startsWith('/portal') ? '/crm/login' : '/auth/login'
+      // Portal users go to the dedicated portal login.
+      // Admin users continue to the existing /auth/login.
+      const loginPath = pathname.startsWith('/portal') ? '/portal/login' : '/auth/login'
       const loginUrl = new URL(loginPath, request.url)
       loginUrl.searchParams.set('redirectTo', pathname)
       return NextResponse.redirect(loginUrl)
@@ -104,13 +108,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - images: .svg, .png, .jpg, .jpeg, .gif, .webp
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
