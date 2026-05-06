@@ -10,7 +10,7 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-white">
       <PortalSidebar />
-      <div className="flex-1 min-w-0">{children}</div>
+      <div className="flex-1 min-w-0 pt-14 md:pt-0">{children}</div>
     </div>
   )
 }
