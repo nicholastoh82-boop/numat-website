@@ -1363,6 +1363,15 @@ export default function CRMDashboard() {
                 Schematic Estimator
               </a>
             ) : null}
+            {user?.is_active ? (
+              <a
+                href="/crm/tenders"
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 hidden sm:inline-flex items-center"
+                title="Government tender opportunities"
+              >
+                Tenders
+              </a>
+            ) : null}
             <button onClick={() => setAddLeadOpen(true)} className="px-3 py-1.5 bg-green-700 hover:bg-green-800 rounded-lg text-white text-xs font-medium flex items-center gap-1" title="Add a new lead">
               <span className="text-base leading-none">+</span> Add Lead
             </button>
