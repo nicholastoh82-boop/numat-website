@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/finance';
+import PortalSidebar from '@/components/portal/PortalSidebar';
 
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -46,7 +47,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   ];
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="flex min-h-screen bg-white">
+      <PortalSidebar />
+      <div className="flex-1 min-w-0 min-h-screen bg-white text-gray-900">
       <header className="border border-gray-200 border-t-0 border-x-0 bg-white">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
@@ -90,6 +93,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">{children}</main>
+      </div>
     </div>
   );
 }
