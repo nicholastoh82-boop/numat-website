@@ -183,7 +183,7 @@ export default function BatchDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <Card label="Disbursed" value={formatMoney(batch.disbursed_amount)} />
         <Card label="Liquidated" value={formatMoney(totalLiquidated)} sub={`${lines.length} lines`} />
         <Card label="Remaining" value={formatMoney(remaining)} tone={remaining < 0 ? 'red' : remaining < batch.disbursed_amount * 0.1 ? 'amber' : 'green'} />

@@ -1490,7 +1490,7 @@ export default function CRMDashboard() {
           )}
         </div>
 
-        <div className="grid grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
             { label: 'Total', value: stats.total, color: 'text-gray-800' },
             { label: 'Active', value: stats.active, color: 'text-blue-700' },
