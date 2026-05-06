@@ -32,6 +32,7 @@ export default function BatchDetailPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesById, setCategoriesById] = useState<Map<number, Category>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
 
   // line entry form
   const [date, setDate] = useState(todayISO());
@@ -78,6 +79,13 @@ export default function BatchDetailPage() {
     setCategories(tree.categories);
     setCategoriesById(new Map(tree.categories.map(c => [c.id, c])));
     await refresh();
+    // Load current user's roles. Ops users submit as pending, others as verified.
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      const { data: roleRows } = await supabase
+        .from('user_roles').select('role').eq('user_id', authUser.id);
+      setUserRoles(((roleRows ?? []) as { role: string }[]).map(r => r.role));
+    }
     setLoading(false);
   })(); }, [batchId]);
 
@@ -99,6 +107,7 @@ export default function BatchDetailPage() {
         receipt_url = up.url; receipt_filename = receiptFile.name;
       }
       const { data: { user } } = await supabase.auth.getUser();
+      const isOps = userRoles.includes('ops') && !userRoles.includes('admin') && !userRoles.includes('finance');
       const { error } = await supabase.from('fin_transactions').insert({
         transaction_date: date,
         entry_type: 'liquidation',
@@ -111,6 +120,7 @@ export default function BatchDetailPage() {
         receipt_url, receipt_filename,
         revolving_fund_batch_id: batch.id,
         submitted_by: user?.email || null,
+        status: isOps ? 'pending' : 'verified',
       });
       if (error) throw error;
 
