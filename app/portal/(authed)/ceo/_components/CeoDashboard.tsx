@@ -4,7 +4,8 @@
 
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 
 type Props = { data: any }
 
@@ -53,32 +54,29 @@ export default function CeoDashboard({ data }: Props) {
 
   const generatedAt = data.generated_at ? new Date(data.generated_at).toLocaleString() : '—'
 
-  // ---- Period toggle for total sales ----
-  type Period = 'mtd' | 'ytd' | 'all'
-  const [period, setPeriod] = useState<Period>('mtd')
+  // ---- Period control (server side aware) ----
+  const router = useRouter()
+  const pathname = usePathname()
+  const periodInfo = (data.period || { type: 'mtd', label: 'Month to date', start: '', end: '' })
+  const periodAgg = (data.period_aggregates || { pl: {}, invoices_issued: {}, outreach: {}, won: {}, lost: {} })
+  const currentPeriod: 'mtd' | 'ytd' | 'all' | 'custom' = periodInfo.type as any
 
-  const totalSales = useMemo(() => {
-    const now = new Date()
-    const ymThis = now.toISOString().slice(0, 7)
-    const yThis = ymThis.slice(0, 4)
-    let salesPhp = 0
-    let salesUsd = 0
-    let label = ''
-    if (period === 'mtd') {
-      salesPhp = (fin.current_month?.income || 0)
-      label = `Month to date (${ymThis})`
-    } else if (period === 'ytd') {
-      const ytdMonths = (trend || []).filter((m: any) => String(m.month_key || '').startsWith(yThis))
-      salesPhp = ytdMonths.reduce((s: number, m: any) => s + (m.revenue_php || 0), 0)
-      salesUsd = ytdMonths.reduce((s: number, m: any) => s + (m.revenue_usd || 0), 0)
-      label = `Year to date (${yThis})`
-    } else {
-      salesPhp = (trend || []).reduce((s: number, m: any) => s + (m.revenue_php || 0), 0)
-      salesUsd = (trend || []).reduce((s: number, m: any) => s + (m.revenue_usd || 0), 0)
-      label = `All time (${(trend || []).length} months on record)`
-    }
-    return { salesPhp, salesUsd, label }
-  }, [period, fin, trend])
+  // Custom range pickers state (only relevant when period === 'custom')
+  const [customFrom, setCustomFrom] = useState<string>(periodInfo.start || '')
+  const [customTo, setCustomTo] = useState<string>(periodInfo.end || '')
+
+  function setPeriod(p: 'mtd' | 'ytd' | 'all') {
+    router.push(`${pathname}?period=${p}`)
+  }
+  function applyCustom() {
+    if (!customFrom || !customTo) return
+    router.push(`${pathname}?period=custom&from=${customFrom}&to=${customTo}`)
+  }
+
+  // Total sales = period income (PHP + USD broken out)
+  const periodSalesPhp = periodAgg.pl?.income_php || 0
+  const periodSalesUsd = periodAgg.pl?.income_usd || 0
+  const periodSalesPhpTotal = periodAgg.pl?.income_php_total || 0
 
   // KPI strip
   const totalCash = fin.total_cash_php || 0
@@ -98,18 +96,18 @@ export default function CeoDashboard({ data }: Props) {
         <div className="text-xs text-gray-500">Generated {generatedAt}</div>
       </header>
 
-      {/* TOTAL SALES with period toggle */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      {/* PERIOD CONTROL with period summary (drives the whole dashboard) */}
+      <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <div className="text-xs text-gray-500 uppercase tracking-wide">Total sales</div>
+            <div className="text-xs text-gray-500 uppercase tracking-wide">Total sales for period</div>
             <div className="text-2xl font-semibold text-gray-900 mt-1 tabular-nums">
-              {full(totalSales.salesPhp)}
-              {totalSales.salesUsd > 0 && (
-                <span className="text-sm text-gray-500 font-normal ml-2">+ {full(totalSales.salesUsd, 'USD')}</span>
+              {full(periodSalesPhp)}
+              {periodSalesUsd > 0 && (
+                <span className="text-sm text-gray-500 font-normal ml-2">+ {full(periodSalesUsd, 'USD')}</span>
               )}
             </div>
-            <div className="text-xs text-gray-500 mt-1">{totalSales.label}</div>
+            <div className="text-xs text-gray-500 mt-1">{periodInfo.label}</div>
           </div>
           <div className="flex gap-1 border border-gray-200 rounded-lg p-1">
             {(['mtd', 'ytd', 'all'] as const).map(p => (
@@ -117,14 +115,61 @@ export default function CeoDashboard({ data }: Props) {
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={`px-3 py-1.5 rounded text-xs font-medium ${
-                  period === p ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'
+                  currentPeriod === p ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 {p === 'mtd' ? 'Month' : p === 'ytd' ? 'Year' : 'All time'}
               </button>
             ))}
+            <button
+              onClick={() => router.push(`${pathname}?period=custom&from=${customFrom || periodInfo.start}&to=${customTo || periodInfo.end}`)}
+              className={`px-3 py-1.5 rounded text-xs font-medium ${
+                currentPeriod === 'custom' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Custom
+            </button>
           </div>
         </div>
+
+        {currentPeriod === 'custom' && (
+          <div className="flex items-end gap-2 flex-wrap pt-2 border-t border-gray-100">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">From</label>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={e => setCustomFrom(e.target.value)}
+                className="px-2 py-1 border border-gray-300 rounded text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">To</label>
+              <input
+                type="date"
+                value={customTo}
+                onChange={e => setCustomTo(e.target.value)}
+                className="px-2 py-1 border border-gray-300 rounded text-sm"
+              />
+            </div>
+            <button
+              onClick={applyCustom}
+              disabled={!customFrom || !customTo}
+              className="px-3 py-1.5 bg-gray-900 text-white rounded text-xs font-medium disabled:opacity-50"
+            >
+              Apply range
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* PERIOD METRICS GRID (responds to toggle) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <Kpi label={`Income (${periodInfo.type === 'mtd' ? 'MTD' : periodInfo.type === 'ytd' ? 'YTD' : periodInfo.type === 'custom' ? 'Custom' : 'All time'})`} value={full(periodSalesPhpTotal)} sub={`PHP ${periodSalesPhp.toLocaleString()} + USD ${periodSalesUsd.toLocaleString()}`} color="emerald" />
+        <Kpi label="Expenses" value={full(periodAgg.pl?.expenses_php || 0)} sub="Period operating costs" color="red" />
+        <Kpi label="Net" value={full(periodAgg.pl?.net_php || 0)} sub="Income minus expenses" color={(periodAgg.pl?.net_php || 0) < 0 ? 'red' : 'emerald'} />
+        <Kpi label="Invoices issued" value={`${periodAgg.invoices_issued?.count || 0}`} sub={`Value ${full(periodAgg.invoices_issued?.value_php || 0)}`} color="blue" />
+        <Kpi label="Won deals" value={`${periodAgg.won?.count || 0}`} sub={`Value ${full(periodAgg.won?.value_php || 0)}`} color="emerald" />
       </div>
 
       {/* TOP STRIP: per account balances */}
