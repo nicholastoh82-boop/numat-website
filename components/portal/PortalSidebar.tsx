@@ -22,6 +22,7 @@ type NavItem = {
 // CRM goes straight to /crm/dashboard, Financials goes to /finance, etc.
 const ALL_ITEMS: NavItem[] = [
   { href: '/portal',                label: 'Home',       roles: 'all' },
+  { href: '/portal/ceo',            label: 'CEO View',   roles: ['admin', 'ceo'] },
   { href: '/crm/dashboard',         label: 'CRM',        roles: ['admin', 'ceo', 'sales'] },
   { href: '/finance',               label: 'Financials', roles: ['admin', 'ceo', 'finance'] },
   { href: '/finance/new',           label: 'Receipts',   roles: ['admin', 'finance', 'ops'] },
