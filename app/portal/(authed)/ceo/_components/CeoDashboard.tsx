@@ -4,6 +4,8 @@
 
 'use client'
 
+import { useMemo, useState } from 'react'
+
 type Props = { data: any }
 
 const STAGE_COLORS: Record<string, string> = {
@@ -27,11 +29,15 @@ function fmtPct(n: number | null): string {
   if (n === null || n === undefined) return '—'
   return n.toFixed(1) + '%'
 }
-function compact(n: number): string {
-  const x = Math.round(n || 0)
-  if (x >= 1_000_000) return (x / 1_000_000).toFixed(1) + 'M'
-  if (x >= 1_000) return (x / 1_000).toFixed(0) + 'k'
-  return String(x)
+function full(n: number, currency: string = 'PHP'): string {
+  // No rounding. Show the actual value with thousands separators and 2 decimals.
+  const x = Number(n || 0)
+  return currency + ' ' + x.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function fullNum(n: number): string {
+  const x = Number(n || 0)
+  return x.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 export default function CeoDashboard({ data }: Props) {
@@ -46,6 +52,33 @@ export default function CeoDashboard({ data }: Props) {
   const trend = data.revenue_trend || []
 
   const generatedAt = data.generated_at ? new Date(data.generated_at).toLocaleString() : '—'
+
+  // ---- Period toggle for total sales ----
+  type Period = 'mtd' | 'ytd' | 'all'
+  const [period, setPeriod] = useState<Period>('mtd')
+
+  const totalSales = useMemo(() => {
+    const now = new Date()
+    const ymThis = now.toISOString().slice(0, 7)
+    const yThis = ymThis.slice(0, 4)
+    let salesPhp = 0
+    let salesUsd = 0
+    let label = ''
+    if (period === 'mtd') {
+      salesPhp = (fin.current_month?.income || 0)
+      label = `Month to date (${ymThis})`
+    } else if (period === 'ytd') {
+      const ytdMonths = (trend || []).filter((m: any) => String(m.month_key || '').startsWith(yThis))
+      salesPhp = ytdMonths.reduce((s: number, m: any) => s + (m.revenue_php || 0), 0)
+      salesUsd = ytdMonths.reduce((s: number, m: any) => s + (m.revenue_usd || 0), 0)
+      label = `Year to date (${yThis})`
+    } else {
+      salesPhp = (trend || []).reduce((s: number, m: any) => s + (m.revenue_php || 0), 0)
+      salesUsd = (trend || []).reduce((s: number, m: any) => s + (m.revenue_usd || 0), 0)
+      label = `All time (${(trend || []).length} months on record)`
+    }
+    return { salesPhp, salesUsd, label }
+  }, [period, fin, trend])
 
   // KPI strip
   const totalCash = fin.total_cash_php || 0
@@ -65,6 +98,35 @@ export default function CeoDashboard({ data }: Props) {
         <div className="text-xs text-gray-500">Generated {generatedAt}</div>
       </header>
 
+      {/* TOTAL SALES with period toggle */}
+      <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <div className="text-xs text-gray-500 uppercase tracking-wide">Total sales</div>
+            <div className="text-2xl font-semibold text-gray-900 mt-1 tabular-nums">
+              {full(totalSales.salesPhp)}
+              {totalSales.salesUsd > 0 && (
+                <span className="text-sm text-gray-500 font-normal ml-2">+ {full(totalSales.salesUsd, 'USD')}</span>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">{totalSales.label}</div>
+          </div>
+          <div className="flex gap-1 border border-gray-200 rounded-lg p-1">
+            {(['mtd', 'ytd', 'all'] as const).map(p => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-3 py-1.5 rounded text-xs font-medium ${
+                  period === p ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {p === 'mtd' ? 'Month' : p === 'ytd' ? 'Year' : 'All time'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* TOP STRIP: per account balances */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <AccountKpi accounts={fin.account_balances || []} matchCurrency="PHP" matchName="RCBC" label="RCBC PHP" />
@@ -74,9 +136,9 @@ export default function CeoDashboard({ data }: Props) {
 
       {/* KPI STRIP */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <Kpi label="Runway" value={runway > 0 ? `${runway.toFixed(1)} mo` : '—'} sub={`Burn ${compact(fin.monthly_burn_estimate || 0)}/mo`} color={runway < 6 ? 'red' : runway < 12 ? 'amber' : 'emerald'} />
-        <Kpi label="Pipeline (weighted)" value={fmtPhp(pipelineWeighted)} sub={`Raw ${compact(wp.total_raw_php || 0)}`} color="blue" />
-        <Kpi label="AR outstanding" value={fmtPhp(arOutstanding)} sub={`Overdue ${compact(arOverdue)}`} color={arOverdue > 0 ? 'red' : 'gray'} />
+        <Kpi label="Runway" value={runway > 0 ? `${runway.toFixed(1)} mo` : '—'} sub={`Burn ${full(fin.monthly_burn_estimate || 0)}/mo`} color={runway < 6 ? 'red' : runway < 12 ? 'amber' : 'emerald'} />
+        <Kpi label="Pipeline (weighted)" value={fmtPhp(pipelineWeighted)} sub={`Raw ${full(wp.total_raw_php || 0)}`} color="blue" />
+        <Kpi label="AR outstanding" value={fmtPhp(arOutstanding)} sub={`Overdue ${full(arOverdue)}`} color={arOverdue > 0 ? 'red' : 'gray'} />
         <Kpi label="Reply rate" value={fmtPct(replyRate)} sub={`${out.sent_total || 0} sent, ${out.replies_total || 0} replies`} color="navy" />
         <Kpi label="Factory util" value={prod.no_data ? '—' : fmtPct(prod.current_utilization_pct)} sub={prod.utilization_basis || ''} color={prod.current_utilization_pct < (prod.break_even_util_pct || 0) ? 'amber' : 'emerald'} />
       </div>
@@ -96,7 +158,7 @@ export default function CeoDashboard({ data }: Props) {
                       <div className="h-full rounded transition-all" style={{ width: `${widthPct}%`, background: STAGE_COLORS[s.stage] || '#64748b' }} />
                       <div className="absolute inset-0 flex items-center px-2 text-[11px] font-medium text-white mix-blend-difference">{s.count}</div>
                     </div>
-                    <div className="text-right text-gray-600 tabular-nums">{compact(s.weighted_php)}</div>
+                    <div className="text-right text-gray-600 tabular-nums">{fullNum(s.weighted_php)}</div>
                   </div>
                 )
               })}
@@ -113,7 +175,7 @@ export default function CeoDashboard({ data }: Props) {
                 <div key={rep} className="rounded border border-gray-200 p-3">
                   <div className="text-xs text-gray-500 uppercase tracking-wide">{rep}</div>
                   <div className="text-lg font-semibold text-gray-900 mt-1">{v.count}</div>
-                  <div className="text-xs text-gray-600 mt-1">{compact(v.value_php)} PHP / {(v.value_usd || 0).toFixed(0)} USD</div>
+                  <div className="text-xs text-gray-600 mt-1">{fullNum(v.value_php)} PHP / {fullNum(v.value_usd || 0)} USD</div>
                 </div>
               ))}
             </div>
@@ -126,7 +188,7 @@ export default function CeoDashboard({ data }: Props) {
                   .map(([seg, v]: any) => (
                     <div key={seg} className="flex justify-between text-xs">
                       <span className="text-gray-700 truncate">{seg}</span>
-                      <span className="text-gray-600 tabular-nums">{v.count} · {compact(v.value)}</span>
+                      <span className="text-gray-600 tabular-nums">{v.count} · {fullNum(v.value)}</span>
                     </div>
                   ))}
               </div>
@@ -196,15 +258,24 @@ export default function CeoDashboard({ data }: Props) {
           </Card>
           <Card title="Quotes and invoices">
             <div className="space-y-1.5 text-xs">
-              <Row label="Active proformas" value={`${quotes.proformas_active_count || 0} · ${compact(quotes.proformas_total_php || 0)}`} />
-              <Row label="Converted proformas" value={`${quotes.proformas_converted_count || 0} · ${compact(quotes.proformas_converted_php || 0)}`} />
-              <Row label="Unpaid invoices" value={`${quotes.invoices_unpaid_count || 0} · ${compact(quotes.invoices_unpaid_total_php || 0)}`} />
+              <Row label="Active proformas" value={`${quotes.proformas_active_count || 0} · ${full(quotes.proformas_total_php || 0)}`} />
+              <Row label="Converted proformas" value={`${quotes.proformas_converted_count || 0} · ${full(quotes.proformas_converted_php || 0)}`} />
+              <Row label="Unpaid invoices" value={`${quotes.invoices_unpaid_count || 0} · ${full(quotes.invoices_unpaid_total_php || 0)}`} />
             </div>
-            {quotes.recent && quotes.recent.length > 0 && (
+            {(() => {
+              const recent = quotes.recent || []
+              // Find proforma IDs that have a corresponding invoice in the same response
+              const convertedIds = new Set(
+                recent.filter((q: any) => q.doc_type === 'invoice' && q.converted_from_proforma_id)
+                      .map((q: any) => String(q.converted_from_proforma_id))
+              )
+              const filtered = recent.filter((q: any) => !(q.doc_type === 'proforma_invoice' && convertedIds.has(String(q.id))))
+              if (filtered.length === 0) return null
+              return (
               <div className="mt-3 pt-3 border-t border-gray-100">
                 <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Recent</div>
                 <div className="space-y-1.5">
-                  {quotes.recent.slice(0, 6).map((q: any) => (
+                  {filtered.slice(0, 6).map((q: any) => (
                     <div key={q.id} className="flex justify-between items-start text-xs">
                       <div className="min-w-0">
                         <div className="text-gray-900 truncate">{q.company || q.customer_name || 'Unknown'}</div>
@@ -212,12 +283,13 @@ export default function CeoDashboard({ data }: Props) {
                           {q.doc_type === 'invoice' ? 'Invoice' : 'Proforma'} · {String(q.created_at || '').slice(0, 10)} · {q.payment_status || q.status}
                         </div>
                       </div>
-                      <div className="text-gray-700 tabular-nums shrink-0 ml-2">{q.currency || 'PHP'} {compact(q.total)}</div>
+                      <div className="text-gray-700 tabular-nums shrink-0 ml-2">{q.currency || 'PHP'} {fullNum(q.total)}</div>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
+              )
+            })()}
           </Card>
         </div>
       </Section>
