@@ -65,9 +65,15 @@ export default function CeoDashboard({ data }: Props) {
         <div className="text-xs text-gray-500">Generated {generatedAt}</div>
       </header>
 
+      {/* TOP STRIP: per account balances */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <AccountKpi accounts={fin.account_balances || []} matchCurrency="PHP" matchName="RCBC" label="RCBC PHP" />
+        <AccountKpi accounts={fin.account_balances || []} matchCurrency="USD" matchName="OCBC" label="OCBC USD" />
+        <AccountKpi accounts={fin.account_balances || []} matchCurrency="SGD" matchName="OCBC" label="OCBC SGD" />
+      </div>
+
       {/* KPI STRIP */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Kpi label="Cash on hand" value={fmtPhp(totalCash)} sub={`PHP ${compact(fin.php_cash || 0)} + USD ${compact(fin.usd_cash || 0)}`} color="emerald" />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <Kpi label="Runway" value={runway > 0 ? `${runway.toFixed(1)} mo` : '—'} sub={`Burn ${compact(fin.monthly_burn_estimate || 0)}/mo`} color={runway < 6 ? 'red' : runway < 12 ? 'amber' : 'emerald'} />
         <Kpi label="Pipeline (weighted)" value={fmtPhp(pipelineWeighted)} sub={`Raw ${compact(wp.total_raw_php || 0)}`} color="blue" />
         <Kpi label="AR outstanding" value={fmtPhp(arOutstanding)} sub={`Overdue ${compact(arOverdue)}`} color={arOverdue > 0 ? 'red' : 'gray'} />
@@ -221,6 +227,37 @@ export default function CeoDashboard({ data }: Props) {
 
 /* ----- small reusable bits ----- */
 
+function AccountKpi({
+  accounts,
+  matchCurrency,
+  matchName,
+  label,
+}: {
+  accounts: any[]
+  matchCurrency: string
+  matchName: string
+  label: string
+}) {
+  const acc = accounts.find(
+    (a) =>
+      String(a.currency || '').toUpperCase() === matchCurrency &&
+      String(a.account_name || a.name || '').toUpperCase().includes(matchName.toUpperCase()),
+  )
+  const balance = acc ? Number(acc.balance || 0) : 0
+  const found = !!acc
+  return (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+      <div className="text-[11px] uppercase tracking-wide text-gray-600">{label}</div>
+      <div className="text-xl font-semibold mt-1 text-emerald-900 tabular-nums">
+        {matchCurrency} {balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </div>
+      <div className="text-[11px] text-gray-500 mt-1 truncate">
+        {found ? (acc.account_name || acc.name || '') : 'Account not found in feed'}
+      </div>
+    </div>
+  )
+}
+
 function Kpi({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
   const colors: Record<string, string> = {
     emerald: 'border-emerald-200 bg-emerald-50',
@@ -346,7 +383,7 @@ function ArTable({ records }: { records: any[] }) {
             const overdue = r.due_date && r.due_date < today
             return (
               <tr key={i} className="border-b border-gray-100">
-                <td className="py-1.5 px-1 text-gray-900">{r.customer_name || r.company || '—'}</td>
+                <td className="py-1.5 px-1 text-gray-900">{r.customer || r.customer_name || r.company || '—'}</td>
                 <td className="py-1.5 px-1 text-gray-700">{r.invoice_number || '—'}</td>
                 <td className={`py-1.5 px-1 ${overdue ? 'text-red-700 font-medium' : 'text-gray-700'}`}>{r.due_date || '—'}</td>
                 <td className="py-1.5 px-1 text-gray-700">{r.status || '—'}</td>
