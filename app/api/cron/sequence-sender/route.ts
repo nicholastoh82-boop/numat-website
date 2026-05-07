@@ -26,12 +26,13 @@ type ClaimedMessage = {
   email_body: string;
 };
 
-type RepKey = "Nick" | "Mohan" | "Bryan";
+type RepKey = "Nick" | "Mohan" | "Bryan" | "Eugene";
 
 const REP_REFRESH_TOKEN_ENV: Record<RepKey, string> = {
   Nick: "GOOGLE_REFRESH_TOKEN_NICK",
   Mohan: "GOOGLE_REFRESH_TOKEN_MOHAN",
   Bryan: "GOOGLE_REFRESH_TOKEN_BRYAN",
+  Eugene: "GOOGLE_REFRESH_TOKEN_EUGENE",
 };
 
 function required(name: string): string {

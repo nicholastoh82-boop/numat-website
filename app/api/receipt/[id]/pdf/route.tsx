@@ -65,6 +65,7 @@ const REP_DIRECTORY: Record<string, string> = {
   "nick@numat.ph": "Nicholas Toh",
   "mohan@numat.ph": "Mohan Louis",
   "bryan@numat.ph": "Bryan",
+  "eugene@numat.ph": "Eugene",
   "sales@numat.ph": "NUMAT Sales Team",
 };
 
