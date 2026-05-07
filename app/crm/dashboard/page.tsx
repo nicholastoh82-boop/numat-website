@@ -1225,7 +1225,7 @@ export default function CRMDashboard() {
       return
     }
     setAddLeadSubmitting(true)
-    const repNameMap: Record<string,string> = { 'mohan@numat.ph': 'Mohan', 'bryan@numat.ph': 'Bryan', 'nick@numat.ph': 'Nick' }
+    const repNameMap: Record<string,string> = { 'mohan@numat.ph': 'Mohan', 'bryan@numat.ph': 'Bryan', 'nick@numat.ph': 'Nick', 'eugene@numat.ph': 'Eugene' }
     // Non-admins can only create leads assigned to themselves
     const repEmail = user.role === 'admin' ? (newLead.rep_email || null) : user.email
     const repName = repEmail ? (repNameMap[repEmail] || repEmail.split('@')[0]) : null
@@ -1665,6 +1665,7 @@ export default function CRMDashboard() {
                               const repNameMap: Record<string,string> = {
                                 'mohan@numat.ph': 'Mohan',
                                 'bryan@numat.ph': 'Bryan',
+                                'eugene@numat.ph': 'Eugene',
                               }
                               const name = repNameMap[email] || email.split('@')[0]
                               updateLead(lead.id, {
@@ -1677,6 +1678,7 @@ export default function CRMDashboard() {
                             <option value="">— Unassigned —</option>
                             <option value="mohan@numat.ph">Mohan (International)</option>
                             <option value="bryan@numat.ph">Bryan (Philippines)</option>
+                            <option value="eugene@numat.ph">Eugene (Philippines)</option>
                           </select>
                         </div>
                       )}
