@@ -91,6 +91,7 @@ export async function POST(req: Request) {
       payment_method,
       bank_reference,
       notes,
+      deposit_account_id,
     } = body
 
     // 2. Payload validation
@@ -215,6 +216,7 @@ export async function POST(req: Request) {
           bank_reference: bank_reference || null,
           notes: notes || null,
           issued_by: admin.email,
+          deposit_account_id: deposit_account_id || null,
         },
       ])
       .select("id, receipt_number, created_at")
@@ -256,7 +258,7 @@ export async function POST(req: Request) {
         .eq("quote_id", quote_id)
 
       const categoryId = pickCategoryFromInvoiceItems(items || [])
-      const toAccountId = pickToAccountId(invoiceBaseCurrency, payment_method)
+      const toAccountId = pickToAccountId(invoiceBaseCurrency, payment_method, deposit_account_id)
       const customerName = invoice.customer_name || invoice.company || "Customer"
       const description = `Sale receipt ${receipt.receipt_number} against ${invoice.quote_number} (${customerName}, ${payment_method})`
 

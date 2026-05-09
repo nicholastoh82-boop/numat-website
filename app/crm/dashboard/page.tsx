@@ -114,6 +114,15 @@ interface Receipt {
   created_at: string
   sent_at: string | null
   superseded_by: string | null
+  deposit_account_id: string | null
+}
+
+interface FinanceAccount {
+  id: string
+  code: string
+  name: string
+  currency: string
+  account_type: string
 }
 
 const PIPELINE_STAGES = ['new','contacted','qualified','proposal_sent','meeting_booked','won','lost']
@@ -336,6 +345,8 @@ export default function CRMDashboard() {
   const [receiptMethod, setReceiptMethod] = useState<'wire_transfer' | 'bank_deposit' | 'check' | 'gcash' | 'paymaya' | 'cash' | 'other'>('wire_transfer')
   const [receiptBankRef, setReceiptBankRef] = useState('')
   const [receiptNotes, setReceiptNotes] = useState('')
+  const [receiptDepositAccountId, setReceiptDepositAccountId] = useState<string>('')
+  const [financeAccounts, setFinanceAccounts] = useState<FinanceAccount[]>([])
   const [receiptSubmitting, setReceiptSubmitting] = useState(false)
   const [sendingReceiptId, setSendingReceiptId] = useState<string | null>(null)
   const [sendReceiptModal, setSendReceiptModal] = useState<{
@@ -419,7 +430,7 @@ export default function CRMDashboard() {
   const loadReceipts = useCallback(async () => {
     const { data } = await supabase
       .from('receipts')
-      .select('id, receipt_number, quote_id, actual_amount, actual_currency, display_amount, display_currency, actual_date, payment_method, bank_reference, notes, issued_by, created_at, sent_at, superseded_by')
+      .select('id, receipt_number, quote_id, actual_amount, actual_currency, display_amount, display_currency, actual_date, payment_method, bank_reference, notes, issued_by, created_at, sent_at, superseded_by, deposit_account_id')
       .is('superseded_by', null)
       .order('created_at', { ascending: false })
     if (data) {
@@ -464,6 +475,18 @@ export default function CRMDashboard() {
         setConnectedRepEmails(set)
       })
       .catch(() => { if (!cancelled) setConnectedRepEmails(new Set()) })
+    return () => { cancelled = true }
+  }, [])
+
+  // Load finance accounts once on mount for the receipt deposit dropdown.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/finance/accounts', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : { accounts: [] })
+      .then((json: { accounts?: FinanceAccount[] }) => {
+        if (!cancelled) setFinanceAccounts(json.accounts || [])
+      })
+      .catch(() => {})
     return () => { cancelled = true }
   }, [])
 
@@ -966,6 +989,9 @@ export default function CRMDashboard() {
     setReceiptMethod('wire_transfer')
     setReceiptBankRef('')
     setReceiptNotes('')
+    const cur = (invoice.currency || 'PHP').toUpperCase()
+    const def = financeAccounts.find(a => a.currency === cur && a.account_type === 'bank')
+    setReceiptDepositAccountId(def?.id || '')
   }
 
   // Open the receipt modal in EDIT mode, pre-filled with the existing
@@ -979,6 +1005,7 @@ export default function CRMDashboard() {
     setReceiptMethod(receipt.payment_method as any)
     setReceiptBankRef(receipt.bank_reference || '')
     setReceiptNotes(receipt.notes || '')
+    setReceiptDepositAccountId(receipt.deposit_account_id || '')
   }
 
   // Commit C: submit the receipt. POSTs to /api/receipt/create, which is
@@ -1009,6 +1036,7 @@ export default function CRMDashboard() {
         payment_method: receiptMethod,
         bank_reference: receiptBankRef || undefined,
         notes: receiptNotes || undefined,
+        deposit_account_id: receiptDepositAccountId || undefined,
       }
       if (!isEdit) payload.quote_id = invoice.id
       const res = await fetch(url, {
@@ -1033,6 +1061,7 @@ export default function CRMDashboard() {
                   payment_method: receiptMethod,
                   bank_reference: receiptBankRef || null,
                   notes: receiptNotes || null,
+                  deposit_account_id: receiptDepositAccountId || null,
                 }
               : r
           ),
@@ -1068,6 +1097,7 @@ export default function CRMDashboard() {
         created_at: new Date().toISOString(),
         sent_at: null,
         superseded_by: null,
+        deposit_account_id: receiptDepositAccountId || null,
       }
       setReceiptsByInvoice(prev => ({
         ...prev,
@@ -2785,6 +2815,22 @@ export default function CRMDashboard() {
                   onChange={e => setReceiptBankRef(e.target.value)}
                   placeholder="e.g. SWIFT ref, check number, GCash ref"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+
+              {/* Deposited to (drives the auto-generated finance transaction) */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Deposited to</label>
+                <select value={receiptDepositAccountId}
+                  onChange={e => setReceiptDepositAccountId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">Auto (default for currency and method)</option>
+                  {financeAccounts
+                    .filter(a => a.currency === (invoice.currency || 'PHP').toUpperCase())
+                    .map(a => (
+                      <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
+                    ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Pick the bank account this payment landed in. Drives the Finance dashboard entry.</p>
               </div>
 
               {/* Notes */}
