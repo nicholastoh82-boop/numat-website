@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { pickCategoryFromInvoiceItems, pickToAccountId, upsertFinTransactionForReceipt } from "@/lib/finance/receiptToTransaction"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -243,6 +244,41 @@ export async function POST(req: Request) {
       console.error(
         `[receipt/create] Failed to update invoice payment_status: ${updErr.message}`
       )
+    }
+
+    // Mirror to fin_transactions so the Finance dashboard reflects the
+    // sale automatically. Best-effort: a failure here does not roll back
+    // the receipt, only logs an error.
+    try {
+      const { data: items } = await supabase
+        .from("quote_items")
+        .select("sku, total_price")
+        .eq("quote_id", quote_id)
+
+      const categoryId = pickCategoryFromInvoiceItems(items || [])
+      const toAccountId = pickToAccountId(invoiceBaseCurrency, payment_method)
+      const customerName = invoice.customer_name || invoice.company || "Customer"
+      const description = `Sale receipt ${receipt.receipt_number} against ${invoice.quote_number} (${customerName}, ${payment_method})`
+
+      const result = await upsertFinTransactionForReceipt(
+        {
+          source_receipt_id: receipt.id,
+          transaction_date: actual_date,
+          amount: round2(parsedAmount),
+          currency: invoiceBaseCurrency,
+          to_account_id: toAccountId,
+          category_id: categoryId,
+          description,
+          bank_reference: bank_reference || null,
+          vendor_payee: customerName,
+        },
+        admin.email,
+      )
+      if (!result.ok) {
+        console.error(`[receipt/create] fin_transactions mirror failed: ${result.error}`)
+      }
+    } catch (e: any) {
+      console.error(`[receipt/create] fin_transactions mirror exception: ${e?.message}`)
     }
 
     return NextResponse.json({

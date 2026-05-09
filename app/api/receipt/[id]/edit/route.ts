@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { pickCategoryFromInvoiceItems, pickToAccountId, upsertFinTransactionForReceipt } from "@/lib/finance/receiptToTransaction"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -208,6 +209,47 @@ export async function POST(
     .from("quotes")
     .update({ payment_status: newPaymentStatus })
     .eq("id", receipt.quote_id)
+
+  // Mirror to fin_transactions so the Finance dashboard stays accurate.
+  // Idempotent: helper updates the existing row keyed by source_receipt_id.
+  try {
+    const { data: items } = await supabase
+      .from("quote_items")
+      .select("sku, total_price")
+      .eq("quote_id", receipt.quote_id)
+
+    const { data: invForName } = await supabase
+      .from("quotes")
+      .select("customer_name, company, quote_number, currency")
+      .eq("id", receipt.quote_id)
+      .single()
+
+    const baseCurrency = (invForName?.currency || invoice.currency || "PHP").toUpperCase()
+    const categoryId = pickCategoryFromInvoiceItems(items || [])
+    const toAccountId = pickToAccountId(baseCurrency, payment_method)
+    const customerName = invForName?.customer_name || invForName?.company || "Customer"
+    const description = `Sale receipt (edited) against ${invForName?.quote_number || invoice.quote_number} (${customerName}, ${payment_method})`
+
+    const result = await upsertFinTransactionForReceipt(
+      {
+        source_receipt_id: receiptId,
+        transaction_date: actual_date,
+        amount: round2(parsedAmount),
+        currency: baseCurrency,
+        to_account_id: toAccountId,
+        category_id: categoryId,
+        description,
+        bank_reference: bank_reference || null,
+        vendor_payee: customerName,
+      },
+      admin.email,
+    )
+    if (!result.ok) {
+      console.error(`[receipt/edit] fin_transactions mirror failed: ${result.error}`)
+    }
+  } catch (e: any) {
+    console.error(`[receipt/edit] fin_transactions mirror exception: ${e?.message}`)
+  }
 
   return NextResponse.json({
     success: true,
