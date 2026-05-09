@@ -337,6 +337,7 @@ export default function CRMDashboard() {
   const [receiptBankRef, setReceiptBankRef] = useState('')
   const [receiptNotes, setReceiptNotes] = useState('')
   const [receiptSubmitting, setReceiptSubmitting] = useState(false)
+  const [sendingReceiptId, setSendingReceiptId] = useState<string | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [analyticsOpen, setAnalyticsOpen] = useState(true)
   // Compose email modal state. Single shared instance, only one open at a time.
@@ -707,6 +708,50 @@ export default function CRMDashboard() {
       showToast(`Failed to send: ${err?.message || 'unknown error'}`, 'error')
     } finally {
       setSendingQuoteId(null)
+    }
+  }
+
+  // Send a payment receipt PDF to the customer via the rep's Gmail.
+  // Mirrors sendQuote but hits /api/receipt/send.
+  const sendReceipt = async (receipt: Receipt, invoice: Quote, lead: Lead) => {
+    if (sendingReceiptId) return
+    const recipient = invoice.email || lead.email
+    if (!recipient) {
+      showToast('No recipient email on invoice. Set one via the pencil icon next to the document.', 'error')
+      return
+    }
+    const recipientName = invoice.customer_name || lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Customer'
+    const isResend = Boolean(receipt.sent_at)
+    const verb = isResend ? 'Resend' : 'Send'
+    if (!window.confirm(`${verb} receipt ${receipt.receipt_number} to ${recipient}?`)) return
+    const senderRepEmail = lead.rep_email || 'nick@numat.ph'
+    setSendingReceiptId(receipt.id)
+    try {
+      const res = await fetch('/api/receipt/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          receipt_id: receipt.id,
+          recipient_email: recipient,
+          recipient_name: recipientName,
+          sender_rep_email: senderRepEmail,
+          sent_by: user?.email || 'crm',
+        }),
+      })
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+      const nowIso = result.sent_at || new Date().toISOString()
+      setReceiptsByInvoice(prev => ({
+        ...prev,
+        [invoice.id]: (prev[invoice.id] || []).map(r =>
+          r.id === receipt.id ? { ...r, sent_at: nowIso } : r
+        ),
+      }))
+      showToast(`Receipt ${receipt.receipt_number} sent to ${recipient}`)
+    } catch (err: any) {
+      showToast(`Failed to send receipt: ${err?.message || 'unknown error'}`, 'error')
+    } finally {
+      setSendingReceiptId(null)
     }
   }
 
@@ -1982,6 +2027,10 @@ export default function CRMDashboard() {
                                         <button onClick={() => window.open(`/api/receipt/${r.id}/pdf`, '_blank', 'noopener,noreferrer')}
                                           className="px-2 py-0.5 border border-gray-200 rounded hover:bg-white text-gray-700 font-medium">
                                           Preview
+                                        </button>
+                                        <button onClick={() => sendReceipt(r, q, lead)} disabled={sendingReceiptId === r.id}
+                                          className={`px-2 py-0.5 rounded font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed ${r.sent_at ? 'bg-gray-500 hover:bg-gray-600' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                                          {sendingReceiptId === r.id ? 'Sending.' : r.sent_at ? 'Resend' : 'Send'}
                                         </button>
                                       </div>
                                     )
