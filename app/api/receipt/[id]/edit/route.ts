@@ -99,7 +99,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const { actual_amount, actual_date, payment_method, bank_reference, notes } =
+  const { actual_amount, actual_date, payment_method, bank_reference, notes, deposit_account_id } =
     body
 
   // Validate inputs
@@ -187,6 +187,7 @@ export async function POST(
       payment_method,
       bank_reference: bank_reference || null,
       notes: notes || null,
+      deposit_account_id: deposit_account_id || null,
     })
     .eq("id", receiptId)
 
@@ -226,7 +227,7 @@ export async function POST(
 
     const baseCurrency = (invForName?.currency || invoice.currency || "PHP").toUpperCase()
     const categoryId = pickCategoryFromInvoiceItems(items || [])
-    const toAccountId = pickToAccountId(baseCurrency, payment_method)
+    const toAccountId = pickToAccountId(baseCurrency, payment_method, deposit_account_id)
     const customerName = invForName?.customer_name || invForName?.company || "Customer"
     const description = `Sale receipt (edited) against ${invForName?.quote_number || invoice.quote_number} (${customerName}, ${payment_method})`
 

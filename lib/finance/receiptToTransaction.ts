@@ -77,9 +77,12 @@ export function pickCategoryFromInvoiceItems(
 /**
  * Pick the receiving bank account based on currency + payment method.
  * Cash payments go to the revolving fund. Everything else routes to the
- * primary bank account for the currency.
+ * primary bank account for the currency. If an explicit account id is
+ * provided (from the user picking "Deposited to" on the receipt modal),
+ * it takes precedence over the heuristic.
  */
-export function pickToAccountId(currency: string, paymentMethod: string): string {
+export function pickToAccountId(currency: string, paymentMethod: string, explicitAccountId?: string | null): string {
+  if (explicitAccountId) return explicitAccountId;
   const cur = (currency || "PHP").toUpperCase();
   const method = (paymentMethod || "").toLowerCase();
 
