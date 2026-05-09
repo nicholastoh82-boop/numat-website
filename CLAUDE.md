@@ -98,3 +98,14 @@ These are not abstract: they directly inform engineering, hiring, and roadmap de
 - Bryan Suarin: COO, runs Philippines leads
 - Mohan Louis: Head of Growth, runs international leads and is also CRO of Kastelon
 - Nick: Business Administrator, owns technology and ops
+
+## Git workflow and branch protection
+The `main` branch is protected on GitHub: direct pushes are rejected, and changes must go through a pull request. The global rule "always commit and push to main" is overridden for this repo. Standard flow:
+
+1. Branch off main: `git checkout -b feature-name`
+2. Commit on the feature branch
+3. Push with upstream tracking: `git push -u origin feature-name`
+4. Open a PR via the URL GitHub returns, or via `gh pr create --base main --head feature-name --title "..." --body "..."`
+5. Merge in the GitHub UI; Vercel deploys from main on merge
+
+The `gh` CLI is not installed on this Windows machine. Install with `winget install GitHub.cli` if you want PR creation from PowerShell; otherwise open the PR URL in a browser.
