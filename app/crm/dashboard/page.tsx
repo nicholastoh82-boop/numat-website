@@ -329,6 +329,7 @@ export default function CRMDashboard() {
   const [receiptModal, setReceiptModal] = useState<{
     invoice: Quote
     lead: Lead
+    editingReceipt?: Receipt
   } | null>(null)
   const [receiptAmount, setReceiptAmount] = useState('')
   const [receiptDate, setReceiptDate] = useState('')
@@ -876,6 +877,19 @@ export default function CRMDashboard() {
     setReceiptNotes('')
   }
 
+  // Open the receipt modal in EDIT mode, pre-filled with the existing
+  // receipt's values. Submitting will hit /api/receipt/[id]/edit instead of
+  // /api/receipt/create.
+  const openEditReceiptModal = (receipt: Receipt, invoice: Quote, lead: Lead, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setReceiptModal({ invoice, lead, editingReceipt: receipt })
+    setReceiptAmount(String(Number(receipt.actual_amount).toFixed(2)))
+    setReceiptDate(receipt.actual_date)
+    setReceiptMethod(receipt.payment_method as any)
+    setReceiptBankRef(receipt.bank_reference || '')
+    setReceiptNotes(receipt.notes || '')
+  }
+
   // Commit C: submit the receipt. POSTs to /api/receipt/create, which is
   // gated server-side to admin-only. Optimistically updates state so the rep
   // sees the receipt and the updated invoice payment_status immediately.
@@ -893,20 +907,58 @@ export default function CRMDashboard() {
     }
     setReceiptSubmitting(true)
     try {
-      const res = await fetch('/api/receipt/create', {
+      const editingReceipt = receiptModal.editingReceipt
+      const isEdit = !!editingReceipt
+      const url = isEdit
+        ? `/api/receipt/${editingReceipt!.id}/edit`
+        : '/api/receipt/create'
+      const payload: any = {
+        actual_amount: parsedAmount,
+        actual_date: receiptDate,
+        payment_method: receiptMethod,
+        bank_reference: receiptBankRef || undefined,
+        notes: receiptNotes || undefined,
+      }
+      if (!isEdit) payload.quote_id = invoice.id
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          quote_id: invoice.id,
-          actual_amount: parsedAmount,
-          actual_date: receiptDate,
-          payment_method: receiptMethod,
-          bank_reference: receiptBankRef || undefined,
-          notes: receiptNotes || undefined,
-        }),
+        body: JSON.stringify(payload),
       })
       const result = await res.json()
       if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+
+      if (isEdit) {
+        // Optimistic update: replace the edited receipt in place and refresh invoice status.
+        setReceiptsByInvoice(prev => ({
+          ...prev,
+          [invoice.id]: (prev[invoice.id] || []).map(r =>
+            r.id === editingReceipt!.id
+              ? {
+                  ...r,
+                  actual_amount: result.actual_amount,
+                  display_amount: result.display_amount,
+                  actual_date: receiptDate,
+                  payment_method: receiptMethod,
+                  bank_reference: receiptBankRef || null,
+                  notes: receiptNotes || null,
+                }
+              : r
+          ),
+        }))
+        setQuotesByLead(prev => {
+          const list = (prev[lead.id] || []).map(q =>
+            q.id === invoice.id
+              ? { ...q, payment_status: result.invoice_payment_status }
+              : q
+          )
+          return { ...prev, [lead.id]: list }
+        })
+        const statusLabel = result.invoice_payment_status === 'paid' ? 'PAID IN FULL' : (result.invoice_payment_status === 'partial' ? 'partial payment' : 'unpaid')
+        showToast(`Receipt ${editingReceipt!.receipt_number} updated (${statusLabel})`)
+        setReceiptModal(null)
+        return
+      }
 
       // Optimistic update: add the new receipt and refresh invoice payment_status
       const newReceipt: Receipt = {
@@ -1921,6 +1973,12 @@ export default function CRMDashboard() {
                                         <span className="text-gray-300">·</span>
                                         <span className="text-gray-500">Paid {relDate(r.actual_date)}</span>
                                         <div className="flex-1 min-w-2" />
+                                        {user?.role === 'admin' && (
+                                          <button onClick={(e) => openEditReceiptModal(r, q, lead, e)}
+                                            className="px-2 py-0.5 border border-gray-200 rounded hover:bg-white text-gray-700 font-medium">
+                                            Edit
+                                          </button>
+                                        )}
                                         <button onClick={() => window.open(`/api/receipt/${r.id}/pdf`, '_blank', 'noopener,noreferrer')}
                                           className="px-2 py-0.5 border border-gray-200 rounded hover:bg-white text-gray-700 font-medium">
                                           Preview
@@ -2440,10 +2498,16 @@ export default function CRMDashboard() {
       })()}
 
       {receiptModal && (() => {
-        const { invoice, lead } = receiptModal
+        const { invoice, lead, editingReceipt } = receiptModal
+        const isEditMode = !!editingReceipt
         const currency = invoice.currency || 'USD'
         const existing = (receiptsByInvoice[invoice.id] || []).filter(r => !r.superseded_by)
-        const cumulative = existing.reduce((sum, r) => sum + Number(r.actual_amount || 0), 0)
+        // In edit mode, exclude the receipt being edited from the cumulative so the user
+        // sees what room they have for THIS receipt's new amount.
+        const otherExisting = isEditMode
+          ? existing.filter(r => r.id !== editingReceipt!.id)
+          : existing
+        const cumulative = otherExisting.reduce((sum, r) => sum + Number(r.actual_amount || 0), 0)
         const invoiceTotal = Number(invoice.total || 0)
         const outstanding = Math.max(0, invoiceTotal - cumulative)
         const parsedEntered = parseFloat(receiptAmount)
@@ -2454,7 +2518,7 @@ export default function CRMDashboard() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
             <div className="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
-              <h2 className="text-lg font-semibold text-gray-800">Issue Payment Receipt</h2>
+              <h2 className="text-lg font-semibold text-gray-800">{isEditMode ? `Edit Receipt ${editingReceipt!.receipt_number}` : 'Issue Payment Receipt'}</h2>
               <p className="text-sm text-gray-500 mt-0.5">
                 Against <span className="font-mono">{invoice.quote_number}</span>
                 {' · '}
@@ -2551,7 +2615,7 @@ export default function CRMDashboard() {
               </button>
               <button onClick={submitReceipt} disabled={submitDisabled}
                 className="flex-1 py-2.5 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                {receiptSubmitting ? 'Issuing...' : wouldSettleInFull ? 'Settle in Full' : 'Issue Receipt'}
+                {receiptSubmitting ? (isEditMode ? 'Saving...' : 'Issuing...') : isEditMode ? 'Save changes' : wouldSettleInFull ? 'Settle in Full' : 'Issue Receipt'}
               </button>
             </div>
           </div>
