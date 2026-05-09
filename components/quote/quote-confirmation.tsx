@@ -106,10 +106,11 @@ export function QuoteConfirmation() {
       return new Intl.NumberFormat('en-PH', {
         style: 'currency',
         currency: displayCurrency,
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }).format(amount)
     } catch {
-      return `${displayCurrency} ${Math.round(amount).toLocaleString()}`
+      return `${displayCurrency} ${amount.toFixed(2)}`
     }
   }
 
