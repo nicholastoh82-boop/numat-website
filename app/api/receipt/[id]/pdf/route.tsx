@@ -219,12 +219,14 @@ const styles = StyleSheet.create({
   },
   amountDisplay: {
     fontSize: 24,
+    lineHeight: 1.2,
     fontFamily: "Helvetica-Bold",
     color: COLORS.green,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   amountBase: {
     fontSize: 11,
+    lineHeight: 1.4,
     color: COLORS.body,
     marginBottom: 0,
   },
