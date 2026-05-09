@@ -37,24 +37,26 @@ export function CartContent() {
     removeItem,
     updateQuantity,
     getTotalItems,
-    getSubtotal,
-    getDiscount,
-    getTotal,
     getDiscountPercent,
   } = useCartStore()
 
-  const { formatConvertedFromUsd } = useCurrency()
+  const { unitPhp, lineTotalPhpFromUsd, formatPhpAmount } = useCurrency()
   const searchParams = useSearchParams()
   const prefillProduct = searchParams.get('product') ?? undefined
   const [showQuoteForm, setShowQuoteForm] = useState(() => !!searchParams.get('product'))
 
   const totalItems = getTotalItems()
-  const subtotal = getSubtotal()
-  const discount = getDiscount()
-  const total = getTotal()
   const discountPercent = getDiscountPercent()
   const itemsUntilDiscount = Math.max(0, DISCOUNT_THRESHOLD - totalItems)
   const currentStep = showQuoteForm ? 2 : 1
+
+  // Compute order math in PHP from rounded display units so the visible line/subtotal/total reconcile.
+  const subtotalPhp = items.reduce((sum, item) => {
+    const line = lineTotalPhpFromUsd(item.unitPrice, item.quantity)
+    return sum + (line ?? 0)
+  }, 0)
+  const discountPhp = Math.round(subtotalPhp * (discountPercent / 100) * 100) / 100
+  const totalPhp = Math.round((subtotalPhp - discountPhp) * 100) / 100
 
   if (items.length === 0) {
     return (
@@ -181,7 +183,7 @@ export function CartContent() {
                         <h3 className="font-bold text-stone-950">{item.name}</h3>
                         <p className="mt-1 text-sm text-stone-500">{item.specs}</p>
                         <p className="mt-2 text-sm font-semibold text-emerald-700">
-                          {formatConvertedFromUsd(item.unitPrice)} / {item.unit}
+                          {formatPhpAmount(unitPhp(item.unitPrice))} / {item.unit}
                         </p>
                       </div>
                     </div>
@@ -219,7 +221,7 @@ export function CartContent() {
 
                       <div className="flex items-center gap-4">
                         <p className="font-bold text-stone-950">
-                          {formatConvertedFromUsd(item.quantity * (item.unitPrice ?? 0))}
+                          {formatPhpAmount(lineTotalPhpFromUsd(item.unitPrice, item.quantity))}
                         </p>
                         <button
                           className="flex h-10 w-10 items-center justify-center rounded-xl text-stone-400 transition hover:bg-red-50 hover:text-red-500"
@@ -276,12 +278,12 @@ export function CartContent() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-stone-500">Subtotal</span>
-                    <span className="font-semibold text-stone-950">{formatConvertedFromUsd(subtotal)}</span>
+                    <span className="font-semibold text-stone-950">{formatPhpAmount(subtotalPhp)}</span>
                   </div>
                   {discountPercent > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-emerald-700">Bulk Discount ({discountPercent}%)</span>
-                      <span className="font-semibold text-emerald-700">-{formatConvertedFromUsd(discount)}</span>
+                      <span className="font-semibold text-emerald-700">-{formatPhpAmount(discountPhp)}</span>
                     </div>
                   )}
                   <div className="flex justify-between border-t border-stone-100 pt-3 text-sm">
@@ -290,12 +292,12 @@ export function CartContent() {
                   </div>
                   <div className="flex justify-between border-t border-stone-100 pt-3">
                     <span className="font-bold text-stone-950">Total (excl. VAT)</span>
-                    <span className="text-xl font-extrabold text-stone-950">{formatConvertedFromUsd(total)}</span>
+                    <span className="text-xl font-extrabold text-stone-950">{formatPhpAmount(totalPhp)}</span>
                   </div>
                 </div>
 
                 <p className="mt-3 text-center text-xs text-stone-400">
-                  Live exchange rates applied to USD base prices
+                  Prices pegged to USD, updated daily
                 </p>
 
                 {!showQuoteForm && (

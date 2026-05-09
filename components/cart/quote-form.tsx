@@ -50,8 +50,13 @@ function extractProductId(cartItemId: string) {
 
 export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
   const router = useRouter()
-  const { items, getDiscountPercent, getTotal, clearCart } = useCartStore()
-  const { formatConvertedFromUsd, selectedCountry, exchangeRate } = useCurrency()
+  const { items, getDiscountPercent, clearCart } = useCartStore()
+  const {
+    unitPhp,
+    lineTotalPhpFromUsd,
+    formatPhpAmount,
+    selectedCountry,
+  } = useCurrency()
 
   const [phoneNumber, setPhoneNumber] = useState<Value>()
   const [formData, setFormData] = useState<{
@@ -72,8 +77,16 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const total = getTotal()
   const discountPercent = getDiscountPercent()
+
+  // Email body uses rounded display units so the visible math reconciles (matches the website cart).
+  const subtotalPhp = items.reduce((sum, item) => {
+    if (item.isPriceOnRequest) return sum
+    const line = lineTotalPhpFromUsd(item.unitPrice, item.quantity)
+    return sum + (line ?? 0)
+  }, 0)
+  const discountPhp = Math.round(subtotalPhp * (discountPercent / 100) * 100) / 100
+  const totalPhp = Math.round((subtotalPhp - discountPhp) * 100) / 100
 
   const quoteMessage = useMemo(() => {
     const lines: string[] = []
@@ -88,23 +101,22 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
     lines.push('')
     lines.push('Items:')
     items.forEach((item, index) => {
-      const unitPrice = item.unitPrice ?? 0
       lines.push(`${index + 1}. ${item.name}`)
       lines.push(`   ${item.specs}`)
       lines.push(`   Quantity: ${item.quantity} ${item.unit}`)
-      lines.push(`   Unit Price: ${item.isPriceOnRequest ? 'Price on request' : formatConvertedFromUsd(unitPrice)}`)
-      lines.push(`   Line Total: ${item.isPriceOnRequest ? 'Price on request' : formatConvertedFromUsd(unitPrice * item.quantity)}`)
+      lines.push(`   Unit Price: ${item.isPriceOnRequest ? 'Price on request' : formatPhpAmount(unitPhp(item.unitPrice))}`)
+      lines.push(`   Line Total: ${item.isPriceOnRequest ? 'Price on request' : formatPhpAmount(lineTotalPhpFromUsd(item.unitPrice, item.quantity))}`)
       lines.push('')
     })
     if (discountPercent > 0) lines.push(`Bulk Discount: ${discountPercent}%`)
-    lines.push(`Total (excl. VAT): ${formatConvertedFromUsd(total)}`)
+    lines.push(`Total (excl. VAT): ${formatPhpAmount(totalPhp)}`)
     if (formData.notes.trim()) {
       lines.push('')
       lines.push('Additional Notes:')
       lines.push(formData.notes.trim())
     }
     return lines.join('\n')
-  }, [formData, phoneNumber, items, discountPercent, total, formatConvertedFromUsd, selectedCountry.currency])
+  }, [formData, phoneNumber, items, discountPercent, totalPhp, unitPhp, lineTotalPhpFromUsd, formatPhpAmount, selectedCountry.currency])
 
   function validateForm() {
     const nextErrors: Record<string, string> = {}
@@ -141,7 +153,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
             notes: formData.notes.trim() || null,
             consent: !!formData.consent,
             display_currency: selectedCountry.currency,
-            display_total: total * exchangeRate,
+            display_total: totalPhp,
           },
           items: items.map((item) => ({
             product_id: extractProductId(item.id),

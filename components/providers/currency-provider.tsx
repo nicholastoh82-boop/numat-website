@@ -11,6 +11,9 @@ type CurrencyContextValue = {
   closeCountryModal: () => void
   convertFromUsd: (usdAmount: number | null | undefined) => number | null
   formatConvertedFromUsd: (usdAmount: number | null | undefined) => string
+  unitPhp: (usdAmount: number | null | undefined) => number | null
+  lineTotalPhpFromUsd: (usdAmount: number | null | undefined, qty: number) => number | null
+  formatPhpAmount: (phpAmount: number | null | undefined) => string
   exchangeRate: number
   currency: string
   locale: string
@@ -133,8 +136,8 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     if (converted == null) return 'Request Quote'
 
     const isSubUnit = converted < 1
-    const minFraction = isSubUnit ? 2 : 0
-    const maxFraction = isSubUnit ? 4 : 0
+    const minFraction = 2
+    const maxFraction = isSubUnit ? 4 : 2
 
     try {
       return new Intl.NumberFormat(selectedCountry.locale, {
@@ -147,7 +150,38 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       if (isSubUnit) {
         return `${selectedCountry.currency} ${converted.toFixed(4)}`
       }
-      return `${selectedCountry.currency} ${Math.round(converted).toLocaleString()}`
+      return `${selectedCountry.currency} ${converted.toFixed(2)}`
+    }
+  }
+
+  // Round the converted unit price to 2dp so visible math reconciles:
+  // displayed line total is derived from this rounded unit, not the raw USD unit × qty × rate.
+  const unitPhp = (usdAmount: number | null | undefined): number | null => {
+    if (usdAmount == null || !Number.isFinite(usdAmount)) return null
+    return Math.round(usdAmount * exchangeRate * 100) / 100
+  }
+
+  const lineTotalPhpFromUsd = (
+    usdAmount: number | null | undefined,
+    qty: number,
+  ): number | null => {
+    const unit = unitPhp(usdAmount)
+    if (unit == null) return null
+    return Math.round(unit * qty * 100) / 100
+  }
+
+  const formatPhpAmount = (phpAmount: number | null | undefined): string => {
+    if (phpAmount == null || !Number.isFinite(phpAmount)) return 'Request Quote'
+
+    try {
+      return new Intl.NumberFormat(selectedCountry.locale, {
+        style: 'currency',
+        currency: selectedCountry.currency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(phpAmount)
+    } catch {
+      return `${selectedCountry.currency} ${phpAmount.toFixed(2)}`
     }
   }
 
@@ -160,6 +194,9 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       closeCountryModal: () => setShowCountryModal(false),
       convertFromUsd,
       formatConvertedFromUsd,
+      unitPhp,
+      lineTotalPhpFromUsd,
+      formatPhpAmount,
       exchangeRate,
       currency: selectedCountry.currency,
       locale: selectedCountry.locale,
