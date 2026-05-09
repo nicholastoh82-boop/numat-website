@@ -341,6 +341,7 @@ export default function CRMDashboard() {
   const [sendReceiptModal, setSendReceiptModal] = useState<{
     receipt: Receipt; invoice: Quote; lead: Lead;
     recipient: string; subject: string; html: string;
+    editorMode: 'visual' | 'html';
     isLoading: boolean; isSending: boolean;
   } | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
@@ -723,6 +724,7 @@ export default function CRMDashboard() {
     setSendReceiptModal({
       receipt, invoice, lead,
       recipient, subject: '', html: '',
+      editorMode: 'visual',
       isLoading: true, isSending: false,
     })
     try {
@@ -2623,13 +2625,54 @@ export default function CRMDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">Body (HTML)</label>
-                    <textarea value={html}
-                      onChange={(e) => setSendReceiptModal(prev => prev ? { ...prev, html: e.target.value } : prev)}
-                      rows={14}
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-xs font-mono leading-relaxed"
-                    />
-                    <p className="text-xs text-gray-400 mt-1">HTML is allowed. The receipt PDF is attached automatically.</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-gray-600">Body</label>
+                      <div className="flex gap-1 text-xs border border-gray-200 rounded p-0.5">
+                        <button type="button"
+                          onClick={() => setSendReceiptModal(prev => prev ? { ...prev, editorMode: 'visual' } : prev)}
+                          className={`px-2 py-0.5 rounded ${sendReceiptModal!.editorMode === 'visual' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+                          Visual
+                        </button>
+                        <button type="button"
+                          onClick={() => setSendReceiptModal(prev => prev ? { ...prev, editorMode: 'html' } : prev)}
+                          className={`px-2 py-0.5 rounded ${sendReceiptModal!.editorMode === 'html' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+                          HTML
+                        </button>
+                      </div>
+                    </div>
+                    {sendReceiptModal!.editorMode === 'visual' ? (
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        dir="ltr"
+                        ref={(el) => {
+                          // Only set innerHTML on mount or after a non-visual edit, never on every render
+                          // (otherwise the cursor jumps to the start on every keystroke).
+                          if (el && el.dataset.lastSyncedHtml !== html) {
+                            el.innerHTML = html;
+                            el.dataset.lastSyncedHtml = html;
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const newHtml = (e.currentTarget as HTMLDivElement).innerHTML;
+                          ;(e.currentTarget as HTMLDivElement).dataset.lastSyncedHtml = newHtml;
+                          setSendReceiptModal(prev => prev ? { ...prev, html: newHtml } : prev);
+                        }}
+                        className="w-full px-3 py-3 border border-gray-300 rounded text-sm leading-relaxed bg-white min-h-[280px] max-h-[400px] overflow-y-auto focus:outline-none focus:border-gray-400"
+                      />
+                    ) : (
+                      <textarea value={html}
+                        onChange={(e) => setSendReceiptModal(prev => prev ? { ...prev, html: e.target.value } : prev)}
+                        rows={14}
+                        className="w-full px-3 py-2 border border-gray-300 rounded text-xs font-mono leading-relaxed"
+                        dir="ltr"
+                      />
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">
+                      {sendReceiptModal!.editorMode === 'visual'
+                        ? 'Edit like a normal email. Changes save when you click outside the body.'
+                        : 'Raw HTML. The receipt PDF is attached automatically.'}
+                    </p>
                   </div>
                 </div>
               )}
