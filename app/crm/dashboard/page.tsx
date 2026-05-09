@@ -338,6 +338,11 @@ export default function CRMDashboard() {
   const [receiptNotes, setReceiptNotes] = useState('')
   const [receiptSubmitting, setReceiptSubmitting] = useState(false)
   const [sendingReceiptId, setSendingReceiptId] = useState<string | null>(null)
+  const [sendReceiptModal, setSendReceiptModal] = useState<{
+    receipt: Receipt; invoice: Quote; lead: Lead;
+    recipient: string; subject: string; html: string;
+    isLoading: boolean; isSending: boolean;
+  } | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [analyticsOpen, setAnalyticsOpen] = useState(true)
   // Compose email modal state. Single shared instance, only one open at a time.
@@ -711,22 +716,57 @@ export default function CRMDashboard() {
     }
   }
 
-  // Send a payment receipt PDF to the customer via the rep's Gmail.
-  // Mirrors sendQuote but hits /api/receipt/send.
+  // Open the Send Receipt modal and load the default email body.
   const sendReceipt = async (receipt: Receipt, invoice: Quote, lead: Lead) => {
     if (sendingReceiptId) return
-    const recipient = invoice.email || lead.email
-    if (!recipient) {
-      showToast('No recipient email on invoice. Set one via the pencil icon next to the document.', 'error')
+    const recipient = invoice.email || lead.email || ''
+    setSendReceiptModal({
+      receipt, invoice, lead,
+      recipient, subject: '', html: '',
+      isLoading: true, isSending: false,
+    })
+    try {
+      const res = await fetch('/api/receipt/preview-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receipt_id: receipt.id }),
+      })
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+      setSendReceiptModal(prev => prev && prev.receipt.id === receipt.id ? {
+        ...prev,
+        recipient: prev.recipient || result.recipient_email || '',
+        subject: result.subject || '',
+        html: result.html || '',
+        isLoading: false,
+      } : prev)
+    } catch (err: any) {
+      showToast(`Could not load email preview: ${err?.message || 'unknown error'}`, 'error')
+      setSendReceiptModal(prev => prev && prev.receipt.id === receipt.id ? { ...prev, isLoading: false } : prev)
+    }
+  }
+
+  // Submit handler from inside the Send Receipt modal.
+  const submitSendReceipt = async () => {
+    if (!sendReceiptModal || sendReceiptModal.isSending) return
+    const { receipt, invoice, lead, recipient, subject, html } = sendReceiptModal
+    if (!recipient || !recipient.includes('@')) {
+      showToast('A valid recipient email is required', 'error')
       return
     }
-    const recipientName = invoice.customer_name || lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Customer'
-    const isResend = Boolean(receipt.sent_at)
-    const verb = isResend ? 'Resend' : 'Send'
-    if (!window.confirm(`${verb} receipt ${receipt.receipt_number} to ${recipient}?`)) return
-    const senderRepEmail = lead.rep_email || 'nick@numat.ph'
+    if (!subject.trim()) {
+      showToast('Subject is required', 'error')
+      return
+    }
+    if (!html.trim()) {
+      showToast('Email body is required', 'error')
+      return
+    }
+    setSendReceiptModal(prev => prev ? { ...prev, isSending: true } : prev)
     setSendingReceiptId(receipt.id)
     try {
+      const senderRepEmail = lead.rep_email || 'nick@numat.ph'
+      const recipientName = invoice.customer_name || lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Customer'
       const res = await fetch('/api/receipt/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -736,6 +776,8 @@ export default function CRMDashboard() {
           recipient_name: recipientName,
           sender_rep_email: senderRepEmail,
           sent_by: user?.email || 'crm',
+          custom_subject: subject,
+          custom_html: html,
         }),
       })
       const result = await res.json().catch(() => ({}))
@@ -748,8 +790,10 @@ export default function CRMDashboard() {
         ),
       }))
       showToast(`Receipt ${receipt.receipt_number} sent to ${recipient}`)
+      setSendReceiptModal(null)
     } catch (err: any) {
       showToast(`Failed to send receipt: ${err?.message || 'unknown error'}`, 'error')
+      setSendReceiptModal(prev => prev ? { ...prev, isSending: false } : prev)
     } finally {
       setSendingReceiptId(null)
     }
@@ -2543,6 +2587,65 @@ export default function CRMDashboard() {
             </div>
           </div>
         </div>
+        )
+      })()}
+
+      {/* Send Receipt modal: editable recipient, subject, and body */}
+      {sendReceiptModal && (() => {
+        const { receipt, invoice, lead, recipient, subject, html, isLoading, isSending } = sendReceiptModal
+        const isResend = Boolean(receipt.sent_at)
+        return (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+              <div className="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
+                <h2 className="text-lg font-semibold text-gray-800">{isResend ? 'Resend' : 'Send'} receipt {receipt.receipt_number}</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Against <span className="font-mono">{invoice.quote_number}</span> · {lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Customer'}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Sending from <span className="font-mono">{lead.rep_email || 'nick@numat.ph'}</span></p>
+              </div>
+
+              {isLoading ? (
+                <div className="px-6 py-12 text-center text-gray-500 text-sm">Loading email preview.</div>
+              ) : (
+                <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">To</label>
+                    <input type="email" value={recipient}
+                      onChange={(e) => setSendReceiptModal(prev => prev ? { ...prev, recipient: e.target.value } : prev)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                      placeholder="customer@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">Subject</label>
+                    <input type="text" value={subject}
+                      onChange={(e) => setSendReceiptModal(prev => prev ? { ...prev, subject: e.target.value } : prev)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">Body (HTML)</label>
+                    <textarea value={html}
+                      onChange={(e) => setSendReceiptModal(prev => prev ? { ...prev, html: e.target.value } : prev)}
+                      rows={14}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-xs font-mono leading-relaxed"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">HTML is allowed. The receipt PDF is attached automatically.</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-2 shrink-0">
+                <button onClick={() => setSendReceiptModal(null)} disabled={isSending}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
+                  Cancel
+                </button>
+                <button onClick={submitSendReceipt} disabled={isSending || isLoading || !recipient || !subject || !html}
+                  className="px-4 py-2 bg-orange-600 text-white text-sm rounded font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSending ? 'Sending.' : (isResend ? 'Resend now' : 'Send now')}
+                </button>
+              </div>
+            </div>
+          </div>
         )
       })()}
 

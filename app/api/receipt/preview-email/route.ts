@@ -1,40 +1,29 @@
-// app/api/receipt/send/route.ts
+// app/api/receipt/preview-email/route.ts
 //
-// Send a payment receipt PDF to the customer via the rep's connected Gmail.
-// Mirrors the pattern from /api/crm/send-quote.
-// CRM-authenticated. Stamps receipts.sent_at on success.
+// Returns the default subject + HTML body the system would send for a
+// given receipt. Used to pre-fill the Edit Email modal in the CRM
+// dashboard so reps can review and tweak before sending.
 
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { sendGmail, supabaseGetRaw, supabasePatch, supabasePost, type RepKey } from "@/lib/cron/helpers";
+import { supabaseGetRaw } from "@/lib/cron/helpers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 type ReceiptRow = {
-  id: string;
-  receipt_number: string;
-  quote_id: string;
-  actual_amount: number | string;
-  actual_currency: string | null;
-  display_amount: number | string | null;
-  display_currency: string | null;
-  actual_date: string;
-  payment_method: string;
-  bank_reference: string | null;
+  id: string; receipt_number: string; quote_id: string;
+  actual_amount: number | string; actual_currency: string | null;
+  display_amount: number | string | null; display_currency: string | null;
+  actual_date: string; payment_method: string; bank_reference: string | null;
 };
 
 type InvoiceRow = {
-  id: string;
-  quote_number: string;
-  email: string | null;
-  customer_name: string | null;
-  lead_id: string | null;
-  generated_by: string | null;
-  payment_status: string | null;
+  id: string; quote_number: string; email: string | null;
+  customer_name: string | null; lead_id: string | null;
+  generated_by: string | null; payment_status: string | null;
 };
 
 function fmtDate(v: string | null | undefined): string {
@@ -61,13 +50,6 @@ function methodLabel(m: string | null): string {
   return map[m] || "payment";
 }
 
-function repKeyFromEmail(email: string | null | undefined): RepKey {
-  const e = (email ?? "").toLowerCase();
-  if (e.includes("bryan")) return "Bryan";
-  if (e.includes("mohan")) return "Mohan";
-  return "Nick";
-}
-
 async function isActiveCrmUser(userEmail: string): Promise<boolean> {
   const sc = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
   const { data } = await sc.from("crm_users").select("is_active").eq("email", userEmail).single();
@@ -75,8 +57,6 @@ async function isActiveCrmUser(userEmail: string): Promise<boolean> {
 }
 
 export async function POST(req: NextRequest) {
-  // 1. Auth: must be an active CRM user
-  let userEmail: string | null = null;
   try {
     const cookieStore = await cookies();
     const authClient = createServerClient(
@@ -87,48 +67,24 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await authClient.auth.getUser();
     if (!user?.email) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     if (!(await isActiveCrmUser(user.email))) return NextResponse.json({ ok: false, error: "CRM access denied" }, { status: 403 });
-    userEmail = user.email;
   } catch {
     return NextResponse.json({ ok: false, error: "Auth error" }, { status: 401 });
   }
 
-  // 2. Parse body
-  let body: { receipt_id?: string; recipient_email?: string; recipient_name?: string; sender_rep_email?: string; sent_by?: string; custom_subject?: string; custom_html?: string };
+  let body: { receipt_id?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 }); }
   if (!body.receipt_id) return NextResponse.json({ ok: false, error: "Missing receipt_id" }, { status: 400 });
 
   try {
-    // 3. Fetch receipt
     const receiptRows = await supabaseGetRaw<ReceiptRow[]>(`receipts?id=eq.${encodeURIComponent(body.receipt_id)}&select=*`);
-    if (!receiptRows.length) return NextResponse.json({ ok: false, error: `Receipt not found: ${body.receipt_id}` }, { status: 404 });
+    if (!receiptRows.length) return NextResponse.json({ ok: false, error: `Receipt not found` }, { status: 404 });
     const receipt = receiptRows[0];
 
-    // 4. Fetch invoice (for recipient + lead linking)
     const invoiceRows = await supabaseGetRaw<InvoiceRow[]>(`quotes?id=eq.${encodeURIComponent(receipt.quote_id)}&select=*`);
     if (!invoiceRows.length) return NextResponse.json({ ok: false, error: "Linked invoice not found" }, { status: 404 });
     const invoice = invoiceRows[0];
 
-    const recipientEmail = body.recipient_email || invoice.email;
-    const recipientName = body.recipient_name || invoice.customer_name || "there";
-    const senderRepEmail = body.sender_rep_email || invoice.generated_by || userEmail || "nick@numat.ph";
-
-    if (!recipientEmail) {
-      return NextResponse.json({ ok: false, error: "No recipient email — set one on the linked invoice via the pencil icon" }, { status: 400 });
-    }
-
-    // 5. Generate the receipt PDF. Forward the caller's cookies so the
-    //    PDF endpoint's session auth recognises this as the same user.
-    const cookieStore2 = await cookies();
-    const cookieHeader = cookieStore2.getAll().map(c => `${c.name}=${c.value}`).join('; ');
-    const receiptSecret = process.env.RECEIPT_PDF_SECRET;
-    const pdfHeaders: Record<string, string> = { Cookie: cookieHeader };
-    if (receiptSecret) pdfHeaders['x-receipt-secret'] = receiptSecret;
-    const pdfRes = await fetch(`https://numatbamboo.com/api/receipt/${encodeURIComponent(receipt.id)}/pdf`, { headers: pdfHeaders });
-    if (!pdfRes.ok) throw new Error(`PDF generation failed: ${pdfRes.status} ${await pdfRes.text()}`);
-    const pdfArrayBuffer = await pdfRes.arrayBuffer();
-    const pdfBase64 = Buffer.from(pdfArrayBuffer).toString("base64");
-
-    // 6. Compose email
+    const recipientName = invoice.customer_name || "there";
     const displayCurrency = (receipt.display_currency || receipt.actual_currency || "PHP").toUpperCase();
     const displayAmount = Number(receipt.display_amount ?? receipt.actual_amount ?? 0);
     const totalDisplay = fmtMoney(displayAmount, displayCurrency);
@@ -137,13 +93,12 @@ export async function POST(req: NextRequest) {
     const bankRef = receipt.bank_reference ? ` (reference ${receipt.bank_reference})` : "";
     const isPaidInFull = invoice.payment_status === "paid";
 
-    const defaultSubject = `Payment Receipt ${receipt.receipt_number} from NUMAT`;
-    const subject = body.custom_subject && body.custom_subject.trim() ? body.custom_subject.trim() : defaultSubject;
+    const subject = `Payment Receipt ${receipt.receipt_number} from NUMAT`;
     const closingLine = isPaidInFull
       ? `This invoice is now <strong>fully settled</strong>. We appreciate your prompt payment.`
       : `This is a partial payment acknowledgment against invoice <strong>${invoice.quote_number}</strong>. Further receipts will follow as additional payments are received.`;
 
-    const defaultHtml = [
+    const html = [
       '<div style="font-family: Helvetica, Arial, sans-serif; font-size: 14px; color: #0F1F14; max-width: 600px; line-height: 1.55;">',
       `<p>Hi ${recipientName},</p>`,
       `<p>Thank you for your ${method}${bankRef}. Please find your payment receipt <strong>${receipt.receipt_number}</strong> attached as a PDF.</p>`,
@@ -161,45 +116,15 @@ export async function POST(req: NextRequest) {
       '<p style="color: #8A958D; font-size: 11px; margin-top: 16px;">Note: this document is a commercial payment acknowledgment. It is not a BIR Official Receipt.</p>',
       "</div>",
     ].join("");
-    const html = body.custom_html && body.custom_html.trim() ? body.custom_html : defaultHtml;
-
-    // 7. Send via the rep's Gmail
-    const repKey = repKeyFromEmail(senderRepEmail);
-    const gmailMessageId = await sendGmail({
-      from: repKey, to: recipientEmail, subject, html,
-      attachments: [{ filename: `${receipt.receipt_number}.pdf`, mimeType: "application/pdf", data: pdfBase64 }],
-    });
-
-    // 8. Stamp sent_at on the receipt
-    const nowIso = new Date().toISOString();
-    await supabasePatch(`receipts?id=eq.${encodeURIComponent(receipt.id)}`, { sent_at: nowIso });
-
-    // 9. Best-effort activity log
-    try {
-      await supabasePost("sales_activities", {
-        lead_id: invoice.lead_id, activity_type: "receipt_sent",
-        actor: body.sent_by || senderRepEmail,
-        payload: {
-          receipt_id: receipt.id,
-          receipt_number: receipt.receipt_number,
-          quote_id: invoice.id,
-          quote_number: invoice.quote_number,
-          recipient_email: recipientEmail,
-          amount: displayAmount,
-          currency: displayCurrency,
-          gmail_message_id: gmailMessageId,
-        },
-      });
-    } catch (err) { console.error("activity log non-fatal:", err); }
 
     return NextResponse.json({
-      ok: true, success: true,
-      receipt_number: receipt.receipt_number,
-      sent_to: recipientEmail, sent_from: senderRepEmail,
-      sent_at: nowIso,
+      ok: true,
+      subject,
+      html,
+      recipient_email: invoice.email || "",
+      recipient_name: recipientName,
     });
   } catch (err) {
-    console.error("receipt/send error:", err);
     return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
