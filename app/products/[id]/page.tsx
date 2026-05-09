@@ -433,7 +433,7 @@ export default function ProductDetailPage() {
   const router = useRouter()
   const productId = params?.id
 
-  const { formatConvertedFromUsd } = useCurrency()
+  const { unitPhp, lineTotalPhpFromUsd, formatPhpAmount } = useCurrency()
   const { addItem } = useCartStore()
 
   const [loading, setLoading] = useState(true)
@@ -918,7 +918,9 @@ export default function ProductDetailPage() {
     return fallbackResolved
   }, [useVariantDrivenConfig, selectedVariant, product, family, selectedLength, displayProductName, fallbackResolved])
 
-  const totalUsd = resolved.priceUsd != null ? resolved.priceUsd * quantity : null
+  // Display values rounded once at unit so estimated total reconciles with unit × qty.
+  const unitPriceDisplayPhp = unitPhp(resolved.priceUsd)
+  const estimatedTotalPhp = lineTotalPhpFromUsd(resolved.priceUsd, quantity)
   const familyQuantityError = validateConfiguredQuantity(family, quantity)
   const quantityError =
     quantity < resolved.moq
@@ -1385,9 +1387,12 @@ export default function ProductDetailPage() {
                           Estimated total
                         </p>
                         <p className="mt-2 text-xl font-semibold text-foreground">
-                          {totalUsd != null
-                            ? formatConvertedFromUsd(totalUsd)
+                          {estimatedTotalPhp != null
+                            ? formatPhpAmount(estimatedTotalPhp)
                             : resolved.stockMessage || 'Request Quote'}
+                        </p>
+                        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                          Prices pegged to USD, updated daily
                         </p>
                       </div>
                     </div>
@@ -1497,17 +1502,20 @@ export default function ProductDetailPage() {
                   <div className="rounded-[22px] border border-white/10 bg-amber-400/10 p-4">
                     <p className="text-sm text-amber-100/80">Unit Price</p>
                     <p className="mt-1 text-2xl font-semibold">
-                      {resolved.priceUsd != null
-                        ? formatConvertedFromUsd(resolved.priceUsd)
+                      {unitPriceDisplayPhp != null
+                        ? formatPhpAmount(unitPriceDisplayPhp)
                         : resolved.stockMessage || 'Request Quote'}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-white/55">
+                      Prices pegged to USD, updated daily
                     </p>
                   </div>
 
                   <div className="rounded-[22px] border border-white/10 bg-emerald-400/10 p-4">
                     <p className="text-sm text-emerald-100/80">Estimated Total</p>
                     <p className="mt-1 text-xl font-semibold">
-                      {totalUsd != null
-                        ? formatConvertedFromUsd(totalUsd)
+                      {estimatedTotalPhp != null
+                        ? formatPhpAmount(estimatedTotalPhp)
                         : resolved.stockMessage || 'Request Quote'}
                     </p>
                   </div>
@@ -1543,8 +1551,8 @@ export default function ProductDetailPage() {
                 Estimated total
               </p>
               <p className="truncate text-base font-semibold text-foreground">
-                {totalUsd != null
-                  ? formatConvertedFromUsd(totalUsd)
+                {estimatedTotalPhp != null
+                  ? formatPhpAmount(estimatedTotalPhp)
                   : resolved.stockMessage || 'Request Quote'}
               </p>
               <p className="text-xs text-muted-foreground">

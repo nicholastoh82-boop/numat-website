@@ -6,18 +6,20 @@
 //   - supabaseGet / supabasePost / supabasePatch / supabaseRpc: typed REST helpers
 //   - sendGmail: send plain-text email via Gmail API using a rep's OAuth refresh token
 
-export type RepKey = "Nick" | "Mohan" | "Bryan";
+export type RepKey = "Nick" | "Mohan" | "Bryan" | "Eugene";
 
 const REP_REFRESH_TOKEN_ENV: Record<RepKey, string> = {
   Nick: "GOOGLE_REFRESH_TOKEN_NICK",
   Mohan: "GOOGLE_REFRESH_TOKEN_MOHAN",
   Bryan: "GOOGLE_REFRESH_TOKEN_BRYAN",
+  Eugene: "GOOGLE_REFRESH_TOKEN_EUGENE",
 };
 
 const REP_EMAIL: Record<RepKey, string> = {
   Nick: "nick@numat.ph",
   Mohan: "mohan@numat.ph",
   Bryan: "bryan@numat.ph",
+  Eugene: "eugene@numat.ph",
 };
 
 export function required(name: string): string {
@@ -370,7 +372,7 @@ export async function gmailAddLabel(rep: RepKey, messageId: string, labelId: str
   }
 }
 
-export const ALL_REPS: RepKey[] = ["Nick", "Mohan", "Bryan"];
+export const ALL_REPS: RepKey[] = ["Nick", "Mohan", "Bryan", "Eugene"];
 
 export function repEmailFor(rep: RepKey): string {
   return REP_EMAIL[rep];

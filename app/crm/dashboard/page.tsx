@@ -114,6 +114,15 @@ interface Receipt {
   created_at: string
   sent_at: string | null
   superseded_by: string | null
+  deposit_account_id: string | null
+}
+
+interface FinanceAccount {
+  id: string
+  code: string
+  name: string
+  currency: string
+  account_type: string
 }
 
 const PIPELINE_STAGES = ['new','contacted','qualified','proposal_sent','meeting_booked','won','lost']
@@ -329,13 +338,23 @@ export default function CRMDashboard() {
   const [receiptModal, setReceiptModal] = useState<{
     invoice: Quote
     lead: Lead
+    editingReceipt?: Receipt
   } | null>(null)
   const [receiptAmount, setReceiptAmount] = useState('')
   const [receiptDate, setReceiptDate] = useState('')
   const [receiptMethod, setReceiptMethod] = useState<'wire_transfer' | 'bank_deposit' | 'check' | 'gcash' | 'paymaya' | 'cash' | 'other'>('wire_transfer')
   const [receiptBankRef, setReceiptBankRef] = useState('')
   const [receiptNotes, setReceiptNotes] = useState('')
+  const [receiptDepositAccountId, setReceiptDepositAccountId] = useState<string>('')
+  const [financeAccounts, setFinanceAccounts] = useState<FinanceAccount[]>([])
   const [receiptSubmitting, setReceiptSubmitting] = useState(false)
+  const [sendingReceiptId, setSendingReceiptId] = useState<string | null>(null)
+  const [sendReceiptModal, setSendReceiptModal] = useState<{
+    receipt: Receipt; invoice: Quote; lead: Lead;
+    recipient: string; subject: string; html: string;
+    editorMode: 'visual' | 'html';
+    isLoading: boolean; isSending: boolean;
+  } | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [analyticsOpen, setAnalyticsOpen] = useState(true)
   // Compose email modal state. Single shared instance, only one open at a time.
@@ -411,7 +430,7 @@ export default function CRMDashboard() {
   const loadReceipts = useCallback(async () => {
     const { data } = await supabase
       .from('receipts')
-      .select('id, receipt_number, quote_id, actual_amount, actual_currency, display_amount, display_currency, actual_date, payment_method, bank_reference, notes, issued_by, created_at, sent_at, superseded_by')
+      .select('id, receipt_number, quote_id, actual_amount, actual_currency, display_amount, display_currency, actual_date, payment_method, bank_reference, notes, issued_by, created_at, sent_at, superseded_by, deposit_account_id')
       .is('superseded_by', null)
       .order('created_at', { ascending: false })
     if (data) {
@@ -456,6 +475,18 @@ export default function CRMDashboard() {
         setConnectedRepEmails(set)
       })
       .catch(() => { if (!cancelled) setConnectedRepEmails(new Set()) })
+    return () => { cancelled = true }
+  }, [])
+
+  // Load finance accounts once on mount for the receipt deposit dropdown.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/finance/accounts', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : { accounts: [] })
+      .then((json: { accounts?: FinanceAccount[] }) => {
+        if (!cancelled) setFinanceAccounts(json.accounts || [])
+      })
+      .catch(() => {})
     return () => { cancelled = true }
   }, [])
 
@@ -709,6 +740,90 @@ export default function CRMDashboard() {
     }
   }
 
+  // Open the Send Receipt modal and load the default email body.
+  const sendReceipt = async (receipt: Receipt, invoice: Quote, lead: Lead) => {
+    if (sendingReceiptId) return
+    const recipient = invoice.email || lead.email || ''
+    setSendReceiptModal({
+      receipt, invoice, lead,
+      recipient, subject: '', html: '',
+      editorMode: 'visual',
+      isLoading: true, isSending: false,
+    })
+    try {
+      const res = await fetch('/api/receipt/preview-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receipt_id: receipt.id }),
+      })
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+      setSendReceiptModal(prev => prev && prev.receipt.id === receipt.id ? {
+        ...prev,
+        recipient: prev.recipient || result.recipient_email || '',
+        subject: result.subject || '',
+        html: result.html || '',
+        isLoading: false,
+      } : prev)
+    } catch (err: any) {
+      showToast(`Could not load email preview: ${err?.message || 'unknown error'}`, 'error')
+      setSendReceiptModal(prev => prev && prev.receipt.id === receipt.id ? { ...prev, isLoading: false } : prev)
+    }
+  }
+
+  // Submit handler from inside the Send Receipt modal.
+  const submitSendReceipt = async () => {
+    if (!sendReceiptModal || sendReceiptModal.isSending) return
+    const { receipt, invoice, lead, recipient, subject, html } = sendReceiptModal
+    if (!recipient || !recipient.includes('@')) {
+      showToast('A valid recipient email is required', 'error')
+      return
+    }
+    if (!subject.trim()) {
+      showToast('Subject is required', 'error')
+      return
+    }
+    if (!html.trim()) {
+      showToast('Email body is required', 'error')
+      return
+    }
+    setSendReceiptModal(prev => prev ? { ...prev, isSending: true } : prev)
+    setSendingReceiptId(receipt.id)
+    try {
+      const senderRepEmail = lead.rep_email || 'nick@numat.ph'
+      const recipientName = invoice.customer_name || lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Customer'
+      const res = await fetch('/api/receipt/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          receipt_id: receipt.id,
+          recipient_email: recipient,
+          recipient_name: recipientName,
+          sender_rep_email: senderRepEmail,
+          sent_by: user?.email || 'crm',
+          custom_subject: subject,
+          custom_html: html,
+        }),
+      })
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+      const nowIso = result.sent_at || new Date().toISOString()
+      setReceiptsByInvoice(prev => ({
+        ...prev,
+        [invoice.id]: (prev[invoice.id] || []).map(r =>
+          r.id === receipt.id ? { ...r, sent_at: nowIso } : r
+        ),
+      }))
+      showToast(`Receipt ${receipt.receipt_number} sent to ${recipient}`)
+      setSendReceiptModal(null)
+    } catch (err: any) {
+      showToast(`Failed to send receipt: ${err?.message || 'unknown error'}`, 'error')
+      setSendReceiptModal(prev => prev ? { ...prev, isSending: false } : prev)
+    } finally {
+      setSendingReceiptId(null)
+    }
+  }
+
   // Commit C: hard-delete an UNSENT draft quote (proforma or invoice).
   // For the case where a rep accidentally issued a document against the wrong lead.
   // Server route enforces: not sent, not superseded, no children, no receipts, no revisions.
@@ -874,6 +989,23 @@ export default function CRMDashboard() {
     setReceiptMethod('wire_transfer')
     setReceiptBankRef('')
     setReceiptNotes('')
+    const cur = (invoice.currency || 'PHP').toUpperCase()
+    const def = financeAccounts.find(a => a.currency === cur && a.account_type === 'bank')
+    setReceiptDepositAccountId(def?.id || '')
+  }
+
+  // Open the receipt modal in EDIT mode, pre-filled with the existing
+  // receipt's values. Submitting will hit /api/receipt/[id]/edit instead of
+  // /api/receipt/create.
+  const openEditReceiptModal = (receipt: Receipt, invoice: Quote, lead: Lead, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setReceiptModal({ invoice, lead, editingReceipt: receipt })
+    setReceiptAmount(String(Number(receipt.actual_amount).toFixed(2)))
+    setReceiptDate(receipt.actual_date)
+    setReceiptMethod(receipt.payment_method as any)
+    setReceiptBankRef(receipt.bank_reference || '')
+    setReceiptNotes(receipt.notes || '')
+    setReceiptDepositAccountId(receipt.deposit_account_id || '')
   }
 
   // Commit C: submit the receipt. POSTs to /api/receipt/create, which is
@@ -893,20 +1025,60 @@ export default function CRMDashboard() {
     }
     setReceiptSubmitting(true)
     try {
-      const res = await fetch('/api/receipt/create', {
+      const editingReceipt = receiptModal.editingReceipt
+      const isEdit = !!editingReceipt
+      const url = isEdit
+        ? `/api/receipt/${editingReceipt!.id}/edit`
+        : '/api/receipt/create'
+      const payload: any = {
+        actual_amount: parsedAmount,
+        actual_date: receiptDate,
+        payment_method: receiptMethod,
+        bank_reference: receiptBankRef || undefined,
+        notes: receiptNotes || undefined,
+        deposit_account_id: receiptDepositAccountId || undefined,
+      }
+      if (!isEdit) payload.quote_id = invoice.id
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          quote_id: invoice.id,
-          actual_amount: parsedAmount,
-          actual_date: receiptDate,
-          payment_method: receiptMethod,
-          bank_reference: receiptBankRef || undefined,
-          notes: receiptNotes || undefined,
-        }),
+        body: JSON.stringify(payload),
       })
       const result = await res.json()
       if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
+
+      if (isEdit) {
+        // Optimistic update: replace the edited receipt in place and refresh invoice status.
+        setReceiptsByInvoice(prev => ({
+          ...prev,
+          [invoice.id]: (prev[invoice.id] || []).map(r =>
+            r.id === editingReceipt!.id
+              ? {
+                  ...r,
+                  actual_amount: result.actual_amount,
+                  display_amount: result.display_amount,
+                  actual_date: receiptDate,
+                  payment_method: receiptMethod,
+                  bank_reference: receiptBankRef || null,
+                  notes: receiptNotes || null,
+                  deposit_account_id: receiptDepositAccountId || null,
+                }
+              : r
+          ),
+        }))
+        setQuotesByLead(prev => {
+          const list = (prev[lead.id] || []).map(q =>
+            q.id === invoice.id
+              ? { ...q, payment_status: result.invoice_payment_status }
+              : q
+          )
+          return { ...prev, [lead.id]: list }
+        })
+        const statusLabel = result.invoice_payment_status === 'paid' ? 'PAID IN FULL' : (result.invoice_payment_status === 'partial' ? 'partial payment' : 'unpaid')
+        showToast(`Receipt ${editingReceipt!.receipt_number} updated (${statusLabel})`)
+        setReceiptModal(null)
+        return
+      }
 
       // Optimistic update: add the new receipt and refresh invoice payment_status
       const newReceipt: Receipt = {
@@ -925,6 +1097,7 @@ export default function CRMDashboard() {
         created_at: new Date().toISOString(),
         sent_at: null,
         superseded_by: null,
+        deposit_account_id: receiptDepositAccountId || null,
       }
       setReceiptsByInvoice(prev => ({
         ...prev,
@@ -1225,7 +1398,7 @@ export default function CRMDashboard() {
       return
     }
     setAddLeadSubmitting(true)
-    const repNameMap: Record<string,string> = { 'mohan@numat.ph': 'Mohan', 'bryan@numat.ph': 'Bryan', 'nick@numat.ph': 'Nick' }
+    const repNameMap: Record<string,string> = { 'mohan@numat.ph': 'Mohan', 'bryan@numat.ph': 'Bryan', 'nick@numat.ph': 'Nick', 'eugene@numat.ph': 'Eugene' }
     // Non-admins can only create leads assigned to themselves
     const repEmail = user.role === 'admin' ? (newLead.rep_email || null) : user.email
     const repName = repEmail ? (repNameMap[repEmail] || repEmail.split('@')[0]) : null
@@ -1665,6 +1838,7 @@ export default function CRMDashboard() {
                               const repNameMap: Record<string,string> = {
                                 'mohan@numat.ph': 'Mohan',
                                 'bryan@numat.ph': 'Bryan',
+                                'eugene@numat.ph': 'Eugene',
                               }
                               const name = repNameMap[email] || email.split('@')[0]
                               updateLead(lead.id, {
@@ -1677,6 +1851,7 @@ export default function CRMDashboard() {
                             <option value="">— Unassigned —</option>
                             <option value="mohan@numat.ph">Mohan (International)</option>
                             <option value="bryan@numat.ph">Bryan (Philippines)</option>
+                            <option value="eugene@numat.ph">Eugene (Philippines)</option>
                           </select>
                         </div>
                       )}
@@ -1919,9 +2094,19 @@ export default function CRMDashboard() {
                                         <span className="text-gray-300">·</span>
                                         <span className="text-gray-500">Paid {relDate(r.actual_date)}</span>
                                         <div className="flex-1 min-w-2" />
+                                        {user?.role === 'admin' && (
+                                          <button onClick={(e) => openEditReceiptModal(r, q, lead, e)}
+                                            className="px-2 py-0.5 border border-gray-200 rounded hover:bg-white text-gray-700 font-medium">
+                                            Edit
+                                          </button>
+                                        )}
                                         <button onClick={() => window.open(`/api/receipt/${r.id}/pdf`, '_blank', 'noopener,noreferrer')}
                                           className="px-2 py-0.5 border border-gray-200 rounded hover:bg-white text-gray-700 font-medium">
                                           Preview
+                                        </button>
+                                        <button onClick={() => sendReceipt(r, q, lead)} disabled={sendingReceiptId === r.id}
+                                          className={`px-2 py-0.5 rounded font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed ${r.sent_at ? 'bg-gray-500 hover:bg-gray-600' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                                          {sendingReceiptId === r.id ? 'Sending.' : r.sent_at ? 'Resend' : 'Send'}
                                         </button>
                                       </div>
                                     )
@@ -2437,11 +2622,117 @@ export default function CRMDashboard() {
         )
       })()}
 
+      {/* Send Receipt modal: editable recipient, subject, and body */}
+      {sendReceiptModal && (() => {
+        const { receipt, invoice, lead, recipient, subject, html, isLoading, isSending } = sendReceiptModal
+        const isResend = Boolean(receipt.sent_at)
+        return (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+              <div className="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
+                <h2 className="text-lg font-semibold text-gray-800">{isResend ? 'Resend' : 'Send'} receipt {receipt.receipt_number}</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Against <span className="font-mono">{invoice.quote_number}</span> · {lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Customer'}</p>
+                <p className="text-xs text-gray-400 mt-0.5">Sending from <span className="font-mono">{lead.rep_email || 'nick@numat.ph'}</span></p>
+              </div>
+
+              {isLoading ? (
+                <div className="px-6 py-12 text-center text-gray-500 text-sm">Loading email preview.</div>
+              ) : (
+                <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">To</label>
+                    <input type="email" value={recipient}
+                      onChange={(e) => setSendReceiptModal(prev => prev ? { ...prev, recipient: e.target.value } : prev)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                      placeholder="customer@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">Subject</label>
+                    <input type="text" value={subject}
+                      onChange={(e) => setSendReceiptModal(prev => prev ? { ...prev, subject: e.target.value } : prev)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-gray-600">Body</label>
+                      <div className="flex gap-1 text-xs border border-gray-200 rounded p-0.5">
+                        <button type="button"
+                          onClick={() => setSendReceiptModal(prev => prev ? { ...prev, editorMode: 'visual' } : prev)}
+                          className={`px-2 py-0.5 rounded ${sendReceiptModal!.editorMode === 'visual' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+                          Visual
+                        </button>
+                        <button type="button"
+                          onClick={() => setSendReceiptModal(prev => prev ? { ...prev, editorMode: 'html' } : prev)}
+                          className={`px-2 py-0.5 rounded ${sendReceiptModal!.editorMode === 'html' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+                          HTML
+                        </button>
+                      </div>
+                    </div>
+                    {sendReceiptModal!.editorMode === 'visual' ? (
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        dir="ltr"
+                        ref={(el) => {
+                          // Only set innerHTML on mount or after a non-visual edit, never on every render
+                          // (otherwise the cursor jumps to the start on every keystroke).
+                          if (el && el.dataset.lastSyncedHtml !== html) {
+                            el.innerHTML = html;
+                            el.dataset.lastSyncedHtml = html;
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const newHtml = (e.currentTarget as HTMLDivElement).innerHTML;
+                          ;(e.currentTarget as HTMLDivElement).dataset.lastSyncedHtml = newHtml;
+                          setSendReceiptModal(prev => prev ? { ...prev, html: newHtml } : prev);
+                        }}
+                        className="w-full px-3 py-3 border border-gray-300 rounded text-sm leading-relaxed bg-white min-h-[280px] max-h-[400px] overflow-y-auto focus:outline-none focus:border-gray-400"
+                      />
+                    ) : (
+                      <textarea value={html}
+                        onChange={(e) => setSendReceiptModal(prev => prev ? { ...prev, html: e.target.value } : prev)}
+                        rows={14}
+                        className="w-full px-3 py-2 border border-gray-300 rounded text-xs font-mono leading-relaxed"
+                        dir="ltr"
+                      />
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">
+                      {sendReceiptModal!.editorMode === 'visual'
+                        ? 'Edit like a normal email. Changes save when you click outside the body.'
+                        : 'Raw HTML. The receipt PDF is attached automatically.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-2 shrink-0">
+                <button onClick={() => setSendReceiptModal(null)} disabled={isSending}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
+                  Cancel
+                </button>
+                <button onClick={submitSendReceipt} disabled={isSending || isLoading || !recipient || !subject || !html}
+                  className="px-4 py-2 bg-orange-600 text-white text-sm rounded font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isSending ? 'Sending.' : (isResend ? 'Resend now' : 'Send now')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {receiptModal && (() => {
-        const { invoice, lead } = receiptModal
+        const { invoice, lead, editingReceipt } = receiptModal
+        const isEditMode = !!editingReceipt
         const currency = invoice.currency || 'USD'
         const existing = (receiptsByInvoice[invoice.id] || []).filter(r => !r.superseded_by)
-        const cumulative = existing.reduce((sum, r) => sum + Number(r.actual_amount || 0), 0)
+        // In edit mode, exclude the receipt being edited from the cumulative so the user
+        // sees what room they have for THIS receipt's new amount.
+        const otherExisting = isEditMode
+          ? existing.filter(r => r.id !== editingReceipt!.id)
+          : existing
+        const cumulative = otherExisting.reduce((sum, r) => sum + Number(r.actual_amount || 0), 0)
         const invoiceTotal = Number(invoice.total || 0)
         const outstanding = Math.max(0, invoiceTotal - cumulative)
         const parsedEntered = parseFloat(receiptAmount)
@@ -2452,7 +2743,7 @@ export default function CRMDashboard() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
             <div className="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
-              <h2 className="text-lg font-semibold text-gray-800">Issue Payment Receipt</h2>
+              <h2 className="text-lg font-semibold text-gray-800">{isEditMode ? `Edit Receipt ${editingReceipt!.receipt_number}` : 'Issue Payment Receipt'}</h2>
               <p className="text-sm text-gray-500 mt-0.5">
                 Against <span className="font-mono">{invoice.quote_number}</span>
                 {' · '}
@@ -2526,6 +2817,22 @@ export default function CRMDashboard() {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
               </div>
 
+              {/* Deposited to (drives the auto-generated finance transaction) */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Deposited to</label>
+                <select value={receiptDepositAccountId}
+                  onChange={e => setReceiptDepositAccountId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">Auto (default for currency and method)</option>
+                  {financeAccounts
+                    .filter(a => a.currency === (invoice.currency || 'PHP').toUpperCase())
+                    .map(a => (
+                      <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
+                    ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Pick the bank account this payment landed in. Drives the Finance dashboard entry.</p>
+              </div>
+
               {/* Notes */}
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">
@@ -2549,7 +2856,7 @@ export default function CRMDashboard() {
               </button>
               <button onClick={submitReceipt} disabled={submitDisabled}
                 className="flex-1 py-2.5 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                {receiptSubmitting ? 'Issuing...' : wouldSettleInFull ? 'Settle in Full' : 'Issue Receipt'}
+                {receiptSubmitting ? (isEditMode ? 'Saving...' : 'Issuing...') : isEditMode ? 'Save changes' : wouldSettleInFull ? 'Settle in Full' : 'Issue Receipt'}
               </button>
             </div>
           </div>

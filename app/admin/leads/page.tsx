@@ -504,6 +504,7 @@ export default function AdminLeadsPage() {
                   <option value="">All Reps</option>
                   <option value="Mohan">Mohan</option>
                   <option value="Bryan">Bryan</option>
+                  <option value="Eugene">Eugene</option>
                   <option value="Lemuel">Lemuel</option>
                 </select>
               )}

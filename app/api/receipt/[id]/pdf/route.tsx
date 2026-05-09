@@ -65,6 +65,7 @@ const REP_DIRECTORY: Record<string, string> = {
   "nick@numat.ph": "Nicholas Toh",
   "mohan@numat.ph": "Mohan Louis",
   "bryan@numat.ph": "Bryan",
+  "eugene@numat.ph": "Eugene",
   "sales@numat.ph": "NUMAT Sales Team",
 };
 
@@ -218,12 +219,14 @@ const styles = StyleSheet.create({
   },
   amountDisplay: {
     fontSize: 24,
+    lineHeight: 1.2,
     fontFamily: "Helvetica-Bold",
     color: COLORS.green,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   amountBase: {
     fontSize: 11,
+    lineHeight: 1.4,
     color: COLORS.body,
     marginBottom: 0,
   },

@@ -19,13 +19,10 @@ export default function CartDrawer() {
     removeItem,
     updateQuantity,
     getTotalItems,
-    getSubtotal,
-    getDiscount,
-    getTotal,
     getDiscountPercent,
   } = useCartStore()
 
-  const { formatConvertedFromUsd } = useCurrency()
+  const { unitPhp, lineTotalPhpFromUsd, formatPhpAmount } = useCurrency()
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -45,13 +42,18 @@ export default function CartDrawer() {
   }, [isOpen])
 
   const totalItems = getTotalItems()
-  const subtotal = getSubtotal()
-  const discount = getDiscount()
-  const total = getTotal()
   const discountPercent = getDiscountPercent()
   const itemsUntilDiscount = Math.max(0, DISCOUNT_THRESHOLD - totalItems)
   const hasPricedItems = items.some((item) => typeof item.unitPrice === 'number' && item.unitPrice > 0)
   const hasPriceOnRequestItems = items.some((item) => item.isPriceOnRequest || item.unitPrice == null)
+
+  // Compute totals in PHP from rounded display units so the on-screen math reconciles.
+  const subtotalPhp = items.reduce((sum, item) => {
+    const line = lineTotalPhpFromUsd(item.unitPrice, item.quantity)
+    return sum + (line ?? 0)
+  }, 0)
+  const discountPhp = Math.round(subtotalPhp * (discountPercent / 100) * 100) / 100
+  const totalPhp = Math.round((subtotalPhp - discountPhp) * 100) / 100
 
   return (
     <>
@@ -138,7 +140,7 @@ export default function CartDrawer() {
                         </p>
                         <p className="mt-1 text-sm font-medium text-primary">
                           {hasPrice
-                            ? `${formatConvertedFromUsd(item.unitPrice!)} / ${item.unit}`
+                            ? `${formatPhpAmount(unitPhp(item.unitPrice!))} / ${item.unit}`
                             : 'Price on request'}
                         </p>
                       </div>
@@ -179,7 +181,7 @@ export default function CartDrawer() {
                         </Button>
                       </div>
                       <p className="font-semibold text-foreground">
-                        {hasPrice ? formatConvertedFromUsd(item.quantity * item.unitPrice!) : '—'}
+                        {hasPrice ? formatPhpAmount(lineTotalPhpFromUsd(item.unitPrice!, item.quantity)) : '—'}
                       </p>
                     </div>
                   </div>
@@ -199,21 +201,21 @@ export default function CartDrawer() {
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>
               <span className="font-medium text-foreground">
-                {hasPricedItems ? formatConvertedFromUsd(subtotal) : 'Price on request'}
+                {hasPricedItems ? formatPhpAmount(subtotalPhp) : 'Price on request'}
               </span>
             </div>
 
             {discountPercent > 0 && hasPricedItems && (
               <div className="flex justify-between text-sm">
                 <span className="text-primary">Bulk Discount ({discountPercent}%)</span>
-                <span className="font-medium text-primary">-{formatConvertedFromUsd(discount)}</span>
+                <span className="font-medium text-primary">-{formatPhpAmount(discountPhp)}</span>
               </div>
             )}
 
             <div className="flex justify-between border-t border-border pt-2 text-sm">
               <span className="font-semibold text-foreground">Total (excl. VAT)</span>
               <span className="text-lg font-bold text-foreground">
-                {hasPricedItems ? formatConvertedFromUsd(total) : 'Price on request'}
+                {hasPricedItems ? formatPhpAmount(totalPhp) : 'Price on request'}
               </span>
             </div>
 
