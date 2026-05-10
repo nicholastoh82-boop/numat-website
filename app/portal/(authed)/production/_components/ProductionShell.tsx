@@ -9,6 +9,7 @@ import BoardRunForm from './BoardRunForm'
 import InventoryView from './InventoryView'
 import RecentEntries from './RecentEntries'
 import AuditLogView from './AuditLogView'
+import SummaryView from './SummaryView'
 
 export type Variant = {
   id: string
@@ -26,9 +27,10 @@ export type InventoryRow = {
   updated_at: string
 }
 
-type Tab = 'slats' | 'planing' | 'gluing' | 'veneer_sanding' | 'boards' | 'inventory' | 'audit'
+type Tab = 'summary' | 'slats' | 'planing' | 'gluing' | 'veneer_sanding' | 'boards' | 'inventory' | 'audit'
 
 const TABS: { key: Tab; label: string; subtitle: string }[] = [
+  { key: 'summary', label: 'Summary', subtitle: 'KPIs and trends' },
   { key: 'slats', label: 'Slats In', subtitle: 'Supplier delivery + QA' },
   { key: 'planing', label: 'Planing', subtitle: 'Rough + fine planer' },
   { key: 'gluing', label: 'Gluing', subtitle: '1st heat press → veneers' },
@@ -45,7 +47,7 @@ type Props = {
 }
 
 export default function ProductionShell({ userEmail, variants, initialInventory }: Props) {
-  const [tab, setTab] = useState<Tab>('slats')
+  const [tab, setTab] = useState<Tab>('summary')
   const [inventory, setInventory] = useState<InventoryRow[]>(initialInventory)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -82,6 +84,7 @@ export default function ProductionShell({ userEmail, variants, initialInventory 
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6">
+        {tab === 'summary' && <SummaryView refreshKey={refreshKey} />}
         {tab === 'slats' && <SlatReceiptForm userEmail={userEmail} onSubmitted={onSubmit} />}
         {tab === 'planing' && <PlaningForm userEmail={userEmail} onSubmitted={onSubmit} />}
         {tab === 'gluing' && <GluingForm userEmail={userEmail} onSubmitted={onSubmit} />}
@@ -92,7 +95,7 @@ export default function ProductionShell({ userEmail, variants, initialInventory 
       </div>
 
       {/* Recent entries always visible below */}
-      {(tab !== 'inventory' && tab !== 'audit') && (
+      {(tab !== 'inventory' && tab !== 'audit' && tab !== 'summary') && (
         <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6">
           <RecentEntries station={tab} refreshKey={refreshKey} userEmail={userEmail} variants={variants} />
         </div>
