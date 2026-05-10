@@ -1693,7 +1693,7 @@ export default function CRMDashboard() {
             const lastContact = relDate(mostRecent(lead.last_activity_at, lead.last_email_sent))
             return (
               <div key={lead.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div className="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 select-none"
+                <div className="flex flex-col md:flex-row md:items-center px-4 py-3 cursor-pointer hover:bg-gray-50 select-none gap-3 md:gap-0"
                   onClick={() => setExpandedId(isExpanded ? null : lead.id)}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1721,7 +1721,7 @@ export default function CRMDashboard() {
                       {lastContact && <span className="ml-2 text-gray-400">· {lastContact}</span>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-3 shrink-0">
+                  <div className="flex items-center gap-2 md:ml-3 shrink-0 flex-wrap" onClick={e => e.stopPropagation()}>
                     <button onClick={e => openQuoteModal(lead, 'proforma_invoice', e)}
                       className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${lead.quoted_at ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-green-700 border-green-200 hover:bg-green-50'}`}
                       title="Issue a Proforma Invoice (pre-sale proposal)">
