@@ -19,6 +19,7 @@ type Summary = {
   press_avg: { platen_temp_c: number | null; pressure_bar: number | null; press_time_min: number | null }
   daily_trend: { date: string; boards: number }[]
   boards_by_sku: Record<string, { produced: number; passed: number; defects: number }>
+  borax: { batches_tested: number; batches_flagged_for_review: number; slats_pass: number; slats_fail: number }
 }
 
 const fmt = (n: number | null | undefined, suffix = '') => n === null || n === undefined ? '—' : `${(Math.round(n * 10) / 10).toLocaleString()}${suffix}`
@@ -164,6 +165,16 @@ export default function SummaryView({ refreshKey }: { refreshKey: number }) {
           </div>
         </Section>
       </div>
+
+      {/* Borax treatment verification */}
+      <Section title="Borax treatment verification" subtitle="Turmeric + ethanol test on 5% sample of each delivery">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Kpi label="Batches tested" value={String(data.borax.batches_tested)} accent={data.borax.batches_tested > 0 ? 'emerald' : 'gray'} />
+          <Kpi label="Batches flagged" value={String(data.borax.batches_flagged_for_review)} accent={data.borax.batches_flagged_for_review > 0 ? 'red' : 'gray'} sub="Awaiting Mark or Bryan review" />
+          <Kpi label="Slats passed" value={data.borax.slats_pass.toLocaleString()} accent="emerald" sub="Color changed" />
+          <Kpi label="Slats failed" value={data.borax.slats_fail.toLocaleString()} accent={data.borax.slats_fail > 0 ? 'red' : 'gray'} sub="No color change" />
+        </div>
+      </Section>
     </div>
   )
 }

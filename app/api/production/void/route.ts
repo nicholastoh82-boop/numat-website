@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 const ALLOWED_TABLES = new Set([
   'prod_slat_receipts', 'prod_planing_runs', 'prod_gluing_runs',
-  'prod_veneer_sanding', 'prod_board_runs',
+  'prod_veneer_sanding', 'prod_board_runs', 'prod_borax_tests',
 ])
 
 export async function POST(req: NextRequest) {

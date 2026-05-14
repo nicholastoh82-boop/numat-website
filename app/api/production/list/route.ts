@@ -9,6 +9,7 @@ const TABLE_MAP: Record<string, string> = {
   gluing: 'prod_gluing_runs',
   veneer_sanding: 'prod_veneer_sanding',
   boards: 'prod_board_runs',
+  borax: 'prod_borax_tests',
 }
 
 export async function GET(req: NextRequest) {
