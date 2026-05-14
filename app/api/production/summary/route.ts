@@ -12,12 +12,13 @@ export async function GET(req: NextRequest) {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   const sc = adminClient()
 
-  const [slats, planing, gluing, sanding, boards] = await Promise.all([
+  const [slats, planing, gluing, sanding, boards, borax] = await Promise.all([
     sc.from('prod_slat_receipts').select('*').gte('event_date', since).eq('voided', false),
     sc.from('prod_planing_runs').select('*').gte('event_date', since).eq('voided', false),
     sc.from('prod_gluing_runs').select('*').gte('event_date', since).eq('voided', false),
     sc.from('prod_veneer_sanding').select('*').gte('event_date', since).eq('voided', false),
     sc.from('prod_board_runs').select('*').gte('event_date', since).eq('voided', false),
+    sc.from('prod_borax_tests').select('*').gte('event_date', since).eq('voided', false),
   ])
 
   const slatRows = slats.data || []
@@ -97,8 +98,21 @@ export async function GET(req: NextRequest) {
     boardsBySku[k].defects += r.defects || 0
   })
 
+  // Borax test stats
+  const boraxRows = borax.data || []
+  const boraxSlatsPass = boraxRows.reduce((s, r: any) => s + (r.slats_pass || 0), 0)
+  const boraxSlatsFail = boraxRows.reduce((s, r: any) => s + (r.slats_fail || 0), 0)
+  const boraxBatchesTested = new Set(boraxRows.map((r: any) => r.slat_receipt_id)).size
+  const boraxBatchesFlagged = slatRows.filter((r: any) => r.borax_test_status === 'flagged_for_review').length
+
   return NextResponse.json({
     period_days: days, since,
+    borax: {
+      batches_tested: boraxBatchesTested,
+      batches_flagged_for_review: boraxBatchesFlagged,
+      slats_pass: boraxSlatsPass,
+      slats_fail: boraxSlatsFail,
+    },
     totals: { slats_received: slatsReceived, slats_passed: slatsPassed, slats_rejected: slatsRejected,
       veneers_produced: veneersProduced, veneers_sanded_passed: veneersSandedPassed,
       boards_produced: boardsProduced, boards_passed: boardsPassed },

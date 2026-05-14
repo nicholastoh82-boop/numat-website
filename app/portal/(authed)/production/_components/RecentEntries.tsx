@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import type { Variant } from './ProductionShell'
 
-type Station = 'slats' | 'planing' | 'gluing' | 'veneer_sanding' | 'boards'
+type Station = 'slats' | 'planing' | 'gluing' | 'veneer_sanding' | 'boards' | 'borax'
 
 const TABLE_BY_STATION: Record<Station, string> = {
   slats: 'prod_slat_receipts',
@@ -10,6 +10,7 @@ const TABLE_BY_STATION: Record<Station, string> = {
   gluing: 'prod_gluing_runs',
   veneer_sanding: 'prod_veneer_sanding',
   boards: 'prod_board_runs',
+  borax: 'prod_borax_tests',
 }
 
 export default function RecentEntries({ station, refreshKey, userEmail, variants }: { station: Station; refreshKey: number; userEmail: string; variants: Variant[] }) {
@@ -79,6 +80,11 @@ function summarise(station: Station, r: any, variantById: Map<string, Variant>):
   if (station === 'planing') return `${r.slats_in} in, ${r.slats_out} survived, ${r.defects} defects, ${r.downtime_min}min downtime`
   if (station === 'gluing') return `${r.slats_consumed} slats → ${r.veneers_produced} veneers, ${r.downtime_min}min downtime`
   if (station === 'veneer_sanding') return `${r.veneers_in} sanded, ${r.veneers_passed} passed, ${r.defects} defects`
+  if (station === 'borax') {
+    const totalTested = (r.slats_pass || 0) + (r.slats_fail || 0)
+    const verdict = r.slats_fail > 0 ? 'FLAGGED' : 'PASS'
+    return `Tested ${totalTested}: ${r.slats_pass || 0} pass, ${r.slats_fail || 0} fail → ${verdict}`
+  }
   if (station === 'boards') {
     const v = r.variant_id ? variantById.get(r.variant_id) : null
     const sku = v?.sku || r.sku_snapshot || 'unknown'

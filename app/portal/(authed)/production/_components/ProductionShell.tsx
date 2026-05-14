@@ -10,6 +10,7 @@ import InventoryView from './InventoryView'
 import RecentEntries from './RecentEntries'
 import AuditLogView from './AuditLogView'
 import SummaryView from './SummaryView'
+import BoraxTestForm from './BoraxTestForm'
 
 export type Variant = {
   id: string
@@ -27,11 +28,12 @@ export type InventoryRow = {
   updated_at: string
 }
 
-type Tab = 'summary' | 'slats' | 'planing' | 'gluing' | 'veneer_sanding' | 'boards' | 'inventory' | 'audit'
+type Tab = 'summary' | 'slats' | 'borax' | 'planing' | 'gluing' | 'veneer_sanding' | 'boards' | 'inventory' | 'audit'
 
 const TABS: { key: Tab; label: string; subtitle: string }[] = [
   { key: 'summary', label: 'Summary', subtitle: 'KPIs and trends' },
   { key: 'slats', label: 'Slats In', subtitle: 'Supplier delivery + QA' },
+  { key: 'borax', label: 'Borax Test', subtitle: 'Turmeric + ethanol verification' },
   { key: 'planing', label: 'Planing', subtitle: 'Rough + fine planer' },
   { key: 'gluing', label: 'Gluing', subtitle: '1st heat press → veneers' },
   { key: 'veneer_sanding', label: 'Veneer Sand', subtitle: 'Veneer sanding QA' },
@@ -86,6 +88,7 @@ export default function ProductionShell({ userEmail, variants, initialInventory 
       <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6">
         {tab === 'summary' && <SummaryView refreshKey={refreshKey} />}
         {tab === 'slats' && <SlatReceiptForm userEmail={userEmail} onSubmitted={onSubmit} />}
+        {tab === 'borax' && <BoraxTestForm userEmail={userEmail} onSubmitted={onSubmit} />}
         {tab === 'planing' && <PlaningForm userEmail={userEmail} onSubmitted={onSubmit} />}
         {tab === 'gluing' && <GluingForm userEmail={userEmail} onSubmitted={onSubmit} />}
         {tab === 'veneer_sanding' && <VeneerSandingForm userEmail={userEmail} onSubmitted={onSubmit} />}

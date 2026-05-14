@@ -18,6 +18,7 @@ const TABLE_LABELS: Record<string, string> = {
   prod_gluing_runs: 'Gluing',
   prod_veneer_sanding: 'Veneer Sand',
   prod_board_runs: 'Boards',
+  prod_borax_tests: 'Borax Test',
 }
 
 export default function AuditLogView({ refreshKey }: { refreshKey: number }) {
@@ -74,6 +75,7 @@ function summarise(r: AuditRow): string {
   if (t === 'prod_planing_runs') return `${date}: ${v.slats_in || 0} in, ${v.slats_out || 0} out, ${v.defects || 0} defects`
   if (t === 'prod_gluing_runs') return `${date}: ${v.slats_consumed || 0} slats → ${v.veneers_produced || 0} veneers`
   if (t === 'prod_veneer_sanding') return `${date}: ${v.veneers_in || 0} sanded, ${v.veneers_passed || 0} passed`
+  if (t === 'prod_borax_tests') return `${date}: tested ${((v.slats_pass || 0) + (v.slats_fail || 0))}, fails: ${v.slats_fail || 0}`
   if (t === 'prod_board_runs') return `${date}: ${v.sku_snapshot || ''} · ${v.veneers_consumed || 0} veneers → ${v.boards_passed || 0} boards`
   return `${date}: ${r.row_id}`
 }
