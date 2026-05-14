@@ -50,7 +50,7 @@ function extractProductId(cartItemId: string) {
 
 export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
   const router = useRouter()
-  const { items, getDiscountPercent, clearCart } = useCartStore()
+  const { items, clearCart } = useCartStore()
   const {
     unitPhp,
     lineTotalPhpFromUsd,
@@ -77,16 +77,13 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const discountPercent = getDiscountPercent()
-
   // Email body uses rounded display units so the visible math reconciles (matches the website cart).
   const subtotalPhp = items.reduce((sum, item) => {
     if (item.isPriceOnRequest) return sum
     const line = lineTotalPhpFromUsd(item.unitPrice, item.quantity)
     return sum + (line ?? 0)
   }, 0)
-  const discountPhp = Math.round(subtotalPhp * (discountPercent / 100) * 100) / 100
-  const totalPhp = Math.round((subtotalPhp - discountPhp) * 100) / 100
+  const totalPhp = subtotalPhp
 
   const quoteMessage = useMemo(() => {
     const lines: string[] = []
@@ -108,7 +105,6 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
       lines.push(`   Line Total: ${item.isPriceOnRequest ? 'Price on request' : formatPhpAmount(lineTotalPhpFromUsd(item.unitPrice, item.quantity))}`)
       lines.push('')
     })
-    if (discountPercent > 0) lines.push(`Bulk Discount: ${discountPercent}%`)
     lines.push(`Total (excl. VAT): ${formatPhpAmount(totalPhp)}`)
     if (formData.notes.trim()) {
       lines.push('')
@@ -116,7 +112,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
       lines.push(formData.notes.trim())
     }
     return lines.join('\n')
-  }, [formData, phoneNumber, items, discountPercent, totalPhp, unitPhp, lineTotalPhpFromUsd, formatPhpAmount, selectedCountry.currency])
+  }, [formData, phoneNumber, items, totalPhp, unitPhp, lineTotalPhpFromUsd, formatPhpAmount, selectedCountry.currency])
 
   function validateForm() {
     const nextErrors: Record<string, string> = {}

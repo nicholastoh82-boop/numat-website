@@ -38,16 +38,16 @@ type BoardRow = {
 const BOARD_DIMENSIONS = '2440mm x 1220mm'
 
 const BOARD_ROWS: BoardRow[] = [
-  { coreType: 'Horizontal', thickness: '7mm', ply: '2 Ply', priceUsd: 50 },
-  { coreType: 'Horizontal', thickness: '7mm', ply: '3 Ply', priceUsd: 65 },
-  { coreType: 'Horizontal', thickness: '12mm', ply: '2 Ply', priceUsd: 55 },
-  { coreType: 'Horizontal', thickness: '12mm', ply: '3 Ply', priceUsd: 70 },
-  { coreType: 'Horizontal', thickness: '20mm', ply: '3 Ply', priceUsd: 75 },
-  { coreType: 'Horizontal', thickness: '25mm', ply: '3 Ply', priceUsd: 130 },
-  { coreType: 'Horizontal', thickness: '30mm', ply: '5 Ply', priceUsd: 140 },
-  { coreType: 'Vertical', thickness: '40mm', ply: '3 Ply', priceUsd: 200 },
-  { coreType: 'Vertical', thickness: '45mm', ply: '5 Ply', priceUsd: 210 },
-  { coreType: 'Vertical', thickness: '50mm', ply: '5 Ply', priceUsd: 220 },
+  { coreType: 'Horizontal', thickness: '7mm', ply: '2 Ply', priceUsd: 60 },
+  { coreType: 'Horizontal', thickness: '7mm', ply: '3 Ply', priceUsd: 78 },
+  { coreType: 'Horizontal', thickness: '12mm', ply: '2 Ply', priceUsd: 66 },
+  { coreType: 'Horizontal', thickness: '12mm', ply: '3 Ply', priceUsd: 84 },
+  { coreType: 'Horizontal', thickness: '20mm', ply: '3 Ply', priceUsd: 90 },
+  { coreType: 'Horizontal', thickness: '25mm', ply: '3 Ply', priceUsd: 156 },
+  { coreType: 'Horizontal', thickness: '30mm', ply: '5 Ply', priceUsd: 168 },
+  { coreType: 'Vertical', thickness: '40mm', ply: '3 Ply', priceUsd: 240 },
+  { coreType: 'Vertical', thickness: '45mm', ply: '5 Ply', priceUsd: 252 },
+  { coreType: 'Vertical', thickness: '50mm', ply: '5 Ply', priceUsd: 264 },
 ]
 
 const DOOR_MODELS = {
@@ -55,7 +55,7 @@ const DOOR_MODELS = {
     label: 'NuDoor Premium',
     dimensions: '2100mm x 900mm',
     thickness: '45mm',
-    priceUsd: 350,
+    priceUsd: 420,
     moq: 1,
     unit: 'pc',
   },
@@ -63,7 +63,7 @@ const DOOR_MODELS = {
     label: 'NuDoor Composite',
     dimensions: '2100mm x 800mm',
     thickness: '40mm',
-    priceUsd: 250,
+    priceUsd: 300,
     moq: 1,
     unit: 'pc',
   },
@@ -71,7 +71,7 @@ const DOOR_MODELS = {
     label: 'NuDoor Light',
     dimensions: '2000mm x 800mm',
     thickness: '35mm',
-    priceUsd: 200,
+    priceUsd: 240,
     moq: 1,
     unit: 'pc',
   },
@@ -280,7 +280,7 @@ export function resolveConfiguredVariant(args: {
       length: '',
       unit: 'pc',
       moq: 20,
-      priceUsd: 10,
+      priceUsd: 12,
       inStock: true,
     }
   }
@@ -298,7 +298,7 @@ export function resolveConfiguredVariant(args: {
       length: selectedLength,
       unit: 'pc',
       moq: 500,
-      priceUsd: inStock ? 0.5 : null,
+      priceUsd: inStock ? 0.6 : null,
       inStock,
       stockMessage: inStock ? '' : 'No stock',
     }

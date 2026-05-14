@@ -30,7 +30,7 @@ export default function ShippingPage() {
                   <div>
                     <h3 className="font-semibold text-foreground mb-2">Metro Manila</h3>
                     <p className="text-muted-foreground text-sm">3-5 business days</p>
-                    <p className="text-muted-foreground text-sm">Free delivery for orders over PHP 50,000</p>
+                    <p className="text-muted-foreground text-sm">Shipping and freight are quoted separately based on destination and order volume.</p>
                   </div>
                 </div>
               </CardContent>

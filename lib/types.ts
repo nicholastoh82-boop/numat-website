@@ -79,14 +79,6 @@ export interface QuoteResponse {
   error?: string
 }
 
-// Admin types
-export interface DiscountRule {
-  id: string
-  minBoards: number
-  discountPercent: number
-  active: boolean
-}
-
 // Country codes for phone input
 export interface CountryCode {
   code: string

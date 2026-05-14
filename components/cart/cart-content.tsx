@@ -22,7 +22,6 @@ import { useCartStore } from '@/lib/cart-store'
 import { QuoteForm } from '@/components/cart/quote-form'
 import { useCurrency } from '@/components/providers/currency-provider'
 
-const DISCOUNT_THRESHOLD = 20
 const DOST_PDF_PATH = '/docs/DOST%20Results.pdf'
 
 const STEPS = [
@@ -37,7 +36,6 @@ export function CartContent() {
     removeItem,
     updateQuantity,
     getTotalItems,
-    getDiscountPercent,
   } = useCartStore()
 
   const { unitPhp, lineTotalPhpFromUsd, formatPhpAmount } = useCurrency()
@@ -46,8 +44,6 @@ export function CartContent() {
   const [showQuoteForm, setShowQuoteForm] = useState(() => !!searchParams.get('product'))
 
   const totalItems = getTotalItems()
-  const discountPercent = getDiscountPercent()
-  const itemsUntilDiscount = Math.max(0, DISCOUNT_THRESHOLD - totalItems)
   const currentStep = showQuoteForm ? 2 : 1
 
   // Compute order math in PHP from rounded display units so the visible line/subtotal/total reconcile.
@@ -55,8 +51,7 @@ export function CartContent() {
     const line = lineTotalPhpFromUsd(item.unitPrice, item.quantity)
     return sum + (line ?? 0)
   }, 0)
-  const discountPhp = Math.round(subtotalPhp * (discountPercent / 100) * 100) / 100
-  const totalPhp = Math.round((subtotalPhp - discountPhp) * 100) / 100
+  const totalPhp = subtotalPhp
 
   if (items.length === 0) {
     return (
@@ -142,22 +137,6 @@ export function CartContent() {
             {!showQuoteForm && (
               <>
                 <h1 className="text-2xl font-bold text-stone-950">Review Your Quote List</h1>
-
-                {/* Discount progress */}
-                {itemsUntilDiscount > 0 && (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                    <p className="text-sm font-semibold text-emerald-800">
-                      Add {itemsUntilDiscount} more items to unlock a 3% bulk discount
-                    </p>
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-emerald-100">
-                      <div
-                        className="h-full bg-emerald-600 transition-all duration-300"
-                        style={{ width: `${Math.min((totalItems / DISCOUNT_THRESHOLD) * 100, 100)}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 text-xs text-emerald-600">{totalItems} / {DISCOUNT_THRESHOLD} items</p>
-                  </div>
-                )}
 
                 {/* Cart items */}
                 {items.map((item, index) => (
@@ -280,12 +259,6 @@ export function CartContent() {
                     <span className="text-stone-500">Subtotal</span>
                     <span className="font-semibold text-stone-950">{formatPhpAmount(subtotalPhp)}</span>
                   </div>
-                  {discountPercent > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-emerald-700">Bulk Discount ({discountPercent}%)</span>
-                      <span className="font-semibold text-emerald-700">-{formatPhpAmount(discountPhp)}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between border-t border-stone-100 pt-3 text-sm">
                     <span className="text-stone-500">Shipping</span>
                     <span className="italic text-stone-400">To be confirmed</span>
