@@ -39,18 +39,7 @@ interface CartState {
   closeCart: () => void
   getTotalItems: () => number
   getSubtotal: () => number
-  getDiscount: () => number
   getTotal: () => number
-  getDiscountPercent: () => number
-}
-
-function calculateDiscountPercent(totalQuantity: number): number {
-  if (totalQuantity >= 500) return 15
-  if (totalQuantity >= 200) return 10
-  if (totalQuantity >= 100) return 7
-  if (totalQuantity >= 50) return 5
-  if (totalQuantity >= 20) return 3
-  return 0
 }
 
 export function getCartItemKey(
@@ -148,22 +137,7 @@ export const useCartStore = create<CartState>()(
           return sum + item.quantity * item.unitPrice
         }, 0),
 
-      getDiscountPercent: () => {
-        const totalItems = get().getTotalItems()
-        return calculateDiscountPercent(totalItems)
-      },
-
-      getDiscount: () => {
-        const subtotal = get().getSubtotal()
-        const discountPercent = get().getDiscountPercent()
-        return Math.round(subtotal * (discountPercent / 100))
-      },
-
-      getTotal: () => {
-        const subtotal = get().getSubtotal()
-        const discount = get().getDiscount()
-        return subtotal - discount
-      },
+      getTotal: () => get().getSubtotal(),
     }),
     {
       name: 'numat-cart',

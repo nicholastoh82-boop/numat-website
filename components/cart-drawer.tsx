@@ -9,8 +9,6 @@ import { getCartItemKey, useCartStore } from '@/lib/cart-store'
 import { cn } from '@/lib/utils'
 import { useCurrency } from '@/components/providers/currency-provider'
 
-const DISCOUNT_THRESHOLD = 20
-
 export default function CartDrawer() {
   const {
     items,
@@ -19,7 +17,6 @@ export default function CartDrawer() {
     removeItem,
     updateQuantity,
     getTotalItems,
-    getDiscountPercent,
   } = useCartStore()
 
   const { unitPhp, lineTotalPhpFromUsd, formatPhpAmount } = useCurrency()
@@ -42,8 +39,6 @@ export default function CartDrawer() {
   }, [isOpen])
 
   const totalItems = getTotalItems()
-  const discountPercent = getDiscountPercent()
-  const itemsUntilDiscount = Math.max(0, DISCOUNT_THRESHOLD - totalItems)
   const hasPricedItems = items.some((item) => typeof item.unitPrice === 'number' && item.unitPrice > 0)
   const hasPriceOnRequestItems = items.some((item) => item.isPriceOnRequest || item.unitPrice == null)
 
@@ -52,8 +47,7 @@ export default function CartDrawer() {
     const line = lineTotalPhpFromUsd(item.unitPrice, item.quantity)
     return sum + (line ?? 0)
   }, 0)
-  const discountPhp = Math.round(subtotalPhp * (discountPercent / 100) * 100) / 100
-  const totalPhp = Math.round((subtotalPhp - discountPhp) * 100) / 100
+  const totalPhp = subtotalPhp
 
   return (
     <>
@@ -93,21 +87,6 @@ export default function CartDrawer() {
             </div>
           ) : (
             <div className="space-y-4">
-              {itemsUntilDiscount > 0 && hasPricedItems && (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-                  <p className="text-sm text-foreground">
-                    Add <span className="font-semibold text-primary">{itemsUntilDiscount} more items</span> to get{' '}
-                    <span className="font-semibold">3% off</span>
-                  </p>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full bg-primary transition-all duration-300"
-                      style={{ width: `${Math.min((totalItems / DISCOUNT_THRESHOLD) * 100, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
               {items.map((item) => {
                 const itemKey = getCartItemKey(item)
                 const hasPrice = typeof item.unitPrice === 'number' && item.unitPrice > 0
@@ -204,13 +183,6 @@ export default function CartDrawer() {
                 {hasPricedItems ? formatPhpAmount(subtotalPhp) : 'Price on request'}
               </span>
             </div>
-
-            {discountPercent > 0 && hasPricedItems && (
-              <div className="flex justify-between text-sm">
-                <span className="text-primary">Bulk Discount ({discountPercent}%)</span>
-                <span className="font-medium text-primary">-{formatPhpAmount(discountPhp)}</span>
-              </div>
-            )}
 
             <div className="flex justify-between border-t border-border pt-2 text-sm">
               <span className="font-semibold text-foreground">Total (excl. VAT)</span>

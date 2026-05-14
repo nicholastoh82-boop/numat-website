@@ -113,7 +113,6 @@ Total: PHP ${total.toLocaleString()}
 📞 Have questions about the quote?
 💡 Need custom modifications?
 🚚 Want to discuss delivery options?
-💰 Looking for bulk discounts?
 
 Just reply here or reach out directly. We're committed to finding the perfect solution for your bamboo product needs! 🌱
 

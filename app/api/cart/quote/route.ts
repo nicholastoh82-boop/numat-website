@@ -97,17 +97,7 @@ export async function POST(request: NextRequest) {
 
     // Calculations
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0)
-
-    const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
-    let discountPercent = 0
-    if (totalQuantity >= 500) discountPercent = 15
-    else if (totalQuantity >= 200) discountPercent = 10
-    else if (totalQuantity >= 100) discountPercent = 7
-    else if (totalQuantity >= 50) discountPercent = 5
-    else if (totalQuantity >= 20) discountPercent = 3
-
-    const discountAmount = Math.round(subtotal * (discountPercent / 100))
-    const total = subtotal - discountAmount
+    const total = subtotal
     const quoteNumber = generateQuoteNumber()
 
     // Valid until = 14 days from now
@@ -134,8 +124,8 @@ export async function POST(request: NextRequest) {
         phone: formattedPhone,
         notes,
         subtotal,
-        discount_amount: discountAmount,
-        discount_percent: discountPercent,
+        discount_amount: 0,
+        discount_percent: 0,
         total,
         display_currency: contact.display_currency ?? 'USD',
         display_total: contact.display_total ?? total,
@@ -236,8 +226,6 @@ export async function POST(request: NextRequest) {
           quoteDate,
           validUntil: validUntilFormatted,
           subtotal: Math.round(subtotal * conversionRatio),
-          discountAmount: Math.round(discountAmount * conversionRatio),
-          discountPercent,
           total: Math.round(displayTotal),
           recipientEmail: contact.email,
           items: items.map((item) => ({

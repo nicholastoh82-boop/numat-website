@@ -1,7 +1,7 @@
 import { Product } from './types'
 
 // Product data - NuBam Boards product line
-// MOQ: 10 boards, 15% discount for orders > 100 boards
+// MOQ: 10 boards
 export const products: Product[] = [
   // Engineered Bamboo Boards - differentiated by thickness
   {
@@ -10,7 +10,7 @@ export const products: Product[] = [
     size: '2440 x 1220 mm',
     thickness_mm: 6.35,
     ply: '1-Ply',
-    price: 1850,
+    price: 2220,
     moq: 10,
     lead_time_days: 10,
     category: 'Furniture',
@@ -22,7 +22,7 @@ export const products: Product[] = [
     size: '2440 x 1220 mm',
     thickness_mm: 12.7,
     ply: '2-Ply',
-    price: 2450,
+    price: 2940,
     moq: 10,
     lead_time_days: 10,
     category: 'Furniture',
@@ -34,7 +34,7 @@ export const products: Product[] = [
     size: '2440 x 1220 mm',
     thickness_mm: 19,
     ply: '3-Ply',
-    price: 3200,
+    price: 3840,
     moq: 10,
     lead_time_days: 10,
     category: 'Furniture',
@@ -46,7 +46,7 @@ export const products: Product[] = [
     size: '2440 x 1220 mm',
     thickness_mm: 25,
     ply: '4-Ply',
-    price: 3950,
+    price: 4740,
     moq: 10,
     lead_time_days: 10,
     category: 'Structural',
@@ -59,7 +59,7 @@ export const products: Product[] = [
     size: '2100 x 900 mm',
     thickness_mm: 19,
     ply: '3-Ply',
-    price: 2800,
+    price: 3360,
     moq: 10,
     lead_time_days: 10,
     category: 'Door',
@@ -71,7 +71,7 @@ export const products: Product[] = [
     size: '2100 x 900 mm',
     thickness_mm: 25,
     ply: '4-Ply',
-    price: 3400,
+    price: 4080,
     moq: 10,
     lead_time_days: 10,
     category: 'Door',
@@ -84,7 +84,7 @@ export const products: Product[] = [
     size: '1850 x 125 mm',
     thickness_mm: 14,
     ply: '3-Ply',
-    price: 1450,
+    price: 1740,
     moq: 10,
     lead_time_days: 10,
     category: 'Flooring',
@@ -96,7 +96,7 @@ export const products: Product[] = [
     size: '1850 x 125 mm',
     thickness_mm: 14,
     ply: '3-Ply',
-    price: 1550,
+    price: 1860,
     moq: 10,
     lead_time_days: 10,
     category: 'Flooring',
@@ -108,7 +108,7 @@ export const products: Product[] = [
     size: '1850 x 125 mm',
     thickness_mm: 20,
     ply: 'Strand',
-    price: 2100,
+    price: 2520,
     moq: 10,
     lead_time_days: 10,
     category: 'Flooring',
@@ -121,7 +121,7 @@ export const products: Product[] = [
     size: '2440 x 600 mm',
     thickness_mm: 6,
     ply: '1-Ply',
-    price: 950,
+    price: 1140,
     moq: 10,
     lead_time_days: 10,
     category: 'Wall Panelling',
@@ -133,7 +133,7 @@ export const products: Product[] = [
     size: '2440 x 600 mm',
     thickness_mm: 9,
     ply: '2-Ply',
-    price: 1250,
+    price: 1500,
     moq: 10,
     lead_time_days: 10,
     category: 'Wall Panelling',
@@ -146,7 +146,7 @@ export const products: Product[] = [
     size: '2500 x 640 mm',
     thickness_mm: 0.6,
     ply: 'Veneer',
-    price: 380,
+    price: 456,
     moq: 10,
     lead_time_days: 10,
     category: 'Veneer',
@@ -158,7 +158,7 @@ export const products: Product[] = [
     size: '2500 x 640 mm',
     thickness_mm: 0.6,
     ply: 'Veneer',
-    price: 420,
+    price: 504,
     moq: 10,
     lead_time_days: 10,
     category: 'Veneer',
@@ -171,7 +171,7 @@ export const products: Product[] = [
     size: '2440 x 150 mm',
     thickness_mm: 12,
     ply: '2-Ply',
-    price: 1650,
+    price: 1980,
     moq: 10,
     lead_time_days: 10,
     category: 'Cladding',
@@ -183,7 +183,7 @@ export const products: Product[] = [
     size: '2440 x 150 mm',
     thickness_mm: 18,
     ply: '3-Ply',
-    price: 2200,
+    price: 2640,
     moq: 10,
     lead_time_days: 10,
     category: 'Cladding',
@@ -196,7 +196,7 @@ export const products: Product[] = [
     size: '3000 x 150 x 150 mm',
     thickness_mm: 30,
     ply: '5-Ply',
-    price: 4500,
+    price: 5400,
     moq: 10,
     lead_time_days: 10,
     category: 'Structural',
@@ -208,7 +208,7 @@ export const products: Product[] = [
     size: '3000 x 200 x 200 mm',
     thickness_mm: 40,
     ply: '6-Ply',
-    price: 5800,
+    price: 6960,
     moq: 10,
     lead_time_days: 10,
     category: 'Structural',
@@ -221,7 +221,7 @@ export const products: Product[] = [
     size: '600 x 400 mm',
     thickness_mm: 6,
     ply: '1-Ply',
-    price: 280,
+    price: 336,
     moq: 10,
     lead_time_days: 10,
     category: 'DIY Project',
@@ -233,7 +233,7 @@ export const products: Product[] = [
     size: '900 x 250 mm',
     thickness_mm: 12,
     ply: '2-Ply',
-    price: 450,
+    price: 540,
     moq: 10,
     lead_time_days: 10,
     category: 'DIY Project',
@@ -245,7 +245,7 @@ export const products: Product[] = [
     size: '1200 x 600 mm',
     thickness_mm: 19,
     ply: '3-Ply',
-    price: 1200,
+    price: 1440,
     moq: 10,
     lead_time_days: 10,
     category: 'DIY Project',
@@ -267,16 +267,10 @@ export const categories = [
 export type Category = typeof categories[number]
 
 // Pricing constants
-export const DISCOUNT_THRESHOLD = 100 // boards
-export const DISCOUNT_PERCENT = 15
 export const DEFAULT_MOQ = 10
 export const DEFAULT_LEAD_TIME = 10
 export const QUOTE_VALIDITY_DAYS = 14
 export const VAT_RATE = 0.12 // 12% VAT in Philippines
-
-export function calculateDiscount(totalBoards: number): number {
-  return totalBoards > DISCOUNT_THRESHOLD ? DISCOUNT_PERCENT : 0
-}
 
 export function getProductsByCategory(category: string): Product[] {
   return products.filter(p => p.category === category)

@@ -56,13 +56,6 @@ export async function GET() {
           default_lead_time_days: 10,
           whatsapp_number: '+639123456789',
           sales_email: 'sales@numat.ph',
-          bulk_discount_tiers: [
-            { min: 20, max: 49, discount: '3%' },
-            { min: 50, max: 99, discount: '5%' },
-            { min: 100, max: 199, discount: '7%' },
-            { min: 200, max: 499, discount: '10%' },
-            { min: 500, max: null, discount: '15%' },
-          ],
         },
         { status: 200 }
       )
@@ -96,15 +89,6 @@ export async function PATCH(request: Request) {
       default_lead_time_days: Number(body.default_lead_time_days ?? 10),
       whatsapp_number: body.whatsapp_number ?? '+639123456789',
       sales_email: body.sales_email ?? 'sales@numat.ph',
-      bulk_discount_tiers: Array.isArray(body.bulk_discount_tiers)
-        ? body.bulk_discount_tiers
-        : [
-            { min: 20, max: 49, discount: '3%' },
-            { min: 50, max: 99, discount: '5%' },
-            { min: 100, max: 199, discount: '7%' },
-            { min: 200, max: 499, discount: '10%' },
-            { min: 500, max: null, discount: '15%' },
-          ],
       updated_at: new Date().toISOString(),
     }
 
