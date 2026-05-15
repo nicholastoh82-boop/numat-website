@@ -118,7 +118,8 @@ type ResolvedQuoteState = {
 }
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url)
+  // Force no-store so prices reflect Supabase live, no CDN/browser caching
+  const res = await fetch(url, { cache: 'no-store' })
   const data = await res.json()
 
   if (!res.ok) {
@@ -449,10 +450,14 @@ export default function ProductDetailPage() {
 
   const { data: categories } = useSWR<Category[]>('/api/categories', fetcher, {
     fallbackData: [],
+    revalidateOnMount: true,
+    revalidateOnFocus: true,
   })
 
   const { data: allProducts } = useSWR<ProductListItem[]>('/api/products', fetcher, {
     fallbackData: [],
+    revalidateOnMount: true,
+    revalidateOnFocus: true,
   })
 
   useEffect(() => {

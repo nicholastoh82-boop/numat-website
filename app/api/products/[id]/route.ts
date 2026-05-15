@@ -14,6 +14,19 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+const NO_STORE_HEADERS = { 'Cache-Control': 'no-store, max-age=0, must-revalidate' }
+
+function jsonNoStore(body: any, init?: ResponseInit): Response {
+  const headers = new Headers(init?.headers)
+  headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate')
+  return NextResponse.json(body, { ...init, headers })
+}
+
+
 function parsePrice(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
     return value
@@ -37,7 +50,7 @@ export async function GET(
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.json({ error: 'Missing Supabase environment variables.' }, { status: 500 })
+    return jsonNoStore({ error: 'Missing Supabase environment variables.' }, { status: 500 })
   }
 
   const { id } = await params
@@ -54,7 +67,7 @@ export async function GET(
     .single()
 
   if (productError || !product) {
-    return NextResponse.json(
+    return jsonNoStore(
       { error: productError?.message ?? 'Product not found.' },
       { status: 404 },
     )
@@ -100,7 +113,7 @@ export async function GET(
     .order('sort_order', { ascending: true, nullsFirst: false })
 
   if (variantsError) {
-    return NextResponse.json({ error: variantsError.message }, { status: 500 })
+    return jsonNoStore({ error: variantsError.message }, { status: 500 })
   }
 
   const { data: allImages } = await supabase
@@ -173,7 +186,7 @@ export async function GET(
   const resolvedBasePriceUsd =
     canonicalProductPrice ?? firstPricedVariant?.base_price_usd ?? null
 
-  return NextResponse.json({
+  return jsonNoStore({
     id: product.id,
     name: product.name,
     slug: product.slug ?? '',
