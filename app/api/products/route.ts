@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -17,7 +21,7 @@ const PUBLIC_VARIANT_FIELDS =
   'id, product_id, sku, size_label, length_mm, width_mm, thickness_mm, core_type, ply_count, unit, moq, is_price_on_request, price_notes, is_active, is_available, in_stock, sort_order'
 
 const PUBLIC_CACHE_HEADERS = {
-  'Cache-Control': 'public, max-age=300',
+  'Cache-Control': 'no-store, max-age=0, must-revalidate',
 }
 
 export async function GET() {

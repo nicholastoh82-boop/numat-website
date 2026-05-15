@@ -6,6 +6,8 @@ import { ProductsContent } from '@/components/products/products-content'
 import { productsMetadata } from '@/numat-seo-metadata'
 
 export const metadata = productsMetadata
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 import { createClient } from '@supabase/supabase-js'
 
