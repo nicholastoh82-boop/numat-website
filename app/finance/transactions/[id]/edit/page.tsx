@@ -237,7 +237,7 @@ export default function EditTransactionPage() {
         </Field>
 
         <Field label="Amount">
-          <input type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="input" />
+          <input type="number" onWheel={(e) => e.currentTarget.blur()} step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="input" />
         </Field>
 
         <Field label="Currency">
@@ -339,7 +339,7 @@ export default function EditTransactionPage() {
         </Field>
 
         <Field label="Foreign Exchange Rate (if applicable)">
-          <input type="number" step="0.0001" value={form.fx_rate} onChange={(e) => setForm({ ...form, fx_rate: e.target.value })} className="input" />
+          <input type="number" onWheel={(e) => e.currentTarget.blur()} step="0.0001" value={form.fx_rate} onChange={(e) => setForm({ ...form, fx_rate: e.target.value })} className="input" />
         </Field>
 
         <div className="md:col-span-2">

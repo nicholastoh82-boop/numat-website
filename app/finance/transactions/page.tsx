@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Pencil } from "lucide-react";
 import {
   getFinanceSupabase,
   formatDate,
@@ -162,7 +163,7 @@ export default function TransactionsListPage() {
                 <th className="text-left px-3 py-2 font-medium">To</th>
                 <th className="text-right px-3 py-2 font-medium">Amount</th>
                 <th className="text-left px-3 py-2 font-medium">Status</th>
-                <th className="text-left px-3 py-2 font-medium">Action</th>
+                <th className="text-left px-3 py-2 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -188,7 +189,12 @@ export default function TransactionsListPage() {
                     <StatusBadge status={r.status} />
                   </td>
                   <td className="px-3 py-2">
-                    <Link href={`/finance/transactions/${r.id}/edit`} className="text-blue-600 hover:underline text-xs font-medium">
+                    <Link
+                      href={`/finance/transactions/${r.id}/edit`}
+                      className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 hover:text-blue-700"
+                      aria-label="Edit transaction"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
                       Edit
                     </Link>
                   </td>

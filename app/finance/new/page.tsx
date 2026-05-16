@@ -211,7 +211,7 @@ export default function NewTransactionPage() {
 
         <Row label="Amount">
           <div className="flex gap-2">
-            <input type="number" step="0.01" className={inputCls} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+            <input type="number" onWheel={(e) => e.currentTarget.blur()} step="0.01" className={inputCls} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
             <select className={inputCls + ' w-28'} value={currency} onChange={e => setCurrency(e.target.value)}>
               <option>PHP</option><option>USD</option><option>SGD</option>
             </select>
@@ -220,7 +220,7 @@ export default function NewTransactionPage() {
 
         {isFxBetweenCurrencies && (
           <Row label="FX Rate">
-            <input type="number" step="0.000001" className={inputCls} value={fxRate} onChange={e => setFxRate(e.target.value)}
+            <input type="number" onWheel={(e) => e.currentTarget.blur()} step="0.000001" className={inputCls} value={fxRate} onChange={e => setFxRate(e.target.value)}
               placeholder="e.g. 56.75 PHP per USD" />
           </Row>
         )}
@@ -279,7 +279,7 @@ export default function NewTransactionPage() {
         </Row>
 
         <Row label="PR Amount (optional)">
-          <input type="number" step="0.01" className={inputCls} value={prAmount} onChange={e => setPrAmount(e.target.value)}
+          <input type="number" onWheel={(e) => e.currentTarget.blur()} step="0.01" className={inputCls} value={prAmount} onChange={e => setPrAmount(e.target.value)}
             placeholder="Original purchase requisition amount for variance tracking" />
         </Row>
 
