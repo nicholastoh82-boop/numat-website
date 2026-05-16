@@ -169,7 +169,7 @@ export default function FundListPage() {
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-700 mb-1">Amount (PHP)</div>
-                <input type="number" step="0.01" className={inputCls} value={amount} onChange={e => setAmount(e.target.value)} />
+                <input type="number" onWheel={(e) => e.currentTarget.blur()} step="0.01" className={inputCls} value={amount} onChange={e => setAmount(e.target.value)} />
               </div>
             </div>
 

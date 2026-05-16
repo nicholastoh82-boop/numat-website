@@ -198,7 +198,7 @@ export default function BatchDetailPage() {
               <input type="date" className={inputCls} value={date} onChange={e => setDate(e.target.value)} />
             </Field>
             <Field label="Amount (PHP)">
-              <input type="number" step="0.01" className={inputCls} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+              <input type="number" onWheel={(e) => e.currentTarget.blur()} step="0.01" className={inputCls} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
             </Field>
             <Field label="Description" className="md:col-span-2">
               <input className={inputCls} value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. Fuel for truck, Meals OT, Saw blade" />

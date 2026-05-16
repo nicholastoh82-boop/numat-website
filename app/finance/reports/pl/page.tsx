@@ -787,6 +787,7 @@ export default function PLReportPage() {
                 </label>
                 <input
                   type="number"
+                  onWheel={(e) => e.currentTarget.blur()}
                   value={year}
                   onChange={(e) => setYear(Number(e.target.value))}
                   className="mt-1 w-24 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"
