@@ -1,8 +1,15 @@
 // app/api/gmail/auth/route.ts
 // Starts the Google OAuth flow for a rep. Call from CRM:
 //   GET /api/gmail/auth?rep_email=bryan@numat.ph
+//
+// Whitelist is read dynamically from crm_users (active reps + admins).
+// Any new hire added to crm_users can immediately connect Gmail.
 
 import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/gmail';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
@@ -16,8 +23,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'rep_email is required' }, { status: 400 });
   }
 
-  const allowed = ['nick@numat.ph', 'bryan@numat.ph', 'mohan@numat.ph'];
-  if (!allowed.includes(repEmail.toLowerCase())) {
+  // Verify the email belongs to an active rep or admin in crm_users.
+  const { data: user, error } = await supabaseAdmin
+    .from('crm_users')
+    .select('email, is_active, role')
+    .ilike('email', repEmail)
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  if (!user || !user.is_active || !['rep', 'admin'].includes(user.role ?? '')) {
     return NextResponse.json({ error: 'rep_email not allowed' }, { status: 403 });
   }
 

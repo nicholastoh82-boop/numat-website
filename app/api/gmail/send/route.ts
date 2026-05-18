@@ -46,12 +46,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const repNameMap: Record<string, string> = {
-    'nick@numat.ph': 'Nicholas Toh',
-    'bryan@numat.ph': 'Bryan Suarin',
-    'mohan@numat.ph': 'Mohan Louis',
-  };
-  const fromName = repNameMap[body.rep_email.toLowerCase()];
+  // Look up the rep's display name from crm_users so new hires
+  // automatically have their name on outgoing email without a code change.
+  let fromName: string | undefined;
+  try {
+    const { data: repUser } = await supabaseAdmin
+      .from('crm_users')
+      .select('name')
+      .ilike('email', body.rep_email)
+      .maybeSingle();
+    if (repUser?.name) fromName = repUser.name;
+  } catch {
+    // Non-fatal: email still sends, just without a display name.
+  }
 
   try {
     const result = await sendGmail({
