@@ -101,6 +101,7 @@ export async function GET(
       is_price_on_request,
       price_notes,
       is_active,
+      is_available,
       in_stock,
       sort_order,
       grade,
