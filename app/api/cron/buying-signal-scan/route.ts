@@ -44,6 +44,13 @@ function batchSize(): number {
   return Math.min(n, 100);
 }
 
+function concurrency(): number {
+  const raw = process.env.SIGNAL_SCAN_CONCURRENCY;
+  const n = raw ? parseInt(raw, 10) : 6;
+  if (!Number.isFinite(n) || n <= 0) return 6;
+  return Math.min(n, 15);
+}
+
 async function pickLeads(limit: number): Promise<LeadRow[]> {
   const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const select =
@@ -191,10 +198,22 @@ async function handle(): Promise<Response> {
     );
   }
 
+  // Parallel pool. Each worker pulls the next lead from the queue. Pro+grounding
+  // calls take 10 to 20 sec each; 6 workers process 25 leads in about 60 to 90 sec,
+  // well inside the 300 sec Vercel function budget. Tune via SIGNAL_SCAN_CONCURRENCY.
+  const queue = [...leads];
   const results: Awaited<ReturnType<typeof processOne>>[] = [];
-  for (const lead of leads) {
-    results.push(await processOne(lead));
-  }
+  const workerCount = Math.min(concurrency(), leads.length);
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (queue.length > 0) {
+        const lead = queue.shift();
+        if (!lead) break;
+        const out = await processOne(lead);
+        results.push(out);
+      }
+    })
+  );
 
   const ok_count = results.filter((r) => r.status === "ok").length;
   const err_count = results.filter((r) => r.status === "error").length;
