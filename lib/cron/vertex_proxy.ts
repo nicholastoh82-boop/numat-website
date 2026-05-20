@@ -7,27 +7,28 @@
 // the metadata server. Calls bill to GCP credits.
 //
 // Auth flow (Vercel to Cloud Run):
-//   1. Read VERCEL_OIDC_TOKEN (Vercel runtime injects this when OIDC is enabled
-//      on the project)
+//   1. Get OIDC token via @vercel/functions/oidc (Vercel runtime helper, more
+//      reliable than reading process.env.VERCEL_OIDC_TOKEN directly because the
+//      helper handles refresh and edge runtime differences)
 //   2. Exchange the OIDC token for a GCP federated access token via the STS
-//      endpoint, scoped through our Workload Identity Pool
+//      endpoint, scoped via the vercel-pool Workload Identity Pool
 //   3. Use the federated token to impersonate the gemini-cron-runner service
 //      account and mint a Google ID token whose audience is the Cloud Run URL
-//   4. Call Cloud Run with the ID token in the Authorization header. Cloud
-//      Run IAM validates the token and confirms gemini-cron-runner has the
-//      run.invoker role on the gemini-proxy service.
+//   4. Call Cloud Run with the ID token. Cloud Run IAM validates the token and
+//      confirms gemini-cron-runner has roles/run.invoker on the proxy service.
 //
-// The ID token is cached in module scope for ~50 min. Vercel functions
-// share module scope per warm instance so this avoids redoing the dance on
-// every call within a cron run.
+// The ID token is cached in module scope for ~50 min. Vercel functions share
+// module scope per warm instance so this avoids redoing the dance on every call
+// within a cron run.
 //
 // Required env vars:
 //   VERTEX_PROXY_URL          e.g. https://gemini-proxy-xxxxx.a.run.app
 //   GCP_WIF_AUDIENCE          //iam.googleapis.com/projects/.../providers/vercel
 //   GCP_SERVICE_ACCOUNT       gemini-cron-runner@numat-automation.iam.gserviceaccount.com
 //
-// Vercel automatically injects:
-//   VERCEL_OIDC_TOKEN         JWT issued by Vercel for this function invocation
+// Project must have OIDC Federation enabled (Project Settings > Security).
+
+import { getVercelOidcToken } from '@vercel/functions/oidc';
 
 const PROXY_PATH = '/generate';
 const STS_ENDPOINT = 'https://sts.googleapis.com/v1/token';
@@ -72,10 +73,17 @@ function required(name: string): string {
 let cachedIdToken: { token: string; expiresAt: number } | null = null;
 
 async function exchangeOidcForFederatedToken(): Promise<string> {
-  const oidcToken = process.env.VERCEL_OIDC_TOKEN;
+  let oidcToken: string;
+  try {
+    oidcToken = await getVercelOidcToken();
+  } catch (err) {
+    throw new Error(
+      `Failed to read Vercel OIDC token: ${err instanceof Error ? err.message : String(err)}. Ensure OIDC Federation is enabled on the Vercel project (Project Settings > Security > Secure Backend Access with OIDC Federation).`
+    );
+  }
   if (!oidcToken) {
     throw new Error(
-      'VERCEL_OIDC_TOKEN not present. Enable OIDC Federation on the Vercel project (Project Settings then Security).'
+      'Vercel OIDC token is empty. Ensure OIDC Federation is enabled and the project has been redeployed since enabling.'
     );
   }
   const audience = required('GCP_WIF_AUDIENCE');
