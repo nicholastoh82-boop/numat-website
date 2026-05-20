@@ -5,6 +5,7 @@
     { "path": "/api/cron/daily-digest", "schedule": "0 16 * * *" },
     { "path": "/api/cron/parse_invoices", "schedule": "*/30 * * * *" },
     { "path": "/api/cron/lead-enrichment", "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/geocode-leads", "schedule": "*/30 * * * *" },
     { "path": "/api/cron/buying-signal-scan", "schedule": "0 2 * * 1" }
   ]
 }
