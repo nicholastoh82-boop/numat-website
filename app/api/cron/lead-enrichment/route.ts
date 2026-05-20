@@ -79,7 +79,7 @@ async function persistEnrichment(
     pain_hooks: result.pain_hooks,
     product_recommendations: result.product_recommendations,
     last_enriched_at: now,
-    enrichment_tier: "gemini_flash_v1",
+    enrichment_tier: "enriched",
     updated_at: now,
   });
 
@@ -150,7 +150,7 @@ async function processOne(lead: LeadRow): Promise<{
     try {
       await supabasePatch(`master_leads?id=eq.${lead.id}`, {
         last_enriched_at: retryAt,
-        enrichment_tier: "gemini_flash_v1_failed",
+        enrichment_tier: "basic",
       });
     } catch {
       // ignore
