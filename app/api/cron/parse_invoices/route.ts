@@ -16,7 +16,8 @@
 // Auth: x-vercel-cron-signature (auto injected by Vercel) or Authorization: Bearer ${CRON_SECRET}
 //
 // Required env vars (most already set):
-//   GEMINI_API_KEY                                  NEW
+//   VERTEX_PROXY_URL                                NEW (Cloud Run gemini-proxy)
+//   VERTEX_PROXY_SECRET                             NEW
 //   CRON_SECRET                                     already set
 //   TELEGRAM_BOT_TOKEN                              already set
 //   TELEGRAM_CHAT_ID                                already set
@@ -27,6 +28,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, getValidAccessToken } from '@/lib/gmail';
+import { callGeminiProxy, extractText } from '@/lib/cron/vertex_proxy';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -35,7 +37,7 @@ const REP_EMAIL = 'nick@numat.ph';
 const GMAIL_QUERY = 'is:starred has:attachment filename:pdf';
 const MAX_MESSAGES = 20;
 
-const { GEMINI_API_KEY, CRON_SECRET, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } =
+const { CRON_SECRET, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } =
   process.env as Record<string, string>;
 
 const GEMINI_PROMPT = `You are extracting structured data from a Philippine supplier document for NUMAT Sustainable Manufacturing.
@@ -142,30 +144,22 @@ function findPdfAttachments(message: any): { filename: string; attachmentId: str
 
 async function callGemini(pdfBase64Url: string): Promise<any> {
   const pdfBase64 = pdfBase64Url.replace(/-/g, '+').replace(/_/g, '/');
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: GEMINI_PROMPT },
-              { inline_data: { mime_type: 'application/pdf', data: pdfBase64 } },
-            ],
-          },
+  const data = await callGeminiProxy({
+    model: 'gemini-2.5-pro',
+    contents: [
+      {
+        parts: [
+          { text: GEMINI_PROMPT },
+          { inline_data: { mime_type: 'application/pdf', data: pdfBase64 } },
         ],
-        generationConfig: {
-          response_mime_type: 'application/json',
-          temperature: 0.1,
-        },
-      }),
+      },
+    ],
+    generationConfig: {
+      response_mime_type: 'application/json',
+      temperature: 0.1,
     },
-  );
-  if (!res.ok) throw new Error(`Gemini call failed: ${await res.text()}`);
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  });
+  const text = extractText(data);
   if (!text) throw new Error('Gemini returned no text');
   return JSON.parse(text);
 }

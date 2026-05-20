@@ -2,10 +2,10 @@
 //
 // Gemini Flash based lead enrichment. Used by app/api/cron/lead-enrichment.
 // Fetches the lead's company website, extracts plain text, sends it to Gemini
-// along with lead metadata, returns a structured enrichment object.
+// via the Cloud Run vertex_proxy, returns a structured enrichment object.
+// Calls bill to GCP startup credits via Vertex AI.
 
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+import { callGeminiProxy, extractText } from "./vertex_proxy";
 
 export type EmployeeSizeBand =
   | "small"
@@ -186,9 +186,6 @@ export type LeadInput = {
 };
 
 export async function enrichLead(lead: LeadInput): Promise<EnrichmentResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY not set");
-
   const { text: websiteText, url } = await fetchWebsiteText(lead.company_domain);
 
   const prompt = PROMPT_TEMPLATE
@@ -202,26 +199,17 @@ export async function enrichLead(lead: LeadInput): Promise<EnrichmentResult> {
     .replace("{{SERVICE_KEYWORDS}}", lead.service_keywords || "")
     .replace("{{WEBSITE_TEXT}}", websiteText || "(no website content available)");
 
-  const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        response_mime_type: "application/json",
-        temperature: 0.1,
-        max_output_tokens: 1024,
-      },
-    }),
+  const data = await callGeminiProxy({
+    model: "gemini-2.5-flash",
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      response_mime_type: "application/json",
+      temperature: 0.1,
+      max_output_tokens: 1024,
+    },
   });
 
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Gemini enrich failed: ${res.status} ${txt.slice(0, 300)}`);
-  }
-
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = extractText(data);
   if (!text) throw new Error("Gemini returned no text content");
 
   let parsed: any;
