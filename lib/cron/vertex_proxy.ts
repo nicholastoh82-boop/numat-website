@@ -52,6 +52,10 @@ export type GeminiRequest = {
     response_mime_type?: string;
     temperature?: number;
     max_output_tokens?: number;
+    // Vertex AI specific. Gemini 2.5 models do thinking by default which
+    // consumes output tokens. Set thinkingBudget to 0 on Flash to disable
+    // thinking entirely (faster, cheaper, fine for structured extraction).
+    thinkingConfig?: { thinkingBudget?: number };
   };
   tools?: GeminiTool[];
 };

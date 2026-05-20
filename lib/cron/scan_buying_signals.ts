@@ -135,7 +135,7 @@ export async function scanBuyingSignals(input: ScanInput): Promise<BuyingSignalR
     tools: [{ google_search: {} }],
     generationConfig: {
       temperature: 0.1,
-      max_output_tokens: 2048,
+      max_output_tokens: 8192,
     },
   });
 

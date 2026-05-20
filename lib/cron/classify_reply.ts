@@ -148,7 +148,8 @@ export async function classifyReply(args: {
     generationConfig: {
       response_mime_type: "application/json",
       temperature: 0.1,
-      max_output_tokens: 512,
+      max_output_tokens: 1024,
+      thinkingConfig: { thinkingBudget: 0 },
     },
   });
 
