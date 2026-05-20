@@ -53,7 +53,7 @@ export function DefectBins({ bins, onChange, helperText }: { bins: Bin[]; onChan
 }
 
 // Shift operator field. Same dropdown set across stations.
-const SHIFT_OPS = ['Boyet', 'Francisco', 'Charlie', 'Other']
+const SHIFT_OPS = ['Boyet', 'Francisco', 'Charlie', 'Jesilla', 'Analie', 'Other']
 export function ShiftOperator({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <Field label="Shift operator" hint="Who actually ran the station this shift (may differ from who's typing)">
