@@ -205,7 +205,8 @@ export async function enrichLead(lead: LeadInput): Promise<EnrichmentResult> {
     generationConfig: {
       response_mime_type: "application/json",
       temperature: 0.1,
-      max_output_tokens: 1024,
+      max_output_tokens: 4096,
+      thinkingConfig: { thinkingBudget: 0 },
     },
   });
 

@@ -157,6 +157,7 @@ async function callGemini(pdfBase64Url: string): Promise<any> {
     generationConfig: {
       response_mime_type: 'application/json',
       temperature: 0.1,
+      max_output_tokens: 8192,
     },
   });
   const text = extractText(data);
