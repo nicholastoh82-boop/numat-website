@@ -4,9 +4,11 @@
 // Reads the reply text, returns structured classification + priority + suggested next step.
 // Used by app/api/cron/reply-handler/route.ts to populate master_leads classification columns
 // and trigger Telegram alerts for hot leads.
+//
+// All Gemini calls go through the Cloud Run gemini-proxy, which auths to Vertex AI
+// via the gemini-cron-runner service account. Calls bill to GCP startup credits.
 
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+import { callGeminiProxy, extractText } from "./vertex_proxy";
 
 export type ReplyClassification =
   | "hot_lead"
@@ -138,33 +140,19 @@ export async function classifyReply(args: {
   subject: string;
   replyText: string;
 }): Promise<ClassificationResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY not set");
-  }
-
   const prompt = buildPrompt(args);
 
-  const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        response_mime_type: "application/json",
-        temperature: 0.1,
-        max_output_tokens: 512,
-      },
-    }),
+  const data = await callGeminiProxy({
+    model: "gemini-2.5-flash",
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      response_mime_type: "application/json",
+      temperature: 0.1,
+      max_output_tokens: 512,
+    },
   });
 
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Gemini classify failed: ${res.status} ${txt}`);
-  }
-
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = extractText(data);
   if (!text) {
     throw new Error("Gemini returned no text content");
   }

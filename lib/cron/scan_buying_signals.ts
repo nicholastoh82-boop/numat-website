@@ -1,12 +1,12 @@
 // lib/cron/scan_buying_signals.ts
 //
-// Gemini 2.5 Pro with Google Search grounding. Used by buying-signal-scan cron.
-// Detects buying signals in the last 90 days: project announcements, hires,
-// fundraises, RFP wins, expansion plans. Only runs on leads with
-// icp_fit_score >= 60 (the enrichment cron sets this score).
+// Gemini 2.5 Pro with Google Search grounding via the Cloud Run vertex_proxy.
+// Used by buying-signal-scan cron. Detects buying signals in the last 90 days:
+// project announcements, hires, fundraises, RFP wins, expansion plans. Only
+// runs on leads with icp_fit_score >= 60 (the enrichment cron sets this score).
+// Calls bill to GCP startup credits via Vertex AI.
 
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent";
+import { callGeminiProxy } from "./vertex_proxy";
 
 export type BuyingSignalStrength = "hot" | "warm" | "cold" | "none";
 
@@ -120,9 +120,6 @@ export type ScanInput = {
 };
 
 export async function scanBuyingSignals(input: ScanInput): Promise<BuyingSignalResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY not set");
-
   const prompt = PROMPT_TEMPLATE
     .replace("{{COMPANY_NAME}}", input.company_name || "Unknown")
     .replace("{{COMPANY_DOMAIN}}", input.company_domain || "Unknown")
@@ -132,25 +129,16 @@ export async function scanBuyingSignals(input: ScanInput): Promise<BuyingSignalR
       (input.business_description || "Unknown").slice(0, 400)
     );
 
-  const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      tools: [{ google_search: {} }],
-      generationConfig: {
-        temperature: 0.1,
-        max_output_tokens: 2048,
-      },
-    }),
+  const data = await callGeminiProxy({
+    model: "gemini-2.5-pro",
+    contents: [{ parts: [{ text: prompt }] }],
+    tools: [{ google_search: {} }],
+    generationConfig: {
+      temperature: 0.1,
+      max_output_tokens: 2048,
+    },
   });
 
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Gemini grounded scan failed: ${res.status} ${txt.slice(0, 300)}`);
-  }
-
-  const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts
     ?.map((p: any) => p?.text || "")
     .join("")
