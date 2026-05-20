@@ -1,37 +1,42 @@
 // app/api/cron/parse_invoices/route.ts
 //
 // Vercel Cron route that:
-//   1. Pulls Gmail messages labelled "Invoices/ToParse"
-//   2. Extracts PDF attachments
+//   1. Pulls Gmail messages from nick@numat.ph matching: is:starred has:attachment filename:pdf
+//   2. For each new message (not already in supplier_documents), extracts each PDF attachment
 //   3. Sends each PDF to Gemini 2.5 Pro for structured extraction
-//   4. Writes parsed fields to public.supplier_documents
+//   4. Writes parsed fields to public.supplier_documents in Supabase
 //   5. Stores the PDF in Supabase Storage bucket supplier_documents
-//   6. Relabels the email to "Invoices/Parsed" (or "Invoices/Failed")
-//   7. Sends a Telegram alert per parsed doc
+//   6. Sends a Telegram alert per parsed doc
+//
+// Workflow for user: star a supplier email (gesture on mobile, "s" on desktop).
+// Dedup is via gmail_message_id, so each email is parsed exactly once.
 //
 // Schedule via vercel.json cron config (every 30 min).
+//
+// Auth: x-vercel-cron-signature (auto injected by Vercel) or Authorization: Bearer ${CRON_SECRET}
+//
+// Required env vars (most already set):
+//   GEMINI_API_KEY                                  NEW
+//   CRON_SECRET                                     already set
+//   TELEGRAM_BOT_TOKEN                              already set
+//   TELEGRAM_CHAT_ID                                already set
+//   SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL        already set
+//   SUPABASE_SERVICE_ROLE_KEY                       already set
+//   GOOGLE_CLIENT_ID                                already set
+//   GOOGLE_CLIENT_SECRET                            already set
 
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin, getValidAccessToken } from '@/lib/gmail';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
-const {
-  NEXT_PUBLIC_SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY,
-  GEMINI_API_KEY,
-  GMAIL_CLIENT_ID,
-  GMAIL_CLIENT_SECRET,
-  GMAIL_REFRESH_TOKEN,
-  TELEGRAM_BOT_TOKEN,
-  TELEGRAM_CHAT_ID,
-  CRON_SECRET,
-} = process.env as Record<string, string>;
+const REP_EMAIL = 'nick@numat.ph';
+const GMAIL_QUERY = 'is:starred has:attachment filename:pdf';
+const MAX_MESSAGES = 20;
 
-const TO_PARSE_LABEL = 'Invoices/ToParse';
-const PARSED_LABEL = 'Invoices/Parsed';
-const FAILED_LABEL = 'Invoices/Failed';
+const { GEMINI_API_KEY, CRON_SECRET, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } =
+  process.env as Record<string, string>;
 
 const GEMINI_PROMPT = `You are extracting structured data from a Philippine supplier document for NUMAT Sustainable Manufacturing.
 
@@ -82,47 +87,24 @@ CRITICAL RULES:
   "notes": ""
 }`;
 
-async function getGmailAccessToken(): Promise<string> {
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: GMAIL_CLIENT_ID,
-      client_secret: GMAIL_CLIENT_SECRET,
-      refresh_token: GMAIL_REFRESH_TOKEN,
-      grant_type: 'refresh_token',
-    }),
-  });
-  if (!res.ok) throw new Error(`Gmail token refresh failed: ${await res.text()}`);
-  const data = await res.json();
-  return data.access_token as string;
+function authorized(req: NextRequest): boolean {
+  if (req.headers.get('x-vercel-cron-signature')) return true;
+  const secret = CRON_SECRET;
+  if (!secret) return false;
+  const header = req.headers.get('authorization') ?? '';
+  const expected = `Bearer ${secret}`;
+  if (header.length !== expected.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < header.length; i++) {
+    mismatch |= header.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return mismatch === 0;
 }
 
-async function ensureLabel(token: string, name: string): Promise<string> {
-  const list = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels', {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then((r) => r.json());
-  const existing = list.labels?.find((l: any) => l.name === name);
-  if (existing) return existing.id;
-  const create = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name,
-      labelListVisibility: 'labelShow',
-      messageListVisibility: 'show',
-    }),
-  });
-  if (!create.ok) throw new Error(`Create label failed: ${await create.text()}`);
-  const data = await create.json();
-  return data.id as string;
-}
-
-async function listMessages(token: string, labelId: string): Promise<string[]> {
-  const res = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?labelIds=${labelId}&maxResults=20`,
-    { headers: { Authorization: `Bearer ${token}` } },
-  );
+async function listMessages(token: string): Promise<string[]> {
+  const url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(GMAIL_QUERY)}&maxResults=${MAX_MESSAGES}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`Gmail list failed: ${await res.text()}`);
   const data = await res.json();
   return (data.messages ?? []).map((m: any) => m.id);
 }
@@ -148,11 +130,7 @@ function findPdfAttachments(message: any): { filename: string; attachmentId: str
   const out: { filename: string; attachmentId: string }[] = [];
   const walk = (parts: any[]) => {
     for (const part of parts || []) {
-      if (
-        part.mimeType === 'application/pdf' &&
-        part.filename &&
-        part.body?.attachmentId
-      ) {
+      if (part.mimeType === 'application/pdf' && part.filename && part.body?.attachmentId) {
         out.push({ filename: part.filename, attachmentId: part.body.attachmentId });
       }
       if (part.parts) walk(part.parts);
@@ -192,17 +170,6 @@ async function callGemini(pdfBase64Url: string): Promise<any> {
   return JSON.parse(text);
 }
 
-async function relabel(token: string, messageId: string, addId: string, removeId: string) {
-  await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ addLabelIds: [addId], removeLabelIds: [removeId] }),
-    },
-  );
-}
-
 async function sendTelegram(text: string) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
   await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -227,50 +194,45 @@ function safeNumeric(v: any): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export async function GET(req: Request) {
-  const auth = req.headers.get('authorization');
-  if (auth !== `Bearer ${CRON_SECRET}`) {
+export async function GET(req: NextRequest) {
+  if (!authorized(req)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  const supabase = createClient(NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  const token = await getGmailAccessToken();
-  const toParseId = await ensureLabel(token, TO_PARSE_LABEL);
-  const parsedId = await ensureLabel(token, PARSED_LABEL);
-  const failedId = await ensureLabel(token, FAILED_LABEL);
+  const token = await getValidAccessToken(REP_EMAIL);
+  const messageIds = await listMessages(token);
 
-  const messageIds = await listMessages(token, toParseId);
   const summary = {
+    rep_email: REP_EMAIL,
     found: messageIds.length,
     parsed: 0,
+    skipped_already_parsed: 0,
+    no_pdf: 0,
     failed: 0,
-    skipped: 0,
     errors: [] as any[],
   };
 
   for (const messageId of messageIds) {
     try {
-      const { data: existing } = await supabase
+      const { data: existing } = await supabaseAdmin
         .from('supplier_documents')
         .select('id')
         .eq('gmail_message_id', messageId)
         .maybeSingle();
+
       if (existing) {
-        await relabel(token, messageId, parsedId, toParseId);
-        summary.skipped++;
+        summary.skipped_already_parsed++;
         continue;
       }
 
       const message = await getMessage(token, messageId);
       const pdfs = findPdfAttachments(message);
+
       if (pdfs.length === 0) {
-        summary.errors.push({ messageId, error: 'no PDF attachment' });
-        await relabel(token, messageId, failedId, toParseId);
-        summary.failed++;
+        summary.no_pdf++;
         continue;
       }
 
-      let anyOk = false;
       for (const pdf of pdfs) {
         const pdfBase64Url = await getAttachment(token, messageId, pdf.attachmentId);
         let parsed: any;
@@ -278,6 +240,7 @@ export async function GET(req: Request) {
           parsed = await callGemini(pdfBase64Url);
         } catch (err: any) {
           summary.errors.push({ messageId, filename: pdf.filename, error: err.message });
+          summary.failed++;
           continue;
         }
 
@@ -286,14 +249,14 @@ export async function GET(req: Request) {
           'base64',
         );
         const storagePath = `${new Date().toISOString().slice(0, 7)}/${messageId}_${pdf.filename}`;
-        await supabase.storage
+        await supabaseAdmin.storage
           .from('supplier_documents')
           .upload(storagePath, pdfBuffer, {
             contentType: 'application/pdf',
             upsert: true,
           });
 
-        const { error: insertErr } = await supabase.from('supplier_documents').insert({
+        const { error: insertErr } = await supabaseAdmin.from('supplier_documents').insert({
           gmail_message_id: messageId,
           gmail_thread_id: message.threadId,
           attachment_filename: pdf.filename,
@@ -326,24 +289,22 @@ export async function GET(req: Request) {
 
         if (insertErr) {
           summary.errors.push({ messageId, filename: pdf.filename, error: insertErr.message });
+          summary.failed++;
           continue;
         }
 
-        anyOk = true;
         summary.parsed++;
 
         const tg = [
           `📄 <b>New supplier doc parsed</b>`,
           `<b>Supplier:</b> ${parsed.supplier_name ?? 'Unknown'}`,
           `<b>Type:</b> ${parsed.document_type ?? '?'}`,
-          `<b>Total PHP:</b> ${parsed.total_php ?? '?'}`,
+          `<b>Doc date:</b> ${parsed.document_date ?? '?'}`,
+          `<b>Total PHP:</b> ${parsed.total_php ?? '(not stated)'}`,
           `<b>File:</b> ${pdf.filename}`,
         ].join('\n');
         await sendTelegram(tg);
       }
-
-      await relabel(token, messageId, anyOk ? parsedId : failedId, toParseId);
-      if (!anyOk) summary.failed++;
     } catch (err: any) {
       summary.errors.push({ messageId, error: err.message });
       summary.failed++;
