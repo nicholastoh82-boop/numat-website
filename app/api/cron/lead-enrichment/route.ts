@@ -7,9 +7,14 @@
 // and recommended NUMAT product matches. Writes results to master_leads and
 // upserts the full payload into company_research.
 //
-// Throughput is controlled by env var ENRICHMENT_MAX_PER_RUN. Default is 5 for
-// a safe initial validation period. Crank up to 25 or 50 once you've reviewed
-// the first batch and are happy with quality.
+// Throughput controlled by two env vars:
+//   ENRICHMENT_MAX_PER_RUN  Default 5, cap 100. Leads per cron run.
+//   ENRICHMENT_CONCURRENCY  Default 8, cap 20. Workers running in parallel.
+//
+// Each enrichment takes about 4s end to end (website fetch + Vertex AI Gemini
+// call + Supabase write). With 8 workers, 100 leads completes in about 50s,
+// well inside the 300s Vercel function budget. Crank MAX_PER_RUN up to 100
+// once you're happy with quality from the initial batches.
 //
 // Cost note: Gemini 2.5 Flash is ~10x cheaper than Claude Sonnet for this
 // workload. A full pass on 4500 leads with domains costs roughly USD 5 at the
@@ -44,7 +49,14 @@ function batchSize(): number {
   const raw = process.env.ENRICHMENT_MAX_PER_RUN;
   const n = raw ? parseInt(raw, 10) : 5;
   if (!Number.isFinite(n) || n <= 0) return 5;
-  return Math.min(n, 50);
+  return Math.min(n, 100);
+}
+
+function concurrency(): number {
+  const raw = process.env.ENRICHMENT_CONCURRENCY;
+  const n = raw ? parseInt(raw, 10) : 8;
+  if (!Number.isFinite(n) || n <= 0) return 8;
+  return Math.min(n, 20);
 }
 
 async function pickLeads(limit: number): Promise<LeadRow[]> {
@@ -177,10 +189,23 @@ async function handle(): Promise<Response> {
     );
   }
 
+  // Parallel pool. Each worker pulls the next lead from the queue until empty.
+  // Concurrency tuned via ENRICHMENT_CONCURRENCY env var, default 8, cap 20.
+  // Each enrichment takes about 4s end to end, so 8 workers process 100 leads
+  // in about 50s, comfortably inside the 300s Vercel function budget.
+  const queue = [...leads];
   const results: Awaited<ReturnType<typeof processOne>>[] = [];
-  for (const lead of leads) {
-    results.push(await processOne(lead));
-  }
+  const workerCount = Math.min(concurrency(), leads.length);
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (queue.length > 0) {
+        const lead = queue.shift();
+        if (!lead) break;
+        const out = await processOne(lead);
+        results.push(out);
+      }
+    })
+  );
 
   const ok_count = results.filter((r) => r.status === "ok").length;
   const err_count = results.filter((r) => r.status === "error").length;
