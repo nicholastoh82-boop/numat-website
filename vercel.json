@@ -9,6 +9,8 @@
     { "path": "/api/cron/sync-supabase-to-kb", "schedule": "0 18 * * *" },
     { "path": "/api/cron/sync-supabase-to-bq", "schedule": "0 19 * * *" },
     { "path": "/api/cron/sync-data-catalog", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/generate-daily-outreach", "schedule": "0 23 * * 0-4" },
+    { "path": "/api/cron/send-daily-outreach-digest", "schedule": "0 0 * * 1-5" },
     { "path": "/api/cron/buying-signal-scan", "schedule": "0 2 * * 1" }
   ]
 }

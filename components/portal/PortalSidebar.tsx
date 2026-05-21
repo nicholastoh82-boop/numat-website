@@ -24,6 +24,7 @@ const ALL_ITEMS: NavItem[] = [
   { href: '/portal/ceo',            label: 'CEO View',   roles: ['admin', 'ceo'] },
   { href: '/crm/dashboard',         label: 'CRM',        roles: ['admin', 'sales'] },
   { href: '/crm/search',            label: 'KB Search',  roles: ['admin', 'sales'] },
+  { href: '/crm/outreach',          label: 'Outreach',   roles: ['admin'] },
   { href: '/finance',               label: 'Financials', roles: ['admin', 'ceo', 'finance'] },
   { href: '/finance/new',           label: 'Receipts',   roles: ['admin', 'finance', 'ops'] },
   { href: '/portal/verify',         label: 'Verify',     roles: ['admin', 'finance'] },
