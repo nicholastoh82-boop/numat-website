@@ -96,18 +96,15 @@ export async function searchKb(
     spellCorrectionSpec: { mode: 'AUTO' },
     contentSearchSpec: {
       snippetSpec: { returnSnippet: true },
-      extractiveContentSpec: {
-        maxExtractiveAnswerCount: 1,
-      },
     },
   };
+  // Note: extractiveContentSpec and summarySpec require Enterprise edition to
+  // be enabled on the data store (not just the engine tier). We use plain
+  // snippet search for now; turn on enterprise edition in the data store
+  // settings via the Discovery Engine console to unlock those features.
   if (opts.generateSummary) {
-    (body.contentSearchSpec as Record<string, unknown>).summarySpec = {
-      summaryResultCount: 5,
-      includeCitations: true,
-      ignoreAdversarialQuery: true,
-      ignoreNonSummarySeekingQuery: true,
-    };
+    // Leave as no-op for now; caller can opt in later when Enterprise on the
+    // data store is enabled. We don't return a summary in plain mode.
   }
 
   const res = await fetch(url, {
