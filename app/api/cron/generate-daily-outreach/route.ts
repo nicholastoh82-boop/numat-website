@@ -144,6 +144,7 @@ async function pickLeadsForRep(rep: RepConfig, limit: number): Promise<LeadRow[]
 
   const draftedIds = new Set<string>();
   const contactedDomains = new Set<string>();
+  const blocklistedDomains = new Set<string>();
   try {
     const inIds = ids.map((i) => `"${i}"`).join(',');
     if (inIds) {
@@ -151,6 +152,17 @@ async function pickLeadsForRep(rep: RepConfig, limit: number): Promise<LeadRow[]
         `email_drafts?select=lead_id&lead_id=in.(${encodeURIComponent(inIds)})`
       );
       for (const d of drafts) if (d.lead_id) draftedIds.add(d.lead_id);
+    }
+  } catch {}
+  try {
+    // Pull the full do_not_contact_domains table once per run. The list is
+    // typically small (under 100 rows even after months) so we just grab it
+    // all rather than filtering by candidate domains.
+    const rows = await supabaseGetRaw<Array<{ domain: string }>>(
+      `do_not_contact_domains?select=domain&limit=10000`
+    );
+    for (const r of rows) {
+      if (r.domain) blocklistedDomains.add(r.domain.toLowerCase());
     }
   } catch {}
   try {
@@ -177,7 +189,10 @@ async function pickLeadsForRep(rep: RepConfig, limit: number): Promise<LeadRow[]
   const fresh = candidates.filter((c) => {
     if (draftedIds.has(c.id)) return false;
     const d = c.email?.split('@')[1]?.toLowerCase();
-    if (d && !personalDomains.has(d) && contactedDomains.has(d)) return false;
+    if (d) {
+      if (blocklistedDomains.has(d)) return false;
+      if (!personalDomains.has(d) && contactedDomains.has(d)) return false;
+    }
     return true;
   });
 
