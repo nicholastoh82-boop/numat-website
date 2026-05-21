@@ -49,10 +49,12 @@ async function handle(req: Request, body: SearchBody): Promise<Response> {
       ms: Date.now() - started,
     });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('Search failed:', msg);
     return Response.json(
       {
         ok: false,
-        error: err instanceof Error ? err.message : String(err),
+        error: msg,
         ms: Date.now() - started,
       },
       { status: 500 }
