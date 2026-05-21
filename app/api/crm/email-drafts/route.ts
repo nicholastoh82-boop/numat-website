@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
   let query = adminClient
     .from('email_drafts')
     .select(
-      'id,lead_id,recipient_email,recipient_name,company,rep_email,rep_name,subject,body,status,buying_signal_strength,generated_by,generated_at,reviewed_at,sent_at,rejection_reason'
+      'id,lead_id,recipient_email,recipient_name,company,rep_email,rep_name,subject,body,status,buying_signal_strength,generated_by,generated_at,reviewed_at,sent_at,rejection_reason,gmail_message_id,gmail_thread_id,sent_detected_at,reply_detected_at,reply_snippet,reply_from_email'
     )
     .order('generated_at', { ascending: false })
     .limit(500);
@@ -107,6 +107,8 @@ export async function PATCH(req: NextRequest) {
     'approved',
     'rejected',
     'sent',
+    'sent_by_rep',
+    'replied',
     'skipped',
   ];
   if (body.status && !allowedStatuses.includes(body.status)) {

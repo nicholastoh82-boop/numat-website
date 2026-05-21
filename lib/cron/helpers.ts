@@ -231,6 +231,7 @@ export type GmailMessageSummary = {
   id: string;
   threadId: string;
   from: string;
+  to: string;
   subject: string;
   snippet: string;
   body: string;          // plain text body (best-effort decoded)
@@ -289,49 +290,124 @@ function headerValue(headers: Array<{ name: string; value: string }> | undefined
  * Returns message summaries with full body extracted.
  */
 export async function gmailListInboxSince(rep: RepKey, minutes: number, maxResults = 50): Promise<GmailMessageSummary[]> {
+  return gmailListByFolderSince(rep, "inbox", minutes, maxResults);
+}
+
+/**
+ * List sent messages from the last `minutes` minutes. Used by the outreach
+ * scanner to detect when a rep actually sent a cold outreach email from their
+ * own Gmail (outside of our cron pipeline) so we can correlate against the
+ * email_drafts table.
+ */
+export async function gmailListSentSince(rep: RepKey, minutes: number, maxResults = 50): Promise<GmailMessageSummary[]> {
+  return gmailListByFolderSince(rep, "sent", minutes, maxResults);
+}
+
+async function gmailListByFolderSince(
+  rep: RepKey,
+  folder: "inbox" | "sent",
+  minutes: number,
+  maxResults: number,
+): Promise<GmailMessageSummary[]> {
   const accessToken = await repAccessToken(rep);
-  // Gmail search only supports d/m/y units (where m=months!), not seconds.
-  // Use `after:<epoch_seconds>` for sub-day windows. Rounded to whole seconds.
   const cutoffEpoch = Math.floor((Date.now() - Math.max(60, minutes * 60) * 1000) / 1000);
-  const q = `in:inbox after:${cutoffEpoch}`;
+  const q = `in:${folder} after:${cutoffEpoch}`;
   const listUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${encodeURIComponent(q)}`;
   const listRes = await fetch(listUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
-  if (!listRes.ok) throw new Error(`Gmail list (${rep}) failed: ${listRes.status} ${await listRes.text()}`);
+  if (!listRes.ok) throw new Error(`Gmail list ${folder} (${rep}) failed: ${listRes.status} ${await listRes.text()}`);
   const listJson = (await listRes.json()) as { messages?: Array<{ id: string; threadId: string }> };
   const ids = listJson.messages ?? [];
   if (ids.length === 0) return [];
-
-  // Fetch full messages in parallel, capped
-  const summaries = await Promise.all(
-    ids.map(async ({ id }) => {
-      const getRes = await fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      if (!getRes.ok) return null;
-      const msg = (await getRes.json()) as {
-        id: string;
-        threadId: string;
-        snippet?: string;
-        labelIds?: string[];
-        payload?: GmailPayloadPart;
-        internalDate?: string;
-      };
-      const headers = msg.payload?.headers;
-      return {
-        id: msg.id,
-        threadId: msg.threadId,
-        from: headerValue(headers, "From"),
-        subject: headerValue(headers, "Subject"),
-        snippet: msg.snippet ?? "",
-        body: extractPlainTextBody(msg.payload),
-        date: headerValue(headers, "Date"),
-        labelIds: msg.labelIds ?? [],
-      } as GmailMessageSummary;
-    })
-  );
-
+  const summaries = await Promise.all(ids.map((m) => gmailGetMessage(rep, accessToken, m.id)));
   return summaries.filter((x): x is GmailMessageSummary => x !== null);
+}
+
+async function gmailGetMessage(
+  rep: RepKey,
+  accessToken: string,
+  messageId: string,
+): Promise<GmailMessageSummary | null> {
+  const getRes = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!getRes.ok) {
+    console.error(`gmailGetMessage (${rep}, ${messageId}) failed: ${getRes.status}`);
+    return null;
+  }
+  const msg = (await getRes.json()) as {
+    id: string;
+    threadId: string;
+    snippet?: string;
+    labelIds?: string[];
+    payload?: GmailPayloadPart;
+    internalDate?: string;
+  };
+  const headers = msg.payload?.headers;
+  return {
+    id: msg.id,
+    threadId: msg.threadId,
+    from: headerValue(headers, "From"),
+    to: headerValue(headers, "To"),
+    subject: headerValue(headers, "Subject"),
+    snippet: msg.snippet ?? "",
+    body: extractPlainTextBody(msg.payload),
+    date: headerValue(headers, "Date"),
+    labelIds: msg.labelIds ?? [],
+  } as GmailMessageSummary;
+}
+
+/**
+ * Fetch all messages in a Gmail thread. Used by the outreach scanner to find
+ * incoming replies on threads where we know the rep already sent a cold
+ * outreach.
+ */
+export async function gmailGetThreadMessages(rep: RepKey, threadId: string): Promise<GmailMessageSummary[]> {
+  const accessToken = await repAccessToken(rep);
+  const url = `https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) {
+    if (res.status === 404) return [];
+    throw new Error(`Gmail get thread (${rep}, ${threadId}) failed: ${res.status} ${await res.text()}`);
+  }
+  const thread = (await res.json()) as {
+    messages?: Array<{
+      id: string;
+      threadId: string;
+      snippet?: string;
+      labelIds?: string[];
+      payload?: GmailPayloadPart;
+    }>;
+  };
+  const msgs = thread.messages ?? [];
+  return msgs.map((msg) => {
+    const headers = msg.payload?.headers;
+    return {
+      id: msg.id,
+      threadId: msg.threadId,
+      from: headerValue(headers, "From"),
+      to: headerValue(headers, "To"),
+      subject: headerValue(headers, "Subject"),
+      snippet: msg.snippet ?? "",
+      body: extractPlainTextBody(msg.payload),
+      date: headerValue(headers, "Date"),
+      labelIds: msg.labelIds ?? [],
+    } as GmailMessageSummary;
+  });
+}
+
+/**
+ * Extract a bare email address from a Gmail "From" / "To" header value.
+ * Returns lowercased. Handles forms like
+ *   "Jane Doe <jane@example.com>"
+ *   "jane@example.com"
+ *   "<jane@example.com>"
+ */
+export function parseEmailAddress(headerValue: string | undefined): string {
+  if (!headerValue) return "";
+  const m = headerValue.match(/<([^>]+)>/);
+  if (m) return m[1].trim().toLowerCase();
+  return headerValue.trim().toLowerCase();
 }
 
 /**
