@@ -42,6 +42,14 @@ const TABLES_TO_SYNC: Array<{
   { table: 'company_research' },
   { table: 'personal_tasks' },
   { table: 'product_variants' },
+  // Production tables, needed for forecasting demand and raw material usage.
+  { table: 'prod_slat_receipts' },
+  { table: 'prod_planing_runs' },
+  { table: 'prod_gluing_runs' },
+  { table: 'prod_veneer_sanding' },
+  { table: 'prod_board_runs' },
+  { table: 'prod_inventory' },
+  { table: 'prod_qc_photos' },
 ];
 
 type SupabaseRow = Record<string, unknown>;
