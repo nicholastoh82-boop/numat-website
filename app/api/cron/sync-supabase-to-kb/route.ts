@@ -185,9 +185,12 @@ async function syncOneLead(lead: LeadRow): Promise<{
     const md = renderLeadMarkdown(lead);
     const result = await uploadToGcs({
       bucket: BUCKET,
-      object: `leads/${lead.id}.md`,
+      object: `leads/${lead.id}.txt`,
       body: md,
-      contentType: 'text/markdown; charset=utf-8',
+      // Discovery Engine accepts text/plain but not text/markdown. Markdown
+      // formatting still works fine when indexed as plain text since the
+      // tokenizer just looks at words and punctuation.
+      contentType: 'text/plain; charset=utf-8',
     });
     return { id: lead.id, status: 'ok', bytes: result.size };
   } catch (err) {
@@ -246,7 +249,7 @@ async function handle(): Promise<Response> {
   let importErr: string | null = null;
   if (ok_count > 0) {
     try {
-      const imp = await importDocumentsFromGcs([`gs://${BUCKET}/leads/*.md`]);
+      const imp = await importDocumentsFromGcs([`gs://${BUCKET}/leads/*.txt`]);
       importOp = imp.operation;
     } catch (err) {
       importErr = err instanceof Error ? err.message : String(err);
