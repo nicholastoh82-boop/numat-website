@@ -97,8 +97,17 @@ export default function CrmOutreachPage() {
       body: JSON.stringify({ id, ...patch }),
     });
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(`Update failed: ${data.error || res.status}`);
+      const data = await res.json().catch(() => ({} as Record<string, unknown>));
+      // Log full response so devtools shows the real cause even if alert is generic.
+      console.error('updateDraft failed', { status: res.status, body: data });
+      const raw = (data as { error?: unknown }).error;
+      const message =
+        typeof raw === 'string'
+          ? raw
+          : raw
+            ? JSON.stringify(raw)
+            : `HTTP ${res.status}`;
+      alert(`Update failed: ${message}`);
       return;
     }
     await loadDrafts();
@@ -118,12 +127,20 @@ export default function CrmOutreachPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     });
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch(() => ({} as Record<string, unknown>));
     if (!res.ok) {
-      alert(`Send failed: ${data.error || res.status}`);
+      console.error('sendNow failed', { status: res.status, body: data });
+      const raw = (data as { error?: unknown }).error;
+      const message =
+        typeof raw === 'string'
+          ? raw
+          : raw
+            ? JSON.stringify(raw)
+            : `HTTP ${res.status}`;
+      alert(`Send failed: ${message}`);
       return;
     }
-    if (!data.signature_attached) {
+    if (!(data as { signature_attached?: boolean }).signature_attached) {
       alert(
         'Sent, but no signature was attached. Set yours up at /crm/profile so future sends include it.'
       );
