@@ -23,6 +23,8 @@ export type EnrichmentResult = {
   pain_hooks: string[];
   product_recommendations: string[];
   source_urls: string[];
+  extracted_city: string | null;
+  extracted_address: string | null;
 };
 
 const VALID_SIZE_BANDS = new Set<EmployeeSizeBand>([
@@ -70,7 +72,9 @@ Return ONLY a valid JSON object. No markdown code fences. No commentary. All arr
   "icp_fit_score": 0,
   "icp_fit_reason": "one paragraph explaining the score with specific signals",
   "pain_hooks": ["up to 3 specific pain points NUMAT could address"],
-  "product_recommendations": ["NuBam Boards", "NuFloor"]
+  "product_recommendations": ["NuBam Boards", "NuFloor"],
+  "extracted_city": "city of the company head office or null if not stated",
+  "extracted_address": "full street address of head office if stated on the website, or null"
 }
 
 Constraints on output:
@@ -79,6 +83,8 @@ icp_fit_reason: under 400 characters
 products_offered: up to 8 items, each under 60 chars
 pain_hooks: up to 3 items, each under 120 chars
 product_recommendations: only use exact strings from NUMAT's 5 product names above
+extracted_city: just the city name (e.g. "Manila", "Kuala Lumpur", "Singapore"), no commas or country
+extracted_address: full street address if available on the website footer or contact page, otherwise null. Do not invent addresses.
 
 LEAD METADATA:
 Company name: {{COMPANY_NAME}}
@@ -152,6 +158,13 @@ function arrStr(v: any, maxLen: number, maxItems: number): string[] {
     .slice(0, maxItems);
 }
 
+function nullableStr(v: any, maxLen: number): string | null {
+  if (typeof v !== 'string') return null;
+  const t = v.trim();
+  if (!t || t.toLowerCase() === 'null' || t.toLowerCase() === 'unknown') return null;
+  return t.slice(0, maxLen);
+}
+
 function sanitise(raw: any): Omit<EnrichmentResult, "source_urls"> {
   return {
     business_description:
@@ -171,6 +184,8 @@ function sanitise(raw: any): Omit<EnrichmentResult, "source_urls"> {
     product_recommendations: arrStr(raw?.product_recommendations, 40, 5).filter(
       (p) => VALID_NUMAT_PRODUCTS.has(p)
     ),
+    extracted_city: nullableStr(raw?.extracted_city, 80),
+    extracted_address: nullableStr(raw?.extracted_address, 300),
   };
 }
 
