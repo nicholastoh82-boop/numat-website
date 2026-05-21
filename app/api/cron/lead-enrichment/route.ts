@@ -36,6 +36,8 @@ type LeadRow = {
   company: string | null;
   company_domain: string | null;
   country: string | null;
+  city: string | null;
+  address: string | null;
   segment: string | null;
   title: string | null;
   notes: string | null;
@@ -62,7 +64,7 @@ function concurrency(): number {
 async function pickLeads(limit: number): Promise<LeadRow[]> {
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const select =
-    "id,email,first_name,last_name,full_name,company,company_domain,country,segment,title,notes,intended_business,service_keywords,last_enriched_at,rep_email";
+    "id,email,first_name,last_name,full_name,company,company_domain,country,city,address,segment,title,notes,intended_business,service_keywords,last_enriched_at,rep_email";
   const orFilter = `last_enriched_at.is.null,last_enriched_at.lt.${cutoff}`;
   const path =
     `master_leads?select=${select}` +
@@ -82,7 +84,11 @@ async function persistEnrichment(
   const now = new Date().toISOString();
   const thirtyDays = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  await supabasePatch(`master_leads?id=eq.${lead.id}`, {
+  // Only overwrite city or address when the lead currently has no value,
+  // so manually-entered or already-known data isn't clobbered by Gemini's
+  // guess. This is the main mechanism that unblocks geocoding for the
+  // ~2000 leads currently missing city info.
+  const patch: Record<string, unknown> = {
     business_description: result.business_description || null,
     products_offered: result.products_offered,
     employee_size_band: result.employee_size_band,
@@ -93,7 +99,14 @@ async function persistEnrichment(
     last_enriched_at: now,
     enrichment_tier: "enriched",
     updated_at: now,
-  });
+  };
+  if (!lead.city && result.extracted_city) {
+    patch.city = result.extracted_city;
+  }
+  if (!lead.address && result.extracted_address) {
+    patch.address = result.extracted_address;
+  }
+  await supabasePatch(`master_leads?id=eq.${lead.id}`, patch);
 
   if (lead.company_domain) {
     try {
