@@ -81,8 +81,12 @@ export async function getDriveAccessToken(repEmail: string): Promise<string> {
 }
 
 /**
- * List Google Docs and Google Sheets within a specific Drive folder.
- * Recursive listing is not done; only direct children. Trash items skipped.
+ * List Google Docs and Google Sheets within a Drive folder OR within a
+ * shared drive root. Recursive listing is not done; only direct children.
+ * Trash items skipped.
+ *
+ * Works for both personal Drive folders and shared drives (Team Drives).
+ * For shared drives, the folderId is the shared drive ID itself.
  */
 export async function listDocsInFolder(
   accessToken: string,
@@ -99,7 +103,12 @@ export async function listDocsInFolder(
   const fields = encodeURIComponent(
     'files(id,name,mimeType,modifiedTime,webViewLink,size),nextPageToken'
   );
-  const url = `${DRIVE_API}/files?q=${q}&fields=${fields}&pageSize=${pageSize}`;
+  // supportsAllDrives + includeItemsFromAllDrives + corpora=allDrives
+  // make this call work for personal folders AND shared drives in one
+  // shot. No separate driveId handling needed.
+  const url =
+    `${DRIVE_API}/files?q=${q}&fields=${fields}&pageSize=${pageSize}` +
+    `&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -124,7 +133,8 @@ export async function exportDocAsText(
     ? 'text/csv'
     : 'text/plain';
   const url =
-    `${DRIVE_API}/files/${fileId}/export?mimeType=${encodeURIComponent(exportMime)}`;
+    `${DRIVE_API}/files/${fileId}/export?mimeType=${encodeURIComponent(exportMime)}` +
+    `&supportsAllDrives=true`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
