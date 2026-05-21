@@ -13,6 +13,7 @@
 import { getGcpAccessToken } from './gcp_auth';
 
 const BASE_URL = 'https://sheets.googleapis.com/v4';
+const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 
 /**
  * Clear all values in the given range, then write a fresh 2D array of
@@ -26,7 +27,7 @@ export async function replaceSheetValues(args: {
   sheetName?: string;
   values: (string | number | null)[][];
 }): Promise<{ rowsWritten: number }> {
-  const token = await getGcpAccessToken();
+  const token = await getGcpAccessToken([SHEETS_SCOPE]);
   const sheet = args.sheetName || 'Sheet1';
   const clearRange = encodeURIComponent(`${sheet}!A:Z`);
   const writeRange = encodeURIComponent(`${sheet}!A1`);
