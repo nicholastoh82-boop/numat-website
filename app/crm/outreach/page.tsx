@@ -104,6 +104,33 @@ export default function CrmOutreachPage() {
     await loadDrafts();
   };
 
+  const sendNow = async (id: string) => {
+    if (
+      !confirm(
+        'Send this email now via Gmail API? Your saved signature from /crm/profile will be appended.'
+      )
+    ) {
+      return;
+    }
+    const res = await fetch('/api/crm/email-drafts/send', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(`Send failed: ${data.error || res.status}`);
+      return;
+    }
+    if (!data.signature_attached) {
+      alert(
+        'Sent, but no signature was attached. Set yours up at /crm/profile so future sends include it.'
+      );
+    }
+    await loadDrafts();
+  };
+
   const startEdit = (d: Draft) => {
     setEditing(d.id);
     setEditSubject(d.subject);
@@ -140,11 +167,19 @@ export default function CrmOutreachPage() {
 
   return (
     <div className="min-h-screen bg-white px-6 py-8 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">Outreach Drafts</h1>
-        <p className="text-sm text-slate-500">
-          Review and approve cold outreach drafts generated daily for Mohan and Eugene.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Outreach Drafts</h1>
+          <p className="text-sm text-slate-500">
+            Review and approve cold outreach drafts generated daily for Mohan and Eugene.
+          </p>
+        </div>
+        <a
+          href="/crm/profile"
+          className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded text-sm font-medium hover:bg-slate-200 whitespace-nowrap"
+        >
+          My signature →
+        </a>
       </div>
 
       {error && (
@@ -278,6 +313,13 @@ export default function CrmOutreachPage() {
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => sendNow(d.id)}
+                    className="px-3 py-1.5 bg-purple-600 text-white rounded text-sm font-medium hover:bg-purple-700"
+                    title="Sends through Gmail API with your saved signature appended"
+                  >
+                    Send Now
+                  </button>
                   <a
                     href={composeUrl(d)}
                     target="_blank"
