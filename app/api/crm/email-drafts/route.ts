@@ -85,53 +85,77 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const admin = await authorizeAdmin();
-  if (!admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  try {
+    const admin = await authorizeAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
-  const body = (await req.json().catch(() => ({}))) as {
-    id?: string;
-    status?: string;
-    subject?: string;
-    body?: string;
-    rejection_reason?: string;
-  };
-  if (!body.id) {
-    return NextResponse.json({ error: 'id required' }, { status: 400 });
-  }
+    const body = (await req.json().catch(() => ({}))) as {
+      id?: string;
+      status?: string;
+      subject?: string;
+      body?: string;
+      rejection_reason?: string;
+    };
+    if (!body.id) {
+      return NextResponse.json({ error: 'id required' }, { status: 400 });
+    }
 
-  const allowedStatuses = [
-    'pending_review',
-    'digest_sent',
-    'approved',
-    'rejected',
-    'sent',
-    'sent_by_rep',
-    'replied',
-    'skipped',
-  ];
-  if (body.status && !allowedStatuses.includes(body.status)) {
-    return NextResponse.json({ error: 'invalid status' }, { status: 400 });
-  }
+    const allowedStatuses = [
+      'pending_review',
+      'digest_sent',
+      'approved',
+      'rejected',
+      'sent',
+      'sent_by_rep',
+      'replied',
+      'skipped',
+    ];
+    if (body.status && !allowedStatuses.includes(body.status)) {
+      return NextResponse.json({ error: 'invalid status' }, { status: 400 });
+    }
 
-  const patch: Record<string, unknown> = {
-    reviewed_by: admin.email,
-    reviewed_at: new Date().toISOString(),
-  };
-  if (body.status) patch.status = body.status;
-  if (body.subject !== undefined) patch.subject = body.subject.slice(0, 200);
-  if (body.body !== undefined) patch.body = body.body;
-  if (body.rejection_reason !== undefined)
-    patch.rejection_reason = body.rejection_reason;
-  if (body.status === 'sent') patch.sent_at = new Date().toISOString();
+    const patch: Record<string, unknown> = {
+      reviewed_by: admin.email,
+      reviewed_at: new Date().toISOString(),
+    };
+    if (body.status) patch.status = body.status;
+    if (body.subject !== undefined) patch.subject = String(body.subject).slice(0, 200);
+    if (body.body !== undefined) patch.body = String(body.body);
+    if (body.rejection_reason !== undefined)
+      patch.rejection_reason = body.rejection_reason
+        ? String(body.rejection_reason).slice(0, 1000)
+        : null;
+    if (body.status === 'sent') patch.sent_at = new Date().toISOString();
 
-  const { error } = await adminClient
-    .from('email_drafts')
-    .update(patch)
-    .eq('id', body.id);
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const { error } = await adminClient
+      .from('email_drafts')
+      .update(patch)
+      .eq('id', body.id);
+    if (error) {
+      // Log full Supabase error object so we can see code, details, hint in
+      // Vercel runtime logs. Return only the message string to the client.
+      console.error('email_drafts PATCH supabase error:', {
+        id: body.id,
+        admin: admin.email,
+        patch_keys: Object.keys(patch),
+        code: (error as { code?: string }).code,
+        details: (error as { details?: string }).details,
+        hint: (error as { hint?: string }).hint,
+        message: error.message,
+      });
+      return NextResponse.json(
+        { error: typeof error.message === 'string' ? error.message : 'database update failed' },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    // Unexpected runtime error. Make sure the client gets a string, log the
+    // full thing so we can read it in Vercel runtime logs.
+    console.error('email_drafts PATCH uncaught error:', e);
+    const message = e instanceof Error ? e.message : 'unexpected server error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-  return NextResponse.json({ ok: true });
 }
