@@ -112,19 +112,38 @@ async function pickLeadsForRep(rep: RepConfig, limit: number): Promise<LeadRow[]
 
   if (candidates.length === 0) return [];
 
-  // Filter out leads that already have a draft (by lead_id), AND leads whose
-  // COMPANY has any prior outreach in sequence_events (so we never email two
-  // different people at the same firm via this pipeline). Also filter out
-  // leads whose own email is in sequence_events as a backstop.
-  const emails = Array.from(new Set(candidates.map((c) => c.email))).filter(Boolean);
+  // Filter out leads that already have a draft (by lead_id), AND leads
+  // whose EMAIL DOMAIN has any prior outreach in sequence_events (so we
+  // never email two different people at the same firm via this pipeline).
+  // Domain is the reliable signal; fuzzy company name matching produced too
+  // many false positives because of shared common words like "Architects",
+  // "Design", "Group" etc.
+  //
+  // Personal email domains (gmail, yahoo, hotmail, outlook, icloud,
+  // protonmail, live) are excluded from the domain filter because many
+  // different companies share them. For personal-domain leads we still
+  // dedupe by exact email and by lead_id.
+  const personalDomains = new Set([
+    'gmail.com',
+    'yahoo.com',
+    'hotmail.com',
+    'outlook.com',
+    'icloud.com',
+    'protonmail.com',
+    'live.com',
+  ]);
+
   const ids = Array.from(new Set(candidates.map((c) => c.id))).filter(Boolean);
-  const companies = Array.from(
-    new Set(candidates.map((c) => c.company).filter((x): x is string => !!x))
+  const domains = Array.from(
+    new Set(
+      candidates
+        .map((c) => (c.email ? c.email.split('@')[1]?.toLowerCase() : null))
+        .filter((d): d is string => !!d && !personalDomains.has(d))
+    )
   );
 
   const draftedIds = new Set<string>();
-  const contactedEmails = new Set<string>();
-  const contactedCompanies = new Set<string>();
+  const contactedDomains = new Set<string>();
   try {
     const inIds = ids.map((i) => `"${i}"`).join(',');
     if (inIds) {
@@ -135,43 +154,43 @@ async function pickLeadsForRep(rep: RepConfig, limit: number): Promise<LeadRow[]
     }
   } catch {}
   try {
-    const inEmails = emails.map((e) => `"${e}"`).join(',');
-    if (inEmails) {
+    // Pull email column from sequence_events for these domains. PostgREST
+    // doesn't have a direct domain operator, so we fetch the rows whose
+    // email ends with @{domain} and group client side. Cheap because the
+    // domain list is small.
+    if (domains.length > 0) {
+      const orClauses = domains
+        .map((d) => `email.ilike.*@${d.replace(/[%_\\]/g, '\\$&')}`)
+        .join(',');
       const events = await supabaseGetRaw<Array<{ email: string }>>(
-        `sequence_events?select=email&event_type=eq.sent&email=in.(${encodeURIComponent(
-          inEmails
+        `sequence_events?select=email&event_type=eq.sent&or=(${encodeURIComponent(
+          orClauses
         )})`
       );
-      for (const e of events) contactedEmails.add(e.email);
-    }
-  } catch {}
-  try {
-    const inCompanies = companies.map((c) => `"${c.replace(/"/g, '\\"')}"`).join(',');
-    if (inCompanies) {
-      const events = await supabaseGetRaw<Array<{ company: string }>>(
-        `sequence_events?select=company&event_type=eq.sent&company=in.(${encodeURIComponent(
-          inCompanies
-        )})`
-      );
-      for (const e of events) if (e.company) contactedCompanies.add(e.company);
+      for (const e of events) {
+        const d = e.email?.split('@')[1]?.toLowerCase();
+        if (d) contactedDomains.add(d);
+      }
     }
   } catch {}
 
-  const fresh = candidates.filter(
-    (c) =>
-      !draftedIds.has(c.id) &&
-      !contactedEmails.has(c.email) &&
-      !(c.company && contactedCompanies.has(c.company))
-  );
+  const fresh = candidates.filter((c) => {
+    if (draftedIds.has(c.id)) return false;
+    const d = c.email?.split('@')[1]?.toLowerCase();
+    if (d && !personalDomains.has(d) && contactedDomains.has(d)) return false;
+    return true;
+  });
 
-  // Also dedupe within this batch: only one lead per company so we don't
-  // email three people at the same firm in one go.
-  const seenCompanies = new Set<string>();
+  // Within this batch, only one lead per email domain (so we don't email
+  // five different people at the same firm in one go).
+  const seenDomains = new Set<string>();
   const oneEach: LeadRow[] = [];
   for (const c of fresh) {
-    const key = (c.company || '').toLowerCase().trim();
-    if (key && seenCompanies.has(key)) continue;
-    if (key) seenCompanies.add(key);
+    const d = c.email?.split('@')[1]?.toLowerCase();
+    if (d && !personalDomains.has(d)) {
+      if (seenDomains.has(d)) continue;
+      seenDomains.add(d);
+    }
     oneEach.push(c);
     if (oneEach.length >= limit) break;
   }
