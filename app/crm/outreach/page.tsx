@@ -27,6 +27,12 @@ type Draft = {
   reviewed_at: string | null;
   sent_at: string | null;
   rejection_reason: string | null;
+  gmail_message_id: string | null;
+  gmail_thread_id: string | null;
+  sent_detected_at: string | null;
+  reply_detected_at: string | null;
+  reply_snippet: string | null;
+  reply_from_email: string | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -35,6 +41,8 @@ const STATUS_LABELS: Record<string, string> = {
   approved: 'Approved',
   rejected: 'Rejected',
   sent: 'Sent to Prospect',
+  sent_by_rep: 'Sent by Rep',
+  replied: 'Replied',
   skipped: 'Skipped',
 };
 
@@ -44,6 +52,8 @@ const STATUS_COLORS: Record<string, string> = {
   approved: 'bg-emerald-100 text-emerald-800',
   rejected: 'bg-red-100 text-red-800',
   sent: 'bg-slate-100 text-slate-700',
+  sent_by_rep: 'bg-indigo-100 text-indigo-800',
+  replied: 'bg-green-100 text-green-900 font-semibold',
   skipped: 'bg-slate-100 text-slate-500',
 };
 
@@ -234,6 +244,39 @@ export default function CrmOutreachPage() {
                 <pre className="bg-slate-50 p-3 rounded text-sm text-slate-800 whitespace-pre-wrap font-sans leading-relaxed mb-3">
                   {d.body}
                 </pre>
+                {d.reply_detected_at && (
+                  <div className="mb-3 border-l-4 border-green-500 bg-green-50 p-3 rounded">
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="text-xs uppercase tracking-wide text-green-800 font-semibold">
+                        Reply received
+                      </div>
+                      <div className="text-xs text-green-700">
+                        {new Date(d.reply_detected_at).toLocaleString()}
+                      </div>
+                    </div>
+                    {d.reply_from_email && (
+                      <div className="text-xs text-slate-600 mb-1">From {d.reply_from_email}</div>
+                    )}
+                    <pre className="bg-white p-2 rounded text-xs text-slate-800 whitespace-pre-wrap font-sans">
+                      {d.reply_snippet || '(no preview)'}
+                    </pre>
+                    {d.gmail_thread_id && (
+                      <a
+                        href={`https://mail.google.com/mail/u/0/#inbox/${d.gmail_thread_id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-block mt-2 text-xs text-blue-700 hover:underline"
+                      >
+                        Open thread in Gmail →
+                      </a>
+                    )}
+                  </div>
+                )}
+                {!d.reply_detected_at && d.sent_detected_at && (
+                  <div className="mb-3 text-xs text-indigo-700">
+                    Sent by rep on {new Date(d.sent_detected_at).toLocaleString()}, no reply yet
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   <a
                     href={composeUrl(d)}
