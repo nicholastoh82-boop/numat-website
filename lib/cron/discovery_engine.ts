@@ -86,7 +86,9 @@ export async function searchKb(
   opts: { pageSize?: number; generateSummary?: boolean } = {}
 ): Promise<SearchResponse> {
   const token = await getGcpAccessToken();
-  const url = `${enginePath()}/servingConfigs/default_config:search`;
+  // Engine-level serving config for SEARCH solution type is named `default_search`.
+  // Data-store-level uses `default_config`. We're querying the engine.
+  const url = `${enginePath()}/servingConfigs/default_search:search`;
   const body: Record<string, unknown> = {
     query,
     pageSize: opts.pageSize ?? 10,
