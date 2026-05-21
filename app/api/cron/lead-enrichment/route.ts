@@ -47,8 +47,8 @@ type LeadRow = {
 
 function batchSize(): number {
   const raw = process.env.ENRICHMENT_MAX_PER_RUN;
-  const n = raw ? parseInt(raw, 10) : 5;
-  if (!Number.isFinite(n) || n <= 0) return 5;
+  const n = raw ? parseInt(raw, 10) : 100;
+  if (!Number.isFinite(n) || n <= 0) return 100;
   return Math.min(n, 100);
 }
 
