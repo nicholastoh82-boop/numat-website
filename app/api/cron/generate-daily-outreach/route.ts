@@ -91,8 +91,8 @@ async function pickLeadsForRep(rep: RepConfig, limit: number): Promise<LeadRow[]
       : 'country=neq.Philippines';
 
   // Pull more than we need so we can drop any that already exist in
-  // email_drafts or sequence_events.
-  const overshoot = Math.min(limit * 3, 80);
+  // email_drafts, sequence_events, or share a company we just picked.
+  const overshoot = Math.min(limit * 6, 200);
   const select =
     'id,email,full_name,first_name,company,country,city,segment,' +
     'business_description,icp_fit_reason,pain_hooks,product_recommendations,' +
@@ -112,13 +112,19 @@ async function pickLeadsForRep(rep: RepConfig, limit: number): Promise<LeadRow[]
 
   if (candidates.length === 0) return [];
 
-  // Filter out leads that already have a draft, or that have been emailed
-  // before in any past sequence.
+  // Filter out leads that already have a draft (by lead_id), AND leads whose
+  // COMPANY has any prior outreach in sequence_events (so we never email two
+  // different people at the same firm via this pipeline). Also filter out
+  // leads whose own email is in sequence_events as a backstop.
   const emails = Array.from(new Set(candidates.map((c) => c.email))).filter(Boolean);
   const ids = Array.from(new Set(candidates.map((c) => c.id))).filter(Boolean);
+  const companies = Array.from(
+    new Set(candidates.map((c) => c.company).filter((x): x is string => !!x))
+  );
 
   const draftedIds = new Set<string>();
   const contactedEmails = new Set<string>();
+  const contactedCompanies = new Set<string>();
   try {
     const inIds = ids.map((i) => `"${i}"`).join(',');
     if (inIds) {
@@ -139,11 +145,37 @@ async function pickLeadsForRep(rep: RepConfig, limit: number): Promise<LeadRow[]
       for (const e of events) contactedEmails.add(e.email);
     }
   } catch {}
+  try {
+    const inCompanies = companies.map((c) => `"${c.replace(/"/g, '\\"')}"`).join(',');
+    if (inCompanies) {
+      const events = await supabaseGetRaw<Array<{ company: string }>>(
+        `sequence_events?select=company&event_type=eq.sent&company=in.(${encodeURIComponent(
+          inCompanies
+        )})`
+      );
+      for (const e of events) if (e.company) contactedCompanies.add(e.company);
+    }
+  } catch {}
 
   const fresh = candidates.filter(
-    (c) => !draftedIds.has(c.id) && !contactedEmails.has(c.email)
+    (c) =>
+      !draftedIds.has(c.id) &&
+      !contactedEmails.has(c.email) &&
+      !(c.company && contactedCompanies.has(c.company))
   );
-  return fresh.slice(0, limit);
+
+  // Also dedupe within this batch: only one lead per company so we don't
+  // email three people at the same firm in one go.
+  const seenCompanies = new Set<string>();
+  const oneEach: LeadRow[] = [];
+  for (const c of fresh) {
+    const key = (c.company || '').toLowerCase().trim();
+    if (key && seenCompanies.has(key)) continue;
+    if (key) seenCompanies.add(key);
+    oneEach.push(c);
+    if (oneEach.length >= limit) break;
+  }
+  return oneEach;
 }
 
 function buildPrompt(lead: LeadRow, rep: RepConfig): string {
