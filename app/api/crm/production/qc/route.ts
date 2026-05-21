@@ -149,9 +149,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const {
-    data: { publicUrl },
-  } = adminClient.storage.from('qc-photos').getPublicUrl(storagePath);
+  // Bucket is private (factory photos contain board patterns we'd rather not
+  // leak), so we issue a 1-hour signed URL for the UI to render the image.
+  // The DB stores the storage_path only; signed URLs are regenerated on every
+  // GET so old expirations don't matter.
+  const { data: signed } = await adminClient.storage
+    .from('qc-photos')
+    .createSignedUrl(storagePath, 3600);
+  const signedUrl = signed?.signedUrl ?? null;
 
   // 2. Insert the photo row with status='running'.
   const { data: inserted, error: insertErr } = await adminClient
@@ -161,7 +166,7 @@ export async function POST(req: NextRequest) {
       run_type: runType,
       run_id: runId,
       storage_path: storagePath,
-      public_url: publicUrl,
+      public_url: signedUrl,
       content_type: mime,
       file_size_bytes: file.size,
       captured_by: user.email,
@@ -281,5 +286,27 @@ export async function GET(req: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json({ photos: data ?? [] });
+
+  // Regenerate fresh signed URLs (1 hour expiry) for every photo on each read.
+  // The bucket is private, so the URL stored in the DB at upload time will
+  // have already expired for any photo older than an hour.
+  const photos = data ?? [];
+  if (photos.length > 0) {
+    const paths = photos.map((p: { storage_path: string }) => p.storage_path);
+    const { data: signed } = await adminClient.storage
+      .from('qc-photos')
+      .createSignedUrls(paths, 3600);
+    if (Array.isArray(signed)) {
+      const urlByPath = new Map<string, string>();
+      for (const s of signed) {
+        if (s.path && s.signedUrl) urlByPath.set(s.path, s.signedUrl);
+      }
+      for (const p of photos as Array<{ storage_path: string; public_url: string | null }>) {
+        const u = urlByPath.get(p.storage_path);
+        if (u) p.public_url = u;
+      }
+    }
+  }
+
+  return NextResponse.json({ photos });
 }
