@@ -7,6 +7,7 @@
     { "path": "/api/cron/lead-enrichment", "schedule": "*/30 * * * *" },
     { "path": "/api/cron/geocode-leads", "schedule": "*/30 * * * *" },
     { "path": "/api/cron/sync-supabase-to-kb", "schedule": "0 18 * * *" },
+    { "path": "/api/cron/sync-supabase-to-bq", "schedule": "0 19 * * *" },
     { "path": "/api/cron/buying-signal-scan", "schedule": "0 2 * * 1" }
   ]
 }
