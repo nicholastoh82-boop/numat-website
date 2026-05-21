@@ -49,7 +49,7 @@ async function authorizeUser(): Promise<{ email: string } | null> {
       .select('email, role, is_active')
       .eq('email', user.email)
       .single();
-    if (!crmUser?.is_active || !['rep', 'admin'].includes(crmUser.role ?? '')) return null;
+    if (!crmUser?.is_active || !['rep', 'admin', 'ops'].includes(crmUser.role ?? '')) return null;
     return { email: crmUser.email };
   } catch {
     return null;
