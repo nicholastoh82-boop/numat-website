@@ -72,6 +72,11 @@ async function sendTelegramSignalAlert(args: {
   lead: LeadRow;
   result: BuyingSignalResult;
 }): Promise<void> {
+  // Per-hit alerts are off by default. Set SIGNAL_PER_HIT_ALERTS=true to
+  // re-enable live notifications. When off, signals are still saved to the
+  // database and surfaced in the 5pm end-of-day Telegram digest instead.
+  if (process.env.SIGNAL_PER_HIT_ALERTS !== "true") return;
+
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) return;
