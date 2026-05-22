@@ -24,7 +24,9 @@ import {
   authorized,
   gmailListInboxSince,
   gmailMarkRead,
+  gmailCreateReplyDraft,
   sendGmail,
+  supabaseGetRaw,
   supabasePatch,
   supabaseRpc,
   type GmailMessageSummary,
@@ -35,6 +37,7 @@ import {
   isHotLead,
   type ClassificationResult,
 } from "@/lib/cron/classify_reply";
+import { draftReply, shouldDraftReply } from "@/lib/cron/draft_reply";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -195,6 +198,44 @@ async function sendTelegramHotAlert(args: {
   }
 }
 
+const REP_EMAIL_FOR: Record<RepKey, string> = {
+  Nick: "nick@numat.ph",
+  Mohan: "mohan@numat.ph",
+  Bryan: "bryan@numat.ph",
+  Eugene: "eugene@numat.ph",
+};
+
+const REP_NAME_FOR: Record<RepKey, string> = {
+  Nick: "Nick",
+  Mohan: "Mohan Louis",
+  Bryan: "Bryan Suarin",
+  Eugene: "Eugene Chan",
+};
+
+// Fetch the rep's saved Gmail signature HTML (set via /crm/profile), if any.
+async function getRepSignatureHtml(repEmail: string): Promise<string> {
+  try {
+    const rows = await supabaseGetRaw<Array<{ signature_html: string | null }>>(
+      `crm_users?select=signature_html&email=eq.${encodeURIComponent(repEmail)}&limit=1`,
+    );
+    return rows?.[0]?.signature_html?.trim() || "";
+  } catch {
+    return "";
+  }
+}
+
+function plaintextToHtml(text: string): string {
+  const esc = (s: string) =>
+    s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  return text
+    .split(/\n\s*\n/)
+    .map((p) => `<p style="margin:0 0 12px 0">${esc(p).replace(/\n/g, "<br/>")}</p>`)
+    .join("");
+}
+
 async function patchLeadClassification(
   leadId: string,
   c: ClassificationResult
@@ -310,6 +351,46 @@ async function processRep(
       });
     } catch (err) {
       console.error(`notification email failed for ${fromEmail}:`, err);
+    }
+
+    // Step 4b: pre-draft a reply in the rep's Gmail Drafts, threaded to the
+    // inbound message, for replies that warrant a substantive response. The rep
+    // reviews and sends. This is the speed-to-response lever.
+    if (classification && shouldDraftReply(classification)) {
+      try {
+        const repEmail = REP_EMAIL_FOR[rep];
+        const drafted = await draftReply({
+          fromName,
+          fromEmail,
+          company,
+          subject: msg.subject,
+          replyText: replyBody,
+          classification,
+          repEmail,
+          repName: REP_NAME_FOR[rep],
+        });
+        if (drafted.should_draft && drafted.body) {
+          const signatureHtml = await getRepSignatureHtml(repEmail);
+          const bodyHtml = plaintextToHtml(drafted.body);
+          const sigBlock = signatureHtml
+            ? `<div style="margin-top:18px">${signatureHtml}</div>`
+            : "";
+          const fullHtml = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222">${bodyHtml}${sigBlock}</div>`;
+          const replySubject = drafted.subject.toLowerCase().startsWith("re:")
+            ? drafted.subject
+            : `Re: ${msg.subject}`;
+          await gmailCreateReplyDraft({
+            rep,
+            to: fromEmail,
+            subject: replySubject,
+            html: fullHtml,
+            threadId: msg.threadId,
+            inReplyToMessageIdHeader: msg.messageIdHeader,
+          });
+        }
+      } catch (err) {
+        console.error(`draft reply failed for ${fromEmail}:`, err);
+      }
     }
 
     // Step 5: Telegram alert for hot leads only.
