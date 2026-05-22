@@ -23,7 +23,9 @@ const adminClient = createClient(
   { auth: { persistSession: false } }
 );
 
-async function authorizeAdmin(): Promise<{ email: string } | null> {
+// Allow any active rep or admin. Reps are scoped to their own rep_email
+// (they only see and act on their own leads); admins see and act on all.
+async function authorizeUser(): Promise<{ email: string; role: string } | null> {
   try {
     const cookieStore = await cookies();
     const authClient = createServerClient(
@@ -49,16 +51,16 @@ async function authorizeAdmin(): Promise<{ email: string } | null> {
       .eq('email', user.email)
       .single();
 
-    if (!crmUser?.is_active || crmUser.role !== 'admin') return null;
-    return { email: crmUser.email };
+    if (!crmUser?.is_active || !['rep', 'admin'].includes(crmUser.role ?? '')) return null;
+    return { email: crmUser.email, role: crmUser.role ?? 'rep' };
   } catch {
     return null;
   }
 }
 
 export async function GET(req: NextRequest) {
-  const admin = await authorizeAdmin();
-  if (!admin) {
+  const user = await authorizeUser();
+  if (!user) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -73,6 +75,11 @@ export async function GET(req: NextRequest) {
     .order('generated_at', { ascending: false })
     .limit(500);
 
+  // Reps only see their own leads; admins see everything.
+  if (user.role !== 'admin') {
+    query = query.eq('rep_email', user.email);
+  }
+
   if (status) {
     query = query.eq('status', status);
   }
@@ -86,8 +93,8 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const admin = await authorizeAdmin();
-    if (!admin) {
+    const user = await authorizeUser();
+    if (!user) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -117,7 +124,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const patch: Record<string, unknown> = {
-      reviewed_by: admin.email,
+      reviewed_by: user.email,
       reviewed_at: new Date().toISOString(),
     };
     if (body.status) patch.status = body.status;
@@ -129,16 +136,21 @@ export async function PATCH(req: NextRequest) {
         : null;
     if (body.status === 'sent') patch.sent_at = new Date().toISOString();
 
-    const { error } = await adminClient
+    let updateQuery = adminClient
       .from('email_drafts')
       .update(patch)
       .eq('id', body.id);
+    // Reps can only modify their own leads; admins can modify any.
+    if (user.role !== 'admin') {
+      updateQuery = updateQuery.eq('rep_email', user.email);
+    }
+    const { error } = await updateQuery;
     if (error) {
       // Log full Supabase error object so we can see code, details, hint in
       // Vercel runtime logs. Return only the message string to the client.
       console.error('email_drafts PATCH supabase error:', {
         id: body.id,
-        admin: admin.email,
+        actor: user.email,
         patch_keys: Object.keys(patch),
         code: (error as { code?: string }).code,
         details: (error as { details?: string }).details,

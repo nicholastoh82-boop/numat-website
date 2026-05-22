@@ -71,7 +71,7 @@ export default function CrmOutreachPage() {
     setError(null);
     try {
       const res = await fetch('/api/crm/email-drafts', { credentials: 'include' });
-      if (res.status === 403) throw new Error('Admin access required');
+      if (res.status === 403) throw new Error('You do not have access. Sign in with your NUMAT rep or admin account.');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load');
       setDrafts(data.drafts || []);
