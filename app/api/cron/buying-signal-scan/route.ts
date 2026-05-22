@@ -39,15 +39,15 @@ type LeadRow = {
 
 function batchSize(): number {
   const raw = process.env.SIGNAL_SCAN_MAX_PER_RUN;
-  const n = raw ? parseInt(raw, 10) : 25;
-  if (!Number.isFinite(n) || n <= 0) return 25;
+  const n = raw ? parseInt(raw, 10) : 80;
+  if (!Number.isFinite(n) || n <= 0) return 80;
   return Math.min(n, 100);
 }
 
 function concurrency(): number {
   const raw = process.env.SIGNAL_SCAN_CONCURRENCY;
-  const n = raw ? parseInt(raw, 10) : 6;
-  if (!Number.isFinite(n) || n <= 0) return 6;
+  const n = raw ? parseInt(raw, 10) : 10;
+  if (!Number.isFinite(n) || n <= 0) return 10;
   return Math.min(n, 15);
 }
 
