@@ -220,6 +220,58 @@ export async function sendGmail(opts: SendGmailOpts): Promise<string> {
   return json.id;
 }
 
+// Create a DRAFT reply in the rep's Gmail Drafts, threaded to the original
+// message. The rep reviews and sends manually. Used by the reply handler to
+// pre-draft responses to inbound prospect replies.
+//
+// signatureHtml, if provided, is appended. The draft is HTML.
+export async function gmailCreateReplyDraft(opts: {
+  rep: RepKey;
+  to: string;
+  subject: string;
+  html: string;
+  threadId: string;
+  inReplyToMessageIdHeader?: string; // the RFC822 Message-ID of the message being replied to
+}): Promise<string> {
+  const envName = REP_REFRESH_TOKEN_ENV[opts.rep];
+  if (!envName) throw new Error(`Unknown rep: ${opts.rep}`);
+  const refreshToken = required(envName);
+  const fromEmail = REP_EMAIL[opts.rep];
+  const accessToken = await getAccessToken(refreshToken);
+
+  const subjectEncoded = `=?utf-8?B?${Buffer.from(opts.subject, "utf-8").toString("base64")}?=`;
+  const headers: string[] = [
+    `From: ${fromEmail}`,
+    `To: ${opts.to}`,
+    `Subject: ${subjectEncoded}`,
+    `MIME-Version: 1.0`,
+  ];
+  // Threading headers so Gmail nests the draft into the original conversation.
+  if (opts.inReplyToMessageIdHeader) {
+    headers.push(`In-Reply-To: ${opts.inReplyToMessageIdHeader}`);
+    headers.push(`References: ${opts.inReplyToMessageIdHeader}`);
+  }
+  headers.push(`Content-Type: text/html; charset="UTF-8"`);
+  headers.push(`Content-Transfer-Encoding: 8bit`);
+  const raw = `${headers.join("\r\n")}\r\n\r\n${opts.html}`;
+
+  const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/drafts", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: {
+        raw: toBase64Url(raw),
+        threadId: opts.threadId,
+      },
+    }),
+  });
+  const json = (await res.json()) as { id?: string; error?: { message?: string } };
+  if (!res.ok || !json.id) {
+    throw new Error(`Gmail create draft failed: ${res.status} ${JSON.stringify(json)}`);
+  }
+  return json.id;
+}
+
 // ============================================================================
 // Gmail read / modify (for Reply Handler + Bounce Catcher)
 // ============================================================================
@@ -237,6 +289,7 @@ export type GmailMessageSummary = {
   body: string;          // plain text body (best-effort decoded)
   date: string;          // RFC 2822 header value
   labelIds: string[];
+  messageIdHeader?: string; // the RFC822 Message-ID header, for threading replies
 };
 
 async function repAccessToken(rep: RepKey): Promise<string> {
@@ -354,6 +407,7 @@ async function gmailGetMessage(
     body: extractPlainTextBody(msg.payload),
     date: headerValue(headers, "Date"),
     labelIds: msg.labelIds ?? [],
+    messageIdHeader: headerValue(headers, "Message-ID") || headerValue(headers, "Message-Id"),
   } as GmailMessageSummary;
 }
 
