@@ -46,11 +46,15 @@
     },
     {
       "path": "/api/cron/buying-signal-scan",
-      "schedule": "0 2 * * 1"
+      "schedule": "0 1-9 * * *"
     },
     {
       "path": "/api/cron/scan-rep-outreach",
       "schedule": "15 * * * *"
+    },
+    {
+      "path": "/api/cron/parse-tenders",
+      "schedule": "*/30 * * * *"
     }
   ]
 }

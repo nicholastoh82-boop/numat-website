@@ -47,6 +47,8 @@ type LeadRow = {
   pain_hooks: string[] | null;
   product_recommendations: string[] | null;
   buying_signal_summary: string | null;
+  buying_signal_strength: string | null;
+  buying_signal_detected_at: string | null;
   icp_fit_score: number | null;
 };
 
@@ -96,7 +98,10 @@ async function pickLeadsForRep(rep: RepConfig, limit: number): Promise<LeadRow[]
   const select =
     'id,email,full_name,first_name,company,country,city,segment,' +
     'business_description,icp_fit_reason,pain_hooks,product_recommendations,' +
-    'buying_signal_summary,icp_fit_score';
+    'buying_signal_summary,buying_signal_strength,buying_signal_detected_at,icp_fit_score';
+  // Order so that leads with a fresh hot/warm buying signal float to the top,
+  // then by ICP fit. buying_signal_detected_at is only set for hot/warm leads
+  // (cold/none leave it null), so nullslast naturally demotes unsignalled leads.
   const path =
     'master_leads' +
     `?select=${select}` +
@@ -106,7 +111,7 @@ async function pickLeadsForRep(rep: RepConfig, limit: number): Promise<LeadRow[]
     `&email=neq.` +
     `&status=neq.unsubscribed` +
     `&${countryFilter}` +
-    `&order=icp_fit_score.desc,priority_score.desc.nullslast,created_at.asc` +
+    `&order=buying_signal_detected_at.desc.nullslast,icp_fit_score.desc,priority_score.desc.nullslast,created_at.asc` +
     `&limit=${overshoot}`;
   const candidates = (await supabaseGetRaw<LeadRow[]>(path)) ?? [];
 
@@ -216,6 +221,16 @@ function buildPrompt(lead: LeadRow, rep: RepConfig): string {
   const hooks = (lead.pain_hooks || []).slice(0, 2).join('; ');
   const productRecs = (lead.product_recommendations || []).slice(0, 2).join(', ');
 
+  // When the radar found a fresh hot or warm signal, instruct the model to
+  // open with it. This is the single biggest reply-rate lever: referencing a
+  // specific recent event the prospect cares about.
+  const hasSignal =
+    (lead.buying_signal_strength === 'hot' || lead.buying_signal_strength === 'warm') &&
+    !!lead.buying_signal_summary;
+  const signalInstruction = hasSignal
+    ? `\n\nIMPORTANT SIGNAL: This company has a recent buying signal (${lead.buying_signal_strength}): "${lead.buying_signal_summary}". Open the email by referencing this specific event in a natural, non-creepy way (for example "I saw that ..."). Do not exaggerate or invent details beyond what the signal states. This opener is the most important part of the email.`
+    : '';
+
   return `You are drafting a cold outreach email for NUMAT Sustainable Manufacturing Inc., a Philippine engineered bamboo manufacturer. Write the FIRST touch in a sequence.
 
 RECIPIENT CONTEXT:
@@ -225,7 +240,7 @@ Country: ${lead.country || 'Unknown'}
 City: ${lead.city || 'Unknown'}
 Business description: ${lead.business_description || 'N/A'}
 ICP fit reason: ${lead.icp_fit_reason || 'N/A'}
-Buying signal observed: ${lead.buying_signal_summary || 'None'}
+Buying signal observed: ${lead.buying_signal_summary || 'None'}${signalInstruction}
 Pain hooks: ${hooks || 'N/A'}
 Recommended NUMAT products for this lead: ${productRecs || 'general'}
 
