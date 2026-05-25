@@ -29,11 +29,27 @@ type VeReport = {
 type FormatStats = { sent: number; replied: number; positive: number };
 type StepStats = { sent: number; replied: number };
 
+type RepActivity = {
+  rep_email: string;
+  sent_total: number;
+  sent_7d: number;
+  received_7d: number;
+  sent_matched_lead: number;
+  last_sent_at: string | null;
+};
+
+const REP_DISPLAY_NAME: Record<string, string> = {
+  "nick@numat.ph": "Nick",
+  "bryan@numat.ph": "Bryan",
+  "mohan@numat.ph": "Mohan",
+  "eugene@numat.ph": "Eugene",
+};
+
 export async function generateHotelOutreachReport() {
   const now = new Date();
   const weekAgoISO = new Date(now.getTime() - 7 * 86_400_000).toISOString();
 
-  const [events, veReports] = await Promise.all([
+  const [events, veReports, repActivity] = await Promise.all([
     supabaseGetRaw<SequenceEvent[]>(
       `sequence_events?select=*&created_at=gte.${encodeURIComponent(weekAgoISO)}&order=created_at.desc&limit=1000`
     ),
@@ -44,6 +60,9 @@ export async function generateHotelOutreachReport() {
       order: "view_count.desc",
       limit: "20",
     }),
+    supabaseGetRaw<RepActivity[]>(
+      `v_rep_email_activity?select=rep_email,sent_total,sent_7d,received_7d,sent_matched_lead,last_sent_at&order=sent_7d.desc`
+    ),
   ]);
 
   let sent = 0,
@@ -161,6 +180,24 @@ export async function generateHotelOutreachReport() {
           })
           .join("");
 
+  // Rep activity (true sends from crm_emails: hand written in Gmail + system, sent + received)
+  const repActivityRows =
+    !repActivity || repActivity.length === 0
+      ? '<tr><td colspan="5" style="padding:10px 12px;border:1px solid #ddd;font-size:13px;color:#888;">No rep email activity captured.</td></tr>'
+      : repActivity
+          .map((r) => {
+            const name = REP_DISPLAY_NAME[r.rep_email] || r.rep_email;
+            const lastSent = r.last_sent_at ? new Date(r.last_sent_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "N/A";
+            return (
+              `<tr><td style="padding:7px 12px;border:1px solid #ddd;font-size:13px;">${name}</td>` +
+              `<td style="padding:7px 12px;border:1px solid #ddd;font-size:13px;text-align:center;font-weight:bold;">${r.sent_7d}</td>` +
+              `<td style="padding:7px 12px;border:1px solid #ddd;font-size:13px;text-align:center;">${r.received_7d}</td>` +
+              `<td style="padding:7px 12px;border:1px solid #ddd;font-size:13px;text-align:center;">${r.sent_total}</td>` +
+              `<td style="padding:7px 12px;border:1px solid #ddd;font-size:13px;text-align:center;">${lastSent}</td></tr>`
+            );
+          })
+          .join("");
+
   // Replies
   const repliesHtml =
     repliedCompanies.length === 0
@@ -236,6 +273,12 @@ export async function generateHotelOutreachReport() {
     `<td style="padding:16px;border:1px solid #ddd;text-align:center;"><div style="font-size:28px;font-weight:bold;color:#16a34a;">${positive}</div><div style="font-size:12px;color:#888;margin-top:4px;">Positive Replies</div></td>` +
     `<td style="padding:16px;border:1px solid #ddd;text-align:center;"><div style="font-size:28px;font-weight:bold;color:#0f2137;">${meetings}</div><div style="font-size:12px;color:#888;margin-top:4px;">Meetings Booked</div></td>` +
     "</tr></table>" +
+    '<h3 style="font-size:15px;margin:0 0 10px 0;color:#0f2137;">Rep Activity (Last 7 Days)</h3>' +
+    '<p style="margin:0 0 10px 0;font-size:12px;color:#6b7280;">All emails captured from each rep Gmail account, hand written or system sent.</p>' +
+    '<table style="border-collapse:collapse;width:100%;margin-bottom:24px;">' +
+    `<tr><th style="${thStyle}">Rep</th><th style="${thStyle}text-align:center;">Sent (7d)</th><th style="${thStyle}text-align:center;">Received (7d)</th><th style="${thStyle}text-align:center;">Sent (All Time)</th><th style="${thStyle}text-align:center;">Last Sent</th></tr>` +
+    repActivityRows +
+    "</table>" +
     '<h3 style="font-size:15px;margin:0 0 10px 0;color:#0f2137;">Email Format Performance</h3>' +
     '<table style="border-collapse:collapse;width:100%;margin-bottom:24px;">' +
     `<tr><th style="${thStyle}">Format</th><th style="${thStyle}text-align:center;">Sent</th><th style="${thStyle}text-align:center;">Replied</th><th style="${thStyle}text-align:center;">Reply Rate</th><th style="${thStyle}text-align:center;">Positive</th></tr>` +
