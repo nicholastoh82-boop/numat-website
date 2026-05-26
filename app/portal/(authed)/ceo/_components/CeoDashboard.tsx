@@ -6,6 +6,7 @@
 
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import EmailCounter from '@/components/portal/EmailCounter'
 
 type Props = { data: any }
 
@@ -95,6 +96,9 @@ export default function CeoDashboard({ data }: Props) {
         </div>
         <div className="text-xs text-gray-500">Generated {generatedAt}</div>
       </header>
+
+      {/* EMAIL PRODUCTIVITY COUNTER (scoped server side; ceo sees all reps) */}
+      <EmailCounter />
 
       {/* PERIOD CONTROL with period summary (drives the whole dashboard) */}
       <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">

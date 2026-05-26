@@ -26,6 +26,7 @@ const ALL_ITEMS: NavItem[] = [
   { href: '/crm/search',            label: 'KB Search',  roles: ['admin', 'sales'] },
   { href: '/crm/outreach',          label: 'Outreach',   roles: ['admin', 'sales', 'rep'] },
   { href: '/crm/signals',           label: 'Buying Signals', roles: ['admin', 'sales'] },
+  { href: '/portal/productivity',   label: 'Email Counter', roles: ['admin', 'ceo', 'sales'] },
   { href: '/finance',               label: 'Financials', roles: ['admin', 'ceo', 'finance'] },
   { href: '/finance/new',           label: 'Receipts',   roles: ['admin', 'finance', 'ops'] },
   { href: '/portal/verify',         label: 'Verify',     roles: ['admin', 'finance'] },
