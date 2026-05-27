@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import GmailConnectPanel from '@/components/crm/GmailConnectPanel'
 import ComposeEmailModal from '@/components/crm/ComposeEmailModal'
 import EmailHistoryDrawer from '@/components/crm/EmailHistoryDrawer'
+import LeadTimelineDrawer from '@/components/crm/LeadTimelineDrawer'
 import QualificationFormDrawer from '@/components/crm/QualificationFormDrawer'
 import EnrichmentDrawer from '@/components/crm/EnrichmentDrawer'
 
@@ -378,6 +379,7 @@ export default function CRMDashboard() {
   const [connectedRepEmails, setConnectedRepEmails] = useState<Set<string>>(new Set())
   // Email history drawer state. Single shared instance, only one open at a time.
   const [selectedLeadForHistory, setSelectedLeadForHistory] = useState<{ id: string; name: string } | null>(null)
+  const [selectedLeadForTimeline, setSelectedLeadForTimeline] = useState<{ id: string; name: string } | null>(null)
   // Qualification form drawer state. Single shared instance, only opens for leads with source_payload.
   const [selectedLeadForForm, setSelectedLeadForForm] = useState<{ id: string; name: string } | null>(null)
   // Enrichment drawer state. Shows Gemini enrichment data for a single lead.
@@ -1778,6 +1780,12 @@ export default function CRMDashboard() {
                       History
                     </button>
                     <button
+                      onClick={e => { e.stopPropagation(); setSelectedLeadForTimeline({ id: lead.id, name: displayName }) }}
+                      title="View pipeline timeline and sample tracking"
+                      className="text-xs px-3 py-1.5 rounded-lg border font-medium bg-white text-gray-700 border-gray-200 hover:bg-gray-50 transition-colors">
+                      Timeline
+                    </button>
+                    <button
                       onClick={e => { e.stopPropagation(); setSelectedLeadForEnrichment(lead) }}
                       title={lead.last_enriched_at ? `ICP fit ${lead.icp_fit_score ?? '?'} / 100` : 'Lead not yet enriched'}
                       className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
@@ -3072,6 +3080,15 @@ export default function CRMDashboard() {
           leadName={selectedLeadForHistory.name}
           open={true}
           onClose={() => setSelectedLeadForHistory(null)}
+        />
+      )}
+
+      {selectedLeadForTimeline && (
+        <LeadTimelineDrawer
+          leadId={selectedLeadForTimeline.id}
+          leadName={selectedLeadForTimeline.name}
+          open={true}
+          onClose={() => setSelectedLeadForTimeline(null)}
         />
       )}
 
