@@ -154,3 +154,67 @@ export async function PATCH(req: NextRequest) {
   }
   return NextResponse.json({ ok: true, sample: data });
 }
+
+// PUT /api/crm/lead_timeline
+// Upsert the PRIMARY sample for a lead (the quick inline tracker in the lead
+// card). If the lead has no sample yet, create one. If it has one or more,
+// update the most recent. Keeps the common one sample per lead case simple
+// for reps, without them tracking sample ids. Also derives status from which
+// dates are filled, so the Gantt milestones populate automatically.
+export async function PUT(req: NextRequest) {
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: 'invalid JSON body' }, { status: 400 });
+  }
+
+  const leadId = body.lead_id as string | undefined;
+  if (!leadId) {
+    return NextResponse.json({ ok: false, error: 'lead_id is required' }, { status: 400 });
+  }
+
+  const requested = (body.requested_at as string) || null;
+  const sent = (body.sent_at as string) || null;
+  const received = (body.received_at as string) || null;
+  const productType = body.product_type !== undefined ? ((body.product_type as string) || null) : undefined;
+
+  // Derive status from the furthest milestone reached
+  let status = 'requested';
+  if (received) status = 'delivered';
+  else if (sent) status = 'dispatched';
+  else if (requested) status = 'requested';
+
+  // Find the lead's most recent existing sample
+  const existingRes = await supabaseAdmin
+    .from('lead_samples')
+    .select('id')
+    .eq('lead_id', leadId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (existingRes.error) {
+    return NextResponse.json({ ok: false, error: existingRes.error.message }, { status: 500 });
+  }
+
+  const fields: Record<string, unknown> = {
+    requested_at: requested,
+    sent_at: sent,
+    received_at: received,
+    status,
+  };
+  if (productType !== undefined) fields.product_type = productType;
+
+  if (existingRes.data && existingRes.data.length > 0) {
+    const id = existingRes.data[0].id;
+    const { data, error } = await supabaseAdmin
+      .from('lead_samples').update(fields).eq('id', id).select('*').single();
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, sample: data, mode: 'updated' });
+  } else {
+    const { data, error } = await supabaseAdmin
+      .from('lead_samples').insert({ lead_id: leadId, ...fields }).select('*').single();
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, sample: data, mode: 'created' });
+  }
+}
