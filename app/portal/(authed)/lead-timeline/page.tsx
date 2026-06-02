@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function LeadTimelinePage() {
-  await requireRole(['admin', 'ceo', 'sales'])
+  await requireRole(['admin', 'ceo', 'sales', 'viewer'])
 
   return (
     <div className="space-y-6">
