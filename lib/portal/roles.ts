@@ -5,7 +5,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-export type PortalRole = 'admin' | 'ceo' | 'sales' | 'finance' | 'ops'
+export type PortalRole = 'admin' | 'ceo' | 'sales' | 'finance' | 'ops' | 'viewer'
 
 export type PortalUser = {
   id: string
@@ -16,6 +16,7 @@ export type PortalUser = {
   isSales: boolean
   isFinance: boolean
   isOps: boolean
+  isViewer: boolean
 }
 
 export async function getPortalUser(): Promise<PortalUser | null> {
@@ -44,6 +45,7 @@ export async function getPortalUser(): Promise<PortalUser | null> {
     isSales: roles.includes('sales'),
     isFinance: roles.includes('finance'),
     isOps: roles.includes('ops'),
+    isViewer: roles.includes('viewer'),
   }
 }
 
