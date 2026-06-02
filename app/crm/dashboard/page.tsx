@@ -353,6 +353,7 @@ export default function CRMDashboard() {
   })
   // Quotes (documents per lead)
   const [quotesByLead, setQuotesByLead] = useState<Record<string, Quote[]>>({})
+  const [sampleByLead, setSampleByLead] = useState<Record<string, { id: string; requested_at: string | null; sent_at: string | null; received_at: string | null; product_type: string | null }>>({})
   const [sendingQuoteId, setSendingQuoteId] = useState<string | null>(null)
   const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null)
   // Email editing per document
@@ -467,6 +468,23 @@ export default function CRMDashboard() {
     }
   }, [supabase])
 
+  // Load each lead's primary (most recent) sample so the inline tracker shows existing dates
+  const loadSamples = useCallback(async () => {
+    const { data } = await supabase
+      .from('lead_samples')
+      .select('id, lead_id, requested_at, sent_at, received_at, product_type, created_at')
+      .not('lead_id', 'is', null)
+      .order('created_at', { ascending: false })
+    if (data) {
+      const byLead: Record<string, { id: string; requested_at: string | null; sent_at: string | null; received_at: string | null; product_type: string | null }> = {}
+      for (const r of data as Array<{ id: string; lead_id: string; requested_at: string | null; sent_at: string | null; received_at: string | null; product_type: string | null }>) {
+        if (!r.lead_id || byLead[r.lead_id]) continue // keep most recent only
+        byLead[r.lead_id] = { id: r.id, requested_at: r.requested_at, sent_at: r.sent_at, received_at: r.received_at, product_type: r.product_type }
+      }
+      setSampleByLead(byLead)
+    }
+  }, [supabase])
+
   // Commit C: load all active (non-superseded) receipts and group by their parent invoice id.
   const loadReceipts = useCallback(async () => {
     const { data } = await supabase
@@ -490,16 +508,17 @@ export default function CRMDashboard() {
     await loadLeads(user)
     await loadQuotes()
     await loadReceipts()
+    await loadSamples()
     setRefreshing(false)
   }
 
   useEffect(() => {
     setLoading(true)
     loadUser().then(u => {
-      if (u) loadLeads(u).then(() => { setLoading(false); loadQuotes(); loadReceipts() })
+      if (u) loadLeads(u).then(() => { setLoading(false); loadQuotes(); loadReceipts(); loadSamples() })
       else setLoading(false)
     })
-  }, [loadUser, loadLeads, loadQuotes, loadReceipts])
+  }, [loadUser, loadLeads, loadQuotes, loadReceipts, loadSamples])
 
   // Load Gmail OAuth connection status once on mount so we can disable the
   // per row Email button for reps who have not connected their inbox yet.
@@ -565,6 +584,35 @@ export default function CRMDashboard() {
     if (error) { showToast('Failed to save', 'error') }
     else { setLeads(prev => prev.map(l => l.id === id ? { ...l, ...(updates as Partial<Lead>) } : l)) }
     setSaving(null)
+  }
+
+  // Inline sample tracker: upsert the lead's primary sample dates (feeds the Gantt)
+  const saveSampleDates = async (
+    leadId: string,
+    patch: { requested_at?: string | null; sent_at?: string | null; received_at?: string | null; product_type?: string | null }
+  ) => {
+    if (isViewer) return
+    const current = sampleByLead[leadId] || { id: '', requested_at: null, sent_at: null, received_at: null, product_type: null }
+    const next = {
+      requested_at: patch.requested_at !== undefined ? patch.requested_at : current.requested_at,
+      sent_at: patch.sent_at !== undefined ? patch.sent_at : current.sent_at,
+      received_at: patch.received_at !== undefined ? patch.received_at : current.received_at,
+      product_type: patch.product_type !== undefined ? patch.product_type : current.product_type,
+    }
+    // optimistic local update
+    setSampleByLead(prev => ({ ...prev, [leadId]: { id: prev[leadId]?.id || 'pending', ...next } }))
+    try {
+      const res = await fetch('/api/crm/lead_timeline', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead_id: leadId, ...next }),
+      })
+      const json = await res.json()
+      if (!json.ok) { showToast('Could not save sample: ' + (json.error || ''), 'error'); return }
+      if (json.sample?.id) setSampleByLead(prev => ({ ...prev, [leadId]: { id: json.sample.id, ...next } }))
+      showToast('Sample updated')
+    } catch {
+      showToast('Could not save sample', 'error')
+    }
   }
 
   const openQuoteModal = (lead: Lead, docType: 'proforma_invoice' | 'invoice', e: React.MouseEvent) => {
@@ -1940,6 +1988,48 @@ export default function CRMDashboard() {
                             placeholder="0" className="w-full border border-gray-200 bg-white rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                         </div>
                       </div>
+                    </div>
+
+                    {/* Sample tracking: reps enter these three dates, which drive the Gantt timeline */}
+                    <div className="mt-4 border border-blue-100 bg-blue-50/40 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Sample tracking</span>
+                        <span className="text-[11px] text-blue-700">Fills the timeline automatically</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Sample requested</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={sampleByLead[lead.id]?.requested_at || ''}
+                            onChange={e => saveSampleDates(lead.id, { requested_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Sample delivered (sent out)</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={sampleByLead[lead.id]?.sent_at || ''}
+                            onChange={e => saveSampleDates(lead.id, { sent_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Received by lead</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={sampleByLead[lead.id]?.received_at || ''}
+                            onChange={e => saveSampleDates(lead.id, { received_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <label className="text-xs font-medium text-gray-500 block mb-1">Sample detail (optional)</label>
+                        <input disabled={isViewer} type="text"
+                          defaultValue={sampleByLead[lead.id]?.product_type || ''}
+                          onBlur={e => saveSampleDates(lead.id, { product_type: e.target.value || null })}
+                          placeholder="e.g. NuBam 12mm and 19mm, 100mm x 100mm"
+                          className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Phone</label>
                         <input disabled={isViewer} type="text" defaultValue={lead.phone || ''} placeholder="+63..."
