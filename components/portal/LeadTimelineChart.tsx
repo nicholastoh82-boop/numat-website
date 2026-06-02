@@ -117,8 +117,41 @@ export default function LeadTimelineChart() {
     { key: 'proposal_sent', label: `Proposal (${leads.filter((l) => l.current_stage === 'proposal_sent').length})` },
   ];
 
+  // Pipeline value summary across the leads currently in view
+  const peso = (n: number) => '₱' + Math.round(n).toLocaleString();
+  const sumPhp = (rows: Lead[]) => rows.reduce((t, l) => t + (Number(l.deal_value_php) || 0), 0);
+  const openStages = ['qualified', 'proposal_sent', 'meeting_booked', 'negotiation'];
+  const totalPipeline = sumPhp(filtered);
+  const wonValue = sumPhp(filtered.filter((l) => l.current_stage === 'won'));
+  const openValue = sumPhp(filtered.filter((l) => l.current_stage && openStages.includes(l.current_stage)));
+  const valuedCount = filtered.filter((l) => Number(l.deal_value_php) > 0).length;
+
   return (
     <div className="space-y-4">
+      {/* Pipeline value summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-3">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">Total pipeline (in view)</div>
+          <div className="text-lg font-semibold text-gray-900">{peso(totalPipeline)}</div>
+          <div className="text-[10px] text-gray-400">{valuedCount} of {filtered.length} leads have a value</div>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-3">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">Open pipeline</div>
+          <div className="text-lg font-semibold text-indigo-700">{peso(openValue)}</div>
+          <div className="text-[10px] text-gray-400">Qualified to negotiation</div>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-3">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">Won value</div>
+          <div className="text-lg font-semibold text-emerald-700">{peso(wonValue)}</div>
+          <div className="text-[10px] text-gray-400">Closed won (in view)</div>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-3">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500">Leads in view</div>
+          <div className="text-lg font-semibold text-gray-900">{filtered.length}</div>
+          <div className="text-[10px] text-gray-400">Change with the filter below</div>
+        </div>
+      </div>
+
       {/* Filter + legend */}
       <div className="flex flex-wrap items-center gap-2">
         {filters.map((f) => (
@@ -178,6 +211,9 @@ export default function LeadTimelineChart() {
                     <div className="text-[10px] text-gray-500 truncate" title={l.company || ''}>
                       {l.company || '-'}{l.country ? ` · ${l.country}` : ''}
                     </div>
+                    {Number(l.deal_value_php) > 0 && (
+                      <div className="text-[10px] font-medium text-gray-700 mt-0.5">{peso(Number(l.deal_value_php))}</div>
+                    )}
                   </div>
                   <div className="relative flex-1 my-2 mr-3" style={{ minHeight: 22 }}>
                     {/* month gridlines */}
