@@ -1,32 +1,34 @@
 /* app/portal/(authed)/lead-timeline/page.tsx
-   Consolidated lead pipeline timeline (Gantt) across all progressed leads and
-   sample requesters, in one chart. Visible to admin, ceo, and sales. */
+   Lead status table: one row per active lead showing the deal value and the key
+   milestone dates (emails, samples, quotation, proposal signed, due date, order
+   completed). Replaces the Gantt as the primary view. Visible to admin, ceo,
+   sales, and viewer (Wavemaker Impact). */
 
 import { requireRole } from '@/lib/portal/roles'
-import LeadTimelineChart from '@/components/portal/LeadTimelineChart'
+import LeadStatusTable from '@/components/portal/LeadStatusTable'
 
 export const metadata = {
-  title: 'Lead Timeline | NUMAT Portal',
+  title: 'Lead Status | NUMAT Portal',
   robots: 'noindex, nofollow',
 }
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export default async function LeadTimelinePage() {
+export default async function LeadStatusPage() {
   await requireRole(['admin', 'ceo', 'sales', 'viewer'])
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Lead Timeline</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Lead Status</h1>
         <p className="text-sm text-gray-500 mt-1">
-          One chart across every lead that has progressed beyond new, plus every sample requester.
-          Each row is a lead, each bar is the time spent in a pipeline stage, and the green rings mark
-          sample requested, sent, and received dates.
+          The most recent leads the team is working, with the deal value and where each one stands:
+          last email sent and received, sample requested, sent, and received, quotation sent, proposal
+          signed, due date, and order completed. Sorted by most recent activity.
         </p>
       </div>
-      <LeadTimelineChart />
+      <LeadStatusTable />
     </div>
   )
 }
