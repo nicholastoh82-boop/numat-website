@@ -29,6 +29,9 @@ interface Lead {
   notes: string | null
   deal_value_php: number | null
   deal_value_usd: number | null
+  proposal_signed_at: string | null
+  payment_due_at: string | null
+  order_completed_at: string | null
   quoted_at: string | null
   quote_currency: string | null
   quote_notes: string | null
@@ -423,7 +426,7 @@ export default function CRMDashboard() {
   }, [supabase, router])
 
   const loadLeads = useCallback(async (crmUser: CRMUser) => {
-    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,source_payload,business_description,products_offered,employee_size_band,icp_fit_score,icp_fit_reason,pain_hooks,product_recommendations,buying_signal_strength,buying_signal_summary,buying_signal_evidence,buying_signal_detected_at,buying_signal_scanned_at,last_enriched_at'
+    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,proposal_signed_at,payment_due_at,order_completed_at,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,source_payload,business_description,products_offered,employee_size_band,icp_fit_score,icp_fit_reason,pain_hooks,product_recommendations,buying_signal_strength,buying_signal_summary,buying_signal_evidence,buying_signal_detected_at,buying_signal_scanned_at,last_enriched_at'
     const PAGE_SIZE = 1000
     const allLeads: Lead[] = []
     let from = 0
@@ -2026,6 +2029,37 @@ export default function CRMDashboard() {
                           onBlur={e => saveSampleDates(lead.id, { product_type: e.target.value || null })}
                           placeholder="e.g. NuBam 12mm and 19mm, 100mm x 100mm"
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+                      </div>
+                    </div>
+
+                    {/* Deal milestones: feed the status table columns reps own */}
+                    <div className="mt-4 border border-emerald-100 bg-emerald-50/40 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-emerald-900 uppercase tracking-wide">Deal milestones</span>
+                        <span className="text-[11px] text-emerald-700">Shows on the status report</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Proposal signed</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={lead.proposal_signed_at ? String(lead.proposal_signed_at).slice(0,10) : ''}
+                            onChange={e => updateLead(lead.id, { proposal_signed_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Due date</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={lead.payment_due_at ? String(lead.payment_due_at).slice(0,10) : ''}
+                            onChange={e => updateLead(lead.id, { payment_due_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Order completed</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={lead.order_completed_at ? String(lead.order_completed_at).slice(0,10) : ''}
+                            onChange={e => updateLead(lead.id, { order_completed_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100" />
+                        </div>
                       </div>
                     </div>
 
