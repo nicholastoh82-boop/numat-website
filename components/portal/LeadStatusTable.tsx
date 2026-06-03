@@ -52,6 +52,7 @@ export default function LeadStatusTable() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [repFilter, setRepFilter] = useState<string>('all');
+  const [stageFilter, setStageFilter] = useState<string>('all');
 
   useEffect(() => {
     (async () => {
@@ -75,8 +76,19 @@ export default function LeadStatusTable() {
   }, [leads]);
 
   const filtered = useMemo(() => {
-    if (repFilter === 'all') return leads;
-    return leads.filter((l) => l.rep === repFilter);
+    let rows = leads;
+    if (repFilter !== 'all') rows = rows.filter((l) => l.rep === repFilter);
+    if (stageFilter !== 'all') rows = rows.filter((l) => l.stage === stageFilter);
+    return rows;
+  }, [leads, repFilter, stageFilter]);
+
+  // Stage options present in the data, in pipeline order, with counts (respecting the rep filter)
+  const stageOptions = useMemo(() => {
+    const order = ['qualified', 'proposal_sent', 'meeting_booked', 'negotiation', 'won', 'lost'];
+    const base = repFilter === 'all' ? leads : leads.filter((l) => l.rep === repFilter);
+    const counts = new Map<string, number>();
+    base.forEach((l) => { if (l.stage) counts.set(l.stage, (counts.get(l.stage) || 0) + 1); });
+    return order.filter((s) => counts.has(s)).map((s) => ({ key: s, count: counts.get(s) || 0 }));
   }, [leads, repFilter]);
 
   const totals = useMemo(() => {
@@ -152,6 +164,23 @@ export default function LeadStatusTable() {
             <button key={r} onClick={() => setRepFilter(r)}
               className={`text-xs px-3 py-1.5 rounded-lg border ${repFilter === r ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200'}`}>
               {r} ({leads.filter((l) => l.rep === r).length})
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Stage filter */}
+      {stageOptions.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] uppercase tracking-wide text-gray-400 mr-1">Stage</span>
+          <button onClick={() => setStageFilter('all')}
+            className={`text-xs px-3 py-1.5 rounded-lg border ${stageFilter === 'all' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200'}`}>
+            All stages
+          </button>
+          {stageOptions.map((s) => (
+            <button key={s.key} onClick={() => setStageFilter(s.key)}
+              className={`text-xs px-3 py-1.5 rounded-lg border ${stageFilter === s.key ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200'}`}>
+              {STAGE_LABELS[s.key] || s.key} ({s.count})
             </button>
           ))}
         </div>
