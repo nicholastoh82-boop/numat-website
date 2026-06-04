@@ -36,7 +36,7 @@ export default function AdminSidebar() {
   if (role === 'rep') {
     return (
       <nav className="p-4 space-y-1">
-        <Link href="/admin/leads" className={linkClass('/admin/leads')}>
+        <Link href="/crm/dashboard" className={linkClass('/admin/leads')}>
           <Users className="w-5 h-5" />
           My Leads
         </Link>
@@ -56,7 +56,7 @@ export default function AdminSidebar() {
         Overview
       </Link>
 
-      <Link href="/admin/leads" className={linkClass('/admin/leads')}>
+      <Link href="/crm/dashboard" className={linkClass('/admin/leads')}>
         <Users className="w-5 h-5" />
         Leads
       </Link>
