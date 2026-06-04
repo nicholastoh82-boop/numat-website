@@ -573,14 +573,18 @@ export default function ProductDetailPage() {
     if (!useVariantDrivenConfig) return []
 
     if (family === 'nuslat') {
+      // Length is the first selector now, so thickness is scoped to the chosen length
+      const scoped = selectedLength
+        ? pricedVariants.filter((v) => `${v.length_mm}mm` === selectedLength)
+        : pricedVariants
       const uniqueThicknesses = Array.from(
-        new Set(pricedVariants.map((v) => formatThicknessLabel(v.thickness_mm)).filter(Boolean))
+        new Set(scoped.map((v) => formatThicknessLabel(v.thickness_mm)).filter(Boolean))
       )
       return uniqueThicknesses
         .map((thickness) => ({
           label: thickness,
           value: thickness,
-          disabled: pricedVariants
+          disabled: scoped
             .filter((v) => formatThicknessLabel(v.thickness_mm) === thickness)
             .every((v) => v.in_stock === false || v.is_available === false),
         }))
@@ -606,7 +610,7 @@ export default function ProductDetailPage() {
           .every((v) => v.in_stock === false || v.is_available === false),
       }))
       .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
-  }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType])
+  }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType, selectedLength])
 
   const variantPlyOptions = useMemo(() => {
     if (!useVariantDrivenConfig) return []
@@ -650,26 +654,24 @@ export default function ProductDetailPage() {
   const variantLengthOptions = useMemo(() => {
     if (!useVariantDrivenConfig || family !== 'nuslat') return []
 
-    const uniqueLabels = Array.from(
-      new Set(pricedVariants.map((v) => (v.size_label || '').trim()).filter(Boolean))
-    )
+    // Length is the first selector: one option per distinct length (width is constant)
+    const uniqueLengths = Array.from(
+      new Set(
+        pricedVariants
+          .map((v) => v.length_mm)
+          .filter((n): n is number => typeof n === 'number')
+      )
+    ).sort((a, b) => a - b)
 
-    return uniqueLabels.map((label) => {
-      const matchingVariants = pricedVariants.filter((v) => {
-        const labelMatch = (v.size_label || '').trim() === label
-        const thicknessMatch = selectedThickness
-          ? formatThicknessLabel(v.thickness_mm) === selectedThickness
-          : true
-        return labelMatch && thicknessMatch
-      })
-
+    return uniqueLengths.map((lengthMm) => {
+      const value = `${lengthMm}mm`
+      const matchingVariants = pricedVariants.filter((v) => v.length_mm === lengthMm)
       const disabled =
         matchingVariants.length === 0 ||
         matchingVariants.every((v) => v.in_stock === false || v.is_available === false)
-
-      return { label, value: label, disabled }
+      return { label: value, value, disabled }
     })
-  }, [useVariantDrivenConfig, pricedVariants, family, selectedThickness])
+  }, [useVariantDrivenConfig, pricedVariants, family])
 
   const coreTypeOptions: SelectOption[] =
     useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')
@@ -745,13 +747,24 @@ export default function ProductDetailPage() {
     }
 
     if (useVariantDrivenConfig && family === 'nuslat') {
-      const firstThickness =
-        slatThicknessOptions.find((o) => !o.disabled)?.value ?? slatThicknessOptions[0]?.value ?? ''
+      // Length first: ensure a valid length is selected before thickness
       const firstLength =
         slatLengthOptions.find((o) => !o.disabled)?.value ?? slatLengthOptions[0]?.value ?? ''
+      const lengthValid = slatLengthOptions.some((o) => o.value === selectedLength)
+      if (!lengthValid && firstLength) {
+        setSelectedLength(firstLength)
+        return
+      }
 
-      if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
-      if (!selectedLength && firstLength) setSelectedLength(firstLength)
+      // Thickness second: must be one offered for the chosen length
+      const firstThickness =
+        slatThicknessOptions.find((o) => !o.disabled)?.value ?? slatThicknessOptions[0]?.value ?? ''
+      const thicknessValid = slatThicknessOptions.some(
+        (o) => o.value === selectedThickness && !o.disabled
+      )
+      if ((!selectedThickness || !thicknessValid) && firstThickness) {
+        setSelectedThickness(firstThickness)
+      }
       return
     }
 
@@ -831,7 +844,7 @@ export default function ProductDetailPage() {
             : true
 
           const lengthMatch = selectedLength
-            ? normalizeValue(variant.size_label) === normalizeValue(selectedLength)
+            ? `${variant.length_mm}mm` === selectedLength
             : true
 
           return thicknessMatch && lengthMatch
@@ -1331,17 +1344,17 @@ export default function ProductDetailPage() {
                   {family === 'nuslat' && (
                     <>
                       <OptionPills
-                        label="Thickness"
-                        value={selectedThickness}
-                        onChange={setSelectedThickness}
-                        options={slatThicknessOptions}
-                      />
-
-                      <OptionPills
                         label="Length"
                         value={selectedLength}
                         onChange={setSelectedLength}
                         options={slatLengthOptions}
+                      />
+
+                      <OptionPills
+                        label="Thickness"
+                        value={selectedThickness}
+                        onChange={setSelectedThickness}
+                        options={slatThicknessOptions}
                       />
                     </>
                   )}
