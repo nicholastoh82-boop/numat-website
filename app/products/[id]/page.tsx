@@ -820,7 +820,7 @@ export default function ProductDetailPage() {
     if (family === 'nubam-boards' || family === 'nuwall') setQuantity(10)
     if (family === 'nudoor') setQuantity(5)
     if (family === 'nufloor') setQuantity(20)
-    if (family === 'nuslat') setQuantity(500)
+    if (family === 'nuslat') setQuantity(2000)
     if (family === 'furniture') setQuantity(1)
   }, [family])
 
@@ -1376,9 +1376,18 @@ export default function ProductDetailPage() {
                             <Minus className="h-4 w-4" />
                           </button>
 
-                          <div className="min-w-[72px] px-3 text-center text-base font-semibold text-foreground">
-                            {quantity}
-                          </div>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={quantity === 0 ? '' : String(quantity)}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/[^0-9]/g, '')
+                              setQuantity(digits === '' ? 0 : parseInt(digits, 10))
+                            }}
+                            placeholder={String(resolved.moq)}
+                            aria-label="Quantity"
+                            className="min-w-[72px] w-24 px-3 text-center text-base font-semibold text-foreground bg-transparent outline-none"
+                          />
 
                           <button
                             type="button"
