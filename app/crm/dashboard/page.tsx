@@ -313,6 +313,7 @@ export default function CRMDashboard() {
   const router = useRouter()
 
   const [user, setUser] = useState<CRMUser | null>(null)
+  const [repList, setRepList] = useState<{ email: string; name: string }[]>([])
   const [viewerSettings, setViewerSettings] = useState<ViewerSettings>(VIEWER_SETTINGS_DEFAULT)
   const [viewerPanelOpen, setViewerPanelOpen] = useState(false)
   const [viewerSaving, setViewerSaving] = useState(false)
@@ -420,6 +421,20 @@ export default function CRMDashboard() {
     const { data } = await supabase.from('crm_users').select('*').eq('email', authUser.email).single()
     if (!data) { router.push('/crm/login'); return null }
     setUser(data)
+    // Load the real active reps for the assign-to-rep dropdown, so it does not
+    // depend on which leads happen to be loaded.
+    const { data: reps } = await supabase
+      .from('crm_users')
+      .select('email, name, rep_assigned_name, role, is_active')
+      .eq('role', 'rep')
+      .eq('is_active', true)
+      .order('name')
+    if (reps) {
+      setRepList(
+        (reps as { email: string; name: string; rep_assigned_name: string | null }[])
+          .map(r => ({ email: r.email, name: r.rep_assigned_name || r.name || r.email.split('@')[0] }))
+      )
+    }
     const { data: vs } = await supabase.from('crm_viewer_settings').select('*').eq('id', 1).single()
     if (vs) setViewerSettings(vs as ViewerSettings)
     return data as CRMUser
@@ -1520,10 +1535,11 @@ export default function CRMDashboard() {
     const isPlaceholderEmail = !rawEmail
     setAddLeadSubmitting(true)
     if (isViewer) { setAddLeadSubmitting(false); return }
-    const repNameMap: Record<string,string> = { 'mohan@numat.ph': 'Mohan', 'bryan@numat.ph': 'Bryan', 'nick@numat.ph': 'Nick', 'eugene@numat.ph': 'Eugene' }
     // Non-admins can only create leads assigned to themselves
     const repEmail = user.role === 'admin' ? (newLead.rep_email || null) : user.email
-    const repName = repEmail ? (repNameMap[repEmail] || repEmail.split('@')[0]) : null
+    const repName = repEmail
+      ? (repList.find(r => r.email === repEmail)?.name || repEmail.split('@')[0])
+      : null
     const fullName = [newLead.first_name, newLead.last_name].filter(Boolean).join(' ').trim() || null
     const payload: Record<string, unknown> = {
       email,
@@ -3251,9 +3267,7 @@ export default function CRMDashboard() {
                       onChange={e => setNewLead({ ...newLead, rep_email: e.target.value })}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
                       <option value="">— Unassigned —</option>
-                      <option value="bryan@numat.ph">Bryan (Philippines)</option>
-                      <option value="mohan@numat.ph">Mohan (International)</option>
-                      <option value="nick@numat.ph">Nick</option>
+                      {repList.map(r => <option key={r.email} value={r.email}>{r.name}</option>)}
                     </select>
                   </div>
                 )}
@@ -3276,7 +3290,7 @@ export default function CRMDashboard() {
                 className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                 Cancel
               </button>
-              <button onClick={submitNewLead} disabled={addLeadSubmitting || !newLead.email}
+              <button onClick={submitNewLead} disabled={addLeadSubmitting || !(newLead.email.trim() || newLead.first_name.trim() || newLead.last_name.trim() || newLead.company.trim())}
                 className="flex-1 py-2.5 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                 {addLeadSubmitting ? 'Adding...' : 'Add Lead'}
               </button>
