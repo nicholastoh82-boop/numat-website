@@ -1503,11 +1503,21 @@ export default function CRMDashboard() {
 
   const submitNewLead = async () => {
     if (!user) return
-    const email = newLead.email.trim().toLowerCase()
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      showToast('Valid email address is required', 'error')
+    const rawEmail = newLead.email.trim().toLowerCase()
+    // Email is optional. If given, it must be valid. If blank, we generate a
+    // unique non-routable placeholder so the lead can be saved and still passes
+    // the unique-email index without colliding with other no-email leads.
+    if (rawEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+      showToast('That email does not look valid. Fix it or leave it blank.', 'error')
       return
     }
+    const hasIdentity = (newLead.first_name || newLead.last_name || newLead.company).trim()
+    if (!rawEmail && !hasIdentity) {
+      showToast('Add at least a name or a company.', 'error')
+      return
+    }
+    const email = rawEmail || `noemail+${Date.now()}${Math.floor(Math.random()*1000)}@placeholder.numat.ph`
+    const isPlaceholderEmail = !rawEmail
     setAddLeadSubmitting(true)
     if (isViewer) { setAddLeadSubmitting(false); return }
     const repNameMap: Record<string,string> = { 'mohan@numat.ph': 'Mohan', 'bryan@numat.ph': 'Bryan', 'nick@numat.ph': 'Nick', 'eugene@numat.ph': 'Eugene' }
@@ -1538,8 +1548,15 @@ export default function CRMDashboard() {
       status: 'pending',
       last_activity_at: new Date().toISOString(),
     }
-    // Check if email already exists before inserting
-    if (payload.email) {
+    // A placeholder email is not a real address, so flag it so the outreach
+    // engine never tries to send to it.
+    if (isPlaceholderEmail) {
+      payload.email_validation_status = 'invalid'
+      payload.suppression_reason = 'no email on file (placeholder)'
+    }
+    // Check if email already exists before inserting. Skip for placeholder
+    // emails, which are unique by construction and not real addresses.
+    if (payload.email && !isPlaceholderEmail) {
       const { data: existing } = await supabase.from('master_leads').select('id,full_name,email,pipeline_stage,rep_assigned,rep_email').eq('email', payload.email).maybeSingle()
       if (existing) {
         // rep_email is the source of truth (drives RLS-style filtering); rep_assigned is a display label that can drift.
@@ -3148,10 +3165,10 @@ export default function CRMDashboard() {
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
                 <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-500 block mb-1">Email <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Email <span className="text-gray-400">(optional)</span></label>
                   <input type="email" value={newLead.email}
                     onChange={e => setNewLead({ ...newLead, email: e.target.value })}
-                    placeholder="name@company.com"
+                    placeholder="Leave blank if unknown"
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
                 <div className="col-span-2">
