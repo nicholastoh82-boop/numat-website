@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       .from('master_leads')
       .select(
         `id, full_name, first_name, last_name, email, company, country,
-         segment, status, pipeline_stage, rep_assigned,
+         segment, status, pipeline_stage, rep_assigned, deal_value_php,
          notes, last_activity_at, last_activity_type,
          email_1_sent, email_2_sent, email_3_sent, email_4_sent, email_5_sent,
          replied_at, appointment_date, booking_confirmed,
@@ -114,7 +114,7 @@ export async function PATCH(request: NextRequest) {
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
-    const { id, pipeline_stage, status, note, last_activity_type, bulk_ids, bulk_update } = body
+    const { id, pipeline_stage, status, note, last_activity_type, deal_value_php, bulk_ids, bulk_update } = body
 
     const formatDate = () =>
       new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -164,6 +164,7 @@ export async function PATCH(request: NextRequest) {
     }
     if (pipeline_stage !== undefined) updates.pipeline_stage = pipeline_stage
     if (status !== undefined) updates.status = status
+    if (deal_value_php !== undefined) updates.deal_value_php = deal_value_php
     if (last_activity_type) updates.last_activity_type = last_activity_type
     if (note?.trim()) updates.notes = appendNote(lead.notes, note)
 
@@ -174,5 +175,64 @@ export async function PATCH(request: NextRequest) {
   } catch (err) {
     console.error('[Leads PATCH]', err)
     return NextResponse.json({ error: 'Update failed' }, { status: 500 })
+  }
+}
+// ==============================================================================
+// POST: Create a new lead
+// ==============================================================================
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const authUser = await getAuthUser(supabase)
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const body = await request.json()
+    const {
+      first_name, last_name, full_name, email, company, country,
+      segment, pipeline_stage, deal_value_php, note,
+    } = body
+
+    if (!full_name && !first_name && !email && !company) {
+      return NextResponse.json({ error: 'Enter at least a name, company, or email' }, { status: 400 })
+    }
+
+    const name = (full_name || `${first_name ?? ''} ${last_name ?? ''}`.trim()) || null
+
+    // A rep's new lead is assigned to them so it stays in their list.
+    // An admin's new lead is unassigned unless they pass a rep.
+    const rep_assigned =
+      authUser.role === 'rep'
+        ? (authUser.repName ?? null)
+        : (body.rep_assigned ?? null)
+
+    const insertRow: Record<string, any> = {
+      full_name: name,
+      first_name: first_name || null,
+      last_name: last_name || null,
+      email: email || null,
+      company: company || null,
+      country: country || null,
+      segment: segment || null,
+      pipeline_stage: pipeline_stage || 'Lead',
+      status: 'active',
+      rep_assigned,
+      deal_value_php: deal_value_php ?? null,
+      notes: note?.trim() || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_activity_at: new Date().toISOString(),
+    }
+
+    const { data, error } = await supabase
+      .from('master_leads')
+      .insert(insertRow)
+      .select('id')
+      .maybeSingle()
+
+    if (error) throw error
+    return NextResponse.json({ ok: true, id: data?.id })
+  } catch (err) {
+    console.error('[Leads POST]', err)
+    return NextResponse.json({ error: 'Create failed' }, { status: 500 })
   }
 }

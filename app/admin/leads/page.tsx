@@ -5,7 +5,7 @@ import useSWR from 'swr'
 import {
   Search, Filter, X, ChevronLeft, ChevronRight,
   SquareCheck, Square, Save, Loader2, RefreshCw,
-  Mail, MapPin, TrendingUp, MessageSquare, Building2, Users,
+  Mail, MapPin, TrendingUp, MessageSquare, Building2, Users, Plus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -25,6 +25,7 @@ type Lead = {
   status: string
   pipeline_stage: string | null
   rep_assigned: string | null
+  deal_value_php: number | null
   notes: string | null
   last_activity_at: string | null
   last_activity_type: string | null
@@ -118,12 +119,16 @@ function LeadDrawer({
   const { toast } = useToast()
   const [stage, setStage] = useState(lead.pipeline_stage ?? '')
   const [status, setStatus] = useState(lead.status ?? '')
+  const [dealValue, setDealValue] = useState(
+    lead.deal_value_php != null ? String(lead.deal_value_php) : ''
+  )
   const [activityType, setActivityType] = useState('')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
-    if (!stage && !note && !activityType && status === lead.status) {
+    const dealChanged = dealValue !== (lead.deal_value_php != null ? String(lead.deal_value_php) : '')
+    if (!stage && !note && !activityType && status === lead.status && !dealChanged) {
       toast({ title: 'Nothing to save', description: 'Make at least one change.' })
       return
     }
@@ -136,6 +141,7 @@ function LeadDrawer({
           id: lead.id,
           pipeline_stage: stage || undefined,
           status: status !== lead.status ? status : undefined,
+          deal_value_php: dealChanged ? (dealValue.trim() === '' ? null : Number(dealValue)) : undefined,
           note: note.trim() || undefined,
           last_activity_type: activityType || undefined,
         }),
@@ -252,6 +258,20 @@ function LeadDrawer({
             </select>
           </div>
 
+          {/* Deal Value */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Deal Value (PHP)</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={dealValue}
+              onChange={e => setDealValue(e.target.value.replace(/[^0-9.]/g, ''))}
+              placeholder="e.g. 250000"
+              className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+            />
+            <p className="text-xs text-muted-foreground">The expected or quoted value of this deal. Leave blank if unknown.</p>
+          </div>
+
           {/* Activity Type */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Activity Type</label>
@@ -308,6 +328,161 @@ function LeadDrawer({
   )
 }
 
+// ─── Add Lead Drawer ─────────────────────────────────────────────────────────
+function AddLeadDrawer({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const { toast } = useToast()
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [company, setCompany] = useState('')
+  const [email, setEmail] = useState('')
+  const [country, setCountry] = useState('')
+  const [segment, setSegment] = useState('')
+  const [stage, setStage] = useState('Lead')
+  const [dealValue, setDealValue] = useState('')
+  const [note, setNote] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const handleCreate = async () => {
+    if (!firstName.trim() && !company.trim() && !email.trim()) {
+      toast({ title: 'Need a bit more', description: 'Enter at least a name, company, or email.' })
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: firstName.trim() || undefined,
+          last_name: lastName.trim() || undefined,
+          company: company.trim() || undefined,
+          email: email.trim() || undefined,
+          country: country.trim() || undefined,
+          segment: segment || undefined,
+          pipeline_stage: stage || undefined,
+          deal_value_php: dealValue.trim() === '' ? undefined : Number(dealValue),
+          note: note.trim() || undefined,
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error || 'Create failed')
+      }
+      toast({ title: 'Lead added', description: 'It has been added to your leads.' })
+      onSaved()
+      onClose()
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message || 'Could not add the lead.', variant: 'destructive' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="w-full max-w-md bg-background border-l border-border flex flex-col shadow-xl overflow-y-auto">
+        <div className="sticky top-0 bg-background border-b border-border px-5 py-4 flex items-start justify-between z-10">
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">New Lead</p>
+            <h2 className="font-semibold text-foreground text-lg leading-tight">Add a lead</h2>
+          </div>
+          <button onClick={onClose} className="mt-1 p-1.5 rounded-lg hover:bg-muted transition-colors">
+            <X className="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
+
+        <div className="flex-1 p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">First name</label>
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Juan"
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Last name</label>
+              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Santos"
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Company</label>
+            <input value={company} onChange={e => setCompany(e.target.value)} placeholder="Company name"
+              className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Email</label>
+            <input value={email} onChange={e => setEmail(e.target.value)} placeholder="name@company.com" type="email"
+              className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Country</label>
+              <input value={country} onChange={e => setCountry(e.target.value)} placeholder="Philippines"
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Segment</label>
+              <select value={segment} onChange={e => setSegment(e.target.value)}
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm">
+                <option value="">Select</option>
+                {SEGMENTS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Pipeline Stage</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {PIPELINE_STAGES.map(s => (
+                <button key={s} onClick={() => setStage(s)}
+                  className={cn(
+                    'px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all text-left',
+                    stage === s
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                  )}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Deal Value (PHP)</label>
+            <input type="text" inputMode="numeric" value={dealValue}
+              onChange={e => setDealValue(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="e.g. 250000"
+              className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Note (optional)</label>
+            <textarea value={note} onChange={e => setNote(e.target.value)} rows={3}
+              placeholder="Anything useful about this lead."
+              className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50" />
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 bg-background border-t border-border p-4">
+          <Button onClick={handleCreate} disabled={saving} className="w-full h-11">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+            Add Lead
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function AdminLeadsPage() {
   const { role, name } = useAdminRole()
@@ -324,6 +499,7 @@ export default function AdminLeadsPage() {
   const [bulkStage, setBulkStage] = useState('')
   const [bulkUpdating, setBulkUpdating] = useState(false)
   const [activeLead, setActiveLead] = useState<Lead | null>(null)
+  const [showAddLead, setShowAddLead] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
   // Debounce search
@@ -421,15 +597,25 @@ export default function AdminLeadsPage() {
           <h1 className="font-serif text-2xl text-foreground">{pageTitle}</h1>
           <p className="text-muted-foreground mt-0.5 text-sm">{pageSubtitle}</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => mutate()}
-          className="self-start sm:self-auto gap-2"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            size="sm"
+            onClick={() => setShowAddLead(true)}
+            className="gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Lead
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => mutate()}
+            className="gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Search + Filter Bar */}
@@ -759,6 +945,13 @@ export default function AdminLeadsPage() {
         <LeadDrawer
           lead={activeLead}
           onClose={() => setActiveLead(null)}
+          onSaved={() => mutate()}
+        />
+      )}
+
+      {showAddLead && (
+        <AddLeadDrawer
+          onClose={() => setShowAddLead(false)}
           onSaved={() => mutate()}
         />
       )}
