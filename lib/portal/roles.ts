@@ -4,8 +4,9 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { cache } from 'react'
 
-export type PortalRole = 'admin' | 'ceo' | 'sales' | 'finance' | 'ops'
+export type PortalRole = 'admin' | 'ceo' | 'sales' | 'finance' | 'ops' | 'viewer'
 
 export type PortalUser = {
   id: string
@@ -16,9 +17,10 @@ export type PortalUser = {
   isSales: boolean
   isFinance: boolean
   isOps: boolean
+  isViewer: boolean
 }
 
-export async function getPortalUser(): Promise<PortalUser | null> {
+export const getPortalUser = cache(async function getPortalUser(): Promise<PortalUser | null> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -44,8 +46,9 @@ export async function getPortalUser(): Promise<PortalUser | null> {
     isSales: roles.includes('sales'),
     isFinance: roles.includes('finance'),
     isOps: roles.includes('ops'),
+    isViewer: roles.includes('viewer'),
   }
-}
+})
 
 /* Redirects to portal login if no auth session. */
 export async function requirePortalUser(): Promise<PortalUser> {

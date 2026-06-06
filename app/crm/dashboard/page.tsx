@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation'
 import GmailConnectPanel from '@/components/crm/GmailConnectPanel'
 import ComposeEmailModal from '@/components/crm/ComposeEmailModal'
 import EmailHistoryDrawer from '@/components/crm/EmailHistoryDrawer'
+import LeadTimelineDrawer from '@/components/crm/LeadTimelineDrawer'
 import QualificationFormDrawer from '@/components/crm/QualificationFormDrawer'
+import EnrichmentDrawer from '@/components/crm/EnrichmentDrawer'
 
 interface Lead {
   id: string
@@ -27,6 +29,9 @@ interface Lead {
   notes: string | null
   deal_value_php: number | null
   deal_value_usd: number | null
+  proposal_signed_at: string | null
+  payment_due_at: string | null
+  order_completed_at: string | null
   quoted_at: string | null
   quote_currency: string | null
   quote_notes: string | null
@@ -54,9 +59,22 @@ interface Lead {
   last_rep_touch_subject?: string | null
   rep_reply_count?: number | null
   product_focus?: string | null
-  order_completed_at?: string | null
   marketing_sourced?: boolean | null
   source_payload?: any
+  // Enrichment fields populated by lead-enrichment and buying-signal-scan crons
+  business_description?: string | null
+  products_offered?: any
+  employee_size_band?: string | null
+  icp_fit_score?: number | null
+  icp_fit_reason?: string | null
+  pain_hooks?: any
+  product_recommendations?: any
+  buying_signal_strength?: string | null
+  buying_signal_summary?: string | null
+  buying_signal_evidence?: any
+  buying_signal_detected_at?: string | null
+  buying_signal_scanned_at?: string | null
+  last_enriched_at?: string | null
 }
 
 interface CRMUser {
@@ -65,6 +83,20 @@ interface CRMUser {
   email: string
   role: string
   is_active: boolean
+}
+
+interface ViewerSettings {
+  show_leads: boolean
+  show_timeline: boolean
+  show_email_history: boolean
+  show_quotes_invoices: boolean
+  show_deal_values: boolean
+  show_contact_details: boolean
+}
+
+const VIEWER_SETTINGS_DEFAULT: ViewerSettings = {
+  show_leads: true, show_timeline: true, show_email_history: true,
+  show_quotes_invoices: true, show_deal_values: true, show_contact_details: true,
 }
 
 interface Quote {
@@ -284,6 +316,13 @@ export default function CRMDashboard() {
   const router = useRouter()
 
   const [user, setUser] = useState<CRMUser | null>(null)
+  const [repList, setRepList] = useState<{ email: string; name: string }[]>([])
+  const [viewerSettings, setViewerSettings] = useState<ViewerSettings>(VIEWER_SETTINGS_DEFAULT)
+  const [viewerPanelOpen, setViewerPanelOpen] = useState(false)
+  const [viewerSaving, setViewerSaving] = useState(false)
+  const isViewer = user?.role === 'viewer'
+  const canSeeDealValues = !(user?.role === 'viewer') || viewerSettings.show_deal_values
+  const canSeeContact = !(user?.role === 'viewer') || viewerSettings.show_contact_details
   const [leads, setLeads] = useState<Lead[]>([])
   const [filtered, setFiltered] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
@@ -321,6 +360,7 @@ export default function CRMDashboard() {
   })
   // Quotes (documents per lead)
   const [quotesByLead, setQuotesByLead] = useState<Record<string, Quote[]>>({})
+  const [sampleByLead, setSampleByLead] = useState<Record<string, { id: string; requested_at: string | null; sent_at: string | null; received_at: string | null; product_type: string | null }>>({})
   const [sendingQuoteId, setSendingQuoteId] = useState<string | null>(null)
   const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null)
   // Email editing per document
@@ -367,8 +407,11 @@ export default function CRMDashboard() {
   const [connectedRepEmails, setConnectedRepEmails] = useState<Set<string>>(new Set())
   // Email history drawer state. Single shared instance, only one open at a time.
   const [selectedLeadForHistory, setSelectedLeadForHistory] = useState<{ id: string; name: string } | null>(null)
+  const [selectedLeadForTimeline, setSelectedLeadForTimeline] = useState<{ id: string; name: string } | null>(null)
   // Qualification form drawer state. Single shared instance, only opens for leads with source_payload.
   const [selectedLeadForForm, setSelectedLeadForForm] = useState<{ id: string; name: string } | null>(null)
+  // Enrichment drawer state. Shows Gemini enrichment data for a single lead.
+  const [selectedLeadForEnrichment, setSelectedLeadForEnrichment] = useState<Lead | null>(null)
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
@@ -381,11 +424,27 @@ export default function CRMDashboard() {
     const { data } = await supabase.from('crm_users').select('*').eq('email', authUser.email).single()
     if (!data) { router.push('/crm/login'); return null }
     setUser(data)
+    // Load the real active reps for the assign-to-rep dropdown, so it does not
+    // depend on which leads happen to be loaded.
+    const { data: reps } = await supabase
+      .from('crm_users')
+      .select('email, name, rep_assigned_name, role, is_active')
+      .eq('role', 'rep')
+      .eq('is_active', true)
+      .order('name')
+    if (reps) {
+      setRepList(
+        (reps as { email: string; name: string; rep_assigned_name: string | null }[])
+          .map(r => ({ email: r.email, name: r.rep_assigned_name || r.name || r.email.split('@')[0] }))
+      )
+    }
+    const { data: vs } = await supabase.from('crm_viewer_settings').select('*').eq('id', 1).single()
+    if (vs) setViewerSettings(vs as ViewerSettings)
     return data as CRMUser
   }, [supabase, router])
 
   const loadLeads = useCallback(async (crmUser: CRMUser) => {
-    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,product_focus,order_completed_at,marketing_sourced,source_payload'
+    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,proposal_signed_at,payment_due_at,order_completed_at,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,source_payload,business_description,products_offered,employee_size_band,icp_fit_score,icp_fit_reason,pain_hooks,product_recommendations,buying_signal_strength,buying_signal_summary,buying_signal_evidence,buying_signal_detected_at,buying_signal_scanned_at,last_enriched_at,product_focus,marketing_sourced'
     const PAGE_SIZE = 1000
     const allLeads: Lead[] = []
     let from = 0
@@ -430,6 +489,23 @@ export default function CRMDashboard() {
     }
   }, [supabase])
 
+  // Load each lead's primary (most recent) sample so the inline tracker shows existing dates
+  const loadSamples = useCallback(async () => {
+    const { data } = await supabase
+      .from('lead_samples')
+      .select('id, lead_id, requested_at, sent_at, received_at, product_type, created_at')
+      .not('lead_id', 'is', null)
+      .order('created_at', { ascending: false })
+    if (data) {
+      const byLead: Record<string, { id: string; requested_at: string | null; sent_at: string | null; received_at: string | null; product_type: string | null }> = {}
+      for (const r of data as Array<{ id: string; lead_id: string; requested_at: string | null; sent_at: string | null; received_at: string | null; product_type: string | null }>) {
+        if (!r.lead_id || byLead[r.lead_id]) continue // keep most recent only
+        byLead[r.lead_id] = { id: r.id, requested_at: r.requested_at, sent_at: r.sent_at, received_at: r.received_at, product_type: r.product_type }
+      }
+      setSampleByLead(byLead)
+    }
+  }, [supabase])
+
   // Commit C: load all active (non-superseded) receipts and group by their parent invoice id.
   const loadReceipts = useCallback(async () => {
     const { data } = await supabase
@@ -453,16 +529,17 @@ export default function CRMDashboard() {
     await loadLeads(user)
     await loadQuotes()
     await loadReceipts()
+    await loadSamples()
     setRefreshing(false)
   }
 
   useEffect(() => {
     setLoading(true)
     loadUser().then(u => {
-      if (u) loadLeads(u).then(() => { setLoading(false); loadQuotes(); loadReceipts() })
+      if (u) loadLeads(u).then(() => { setLoading(false); loadQuotes(); loadReceipts(); loadSamples() })
       else setLoading(false)
     })
-  }, [loadUser, loadLeads, loadQuotes, loadReceipts])
+  }, [loadUser, loadLeads, loadQuotes, loadReceipts, loadSamples])
 
   // Load Gmail OAuth connection status once on mount so we can disable the
   // per row Email button for reps who have not connected their inbox yet.
@@ -508,7 +585,18 @@ export default function CRMDashboard() {
     setFiltered(result)
   }, [leads, search, stageFilter, repFilter])
 
+  const saveViewerSettings = async (next: ViewerSettings) => {
+    setViewerSettings(next)
+    setViewerSaving(true)
+    try {
+      const { error } = await supabase.from('crm_viewer_settings')
+        .update({ ...next, updated_at: new Date().toISOString() }).eq('id', 1)
+      showToast(error ? 'Could not save: ' + error.message : 'Viewer access updated', error ? 'error' : 'success')
+    } finally { setViewerSaving(false) }
+  }
+
   const updateLead = async (id: string, updates: Record<string, unknown>) => {
+    if (isViewer) return
     setSaving(id)
     const { error } = await supabase
       .from('master_leads')
@@ -536,7 +624,37 @@ export default function CRMDashboard() {
     setSaving(null)
   }
 
+  // Inline sample tracker: upsert the lead's primary sample dates (feeds the Gantt)
+  const saveSampleDates = async (
+    leadId: string,
+    patch: { requested_at?: string | null; sent_at?: string | null; received_at?: string | null; product_type?: string | null }
+  ) => {
+    if (isViewer) return
+    const current = sampleByLead[leadId] || { id: '', requested_at: null, sent_at: null, received_at: null, product_type: null }
+    const next = {
+      requested_at: patch.requested_at !== undefined ? patch.requested_at : current.requested_at,
+      sent_at: patch.sent_at !== undefined ? patch.sent_at : current.sent_at,
+      received_at: patch.received_at !== undefined ? patch.received_at : current.received_at,
+      product_type: patch.product_type !== undefined ? patch.product_type : current.product_type,
+    }
+    // optimistic local update
+    setSampleByLead(prev => ({ ...prev, [leadId]: { id: prev[leadId]?.id || 'pending', ...next } }))
+    try {
+      const res = await fetch('/api/crm/lead_timeline', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead_id: leadId, ...next }),
+      })
+      const json = await res.json()
+      if (!json.ok) { showToast('Could not save sample: ' + (json.error || ''), 'error'); return }
+      if (json.sample?.id) setSampleByLead(prev => ({ ...prev, [leadId]: { id: json.sample.id, ...next } }))
+      showToast('Sample updated')
+    } catch {
+      showToast('Could not save sample', 'error')
+    }
+  }
+
   const openQuoteModal = (lead: Lead, docType: 'proforma_invoice' | 'invoice', e: React.MouseEvent) => {
+    if (isViewer) return
     e.stopPropagation()
     setQuoteModal({ lead, docType, mode: 'create' })
     setQuoteNotes('')
@@ -721,6 +839,7 @@ export default function CRMDashboard() {
   }
 
   const sendQuote = async (quote: Quote, lead: Lead) => {
+    if (isViewer) return
     if (sendingQuoteId) return
     const recipient = quote.email || lead.email
     const recipientName = quote.customer_name || lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Customer'
@@ -763,6 +882,7 @@ export default function CRMDashboard() {
 
   // Open the Send Receipt modal and load the default email body.
   const sendReceipt = async (receipt: Receipt, invoice: Quote, lead: Lead) => {
+    if (isViewer) return
     if (sendingReceiptId) return
     const recipient = invoice.email || lead.email || ''
     setSendReceiptModal({
@@ -849,6 +969,7 @@ export default function CRMDashboard() {
   // For the case where a rep accidentally issued a document against the wrong lead.
   // Server route enforces: not sent, not superseded, no children, no receipts, no revisions.
   const deleteQuote = async (quote: Quote, lead: Lead) => {
+    if (isViewer) return
     if (deletingQuoteId) return
     const docLabel = quote.doc_type === 'invoice' ? 'Invoice' : 'Proforma'
     if (!window.confirm(
@@ -876,6 +997,7 @@ export default function CRMDashboard() {
   }
 
   const saveQuoteEmail = async (quoteId: string, leadId: string) => {
+    if (isViewer) return
     const email = editingEmailValue.trim()
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       showToast('Invalid email address', 'error')
@@ -897,6 +1019,7 @@ export default function CRMDashboard() {
   // If a Deposit already exists and no Balance has been issued, default to Balance
   // so the user skips the "click → Invoice, oh wait I need to change the radio" step.
   const openConvertModal = (parent: Quote, lead: Lead, e: React.MouseEvent) => {
+    if (isViewer) return
     e.stopPropagation()
     const existingSiblings = (quotesByLead[lead.id] || []).filter(q =>
       q.doc_type === 'invoice' &&
@@ -1000,6 +1123,7 @@ export default function CRMDashboard() {
   // Pre-fills the outstanding balance (invoice total minus previously received)
   // so the most common case (full payment) is a single click.
   const openReceiptModal = (invoice: Quote, lead: Lead, e: React.MouseEvent) => {
+    if (isViewer) return
     e.stopPropagation()
     const existing = (receiptsByInvoice[invoice.id] || []).filter(r => !r.superseded_by)
     const cumulative = existing.reduce((sum, r) => sum + Number(r.actual_amount || 0), 0)
@@ -1144,6 +1268,7 @@ export default function CRMDashboard() {
   }
 
   const submitQuote = async () => {
+    if (isViewer) return
     if (!quoteModal || !user || quoteLineItems.length === 0) return
     const { lead, docType, mode, sourceQuoteId, sourceQuoteNumber } = quoteModal
     const isInvoice = docType === 'invoice'
@@ -1413,16 +1538,28 @@ export default function CRMDashboard() {
 
   const submitNewLead = async () => {
     if (!user) return
-    const email = newLead.email.trim().toLowerCase()
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      showToast('Valid email address is required', 'error')
+    const rawEmail = newLead.email.trim().toLowerCase()
+    // Email is optional. If given, it must be valid. If blank, we generate a
+    // unique non-routable placeholder so the lead can be saved and still passes
+    // the unique-email index without colliding with other no-email leads.
+    if (rawEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+      showToast('That email does not look valid. Fix it or leave it blank.', 'error')
       return
     }
+    const hasIdentity = (newLead.first_name || newLead.last_name || newLead.company).trim()
+    if (!rawEmail && !hasIdentity) {
+      showToast('Add at least a name or a company.', 'error')
+      return
+    }
+    const email = rawEmail || `noemail+${Date.now()}${Math.floor(Math.random()*1000)}@placeholder.numat.ph`
+    const isPlaceholderEmail = !rawEmail
     setAddLeadSubmitting(true)
-    const repNameMap: Record<string,string> = { 'mohan@numat.ph': 'Mohan', 'bryan@numat.ph': 'Bryan', 'nick@numat.ph': 'Nick', 'eugene@numat.ph': 'Eugene' }
+    if (isViewer) { setAddLeadSubmitting(false); return }
     // Non-admins can only create leads assigned to themselves
     const repEmail = user.role === 'admin' ? (newLead.rep_email || null) : user.email
-    const repName = repEmail ? (repNameMap[repEmail] || repEmail.split('@')[0]) : null
+    const repName = repEmail
+      ? (repList.find(r => r.email === repEmail)?.name || repEmail.split('@')[0])
+      : null
     const fullName = [newLead.first_name, newLead.last_name].filter(Boolean).join(' ').trim() || null
     const payload: Record<string, unknown> = {
       email,
@@ -1447,11 +1584,21 @@ export default function CRMDashboard() {
       status: 'pending',
       last_activity_at: new Date().toISOString(),
     }
-    // Check if email already exists before inserting
-    if (payload.email) {
-      const { data: existing } = await supabase.from('master_leads').select('id,full_name,email,pipeline_stage,rep_assigned').eq('email', payload.email).maybeSingle()
+    // A placeholder email is not a real address, so flag it so the outreach
+    // engine never tries to send to it.
+    if (isPlaceholderEmail) {
+      payload.email_validation_status = 'invalid'
+      payload.suppression_reason = 'no email on file (placeholder)'
+    }
+    // Check if email already exists before inserting. Skip for placeholder
+    // emails, which are unique by construction and not real addresses.
+    if (payload.email && !isPlaceholderEmail) {
+      const { data: existing } = await supabase.from('master_leads').select('id,full_name,email,pipeline_stage,rep_assigned,rep_email').eq('email', payload.email).maybeSingle()
       if (existing) {
-        showToast(`This email already exists in the CRM (${existing.full_name || existing.email} · ${existing.pipeline_stage || 'new'} · ${existing.rep_assigned || 'unassigned'}). Search for them in the lead list.`, 'error')
+        // rep_email is the source of truth (drives RLS-style filtering); rep_assigned is a display label that can drift.
+        // Prefer rep_email; fall back to rep_assigned; show 'unassigned' if neither set.
+        const ownerLabel = existing.rep_email || existing.rep_assigned || 'unassigned'
+        showToast(`This email already exists in the CRM (${existing.full_name || existing.email} · ${existing.pipeline_stage || 'new'} · ${ownerLabel}). Search for them in the lead list.`, 'error')
         setAddLeadSubmitting(false)
         return
       }
@@ -1523,6 +1670,40 @@ export default function CRMDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {user?.role === 'admin' && viewerPanelOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20" >
+          <div className="absolute inset-0 bg-black/40" onClick={() => setViewerPanelOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-start justify-between mb-1">
+              <h2 className="text-base font-semibold text-gray-900">Viewer Access</h2>
+              <button onClick={() => setViewerPanelOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">Control what a read only viewer (for example Wavemaker Impact) can see in the CRM. Viewers can never edit, send, or create anything. These switches only hide or show information.</p>
+            <div className="space-y-1">
+              {([
+                ['show_leads', 'Leads and pipeline'],
+                ['show_timeline', 'Lead timeline (Gantt and samples)'],
+                ['show_email_history', 'Email history'],
+                ['show_quotes_invoices', 'Quotes and invoices'],
+                ['show_deal_values', 'Deal values (peso amounts)'],
+                ['show_contact_details', 'Contact details (email and phone)'],
+              ] as [keyof ViewerSettings, string][]).map(([key, label]) => (
+                <label key={key} className="flex items-center justify-between py-2 px-1 border-b border-gray-100 last:border-0 cursor-pointer">
+                  <span className="text-sm text-gray-700">{label}</span>
+                  <button
+                    type="button"
+                    disabled={viewerSaving}
+                    onClick={() => saveViewerSettings({ ...viewerSettings, [key]: !viewerSettings[key] })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${viewerSettings[key] ? 'bg-green-600' : 'bg-gray-300'} disabled:opacity-50`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${viewerSettings[key] ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-4">Changes save instantly and apply to every viewer.</p>
+          </div>
+        </div>
+      )}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
           {toast.msg}
@@ -1539,6 +1720,13 @@ export default function CRMDashboard() {
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user?.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
               {user?.role}
             </span>
+            {user?.role === 'admin' && (
+              <button onClick={() => setViewerPanelOpen(o => !o)}
+                className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                title="Control what read only viewers (e.g. Wavemaker Impact) can see">
+                Viewer Access
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <a
@@ -1557,9 +1745,9 @@ export default function CRMDashboard() {
                 Schematic Estimator
               </a>
             ) : null}
-            <button onClick={() => setAddLeadOpen(true)} className="px-3 py-1.5 bg-green-700 hover:bg-green-800 rounded-lg text-white text-xs font-medium flex items-center gap-1" title="Add a new lead">
+            {!isViewer && (<button onClick={() => setAddLeadOpen(true)} className="px-3 py-1.5 bg-green-700 hover:bg-green-800 rounded-lg text-white text-xs font-medium flex items-center gap-1" title="Add a new lead">
               <span className="text-base leading-none">+</span> Add Lead
-            </button>
+            </button>)}
             <button onClick={refresh} disabled={refreshing} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 text-lg leading-none disabled:opacity-40" title="Refresh">
               {refreshing ? '⟳' : '↻'}
             </button>
@@ -1726,7 +1914,7 @@ export default function CRMDashboard() {
                           {formatStatusLabel(lead.status)}
                         </span>
                       )}
-                      {lead.quoted_at && (
+                      {lead.quoted_at && canSeeDealValues && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
                           ₱{Number(lead.deal_value_php || 0).toLocaleString()} quoted
                         </span>
@@ -1743,6 +1931,7 @@ export default function CRMDashboard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 md:ml-3 shrink-0 flex-wrap" onClick={e => e.stopPropagation()}>
+                    {!isViewer && (<>
                     <button onClick={e => openQuoteModal(lead, 'proforma_invoice', e)}
                       className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${lead.quoted_at ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-white text-green-700 border-green-200 hover:bg-green-50'}`}
                       title="Issue a Proforma Invoice (pre-sale proposal)">
@@ -1772,11 +1961,40 @@ export default function CRMDashboard() {
                         </button>
                       )
                     })()}
-                    <button
+                    </>)}
+                    {(!isViewer || viewerSettings.show_email_history) && (<button
                       onClick={e => { e.stopPropagation(); setSelectedLeadForHistory({ id: lead.id, name: displayName }) }}
                       title="View email history with this lead"
                       className="text-xs px-3 py-1.5 rounded-lg border font-medium bg-white text-gray-700 border-gray-200 hover:bg-gray-50 transition-colors">
                       History
+                    </button>)}
+                    {(!isViewer || viewerSettings.show_timeline) && (<button
+                      onClick={e => { e.stopPropagation(); setSelectedLeadForTimeline({ id: lead.id, name: displayName }) }}
+                      title="View pipeline timeline and sample tracking"
+                      className="text-xs px-3 py-1.5 rounded-lg border font-medium bg-white text-gray-700 border-gray-200 hover:bg-gray-50 transition-colors">
+                      Timeline
+                    </button>)}
+                    <button
+                      onClick={e => { e.stopPropagation(); setSelectedLeadForEnrichment(lead) }}
+                      title={lead.last_enriched_at ? `ICP fit ${lead.icp_fit_score ?? '?'} / 100` : 'Lead not yet enriched'}
+                      className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
+                        lead.buying_signal_strength === 'hot'
+                          ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                          : lead.buying_signal_strength === 'warm'
+                            ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'
+                            : (lead.icp_fit_score ?? 0) >= 80
+                              ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                              : (lead.icp_fit_score ?? 0) >= 60
+                                ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                      }`}>
+                      {lead.buying_signal_strength === 'hot'
+                        ? `🔥 ${lead.icp_fit_score ?? '?'}`
+                        : lead.buying_signal_strength === 'warm'
+                          ? `📈 ${lead.icp_fit_score ?? '?'}`
+                          : lead.icp_fit_score !== null && lead.icp_fit_score !== undefined
+                            ? `Fit ${lead.icp_fit_score}`
+                            : 'Insights'}
                     </button>
                     {lead.source_payload && (
                       <button
@@ -1794,7 +2012,7 @@ export default function CRMDashboard() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Pipeline Stage</label>
-                        <select defaultValue={lead.pipeline_stage || 'new'}
+                        <select disabled={isViewer} defaultValue={lead.pipeline_stage || 'new'}
                           onChange={e => {
                             const v = e.target.value
                             const patch: Record<string, unknown> = { pipeline_stage: v }
@@ -1825,7 +2043,7 @@ export default function CRMDashboard() {
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Email Status</label>
-                        <select defaultValue={lead.status || 'pending'}
+                        <select disabled={isViewer} defaultValue={lead.status || 'pending'}
                           onChange={e => updateLead(lead.id, { status: e.target.value })}
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>)}
@@ -1835,7 +2053,7 @@ export default function CRMDashboard() {
                         <label className="text-xs font-medium text-gray-400 block mb-1">Value (PHP)</label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₱</span>
-                          <input type="number" defaultValue={lead.deal_value_php || ''}
+                          <input disabled={isViewer} type="number" defaultValue={lead.deal_value_php || ''}
                             onBlur={e => updateLead(lead.id, { deal_value_php: parseFloat(e.target.value) || null })}
                             placeholder="0" className="w-full border border-gray-200 bg-white rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                         </div>
@@ -1844,26 +2062,99 @@ export default function CRMDashboard() {
                         <label className="text-xs font-medium text-gray-400 block mb-1">Value (USD)</label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                          <input type="number" defaultValue={lead.deal_value_usd || ''}
+                          <input disabled={isViewer} type="number" defaultValue={lead.deal_value_usd || ''}
                             onBlur={e => updateLead(lead.id, { deal_value_usd: parseFloat(e.target.value) || null })}
                             placeholder="0" className="w-full border border-gray-200 bg-white rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                         </div>
                       </div>
+                    </div>
+
+                    {/* Sample tracking: reps enter these three dates, which drive the Gantt timeline */}
+                    <div className="mt-4 border border-blue-100 bg-blue-50/40 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Sample tracking</span>
+                        <span className="text-[11px] text-blue-700">Fills the timeline automatically</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Sample requested</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={sampleByLead[lead.id]?.requested_at || ''}
+                            onChange={e => saveSampleDates(lead.id, { requested_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Sample delivered (sent out)</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={sampleByLead[lead.id]?.sent_at || ''}
+                            onChange={e => saveSampleDates(lead.id, { sent_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Received by lead</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={sampleByLead[lead.id]?.received_at || ''}
+                            onChange={e => saveSampleDates(lead.id, { received_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <label className="text-xs font-medium text-gray-500 block mb-1">Sample detail (optional)</label>
+                        <input disabled={isViewer} type="text"
+                          defaultValue={sampleByLead[lead.id]?.product_type || ''}
+                          onBlur={e => saveSampleDates(lead.id, { product_type: e.target.value || null })}
+                          placeholder="e.g. NuBam 12mm and 19mm, 100mm x 100mm"
+                          className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+                      </div>
+                    </div>
+
+                    {/* Deal milestones: feed the status table columns reps own */}
+                    <div className="mt-4 border border-emerald-100 bg-emerald-50/40 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-emerald-900 uppercase tracking-wide">Deal milestones</span>
+                        <span className="text-[11px] text-emerald-700">Shows on the status report</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Proposal signed</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={lead.proposal_signed_at ? String(lead.proposal_signed_at).slice(0,10) : ''}
+                            onChange={e => updateLead(lead.id, { proposal_signed_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Due date</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={lead.payment_due_at ? String(lead.payment_due_at).slice(0,10) : ''}
+                            onChange={e => updateLead(lead.id, { payment_due_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-500 block mb-1">Order completed</label>
+                          <input disabled={isViewer} type="date"
+                            defaultValue={lead.order_completed_at ? String(lead.order_completed_at).slice(0,10) : ''}
+                            onChange={e => updateLead(lead.id, { order_completed_at: e.target.value || null })}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Phone</label>
-                        <input type="text" defaultValue={lead.phone || ''} placeholder="+63..."
+                        <input disabled={isViewer} type="text" defaultValue={lead.phone || ''} placeholder="+63..."
                           onBlur={e => updateLead(lead.id, { phone: e.target.value || null })}
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Title / Role</label>
-                        <input type="text" defaultValue={lead.title || ''} placeholder="e.g. Project Manager"
+                        <input disabled={isViewer} type="text" defaultValue={lead.title || ''} placeholder="e.g. Project Manager"
                           onBlur={e => updateLead(lead.id, { title: e.target.value || null })}
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Segment</label>
-                        <select defaultValue={lead.segment || ''}
+                        <select disabled={isViewer} defaultValue={lead.segment || ''}
                           onChange={e => updateLead(lead.id, { segment: e.target.value || null })}
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                           <option value="">— None —</option>
@@ -1876,7 +2167,7 @@ export default function CRMDashboard() {
                       {user?.role === 'admin' && (
                         <div>
                           <label className="text-xs font-medium text-gray-400 block mb-1">Rep Assigned</label>
-                          <select defaultValue={lead.rep_email || ''}
+                          <select disabled={isViewer} defaultValue={lead.rep_email || ''}
                             onChange={e => {
                               const email = e.target.value
                               const repNameMap: Record<string,string> = {
@@ -1901,7 +2192,7 @@ export default function CRMDashboard() {
                       )}
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Reply Classification</label>
-                        <select defaultValue={lead.reply_classification || ''}
+                        <select disabled={isViewer} defaultValue={lead.reply_classification || ''}
                           onChange={e => updateLead(lead.id, { reply_classification: e.target.value || null })}
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                           <option value="">— None —</option>
@@ -1910,13 +2201,13 @@ export default function CRMDashboard() {
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Appointment Date</label>
-                        <input type="date" defaultValue={lead.appointment_date ? lead.appointment_date.slice(0, 10) : ''}
+                        <input disabled={isViewer} type="date" defaultValue={lead.appointment_date ? lead.appointment_date.slice(0, 10) : ''}
                           onBlur={e => updateLead(lead.id, { appointment_date: e.target.value || null })}
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Close Date</label>
-                        <input type="date" defaultValue={lead.close_date ? lead.close_date.slice(0, 10) : ''}
+                        <input disabled={isViewer} type="date" defaultValue={lead.close_date ? lead.close_date.slice(0, 10) : ''}
                           onBlur={e => updateLead(lead.id, { close_date: e.target.value || null })}
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                       </div>
@@ -1948,13 +2239,13 @@ export default function CRMDashboard() {
                         <span>
                           Quote issued {new Date(lead.quoted_at).toLocaleDateString('en-PH',{day:'numeric',month:'short',year:'numeric'})}
                           {lead.quote_issued_by && ' by ' + lead.quote_issued_by.split('@')[0]}
-                          {lead.deal_value_php && ' · ₱' + Number(lead.deal_value_php).toLocaleString()}
-                          {lead.deal_value_usd && ' / \u0024' + Number(lead.deal_value_usd).toLocaleString()}
+                          {canSeeDealValues && lead.deal_value_php && ' · ₱' + Number(lead.deal_value_php).toLocaleString()}
+                          {canSeeDealValues && lead.deal_value_usd && ' / \u0024' + Number(lead.deal_value_usd).toLocaleString()}
                           {lead.quote_notes && ' · ' + lead.quote_notes}
                         </span>
                       </div>
                     )}
-                    {quotesByLead[lead.id] && quotesByLead[lead.id].length > 0 && (
+                    {(!isViewer || viewerSettings.show_quotes_invoices) && quotesByLead[lead.id] && quotesByLead[lead.id].length > 0 && (
                       <div className="mt-3">
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Documents</div>
                         <div className="space-y-1.5">
@@ -1971,7 +2262,7 @@ export default function CRMDashboard() {
                             const outstanding = Math.max(0, invoiceTotal - cumulativeReceived)
                             const isPaid = isInvoice && receiptsForInvoice.length > 0 && outstanding <= 0.01
                             const isPartial = isInvoice && receiptsForInvoice.length > 0 && outstanding > 0.01
-                            const canIssueReceipt = isInvoice && isSent && !isSuperseded && !isPaid && user?.role === 'admin'
+                            const canIssueReceipt = !isViewer && isInvoice && isSent && !isSuperseded && !isPaid && user?.role === 'admin'
                             // Commit C UX: proforma-level tranche status (shown only on proformas that have been converted)
                             const proformaSiblings = !isInvoice
                               ? (quotesByLead[lead.id] || []).filter(s =>
@@ -2039,14 +2330,14 @@ export default function CRMDashboard() {
                                   {isSent ? `✓ Sent ${relDate(q.sent_at)}` : 'Not sent'}
                                 </span>
                                 <div className="flex-1 min-w-2" />
-                                {!isSent && !isSuperseded && (
+                                {!isViewer && !isSent && !isSuperseded && (
                                   <button onClick={e => openEditOrReviseModal(lead, q, 'edit', e)}
                                     className="px-2.5 py-1 border border-gray-200 rounded hover:bg-gray-50 text-gray-700 font-medium"
                                     title="Edit this draft in place (quote number unchanged)">
                                     Edit
                                   </button>
                                 )}
-                                {!isSent && !isSuperseded && (
+                                {!isViewer && !isSent && !isSuperseded && (
                                   <button onClick={e => { e.stopPropagation(); deleteQuote(q, lead) }}
                                     disabled={deletingQuoteId === q.id}
                                     className="px-2.5 py-1 border border-red-200 rounded hover:bg-red-50 text-red-600 font-medium disabled:opacity-50"
@@ -2054,7 +2345,7 @@ export default function CRMDashboard() {
                                     {deletingQuoteId === q.id ? 'Deleting…' : 'Delete'}
                                   </button>
                                 )}
-                                {isSent && !isSuperseded && !isInvoice && !proformaFullyInvoiced && (
+                                {!isViewer && isSent && !isSuperseded && !isInvoice && !proformaFullyInvoiced && (
                                   <button onClick={e => openConvertModal(q, lead, e)}
                                     className={`px-2.5 py-1 border rounded font-medium ${proformaPartiallyInvoiced ? 'border-amber-300 hover:bg-amber-50 text-amber-700' : 'border-emerald-200 hover:bg-emerald-50 text-emerald-700'}`}
                                     title={proformaPartiallyInvoiced
@@ -2070,7 +2361,7 @@ export default function CRMDashboard() {
                                     + Receipt
                                   </button>
                                 )}
-                                {isSent && !isSuperseded && (
+                                {!isViewer && isSent && !isSuperseded && (
                                   <button onClick={e => openEditOrReviseModal(lead, q, 'revise', e)}
                                     className="px-2.5 py-1 border border-purple-200 rounded hover:bg-purple-50 text-purple-700 font-medium"
                                     title="Issue a new revision (creates a new record with -R suffix)">
@@ -2081,7 +2372,7 @@ export default function CRMDashboard() {
                                   className="px-2.5 py-1 border border-gray-200 rounded hover:bg-gray-50 text-gray-700 font-medium">
                                   Preview
                                 </button>
-                                {!isSuperseded && (
+                                {!isViewer && !isSuperseded && (
                                   <button onClick={() => sendQuote(q, lead)} disabled={isSending}
                                     className={`px-2.5 py-1 rounded font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed ${isSent ? 'bg-gray-500 hover:bg-gray-600' : 'bg-orange-600 hover:bg-orange-700'}`}>
                                     {isSending ? 'Sending…' : isSent ? 'Resend' : 'Send'}
@@ -2109,18 +2400,18 @@ export default function CRMDashboard() {
                                   ) : (
                                     <>
                                       <span className={`truncate ${q.email && q.email !== lead.email ? 'text-amber-700 font-medium' : 'text-gray-500'}`}>
-                                        {q.email || lead.email || '—'}
+                                        {canSeeContact ? (q.email || lead.email || '—') : '•••'}
                                       </span>
                                       {q.email && q.email !== lead.email && (
                                         <span className="shrink-0 text-amber-600 text-xs italic">(override)</span>
                                       )}
-                                      <button
+                                      {!isViewer && (<button
                                         onClick={e => { e.stopPropagation(); setEditingEmailQuoteId(q.id); setEditingEmailValue(q.email || lead.email || '') }}
                                         className="shrink-0 text-gray-400 hover:text-green-700 text-xs px-1 rounded"
                                         title="Change recipient email for this document"
                                       >
                                         ✏️
-                                      </button>
+                                      </button>)}
                                     </>
                                   )}
                                 </div>
@@ -2157,10 +2448,10 @@ export default function CRMDashboard() {
                                           className="px-2 py-0.5 border border-gray-200 rounded hover:bg-white text-gray-700 font-medium">
                                           Preview
                                         </button>
-                                        <button onClick={() => sendReceipt(r, q, lead)} disabled={sendingReceiptId === r.id}
+                                        {!isViewer && (<button onClick={() => sendReceipt(r, q, lead)} disabled={sendingReceiptId === r.id}
                                           className={`px-2 py-0.5 rounded font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed ${r.sent_at ? 'bg-gray-500 hover:bg-gray-600' : 'bg-orange-600 hover:bg-orange-700'}`}>
                                           {sendingReceiptId === r.id ? 'Sending.' : r.sent_at ? 'Resend' : 'Send'}
-                                        </button>
+                                        </button>)}
                                       </div>
                                     )
                                   })}
@@ -2942,10 +3233,10 @@ export default function CRMDashboard() {
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
                 <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-500 block mb-1">Email <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Email <span className="text-gray-400">(optional)</span></label>
                   <input type="email" value={newLead.email}
                     onChange={e => setNewLead({ ...newLead, email: e.target.value })}
-                    placeholder="name@company.com"
+                    placeholder="Leave blank if unknown"
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
                 <div className="col-span-2">
@@ -3028,9 +3319,7 @@ export default function CRMDashboard() {
                       onChange={e => setNewLead({ ...newLead, rep_email: e.target.value })}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
                       <option value="">— Unassigned —</option>
-                      <option value="bryan@numat.ph">Bryan (Philippines)</option>
-                      <option value="mohan@numat.ph">Mohan (International)</option>
-                      <option value="nick@numat.ph">Nick</option>
+                      {repList.map(r => <option key={r.email} value={r.email}>{r.name}</option>)}
                     </select>
                   </div>
                 )}
@@ -3053,7 +3342,7 @@ export default function CRMDashboard() {
                 className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                 Cancel
               </button>
-              <button onClick={submitNewLead} disabled={addLeadSubmitting || !newLead.email}
+              <button onClick={submitNewLead} disabled={addLeadSubmitting || !(newLead.email.trim() || newLead.first_name.trim() || newLead.last_name.trim() || newLead.company.trim())}
                 className="flex-1 py-2.5 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                 {addLeadSubmitting ? 'Adding...' : 'Add Lead'}
               </button>
@@ -3086,6 +3375,15 @@ export default function CRMDashboard() {
         />
       )}
 
+      {selectedLeadForTimeline && (
+        <LeadTimelineDrawer
+          leadId={selectedLeadForTimeline.id}
+          leadName={selectedLeadForTimeline.name}
+          open={true}
+          onClose={() => setSelectedLeadForTimeline(null)}
+        />
+      )}
+
       <QualificationFormDrawer
         open={selectedLeadForForm !== null}
         leadId={selectedLeadForForm?.id || null}
@@ -3093,6 +3391,12 @@ export default function CRMDashboard() {
         isAdmin={user?.role === 'admin'}
         onClose={() => setSelectedLeadForForm(null)}
         onDeleted={() => { if (user) loadLeads(user) }}
+      />
+
+      <EnrichmentDrawer
+        lead={selectedLeadForEnrichment}
+        open={selectedLeadForEnrichment !== null}
+        onClose={() => setSelectedLeadForEnrichment(null)}
       />
     </div>
   )

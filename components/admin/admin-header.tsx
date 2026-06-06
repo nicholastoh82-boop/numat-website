@@ -21,7 +21,7 @@ export default function AdminHeader() {
     <header className="bg-card border-b border-border sticky top-0 z-50">
       <div className="flex items-center justify-between px-4 py-3 lg:px-6">
         <div className="flex items-center gap-3">
-          <Link href={role === 'rep' ? '/admin/leads' : '/admin'} className="flex items-center gap-2">
+          <Link href={role === 'rep' ? '/crm/dashboard' : '/admin'} className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
               <Leaf className="w-4 h-4 text-primary-foreground" />
             </div>

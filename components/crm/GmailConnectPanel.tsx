@@ -1,7 +1,8 @@
 // components/crm/GmailConnectPanel.tsx
 // Per rep Gmail OAuth status and connect button.
-// Reads /api/gmail/connect-status, hard codes the three rep emails,
-// and routes a Connect click to /api/gmail/auth?rep_email=...
+// Reads /api/gmail/connect-status which returns the canonical rep list
+// (active reps + admins from crm_users) merged with token status.
+// New hires automatically appear here; no code change needed.
 
 'use client';
 
@@ -25,12 +26,6 @@ type Banner = {
   message: string;
 };
 
-const REPS: Array<{ email: string; name: string }> = [
-  { email: 'nick@numat.ph', name: 'Nick Toh' },
-  { email: 'bryan@numat.ph', name: 'Bryan Suarin' },
-  { email: 'mohan@numat.ph', name: 'Mohan Louis' },
-];
-
 function formatTimestamp(value: string | null): string {
   if (!value) return 'Never';
   const t = Date.parse(value);
@@ -39,10 +34,15 @@ function formatTimestamp(value: string | null): string {
   return d.toLocaleString();
 }
 
+function displayName(rep: RepStatus): string {
+  if (rep.rep_name && rep.rep_name.trim().length > 0) return rep.rep_name;
+  // Fallback: humanize the local part of the email
+  const local = rep.rep_email.split('@')[0] ?? rep.rep_email;
+  return local.charAt(0).toUpperCase() + local.slice(1);
+}
+
 export default function GmailConnectPanel() {
-  const [statusByEmail, setStatusByEmail] = useState<Record<string, RepStatus>>(
-    {}
-  );
+  const [reps, setReps] = useState<RepStatus[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<Banner | null>(null);
@@ -61,14 +61,10 @@ export default function GmailConnectPanel() {
         if (cancelled) return;
         if (!res.ok) {
           setError(json.error ?? `Status ${res.status}`);
-          setStatusByEmail({});
+          setReps([]);
           return;
         }
-        const map: Record<string, RepStatus> = {};
-        for (const r of json.reps ?? []) {
-          map[r.rep_email.toLowerCase()] = r;
-        }
-        setStatusByEmail(map);
+        setReps(json.reps ?? []);
       } catch (e) {
         if (cancelled) return;
         setError(e instanceof Error ? e.message : 'Failed to load status');
@@ -153,7 +149,11 @@ export default function GmailConnectPanel() {
           </div>
         )}
 
-        {!loading && !error && (
+        {!loading && !error && reps.length === 0 && (
+          <div className="text-sm text-gray-500">No active reps to display.</div>
+        )}
+
+        {!loading && !error && reps.length > 0 && (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
@@ -166,16 +166,15 @@ export default function GmailConnectPanel() {
                 </tr>
               </thead>
               <tbody>
-                {REPS.map((rep) => {
-                  const row = statusByEmail[rep.email.toLowerCase()];
-                  const connected = Boolean(row && row.is_active);
+                {reps.map((rep) => {
+                  const connected = Boolean(rep.is_active);
                   return (
-                    <tr key={rep.email} className="border-b border-gray-100">
+                    <tr key={rep.rep_email} className="border-b border-gray-100">
                       <td className="py-3 pr-4">
                         <div className="font-medium text-gray-800">
-                          {rep.name}
+                          {displayName(rep)}
                         </div>
-                        <div className="text-xs text-gray-500">{rep.email}</div>
+                        <div className="text-xs text-gray-500">{rep.rep_email}</div>
                       </td>
                       <td className="py-3 pr-4">
                         <span
@@ -189,15 +188,15 @@ export default function GmailConnectPanel() {
                         </span>
                       </td>
                       <td className="py-3 pr-4 text-gray-700">
-                        {formatTimestamp(row?.connected_at ?? null)}
+                        {formatTimestamp(rep.connected_at)}
                       </td>
                       <td className="py-3 pr-4 text-gray-700">
-                        {formatTimestamp(row?.last_used_at ?? null)}
+                        {formatTimestamp(rep.last_used_at)}
                       </td>
                       <td className="py-3 pr-4">
                         <button
                           type="button"
-                          onClick={() => handleConnect(rep.email)}
+                          onClick={() => handleConnect(rep.rep_email)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
                             connected
                               ? 'border border-gray-300 text-gray-700 hover:bg-gray-50'
