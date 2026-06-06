@@ -58,6 +58,8 @@ interface Lead {
   last_rep_touch_by?: string | null
   last_rep_touch_subject?: string | null
   rep_reply_count?: number | null
+  product_focus?: string | null
+  marketing_sourced?: boolean | null
   source_payload?: any
   // Enrichment fields populated by lead-enrichment and buying-signal-scan crons
   business_description?: string | null
@@ -159,6 +161,7 @@ interface FinanceAccount {
 }
 
 const PIPELINE_STAGES = ['new','contacted','qualified','proposal_sent','meeting_booked','won','lost']
+const PRODUCT_FOCUS_OPTIONS = ['NuBam Boards','NuWall','NuDoor','NuFloor','NuSlat','NuBam Hybrid']
 const STATUS_OPTIONS = ['pending','active','replied','nurturing','booking_sent','booked','closed','cold_close','bounced','unsubscribed']
 
 const STAGE_COLORS: Record<string, string> = {
@@ -441,7 +444,7 @@ export default function CRMDashboard() {
   }, [supabase, router])
 
   const loadLeads = useCallback(async (crmUser: CRMUser) => {
-    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,proposal_signed_at,payment_due_at,order_completed_at,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,source_payload,business_description,products_offered,employee_size_band,icp_fit_score,icp_fit_reason,pain_hooks,product_recommendations,buying_signal_strength,buying_signal_summary,buying_signal_evidence,buying_signal_detected_at,buying_signal_scanned_at,last_enriched_at'
+    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,proposal_signed_at,payment_due_at,order_completed_at,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,source_payload,business_description,products_offered,employee_size_band,icp_fit_score,icp_fit_reason,pain_hooks,product_recommendations,buying_signal_strength,buying_signal_summary,buying_signal_evidence,buying_signal_detected_at,buying_signal_scanned_at,last_enriched_at,product_focus,marketing_sourced'
     const PAGE_SIZE = 1000
     const allLeads: Lead[] = []
     let from = 0
@@ -601,6 +604,23 @@ export default function CRMDashboard() {
       .eq('id', id)
     if (error) { showToast('Failed to save', 'error') }
     else { setLeads(prev => prev.map(l => l.id === id ? { ...l, ...(updates as Partial<Lead>) } : l)) }
+    setSaving(null)
+  }
+
+  const logSample = async (lead: Lead) => {
+    setSaving(lead.id)
+    const today = new Date().toISOString().slice(0, 10)
+    const { error } = await supabase.from('lead_samples').insert({
+      lead_id: lead.id,
+      product_focus: 'NuBam Hybrid',
+      product_type: 'NuBam Hybrid',
+      sent_at: today,
+      status: 'sent',
+      customer_name: lead.full_name || lead.company || null,
+      requestor: 'CRM',
+    })
+    if (error) { showToast('Failed to log sample', 'error') }
+    else { showToast('NuBam Hybrid sample logged as sent today', 'success') }
     setSaving(null)
   }
 
@@ -1993,10 +2013,33 @@ export default function CRMDashboard() {
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Pipeline Stage</label>
                         <select disabled={isViewer} defaultValue={lead.pipeline_stage || 'new'}
-                          onChange={e => updateLead(lead.id, { pipeline_stage: e.target.value })}
+                          onChange={e => {
+                            const v = e.target.value
+                            const patch: Record<string, unknown> = { pipeline_stage: v }
+                            if (v === 'won' && !lead.order_completed_at) patch.order_completed_at = new Date().toISOString()
+                            updateLead(lead.id, patch)
+                          }}
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                           {PIPELINE_STAGES.map(s => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
                         </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 block mb-1">Product Focus</label>
+                        <select defaultValue={lead.product_focus || ''}
+                          onChange={e => updateLead(lead.id, { product_focus: e.target.value || null })}
+                          className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                          <option value="">(none)</option>
+                          {PRODUCT_FOCUS_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 block mb-1">Marketing Sourced</label>
+                        <label className="flex items-center gap-2 h-[38px] px-3 border border-gray-200 bg-white rounded-lg text-sm text-gray-700 cursor-pointer">
+                          <input type="checkbox" defaultChecked={!!lead.marketing_sourced}
+                            onChange={e => updateLead(lead.id, { marketing_sourced: e.target.checked })}
+                            className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500" />
+                          <span>CMO sourced this lead</span>
+                        </label>
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Email Status</label>
@@ -2173,6 +2216,15 @@ export default function CRMDashboard() {
                         <input type="text" defaultValue={lead.follow_up || ''} placeholder="e.g. Call back 20 Apr"
                           onBlur={e => updateLead(lead.id, { follow_up: e.target.value || null })}
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 block mb-1">NuBam Hybrid Sample</label>
+                        <button type="button" disabled={saving === lead.id || lead.product_focus !== 'NuBam Hybrid'}
+                          onClick={() => logSample(lead)}
+                          title={lead.product_focus === 'NuBam Hybrid' ? 'Logs a NuBam Hybrid sample as sent today' : 'Set Product Focus to NuBam Hybrid first'}
+                          className="w-full border border-emerald-300 bg-emerald-50 text-emerald-800 rounded-lg px-3 py-2 text-sm font-medium hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                          {saving === lead.id ? 'Saving' : 'Log sample sent'}
+                        </button>
                       </div>
                       <div className="col-span-2 md:col-span-3">
                         <label className="text-xs font-medium text-gray-400 block mb-1">Notes</label>

@@ -241,3 +241,146 @@ order by
 $$;
 
 grant execute on function public.nbh_scoreboard() to authenticated;
+
+-- ============================================================
+-- NuBam Hybrid input wiring (second pass, applied 2026-06-06)
+--   1. marketing_sourced flag on master_leads (CMO attribution)
+--   2. hybrid variant ply_count = 2 so board runs validate
+--   3. nbh_scoreboard() rebuilt to honor marketing_sourced and
+--      to count meeting_booked as a qualified opportunity
+-- ============================================================
+
+alter table public.master_leads
+  add column if not exists marketing_sourced boolean not null default false;
+
+update public.product_variants v
+  set ply_count = 2
+  from public.products p
+  where p.id = v.product_id and p.slug = 'nubam-hybrid'
+    and (v.ply_count is null or v.ply_count = 0);
+
+create or replace function public.nbh_scoreboard()
+ returns table(kpi_key text, kpi_name text, owner_key text, owner_label text, category text, metric_type text, weekly_target numeric, monthly_target numeric, target_basis text, target_note text, week_actual numeric, month_actual numeric, sort_order integer)
+ language sql
+ stable security definer
+ set search_path to 'public'
+as $function$
+with p as (
+  select
+    date_trunc('week',  (now() at time zone 'Asia/Manila')::date)::date as wk_start,
+    (date_trunc('week', (now() at time zone 'Asia/Manila')::date)::date + 7) as wk_end,
+    date_trunc('month', (now() at time zone 'Asia/Manila')::date)::date as mo_start,
+    (date_trunc('month',(now() at time zone 'Asia/Manila')::date) + interval '1 month')::date as mo_end
+),
+ml as (
+  select
+    (created_at at time zone 'Asia/Manila')::date as created_d,
+    (order_completed_at at time zone 'Asia/Manila')::date as completed_d,
+    (appointment_date at time zone 'Asia/Manila')::date as appt_d,
+    (coalesce(lower(country),'') like 'phil%' or upper(coalesce(country,'')) = 'PH') as is_ph,
+    lower(coalesce(pipeline_stage,'')) as stage_l,
+    (coalesce(marketing_sourced,false) or lower(coalesce(source,'')) like '%market%' or lower(coalesce(lead_source,'')) like '%market%' or lower(coalesce(segment,'')) like '%market%') as is_mktg,
+    id
+  from master_leads
+  where product_focus = 'NuBam Hybrid'
+),
+ls as (
+  select s.sent_at,
+    (coalesce(lower(m.country),'') like 'phil%' or upper(coalesce(m.country,'')) = 'PH') as is_ph
+  from lead_samples s
+  left join master_leads m on m.id = s.lead_id
+  where s.product_focus = 'NuBam Hybrid'
+),
+pbr as (
+  select r.event_date, r.boards_produced, r.boards_passed, r.defects, r.amakan_sheets_consumed
+  from prod_board_runs r
+  where coalesce(r.voided,false) = false
+    and r.variant_id in (
+      select v.id from product_variants v join products pr on pr.id = v.product_id
+      where pr.slug = 'nubam-hybrid'
+    )
+),
+act as (
+  select 'mohan_qual_opps' as k,
+    count(*) filter (where not is_ph and stage_l in ('qualified','negotiating','proposal sent','proposal_sent','meeting_booked','won','closed won') and created_d >= (select wk_start from p) and created_d < (select wk_end from p))::numeric as w,
+    count(*) filter (where not is_ph and stage_l in ('qualified','negotiating','proposal sent','proposal_sent','meeting_booked','won','closed won') and created_d >= (select mo_start from p) and created_d < (select mo_end from p))::numeric as m
+  from ml
+  union all
+  select 'mohan_orders_won',
+    count(*) filter (where not is_ph and stage_l in ('won','closed won') and completed_d >= (select wk_start from p) and completed_d < (select wk_end from p)),
+    count(*) filter (where not is_ph and stage_l in ('won','closed won') and completed_d >= (select mo_start from p) and completed_d < (select mo_end from p))
+  from ml
+  union all
+  select 'eugene_qual_opps',
+    count(*) filter (where is_ph and stage_l in ('qualified','negotiating','proposal sent','proposal_sent','meeting_booked','won','closed won') and created_d >= (select wk_start from p) and created_d < (select wk_end from p)),
+    count(*) filter (where is_ph and stage_l in ('qualified','negotiating','proposal sent','proposal_sent','meeting_booked','won','closed won') and created_d >= (select mo_start from p) and created_d < (select mo_end from p))
+  from ml
+  union all
+  select 'eugene_meetings',
+    count(*) filter (where is_ph and appt_d >= (select wk_start from p) and appt_d < (select wk_end from p)),
+    count(*) filter (where is_ph and appt_d >= (select mo_start from p) and appt_d < (select mo_end from p))
+  from ml
+  union all
+  select 'eugene_orders_won',
+    count(*) filter (where is_ph and stage_l in ('won','closed won') and completed_d >= (select wk_start from p) and completed_d < (select wk_end from p)),
+    count(*) filter (where is_ph and stage_l in ('won','closed won') and completed_d >= (select mo_start from p) and completed_d < (select mo_end from p))
+  from ml
+  union all
+  select 'cmo_leads',
+    count(*) filter (where is_mktg and created_d >= (select wk_start from p) and created_d < (select wk_end from p)),
+    count(*) filter (where is_mktg and created_d >= (select mo_start from p) and created_d < (select mo_end from p))
+  from ml
+  union all
+  select 'cmo_sourced_rev',
+    count(*) filter (where is_mktg and stage_l in ('won','closed won') and completed_d >= (select wk_start from p) and completed_d < (select wk_end from p)),
+    count(*) filter (where is_mktg and stage_l in ('won','closed won') and completed_d >= (select mo_start from p) and completed_d < (select mo_end from p))
+  from ml
+  union all
+  select 'mohan_samples',
+    count(*) filter (where not coalesce(is_ph,false) and sent_at >= (select wk_start from p) and sent_at < (select wk_end from p)),
+    count(*) filter (where not coalesce(is_ph,false) and sent_at >= (select mo_start from p) and sent_at < (select mo_end from p))
+  from ls
+  union all
+  select 'eugene_samples',
+    count(*) filter (where coalesce(is_ph,false) and sent_at >= (select wk_start from p) and sent_at < (select wk_end from p)),
+    count(*) filter (where coalesce(is_ph,false) and sent_at >= (select mo_start from p) and sent_at < (select mo_end from p))
+  from ls
+  union all
+  select 'b22_yield',
+    round(100.0 * sum(boards_passed) filter (where event_date >= (select wk_start from p) and event_date < (select wk_end from p)) / nullif(sum(boards_produced) filter (where event_date >= (select wk_start from p) and event_date < (select wk_end from p)),0), 1),
+    round(100.0 * sum(boards_passed) filter (where event_date >= (select mo_start from p) and event_date < (select mo_end from p)) / nullif(sum(boards_produced) filter (where event_date >= (select mo_start from p) and event_date < (select mo_end from p)),0), 1)
+  from pbr
+  union all
+  select 'b22_reject',
+    round(100.0 * sum(defects) filter (where event_date >= (select wk_start from p) and event_date < (select wk_end from p)) / nullif(sum(boards_produced) filter (where event_date >= (select wk_start from p) and event_date < (select wk_end from p)),0), 1),
+    round(100.0 * sum(defects) filter (where event_date >= (select mo_start from p) and event_date < (select mo_end from p)) / nullif(sum(boards_produced) filter (where event_date >= (select mo_start from p) and event_date < (select mo_end from p)),0), 1)
+  from pbr
+  union all
+  select 'b22_output',
+    sum(boards_produced) filter (where event_date >= (select wk_start from p) and event_date < (select wk_end from p))::numeric,
+    sum(boards_produced) filter (where event_date >= (select mo_start from p) and event_date < (select mo_end from p))::numeric
+  from pbr
+  union all
+  select 'b22_amakan',
+    round(sum(amakan_sheets_consumed) filter (where event_date >= (select wk_start from p) and event_date < (select wk_end from p)) / nullif(sum(boards_produced) filter (where event_date >= (select wk_start from p) and event_date < (select wk_end from p)),0), 2),
+    round(sum(amakan_sheets_consumed) filter (where event_date >= (select mo_start from p) and event_date < (select mo_end from p)) / nullif(sum(boards_produced) filter (where event_date >= (select mo_start from p) and event_date < (select mo_end from p)),0), 2)
+  from pbr
+  union all
+  select 'mohan_conv',
+    null::numeric,
+    round(100.0 * (select count(*) from ml where not is_ph and stage_l in ('won','closed won') and completed_d >= (select mo_start from p) and completed_d < (select mo_end from p))
+      / nullif((select count(*) from ls where not coalesce(is_ph,false) and sent_at >= (select mo_start from p) and sent_at < (select mo_end from p)),0), 1)
+)
+select
+  t.kpi_key, t.kpi_name, t.owner_key, t.owner_label, t.category, t.metric_type,
+  t.weekly_target, t.monthly_target, t.target_basis, t.target_note,
+  a.w as week_actual, a.m as month_actual, t.sort_order
+from nbh_kpi_targets t
+left join act a on a.k = t.kpi_key
+where t.is_active = true
+order by
+  case t.owner_key when 'mohan' then 1 when 'eugene' then 2 when 'cmo' then 3 when 'b22' then 4 else 5 end,
+  t.sort_order;
+$function$;
+
+grant execute on function public.nbh_scoreboard() to authenticated;

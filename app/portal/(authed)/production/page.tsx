@@ -44,12 +44,22 @@ export default async function PortalProduction() {
   const supabase = await createClient()
 
   // Active board variants for the board run dropdown
-  const { data: variants } = await supabase
+  const { data: stdVariants } = await supabase
     .from('product_variants')
     .select('id, sku, thickness_mm, size_label, ply_count, products(name)')
     .eq('is_available', true)
     .or('sku.ilike.NUBAM%,sku.ilike.NUDOOR%,sku.ilike.NUFLOOR%,sku.ilike.%COMPOSITE%')
     .order('sku')
+
+  // NuBam Hybrid variant stays is_available=false (hidden from the public site and quotes).
+  // It is surfaced here only so production can log hybrid board runs.
+  const { data: hybridVariants } = await supabase
+    .from('product_variants')
+    .select('id, sku, thickness_mm, size_label, ply_count, products(name)')
+    .ilike('sku', 'NBH%')
+    .order('sku')
+
+  const variants = [...(stdVariants ?? []), ...(hybridVariants ?? [])]
 
   // Inventory snapshot
   const { data: inv } = await supabase

@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     downtime_min, downtime_reason, notes, shift_operator,
     adhesive_batch_id, platen_temp_c, pressure_bar, press_time_min, close_time_sec,
     defect_delamination, defect_surface, defect_dimensional, defect_glue_bleed, defect_other,
+    amakan_layers, amakan_sheets_consumed,
   } = body
   if (!event_date || !variant_id || !sku_snapshot || !ply_count) return NextResponse.json({ error: 'missing required fields' }, { status: 400 })
   const v = Number(veneers_consumed), bp = Number(boards_produced), bpa = Number(boards_passed), d = Number(defects || 0), dt = Number(downtime_min || 0)
@@ -32,6 +33,8 @@ export async function POST(req: NextRequest) {
     defect_delamination: intOr0(defect_delamination), defect_surface: intOr0(defect_surface),
     defect_dimensional: intOr0(defect_dimensional), defect_glue_bleed: intOr0(defect_glue_bleed),
     defect_other: intOr0(defect_other),
+    amakan_layers: amakan_layers === '' || amakan_layers === null || amakan_layers === undefined ? null : Math.floor(Number(amakan_layers)),
+    amakan_sheets_consumed: num(amakan_sheets_consumed),
   }).select('id').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ id: data.id })
