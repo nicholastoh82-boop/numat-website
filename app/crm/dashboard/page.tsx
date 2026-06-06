@@ -607,20 +607,23 @@ export default function CRMDashboard() {
     setSaving(null)
   }
 
-  const logSample = async (lead: Lead) => {
+  const deleteLead = async (lead: Lead) => {
+    if (user?.role !== 'admin') return
+    const label = lead.full_name || lead.company || lead.email || 'this lead'
+    if (!window.confirm(`Delete ${label}?\n\nThis permanently removes the lead and cannot be undone.`)) return
     setSaving(lead.id)
-    const today = new Date().toISOString().slice(0, 10)
-    const { error } = await supabase.from('lead_samples').insert({
-      lead_id: lead.id,
-      product_focus: 'NuBam Hybrid',
-      product_type: 'NuBam Hybrid',
-      sent_at: today,
-      status: 'sent',
-      customer_name: lead.full_name || lead.company || null,
-      requestor: 'CRM',
-    })
-    if (error) { showToast('Failed to log sample', 'error') }
-    else { showToast('NuBam Hybrid sample logged as sent today', 'success') }
+    try {
+      const res = await fetch(`/api/crm/lead_form/${lead.id}`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.ok === false) {
+        showToast('Failed to delete: ' + (json?.error || res.status), 'error')
+      } else {
+        setLeads(prev => prev.filter(l => l.id !== lead.id))
+        showToast('Lead deleted', 'success')
+      }
+    } catch (err: any) {
+      showToast('Failed to delete: ' + (err?.message || 'unknown error'), 'error')
+    }
     setSaving(null)
   }
 
@@ -2042,6 +2045,14 @@ export default function CRMDashboard() {
                         </label>
                       </div>
                       <div>
+                        <label className="text-xs font-medium text-gray-400 block mb-1">Country</label>
+                        <input disabled={isViewer} type="text" defaultValue={lead.country || ''}
+                          onBlur={e => updateLead(lead.id, { country: e.target.value || null })}
+                          placeholder="e.g. Philippines"
+                          className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100" />
+                        <p className="text-[11px] text-gray-400 mt-1">Philippines or PH routes to Eugene, anything else to Mohan.</p>
+                      </div>
+                      <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Email Status</label>
                         <select disabled={isViewer} defaultValue={lead.status || 'pending'}
                           onChange={e => updateLead(lead.id, { status: e.target.value })}
@@ -2089,6 +2100,7 @@ export default function CRMDashboard() {
                             defaultValue={sampleByLead[lead.id]?.sent_at || ''}
                             onChange={e => saveSampleDates(lead.id, { sent_at: e.target.value || null })}
                             className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
+                          <p className="text-[11px] text-blue-700 mt-1">For NuBam Hybrid leads, this date counts on the scoreboard.</p>
                         </div>
                         <div>
                           <label className="text-xs font-medium text-gray-500 block mb-1">Received by lead</label>
@@ -2217,15 +2229,6 @@ export default function CRMDashboard() {
                           onBlur={e => updateLead(lead.id, { follow_up: e.target.value || null })}
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                       </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-400 block mb-1">NuBam Hybrid Sample</label>
-                        <button type="button" disabled={saving === lead.id || lead.product_focus !== 'NuBam Hybrid'}
-                          onClick={() => logSample(lead)}
-                          title={lead.product_focus === 'NuBam Hybrid' ? 'Logs a NuBam Hybrid sample as sent today' : 'Set Product Focus to NuBam Hybrid first'}
-                          className="w-full border border-emerald-300 bg-emerald-50 text-emerald-800 rounded-lg px-3 py-2 text-sm font-medium hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                          {saving === lead.id ? 'Saving' : 'Log sample sent'}
-                        </button>
-                      </div>
                       <div className="col-span-2 md:col-span-3">
                         <label className="text-xs font-medium text-gray-400 block mb-1">Notes</label>
                         <textarea defaultValue={lead.notes || ''} rows={2} placeholder="Add notes..."
@@ -2233,6 +2236,16 @@ export default function CRMDashboard() {
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none" />
                       </div>
                     </div>
+                    {user?.role === 'admin' && (
+                      <div className="mt-3 flex items-center justify-end gap-3 border-t border-gray-100 pt-3">
+                        <span className="text-[11px] text-gray-400">Admin maintenance</span>
+                        <button type="button" disabled={saving === lead.id}
+                          onClick={() => deleteLead(lead)}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 text-red-700 font-medium hover:bg-red-100 disabled:opacity-50">
+                          {saving === lead.id ? 'Working' : 'Delete lead'}
+                        </button>
+                      </div>
+                    )}
                     {lead.quoted_at && (
                       <div className="mt-3 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg text-xs text-amber-700 flex items-start gap-2">
                         <span>📋</span>

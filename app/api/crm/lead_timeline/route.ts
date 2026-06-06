@@ -197,11 +197,22 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ ok: false, error: existingRes.error.message }, { status: 500 });
   }
 
+  // Tag the sample with the lead's own product focus so the NuBam Hybrid
+  // scoreboard counts it. A blank lookup just leaves it null (no effect).
+  const leadFocusRes = await supabaseAdmin
+    .from('master_leads')
+    .select('product_focus')
+    .eq('id', leadId)
+    .limit(1);
+  const leadProductFocus =
+    (leadFocusRes.data && leadFocusRes.data[0]?.product_focus) || null;
+
   const fields: Record<string, unknown> = {
     requested_at: requested,
     sent_at: sent,
     received_at: received,
     status,
+    product_focus: leadProductFocus,
   };
   if (productType !== undefined) fields.product_type = productType;
 
