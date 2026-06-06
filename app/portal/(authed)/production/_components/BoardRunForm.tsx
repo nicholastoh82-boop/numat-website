@@ -18,6 +18,8 @@ export default function BoardRunForm({ userEmail, variants, onSubmitted }: { use
   const [downtimeReason, setDowntimeReason] = useState('')
   const [notes, setNotes] = useState('')
   const [shiftOp, setShiftOp] = useState('')
+  const [amakanLayers, setAmakanLayers] = useState('')
+  const [amakanSheets, setAmakanSheets] = useState('')
   // Adhesive batch + press parameters
   const [batches, setBatches] = useState<Batch[]>([])
   const [batchId, setBatchId] = useState('')
@@ -39,6 +41,7 @@ export default function BoardRunForm({ userEmail, variants, onSubmitted }: { use
   useEffect(() => { loadBatches() }, [])
 
   const variant = variants.find(v => v.id === variantId) || null
+  const isHybrid = (variant?.sku || '').toUpperCase().startsWith('NBH')
   const ply = variant?.ply_count || 0
   const v = parseInt(veneers) || 0
   const bp = parseInt(boardsProd) || 0
@@ -63,6 +66,8 @@ export default function BoardRunForm({ userEmail, variants, onSubmitted }: { use
           adhesive_batch_id: batchId || null,
           platen_temp_c: platenC || null, pressure_bar: pressureBar || null,
           press_time_min: pressMin || null, close_time_sec: closeSec || null,
+          amakan_layers: isHybrid ? (amakanLayers || null) : null,
+          amakan_sheets_consumed: isHybrid ? (amakanSheets || null) : null,
           ...bins,
         }),
       })
@@ -72,6 +77,7 @@ export default function BoardRunForm({ userEmail, variants, onSubmitted }: { use
       setVariantId(''); setVeneers(''); setBoardsProd(''); setBoardsPass(''); setBins(DEFECT_INIT)
       setDowntime(''); setDowntimeReason(''); setNotes(''); setShiftOp('')
       setBatchId(''); setPlatenC(''); setPressureBar(''); setPressMin(''); setCloseSec('')
+      setAmakanLayers(''); setAmakanSheets('')
       onSubmitted()
     } catch (e: any) { setMsg({ kind: 'err', text: e?.message || 'Failed to submit' }) }
     finally { setBusy(false) }
@@ -94,6 +100,17 @@ export default function BoardRunForm({ userEmail, variants, onSubmitted }: { use
         </Field>
       </div>
       {variant && <div className="text-xs text-gray-600 bg-gray-50 rounded p-2">{variant.products?.name || 'Board'} · {variant.size_label || 'no size'} · {variant.ply_count || '?'} ply</div>}
+
+      {isHybrid && (
+        <div className="bg-emerald-50 border border-emerald-100 rounded p-3 space-y-2">
+          <div className="text-xs font-medium text-emerald-900">NuBam Hybrid core (amakan)</div>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Amakan layers" hint="woven sheets in the core"><input type="number" inputMode="numeric" value={amakanLayers} onChange={e => setAmakanLayers(e.target.value)} placeholder="0" className={inputCls} /></Field>
+            <Field label="Amakan sheets used" hint="total sheets this run"><input type="number" inputMode="decimal" step="0.1" value={amakanSheets} onChange={e => setAmakanSheets(e.target.value)} placeholder="0" className={inputCls} /></Field>
+          </div>
+          <div className="text-[11px] text-emerald-800">Amakan sheets used feeds the amakan utilization KPI on the NuBam Hybrid scoreboard.</div>
+        </div>
+      )}
 
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">Adhesive batch <span className="font-normal text-gray-400">(optional)</span></label>
