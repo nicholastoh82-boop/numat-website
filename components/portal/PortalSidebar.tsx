@@ -20,7 +20,8 @@ type NavItem = {
 }
 
 const ALL_ITEMS: NavItem[] = [
-  { href: '/portal',                label: 'Home',       roles: 'all' },
+  { href: '/portal',                label: 'Home',         roles: 'all' },
+  { href: '/portal/scoreboard',     label: 'NuBam Hybrid', roles: 'all' },
   { href: '/portal/ceo',            label: 'CEO View',   roles: ['admin', 'ceo'] },
   { href: '/crm/dashboard',         label: 'CRM',        roles: ['admin', 'sales'] },
   { href: '/finance',               label: 'Financials', roles: ['admin', 'ceo', 'finance'] },
