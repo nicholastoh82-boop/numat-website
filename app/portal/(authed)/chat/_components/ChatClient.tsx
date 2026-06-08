@@ -6,9 +6,12 @@
   and live in the private team_files bucket. A Summarise button asks Claude
   to recap the channel and pull out what people said they would do.
 
+  Private chats: pick one teammate for a direct message, or several for a
+  private group. A private channel is visible only to its members.
+
   Tables used: team_channels, team_channel_members, team_messages,
-  team_message_files, team_action_items. All created with a team_ prefix so
-  they never collide with the AI sales chat tables.
+  team_message_files, team_action_items. All carry a team_ prefix so they
+  never collide with the AI sales chat tables.
 */
 
 'use client'
@@ -51,6 +54,8 @@ type ActionItem = {
   status: string
   created_at: string
 }
+
+type Member = { id: string; name: string; email: string }
 
 const BUCKET = 'team_files'
 
@@ -96,55 +101,16 @@ export default function ChatClient() {
   const [showNewChannel, setShowNewChannel] = useState(false)
   const [newChannelName, setNewChannelName] = useState('')
 
+  const [showPrivate, setShowPrivate] = useState(false)
+  const [members, setMembers] = useState<Member[]>([])
+  const [loadingMembers, setLoadingMembers] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [creatingPrivate, setCreatingPrivate] = useState(false)
+
   const [loading, setLoading] = useState(true)
 
   const endRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-
-  // Load the signed in user, auto join all public channels, then list channels.
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (cancelled || !user) {
-        setLoading(false)
-        return
-      }
-      const meta = (user.user_metadata || {}) as Record<string, unknown>
-      const name =
-        (meta.full_name as string) ||
-        (meta.name as string) ||
-        user.email ||
-        'Me'
-      setUserId(user.id)
-      setUserName(name)
-      setUserEmail(user.email || '')
-
-      // Auto join every public channel so the team sees the shared rooms.
-      const { data: pub } = await supabase
-        .from('team_channels')
-        .select('id')
-        .eq('is_private', false)
-      const ids = ((pub || []) as { id: string }[]).map((c) => c.id)
-      if (ids.length > 0) {
-        await supabase
-          .from('team_channel_members')
-          .upsert(
-            ids.map((channel_id) => ({ channel_id, user_id: user.id })),
-            { onConflict: 'channel_id,user_id', ignoreDuplicates: true },
-          )
-      }
-
-      await loadChannels(user.id)
-      if (!cancelled) setLoading(false)
-    })()
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const loadChannels = useCallback(
     async (uid: string) => {
@@ -194,7 +160,70 @@ export default function ChatClient() {
     [supabase],
   )
 
-  // When the active channel changes, load its data and subscribe to live updates.
+  // Load the signed in user, auto join the public channels, then list channels.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (cancelled || !user) {
+        setLoading(false)
+        return
+      }
+      const meta = (user.user_metadata || {}) as Record<string, unknown>
+      const name =
+        (meta.full_name as string) || (meta.name as string) || user.email || 'Me'
+      setUserId(user.id)
+      setUserName(name)
+      setUserEmail(user.email || '')
+
+      const { data: pub } = await supabase
+        .from('team_channels')
+        .select('id')
+        .eq('is_private', false)
+      const ids = ((pub || []) as { id: string }[]).map((c) => c.id)
+      if (ids.length > 0) {
+        await supabase
+          .from('team_channel_members')
+          .upsert(
+            ids.map((channel_id) => ({ channel_id, user_id: user.id })),
+            { onConflict: 'channel_id,user_id', ignoreDuplicates: true },
+          )
+      }
+
+      await loadChannels(user.id)
+      if (!cancelled) setLoading(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [supabase, loadChannels])
+
+  // Refresh the channel list live when someone adds me to a new room.
+  useEffect(() => {
+    if (!userId) return
+    const ch = supabase
+      .channel(`team_member_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'team_channel_members',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          loadChannels(userId)
+        },
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(ch)
+    }
+  }, [userId, supabase, loadChannels])
+
+  // When the active channel changes, load its data and subscribe to updates.
   useEffect(() => {
     if (!activeId) return
     setSummary('')
@@ -359,6 +388,88 @@ export default function ChatClient() {
     setActiveId(id)
   }
 
+  async function openPrivatePicker() {
+    setShowPrivate(true)
+    setSelectedIds([])
+    if (members.length === 0) {
+      setLoadingMembers(true)
+      try {
+        const res = await fetch('/api/team_chat/members')
+        const data = await res.json()
+        if (res.ok) setMembers((data.members || []) as Member[])
+        else setNotice(data.error || 'Could not load teammates.')
+      } catch {
+        setNotice('Could not load teammates.')
+      } finally {
+        setLoadingMembers(false)
+      }
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  async function createPrivate() {
+    if (!userId || selectedIds.length === 0) return
+    setCreatingPrivate(true)
+    setNotice('')
+    try {
+      // For a one to one chat, reuse an existing direct room if there is one.
+      if (selectedIds.length === 1) {
+        const targetId = selectedIds[0]
+        const { data: myPriv } = await supabase
+          .from('team_channels')
+          .select('id, team_channel_members(user_id)')
+          .eq('is_private', true)
+        const existing = (
+          (myPriv || []) as Array<{ id: string; team_channel_members: { user_id: string }[] }>
+        ).find((c) => {
+          const ids = (c.team_channel_members || []).map((m) => m.user_id)
+          return ids.length === 2 && ids.includes(userId) && ids.includes(targetId)
+        })
+        if (existing) {
+          await loadChannels(userId)
+          setActiveId(existing.id)
+          setShowPrivate(false)
+          setSelectedIds([])
+          setCreatingPrivate(false)
+          return
+        }
+      }
+
+      const picked = members.filter((m) => selectedIds.includes(m.id))
+      const names = picked.map((m) => m.name)
+      const channelName =
+        names.length === 1
+          ? names[0]
+          : names.slice(0, 3).join(', ') + (names.length > 3 ? '…' : '')
+
+      const ins = await supabase
+        .from('team_channels')
+        .insert({ name: channelName || 'Private chat', is_private: true, created_by: userId })
+        .select('id')
+        .single()
+      if (ins.error || !ins.data) {
+        setNotice('Could not create the private chat.')
+        setCreatingPrivate(false)
+        return
+      }
+      const id = (ins.data as { id: string }).id
+      const rows = [userId, ...selectedIds].map((uid) => ({ channel_id: id, user_id: uid }))
+      await supabase.from('team_channel_members').insert(rows)
+
+      setShowPrivate(false)
+      setSelectedIds([])
+      await loadChannels(userId)
+      setActiveId(id)
+    } finally {
+      setCreatingPrivate(false)
+    }
+  }
+
   const activeChannel = channels.find((c) => c.id === activeId) || null
   const openItems = actionItems.filter((a) => a.status !== 'done').length
 
@@ -370,9 +481,7 @@ export default function ChatClient() {
     return (
       <div className="py-10">
         <h1 className="text-xl font-semibold text-gray-900">Team Chat</h1>
-        <p className="text-sm text-gray-600 mt-2">
-          No channels yet. Create the first one.
-        </p>
+        <p className="text-sm text-gray-600 mt-2">No channels yet. Create the first one.</p>
         <div className="mt-4 flex gap-2">
           <input
             value={newChannelName}
@@ -397,7 +506,7 @@ export default function ChatClient() {
       <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-3">
         <div className="min-w-0">
           <h1 className="text-lg font-semibold text-gray-900 truncate">
-            {activeChannel ? activeChannel.name : 'Team Chat'}
+            {activeChannel ? `${activeChannel.is_private ? '🔒 ' : ''}${activeChannel.name}` : 'Team Chat'}
           </h1>
           {activeChannel?.description ? (
             <p className="text-xs text-gray-500 truncate">{activeChannel.description}</p>
@@ -427,13 +536,22 @@ export default function ChatClient() {
             <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
               Channels
             </span>
-            <button
-              onClick={() => setShowNewChannel((v) => !v)}
-              className="text-gray-500 hover:text-gray-900 text-lg leading-none"
-              title="New channel"
-            >
-              +
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={openPrivatePicker}
+                className="text-gray-500 hover:text-gray-900 text-sm leading-none"
+                title="New private chat"
+              >
+                🔒
+              </button>
+              <button
+                onClick={() => setShowNewChannel((v) => !v)}
+                className="text-gray-500 hover:text-gray-900 text-lg leading-none"
+                title="New channel"
+              >
+                +
+              </button>
+            </div>
           </div>
           {showNewChannel ? (
             <div className="mb-2 space-y-1">
@@ -463,6 +581,7 @@ export default function ChatClient() {
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
+                {c.is_private ? '🔒 ' : ''}
                 {c.name}
               </button>
             ))}
@@ -480,10 +599,18 @@ export default function ChatClient() {
             >
               {channels.map((c) => (
                 <option key={c.id} value={c.id}>
+                  {c.is_private ? '🔒 ' : ''}
                   {c.name}
                 </option>
               ))}
             </select>
+            <button
+              onClick={openPrivatePicker}
+              className="border border-gray-300 rounded px-3 text-gray-700"
+              title="New private chat"
+            >
+              🔒
+            </button>
             <button
               onClick={() => setShowNewChannel((v) => !v)}
               className="border border-gray-300 rounded px-3 text-gray-700"
@@ -518,20 +645,14 @@ export default function ChatClient() {
           {/* Tasks panel on small screens */}
           {tasksOpen ? (
             <div className="lg:hidden flex-1 min-h-0 overflow-y-auto border border-gray-200 rounded p-3 mb-2">
-              <TasksPanel
-                summary={summary}
-                items={actionItems}
-                onToggle={toggleDone}
-              />
+              <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} />
             </div>
           ) : (
             <>
               {/* Messages */}
               <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
                 {messages.length === 0 ? (
-                  <p className="text-sm text-gray-400 mt-4">
-                    No messages yet. Say hello.
-                  </p>
+                  <p className="text-sm text-gray-400 mt-4">No messages yet. Say hello.</p>
                 ) : (
                   messages.map((m) => {
                     const mine = m.sender_id === userId
@@ -548,20 +669,14 @@ export default function ChatClient() {
                         ) : null}
                         <div
                           className={`max-w-[78%] rounded-2xl px-3 py-2 ${
-                            mine
-                              ? 'bg-gray-900 text-white'
-                              : 'bg-gray-100 text-gray-900'
+                            mine ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'
                           }`}
                         >
                           {!mine ? (
-                            <div className="text-[11px] font-medium opacity-70 mb-0.5">
-                              {who}
-                            </div>
+                            <div className="text-[11px] font-medium opacity-70 mb-0.5">{who}</div>
                           ) : null}
                           {m.body ? (
-                            <div className="text-sm whitespace-pre-wrap break-words">
-                              {m.body}
-                            </div>
+                            <div className="text-sm whitespace-pre-wrap break-words">{m.body}</div>
                           ) : null}
                           {(m.team_message_files || []).map((att) => (
                             <button
@@ -653,6 +768,65 @@ export default function ChatClient() {
           <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} />
         </aside>
       </div>
+
+      {/* Private chat picker */}
+      {showPrivate ? (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setShowPrivate(false)}
+        >
+          <div
+            className="bg-white rounded-lg w-full max-w-sm max-h-[80dvh] flex flex-col shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-gray-200">
+              <h2 className="text-sm font-semibold text-gray-900">New private chat</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Pick one person for a direct message, or several for a private group.
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {loadingMembers ? (
+                <p className="text-sm text-gray-500 p-3">Loading teammates...</p>
+              ) : members.length === 0 ? (
+                <p className="text-sm text-gray-500 p-3">No other teammates found.</p>
+              ) : (
+                members.map((m) => (
+                  <label
+                    key={m.id}
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(m.id)}
+                      onChange={() => toggleSelect(m.id)}
+                    />
+                    <div className="min-w-0">
+                      <div className="text-sm text-gray-900 truncate">{m.name}</div>
+                      <div className="text-[11px] text-gray-500 truncate">{m.email}</div>
+                    </div>
+                  </label>
+                ))
+              )}
+            </div>
+            <div className="px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
+              <button
+                onClick={() => setShowPrivate(false)}
+                className="text-sm rounded px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createPrivate}
+                disabled={creatingPrivate || selectedIds.length === 0}
+                className="text-sm rounded px-4 py-1.5 bg-gray-900 text-white disabled:opacity-50"
+              >
+                {creatingPrivate ? 'Starting...' : 'Start chat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -699,9 +873,7 @@ function TasksPanel({
                 <div className="min-w-0">
                   <div
                     className={`text-sm ${
-                      it.status === 'done'
-                        ? 'line-through text-gray-400'
-                        : 'text-gray-800'
+                      it.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800'
                     }`}
                   >
                     {it.title}
