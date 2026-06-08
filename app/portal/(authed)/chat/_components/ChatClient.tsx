@@ -65,6 +65,65 @@ type Member = { id: string; name: string; email: string }
 const BUCKET = 'team_files'
 const EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏', '👀']
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+// Turns chat text into safe formatted HTML. Everything is escaped first, so the
+// only tags in the output are the ones added here. Code and links are pulled out
+// before styling so their contents are never treated as formatting.
+function formatMessage(raw: string, mine: boolean): string {
+  const codeClass = mine
+    ? 'rounded px-1 py-0.5 text-[0.85em] font-mono bg-white/20'
+    : 'rounded px-1 py-0.5 text-[0.85em] font-mono bg-black/10'
+  const blockClass = mine
+    ? 'block rounded p-2 my-1 text-[0.85em] font-mono whitespace-pre-wrap overflow-x-auto bg-white/15'
+    : 'block rounded p-2 my-1 text-[0.85em] font-mono whitespace-pre-wrap overflow-x-auto bg-black/5'
+
+  let s = escapeHtml(raw)
+
+  const blocks: string[] = []
+  s = s.replace(/```([\s\S]*?)```/g, (_m, code: string) => {
+    blocks.push(code.replace(/^\n/, '').replace(/\n$/, ''))
+    return `\u0000CB${blocks.length - 1}\u0000`
+  })
+
+  const inlines: string[] = []
+  s = s.replace(/`([^`\n]+?)`/g, (_m, code: string) => {
+    inlines.push(code)
+    return `\u0000IC${inlines.length - 1}\u0000`
+  })
+
+  const links: string[] = []
+  s = s.replace(/(https?:\/\/[^\s<]+)/g, (url: string) => {
+    links.push(
+      `<a href="${url}" target="_blank" rel="noopener noreferrer" class="underline">${url}</a>`,
+    )
+    return `\u0000LK${links.length - 1}\u0000`
+  })
+
+  s = s.replace(/(^|[\s(])\*(\S(?:.*?\S)?)\*(?=[\s).,!?:;]|$)/g, '$1<strong>$2</strong>')
+  s = s.replace(/(^|[\s(])_(\S(?:.*?\S)?)_(?=[\s).,!?:;]|$)/g, '$1<em>$2</em>')
+  s = s.replace(/(^|[\s(])~(\S(?:.*?\S)?)~(?=[\s).,!?:;]|$)/g, '$1<del>$2</del>')
+
+  s = s.replace(
+    /\u0000IC(\d+)\u0000/g,
+    (_m, i: string) => `<code class="${codeClass}">${inlines[Number(i)]}</code>`,
+  )
+  s = s.replace(
+    /\u0000CB(\d+)\u0000/g,
+    (_m, i: string) => `<code class="${blockClass}">${blocks[Number(i)]}</code>`,
+  )
+  s = s.replace(/\u0000LK(\d+)\u0000/g, (_m, i: string) => links[Number(i)])
+
+  return s
+}
+
 function timeLabel(iso: string): string {
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ''
@@ -1127,7 +1186,10 @@ export default function ChatClient() {
                             ) : (
                               <>
                                 {m.body ? (
-                                  <div className="text-sm whitespace-pre-wrap break-words">{m.body}</div>
+                                  <div
+                                    className="text-sm whitespace-pre-wrap break-words"
+                                    dangerouslySetInnerHTML={{ __html: formatMessage(m.body, mine) }}
+                                  />
                                 ) : null}
                                 {(m.team_message_files || []).map((att) => (
                                   <button
@@ -1262,6 +1324,9 @@ export default function ChatClient() {
                   >
                     {sending ? '...' : 'Send'}
                   </button>
+                </div>
+                <div className="mt-1 text-[11px] text-gray-400">
+                  {'Format: *bold*, _italic_, ~strike~, `code`'}
                 </div>
               </div>
             </>
