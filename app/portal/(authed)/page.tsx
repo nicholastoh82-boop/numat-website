@@ -5,7 +5,6 @@ import { requirePortalUser } from '@/lib/portal/roles'
 
 export default async function PortalHome() {
   const user = await requirePortalUser()
-  const noRole = user.roles.length === 0
 
   return (
     <div className="space-y-2">
@@ -13,9 +12,7 @@ export default async function PortalHome() {
         Welcome back, {firstName(user.email ?? '')}
       </h1>
       <p className="text-sm text-gray-600">
-        {noRole
-          ? 'Your account has no role assigned yet. Ask Nick to grant you access.'
-          : `Signed in as ${user.roles.join(', ')}. Use the sidebar to navigate.`}
+        Use the sidebar to open the tools you have access to.
       </p>
     </div>
   )

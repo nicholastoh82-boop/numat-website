@@ -3,9 +3,9 @@
    In Phase 3 we move the CRM into the portal proper and kill /crm. */
 
 import { redirect } from 'next/navigation'
-import { requireRole } from '@/lib/portal/roles'
+import { requireFeature } from '@/lib/portal/roles'
 
 export default async function PortalCrmRedirect() {
-  await requireRole(['admin', 'ceo', 'sales'])
+  await requireFeature('crm')
   redirect('/crm/dashboard')
 }

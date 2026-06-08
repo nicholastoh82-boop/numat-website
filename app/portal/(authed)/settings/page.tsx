@@ -2,7 +2,7 @@
    Admin only. Lists who has what role across the team.
    Pulls emails via the list_user_roles_with_email RPC (admin gated). */
 
-import { requireRole } from '@/lib/portal/roles'
+import { requireAdmin } from '@/lib/portal/roles'
 import { createClient } from '@/lib/supabase/server'
 
 type DirectoryRow = {
@@ -13,7 +13,7 @@ type DirectoryRow = {
 }
 
 export default async function PortalSettings() {
-  await requireRole('admin')
+  await requireAdmin()
 
   const supabase = await createClient()
   const { data } = await supabase.rpc('list_user_roles_with_email')

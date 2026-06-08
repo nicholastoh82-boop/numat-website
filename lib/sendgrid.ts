@@ -61,3 +61,21 @@ export async function sendEmail(options: SendEmailOptions) {
     throw error
   }
 }
+// Plain notification email with no internal CC. Used for portal alerts
+// such as chat mention pings, so the whole team is not copied.
+export async function sendNotificationEmail(options: { to: string; subject: string; html: string }) {
+  if (!resendApiKey) {
+    throw new Error('RESEND_API_KEY is not configured')
+  }
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@numat.ph'
+  const response = await resend.emails.send({
+    to: options.to,
+    from: fromEmail,
+    subject: options.subject,
+    html: options.html,
+  })
+  if (response.error) {
+    throw new Error(response.error.message)
+  }
+  return { success: true, messageId: response.data?.id }
+}

@@ -1,5 +1,7 @@
 {
-  "regions": ["syd1"],
+  "regions": [
+    "syd1"
+  ],
   "crons": [
     {
       "path": "/api/cron/task-reminders",
@@ -60,6 +62,10 @@
     {
       "path": "/api/cron/daily-rep-telegram",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/mention_emails",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

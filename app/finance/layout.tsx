@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/finance';
 import PortalSidebar from '@/components/portal/PortalSidebar';
 
+const ALWAYS_ADMIN = ['nick@numat.ph'];
+
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -21,6 +23,25 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
       if (!user) {
         router.replace('/crm/login');
+        return;
+      }
+
+      const email = (user.email || '').toLowerCase();
+      if (!email.endsWith('@numat.ph')) {
+        router.replace('/portal/no-access');
+        return;
+      }
+
+      const [{ data: adminRows }, { data: featRows }] = await Promise.all([
+        supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin'),
+        supabase.from('portal_access').select('feature').eq('user_id', user.id).eq('feature', 'financials'),
+      ]);
+      const ok =
+        (adminRows && adminRows.length > 0) ||
+        ALWAYS_ADMIN.includes(email) ||
+        (featRows && featRows.length > 0);
+      if (!ok) {
+        router.replace('/portal/no-access');
         return;
       }
 

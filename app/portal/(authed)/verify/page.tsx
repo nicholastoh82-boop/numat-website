@@ -2,14 +2,14 @@
    Verification queue for ops submissions. Admin and finance only.
    Server fetches the pending list, client handles approve/reject buttons. */
 
-import { requireRole } from '@/lib/portal/roles'
+import { requireFeature } from '@/lib/portal/roles'
 import { createClient } from '@/lib/supabase/server'
 import VerifyList, { type PendingRow } from './_components/VerifyList'
 
 export const dynamic = 'force-dynamic'
 
 export default async function VerifyQueue() {
-  const user = await requireRole(['admin', 'finance'])
+  const user = await requireFeature('verify')
   const supabase = await createClient()
 
   // Pull pending transactions plus any that are flagged so finance can revisit.
