@@ -361,6 +361,8 @@ export default function CRMDashboard() {
   // Quotes (documents per lead)
   const [quotesByLead, setQuotesByLead] = useState<Record<string, Quote[]>>({})
   const [sampleByLead, setSampleByLead] = useState<Record<string, { id: string; requested_at: string | null; sent_at: string | null; received_at: string | null; product_type: string | null }>>({})
+  const [paymentsByLead, setPaymentsByLead] = useState<Record<string, Array<{ id: string; amount_php: number; collected_at: string; kind: string; note: string | null }>>>({})
+  const [newPay, setNewPay] = useState<{ leadId: string | null; amount: string; collected_at: string; kind: string }>({ leadId: null, amount: '', collected_at: '', kind: 'deposit' })
   const [sendingQuoteId, setSendingQuoteId] = useState<string | null>(null)
   const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null)
   // Email editing per document
@@ -506,6 +508,23 @@ export default function CRMDashboard() {
     }
   }, [supabase])
 
+  // Load NuBam Hybrid cash collected per lead so the inline tracker shows logged payments
+  const loadPayments = useCallback(async () => {
+    const { data } = await supabase
+      .from('lead_payments')
+      .select('id, lead_id, amount_php, collected_at, kind, note')
+      .order('collected_at', { ascending: false })
+    if (data) {
+      const byLead: Record<string, Array<{ id: string; amount_php: number; collected_at: string; kind: string; note: string | null }>> = {}
+      for (const r of data as Array<{ id: string; lead_id: string; amount_php: number; collected_at: string; kind: string; note: string | null }>) {
+        if (!r.lead_id) continue
+        if (!byLead[r.lead_id]) byLead[r.lead_id] = []
+        byLead[r.lead_id].push({ id: r.id, amount_php: Number(r.amount_php), collected_at: r.collected_at, kind: r.kind, note: r.note })
+      }
+      setPaymentsByLead(byLead)
+    }
+  }, [supabase])
+
   // Commit C: load all active (non-superseded) receipts and group by their parent invoice id.
   const loadReceipts = useCallback(async () => {
     const { data } = await supabase
@@ -530,16 +549,17 @@ export default function CRMDashboard() {
     await loadQuotes()
     await loadReceipts()
     await loadSamples()
+    await loadPayments()
     setRefreshing(false)
   }
 
   useEffect(() => {
     setLoading(true)
     loadUser().then(u => {
-      if (u) loadLeads(u).then(() => { setLoading(false); loadQuotes(); loadReceipts(); loadSamples() })
+      if (u) loadLeads(u).then(() => { setLoading(false); loadQuotes(); loadReceipts(); loadSamples(); loadPayments() })
       else setLoading(false)
     })
-  }, [loadUser, loadLeads, loadQuotes, loadReceipts, loadSamples])
+  }, [loadUser, loadLeads, loadQuotes, loadReceipts, loadSamples, loadPayments])
 
   // Load Gmail OAuth connection status once on mount so we can disable the
   // per row Email button for reps who have not connected their inbox yet.
@@ -654,6 +674,37 @@ export default function CRMDashboard() {
     } catch {
       showToast('Could not save sample', 'error')
     }
+  }
+
+  // Inline payments tracker: record each NuBam Hybrid deposit or payment collected
+  const addPayment = async (lead: Lead) => {
+    if (isViewer) return
+    if (newPay.leadId !== lead.id) return
+    const amt = parseFloat(newPay.amount)
+    if (!isFinite(amt) || amt <= 0) { showToast('Enter an amount greater than zero', 'error'); return }
+    const collected = newPay.collected_at || new Date().toISOString().slice(0, 10)
+    setSaving(lead.id)
+    const { data, error } = await supabase.from('lead_payments').insert({
+      lead_id: lead.id,
+      amount_php: amt,
+      collected_at: collected,
+      kind: newPay.kind || 'payment',
+      created_by: user?.email || 'crm',
+    }).select('id, amount_php, collected_at, kind, note').single()
+    if (error || !data) { showToast('Failed to record payment', 'error') }
+    else {
+      setPaymentsByLead(prev => ({ ...prev, [lead.id]: [{ id: (data as any).id, amount_php: Number((data as any).amount_php), collected_at: (data as any).collected_at, kind: (data as any).kind, note: (data as any).note }, ...(prev[lead.id] || [])] }))
+      setNewPay({ leadId: lead.id, amount: '', collected_at: '', kind: 'deposit' })
+      showToast('Payment recorded')
+    }
+    setSaving(null)
+  }
+
+  const removePayment = async (leadId: string, id: string) => {
+    if (isViewer) return
+    const { error } = await supabase.from('lead_payments').delete().eq('id', id)
+    if (error) { showToast('Failed to remove payment', 'error'); return }
+    setPaymentsByLead(prev => ({ ...prev, [leadId]: (prev[leadId] || []).filter(pp => pp.id !== id) }))
   }
 
   const openQuoteModal = (lead: Lead, docType: 'proforma_invoice' | 'invoice', e: React.MouseEvent) => {
@@ -2119,6 +2170,61 @@ export default function CRMDashboard() {
                           className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100" />
                       </div>
                     </div>
+
+                    {lead.product_focus === 'NuBam Hybrid' && (
+                    <div className="mt-4 border border-emerald-200 bg-emerald-50/60 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-emerald-900 uppercase tracking-wide">Payments collected</span>
+                        <span className="text-[11px] text-emerald-700">Counts on the NuBam Hybrid scoreboard</span>
+                      </div>
+                      {(paymentsByLead[lead.id]?.length || 0) > 0 && (
+                        <div className="mb-2 space-y-1">
+                          {paymentsByLead[lead.id].map(pay => (
+                            <div key={pay.id} className="flex items-center justify-between text-sm bg-white border border-emerald-100 rounded-lg px-3 py-1.5">
+                              <span className="text-gray-700">{pay.collected_at} <span className="text-gray-400">&middot;</span> {pay.kind}</span>
+                              <span className="flex items-center gap-3">
+                                <span className="font-semibold text-gray-900">₱{pay.amount_php.toLocaleString()}</span>
+                                {!isViewer && (
+                                  <button type="button" onClick={() => removePayment(lead.id, pay.id)} className="text-[11px] text-red-600 hover:underline">remove</button>
+                                )}
+                              </span>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between text-sm pt-1">
+                            <span className="text-emerald-900 font-medium">Total collected</span>
+                            <span className="font-bold text-emerald-900">₱{(paymentsByLead[lead.id].reduce((s, x) => s + (x.amount_php || 0), 0)).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      )}
+                      {!isViewer && (
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                          <input type="number" min="0" step="0.01" placeholder="Amount (PHP)"
+                            value={newPay.leadId === lead.id ? newPay.amount : ''}
+                            onChange={e => setNewPay(prev => ({ leadId: lead.id, amount: e.target.value, collected_at: prev.leadId === lead.id ? prev.collected_at : '', kind: prev.leadId === lead.id ? prev.kind : 'deposit' }))}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                          <input type="date"
+                            value={newPay.leadId === lead.id ? newPay.collected_at : ''}
+                            onChange={e => setNewPay(prev => ({ leadId: lead.id, amount: prev.leadId === lead.id ? prev.amount : '', collected_at: e.target.value, kind: prev.leadId === lead.id ? prev.kind : 'deposit' }))}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                          <select
+                            value={newPay.leadId === lead.id ? newPay.kind : 'deposit'}
+                            onChange={e => setNewPay(prev => ({ leadId: lead.id, amount: prev.leadId === lead.id ? prev.amount : '', collected_at: prev.leadId === lead.id ? prev.collected_at : '', kind: e.target.value }))}
+                            className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="deposit">Deposit</option>
+                            <option value="balance">Balance</option>
+                            <option value="full">Full payment</option>
+                            <option value="payment">Payment</option>
+                          </select>
+                          <button type="button" disabled={saving === lead.id}
+                            onClick={() => addPayment(lead)}
+                            className="w-full border border-emerald-300 bg-emerald-600 text-white rounded-lg px-3 py-2 text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
+                            {saving === lead.id ? 'Saving' : 'Add payment'}
+                          </button>
+                        </div>
+                      )}
+                      <p className="text-[11px] text-gray-500 mt-2">Record each deposit or payment as it is received. This feeds the collected figure for Philippine NuBam Hybrid deals.</p>
+                    </div>
+                    )}
 
                     {/* Deal milestones: feed the status table columns reps own */}
                     <div className="mt-4 border border-emerald-100 bg-emerald-50/40 rounded-xl p-3">
