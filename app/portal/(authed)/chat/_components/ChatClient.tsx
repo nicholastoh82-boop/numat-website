@@ -25,6 +25,7 @@ type Channel = {
   description: string | null
   is_private: boolean
   created_at: string
+  created_by: string | null
 }
 
 type Attachment = {
@@ -43,6 +44,10 @@ type Message = {
   sender_email: string | null
   body: string | null
   created_at: string
+  edited_at: string | null
+  deleted_at: string | null
+  reply_to: string | null
+  forwarded: boolean
   team_message_files?: Attachment[]
 }
 
@@ -58,6 +63,7 @@ type ActionItem = {
 type Member = { id: string; name: string; email: string }
 
 const BUCKET = 'team_files'
+const EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏', '👀']
 
 function timeLabel(iso: string): string {
   const d = new Date(iso)
@@ -112,6 +118,24 @@ export default function ChatClient() {
   const [existingMemberIds, setExistingMemberIds] = useState<string[]>([])
   const [addingPeople, setAddingPeople] = useState(false)
 
+  const [menuMsg, setMenuMsg] = useState<Message | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
+
+  const [reactions, setReactions] = useState<
+    { message_id: string; user_id: string; emoji: string }[]
+  >([])
+  const [replyTo, setReplyTo] = useState<Message | null>(null)
+  const [forwardMsg, setForwardMsg] = useState<Message | null>(null)
+  const [forwardTargets, setForwardTargets] = useState<string[]>([])
+  const [forwarding, setForwarding] = useState(false)
+  const [showManageMembers, setShowManageMembers] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [renameText, setRenameText] = useState('')
+  const [savingRename, setSavingRename] = useState(false)
+
   const [loading, setLoading] = useState(true)
 
   const endRef = useRef<HTMLDivElement | null>(null)
@@ -121,7 +145,7 @@ export default function ChatClient() {
     async (uid: string) => {
       const { data } = await supabase
         .from('team_channel_members')
-        .select('team_channels(id, name, description, is_private, created_at)')
+        .select('team_channels(id, name, description, is_private, created_at, created_by)')
         .eq('user_id', uid)
       const rows = (data || []) as Array<{ team_channels: Channel | null }>
       const list = rows
@@ -143,7 +167,7 @@ export default function ChatClient() {
       const { data } = await supabase
         .from('team_messages')
         .select(
-          'id, channel_id, sender_id, sender_name, sender_email, body, created_at, team_message_files(id, file_path, file_name, file_type, file_size)',
+          'id, channel_id, sender_id, sender_name, sender_email, body, created_at, edited_at, deleted_at, reply_to, forwarded, team_message_files(id, file_path, file_name, file_type, file_size)',
         )
         .eq('channel_id', channelId)
         .order('created_at', { ascending: true })
@@ -161,6 +185,19 @@ export default function ChatClient() {
         .eq('channel_id', channelId)
         .order('created_at', { ascending: false })
       setActionItems((data || []) as ActionItem[])
+    },
+    [supabase],
+  )
+
+  const loadReactions = useCallback(
+    async (channelId: string) => {
+      const { data } = await supabase
+        .from('team_message_reactions')
+        .select('message_id, user_id, emoji')
+        .eq('channel_id', channelId)
+      setReactions(
+        (data || []) as { message_id: string; user_id: string; emoji: string }[],
+      )
     },
     [supabase],
   )
@@ -235,19 +272,32 @@ export default function ChatClient() {
     setNotice('')
     loadMessages(activeId)
     loadActionItems(activeId)
+    loadReactions(activeId)
 
     const ch = supabase
       .channel(`team_chat_${activeId}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'team_messages',
           filter: `channel_id=eq.${activeId}`,
         },
         () => {
           loadMessages(activeId)
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'team_message_reactions',
+          filter: `channel_id=eq.${activeId}`,
+        },
+        () => {
+          loadReactions(activeId)
         },
       )
       .on(
@@ -267,7 +317,7 @@ export default function ChatClient() {
     return () => {
       supabase.removeChannel(ch)
     }
-  }, [activeId, supabase, loadMessages, loadActionItems])
+  }, [activeId, supabase, loadMessages, loadActionItems, loadReactions])
 
   // Keep the view pinned to the newest message.
   useEffect(() => {
@@ -302,6 +352,7 @@ export default function ChatClient() {
           sender_name: userName,
           sender_email: userEmail,
           body: body || null,
+          reply_to: replyTo?.id ?? null,
         })
         .select('id')
         .single()
@@ -323,6 +374,7 @@ export default function ChatClient() {
       }
 
       setText('')
+      setReplyTo(null)
       setFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
       loadMessages(activeId)
@@ -466,6 +518,223 @@ export default function ChatClient() {
     }
   }
 
+  function startEdit(m: Message) {
+    setMenuMsg(null)
+    setEditingId(m.id)
+    setEditText(m.body || '')
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setEditText('')
+  }
+
+  async function saveEdit() {
+    if (!editingId) return
+    const body = editText.trim()
+    if (!body) return
+    setSavingEdit(true)
+    try {
+      const { error } = await supabase.rpc('tc_edit_message', { p_message_id: editingId, p_body: body })
+      if (error) {
+        setNotice('Could not edit the message.')
+      } else {
+        setEditingId(null)
+        setEditText('')
+        await loadMessages(activeId)
+      }
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  async function deleteMessage(id: string) {
+    setMenuMsg(null)
+    if (!window.confirm('Delete this message for everyone?')) return
+    const { error } = await supabase.rpc('tc_delete_message', { p_message_id: id })
+    if (error) {
+      setNotice('Could not delete the message.')
+    } else {
+      await loadMessages(activeId)
+    }
+  }
+
+  async function deleteGroup() {
+    if (!activeId) return
+    if (!window.confirm('Delete this group for everyone? This cannot be undone.')) return
+    const goneId = activeId
+    const { error } = await supabase.from('team_channels').delete().eq('id', goneId)
+    if (error) {
+      setNotice('Could not delete the group.')
+      return
+    }
+    const remaining = channels.filter((c) => c.id !== goneId)
+    setActiveId(remaining[0]?.id || '')
+    await loadChannels(userId)
+  }
+
+  async function leaveGroup() {
+    if (!activeId || !userId) return
+    if (!window.confirm('Leave this group?')) return
+    const goneId = activeId
+    const { error } = await supabase
+      .from('team_channel_members')
+      .delete()
+      .eq('channel_id', goneId)
+      .eq('user_id', userId)
+    if (error) {
+      setNotice('Could not leave the group.')
+      return
+    }
+    const remaining = channels.filter((c) => c.id !== goneId)
+    setActiveId(remaining[0]?.id || '')
+    await loadChannels(userId)
+  }
+
+  function reactionsFor(messageId: string) {
+    const map = new Map<string, { emoji: string; count: number; mine: boolean }>()
+    for (const r of reactions) {
+      if (r.message_id !== messageId) continue
+      const e = map.get(r.emoji) || { emoji: r.emoji, count: 0, mine: false }
+      e.count += 1
+      if (r.user_id === userId) e.mine = true
+      map.set(r.emoji, e)
+    }
+    return Array.from(map.values())
+  }
+
+  async function toggleReaction(message: Message, emoji: string) {
+    setMenuMsg(null)
+    if (!userId) return
+    const mine = reactions.some(
+      (r) => r.message_id === message.id && r.user_id === userId && r.emoji === emoji,
+    )
+    if (mine) {
+      await supabase
+        .from('team_message_reactions')
+        .delete()
+        .eq('message_id', message.id)
+        .eq('user_id', userId)
+        .eq('emoji', emoji)
+    } else {
+      await supabase.from('team_message_reactions').insert({
+        message_id: message.id,
+        channel_id: message.channel_id,
+        user_id: userId,
+        emoji,
+      })
+    }
+    await loadReactions(activeId)
+  }
+
+  function startReply(m: Message) {
+    setMenuMsg(null)
+    setReplyTo(m)
+  }
+
+  function cancelReply() {
+    setReplyTo(null)
+  }
+
+  function openForward(m: Message) {
+    setMenuMsg(null)
+    setForwardMsg(m)
+    setForwardTargets([])
+  }
+
+  function toggleForwardTarget(id: string) {
+    setForwardTargets((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  async function doForward() {
+    if (!forwardMsg || forwardTargets.length === 0 || !userId) return
+    const fwdBody = (forwardMsg.body || '').trim()
+    const files = forwardMsg.team_message_files || []
+    if (!fwdBody && files.length === 0) {
+      setForwardMsg(null)
+      return
+    }
+    setForwarding(true)
+    try {
+      const rows = forwardTargets.map((cid) => ({
+        channel_id: cid,
+        sender_id: userId,
+        sender_name: userName,
+        sender_email: userEmail,
+        body: fwdBody || null,
+        forwarded: true,
+      }))
+      const ins = await supabase.from('team_messages').insert(rows).select('id')
+      const newIds = ((ins.data || []) as { id: string }[]).map((r) => r.id)
+      if (files.length > 0 && newIds.length > 0) {
+        const fileRows = newIds.flatMap((mid) =>
+          files.map((f) => ({
+            message_id: mid,
+            file_path: f.file_path,
+            file_name: f.file_name,
+            file_type: f.file_type,
+            file_size: f.file_size,
+          })),
+        )
+        await supabase.from('team_message_files').insert(fileRows)
+      }
+      setForwardMsg(null)
+      setForwardTargets([])
+      await loadMessages(activeId)
+    } finally {
+      setForwarding(false)
+    }
+  }
+
+  function startRename() {
+    setHeaderMenuOpen(false)
+    setRenameText(activeChannel?.name || '')
+    setRenaming(true)
+  }
+
+  async function saveRename() {
+    if (!activeId) return
+    const name = renameText.trim()
+    if (!name) return
+    setSavingRename(true)
+    try {
+      const { error } = await supabase.from('team_channels').update({ name }).eq('id', activeId)
+      if (error) {
+        setNotice('Could not rename the group.')
+      } else {
+        setRenaming(false)
+        await loadChannels(userId)
+      }
+    } finally {
+      setSavingRename(false)
+    }
+  }
+
+  async function openManageMembers() {
+    setHeaderMenuOpen(false)
+    await ensureMembersLoaded()
+    if (!activeId) return
+    const { data } = await supabase
+      .from('team_channel_members')
+      .select('user_id')
+      .eq('channel_id', activeId)
+    setExistingMemberIds(((data || []) as { user_id: string }[]).map((r) => r.user_id))
+    setShowManageMembers(true)
+  }
+
+  async function removeMember(uid: string) {
+    if (!activeId) return
+    await supabase
+      .from('team_channel_members')
+      .delete()
+      .eq('channel_id', activeId)
+      .eq('user_id', uid)
+    setExistingMemberIds((prev) => prev.filter((x) => x !== uid))
+    await loadChannels(userId)
+  }
+
   async function createPrivate() {
     if (!userId || selectedIds.length === 0) return
     setCreatingPrivate(true)
@@ -525,6 +794,8 @@ export default function ChatClient() {
   }
 
   const activeChannel = channels.find((c) => c.id === activeId) || null
+  const isCreator = !!activeChannel && activeChannel.created_by === userId
+  const hasGroupActions = !!activeChannel && (activeChannel.is_private || isCreator)
   const openItems = actionItems.filter((a) => a.status !== 'done').length
 
   if (loading) {
@@ -567,14 +838,73 @@ export default function ChatClient() {
           ) : null}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {activeChannel?.is_private ? (
-            <button
-              onClick={openAddPeople}
-              className="text-sm rounded px-3 py-1.5 border border-gray-300 text-gray-800 hover:bg-gray-100"
-              title="Add people to this group"
-            >
-              Add people
-            </button>
+          {hasGroupActions ? (
+            <div className="relative">
+              <button
+                onClick={() => setHeaderMenuOpen((v) => !v)}
+                className="text-sm rounded px-2.5 py-1.5 border border-gray-300 text-gray-800 hover:bg-gray-100"
+                title="Group options"
+                aria-label="Group options"
+              >
+                ⋯
+              </button>
+              {headerMenuOpen ? (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setHeaderMenuOpen(false)} aria-hidden />
+                  <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1 text-sm">
+                    {activeChannel?.is_private ? (
+                      <button
+                        onClick={() => {
+                          setHeaderMenuOpen(false)
+                          openAddPeople()
+                        }}
+                        className="w-full text-left px-3 py-2 text-gray-800 hover:bg-gray-50"
+                      >
+                        Add people
+                      </button>
+                    ) : null}
+                    {activeChannel?.is_private && !isCreator ? (
+                      <button
+                        onClick={() => {
+                          setHeaderMenuOpen(false)
+                          leaveGroup()
+                        }}
+                        className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50"
+                      >
+                        Leave group
+                      </button>
+                    ) : null}
+                    {isCreator ? (
+                      <button
+                        onClick={startRename}
+                        className="w-full text-left px-3 py-2 text-gray-800 hover:bg-gray-50"
+                      >
+                        Rename group
+                      </button>
+                    ) : null}
+                    {isCreator ? (
+                      <button
+                        onClick={openManageMembers}
+                        className="w-full text-left px-3 py-2 text-gray-800 hover:bg-gray-50"
+                      >
+                        Manage members
+                      </button>
+                    ) : null}
+                    {isCreator ? (
+                      <button
+                        onClick={() => {
+                          setHeaderMenuOpen(false)
+                          deleteGroup()
+                        }}
+                        className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50"
+                      >
+                        Delete group
+                      </button>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+            </div>
           ) : null}
           <button
             onClick={handleSummarise}
@@ -720,47 +1050,140 @@ export default function ChatClient() {
                   messages.map((m) => {
                     const mine = m.sender_id === userId
                     const who = m.sender_name || m.sender_email || 'Someone'
+                    const canAct = !m.deleted_at && (mine || isCreator)
+                    const replied = m.reply_to
+                      ? messages.find((x) => x.id === m.reply_to) || null
+                      : null
+                    const rx = reactionsFor(m.id)
                     return (
                       <div
                         key={m.id}
-                        className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
+                        className={`flex items-center gap-1 ${mine ? 'justify-end' : 'justify-start'}`}
                       >
                         {!mine ? (
                           <div className="h-8 w-8 rounded-full bg-gray-200 text-gray-700 text-xs flex items-center justify-center mr-2 shrink-0">
                             {initials(who)}
                           </div>
                         ) : null}
-                        <div
-                          className={`max-w-[78%] rounded-2xl px-3 py-2 ${
-                            mine ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'
-                          }`}
-                        >
-                          {!mine ? (
-                            <div className="text-[11px] font-medium opacity-70 mb-0.5">{who}</div>
-                          ) : null}
-                          {m.body ? (
-                            <div className="text-sm whitespace-pre-wrap break-words">{m.body}</div>
-                          ) : null}
-                          {(m.team_message_files || []).map((att) => (
-                            <button
-                              key={att.id}
-                              onClick={() => openFile(att)}
-                              className={`mt-1 flex items-center gap-1 text-xs underline ${
-                                mine ? 'text-white' : 'text-gray-700'
-                              }`}
-                            >
-                              <span aria-hidden>📎</span>
-                              <span className="truncate max-w-[12rem]">{att.file_name}</span>
-                            </button>
-                          ))}
+                        {canAct && mine ? (
+                          <button
+                            onClick={() => setMenuMsg(m)}
+                            className="text-gray-400 hover:text-gray-700 px-1 text-base leading-none shrink-0"
+                            title="Message options"
+                            aria-label="Message options"
+                          >
+                            ⋯
+                          </button>
+                        ) : null}
+                        {editingId === m.id ? (
+                          <div className="w-72 max-w-[78%] rounded-2xl px-3 py-2 bg-white border border-gray-300">
+                            <textarea
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              rows={2}
+                              className="w-full text-sm text-gray-900 resize-none outline-none"
+                            />
+                            <div className="flex justify-end gap-3 mt-1">
+                              <button onClick={cancelEdit} className="text-xs text-gray-500">
+                                Cancel
+                              </button>
+                              <button
+                                onClick={saveEdit}
+                                disabled={savingEdit || !editText.trim()}
+                                className="text-xs font-medium text-gray-900 disabled:opacity-50"
+                              >
+                                {savingEdit ? 'Saving...' : 'Save'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
                           <div
-                            className={`text-[10px] mt-1 ${
-                              mine ? 'text-gray-300' : 'text-gray-400'
+                            className={`max-w-[78%] rounded-2xl px-3 py-2 ${
+                              mine ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'
                             }`}
                           >
-                            {timeLabel(m.created_at)}
+                            {!mine ? (
+                              <div className="text-[11px] font-medium opacity-70 mb-0.5">{who}</div>
+                            ) : null}
+                            {m.forwarded && !m.deleted_at ? (
+                              <div className="text-[10px] italic opacity-60 mb-0.5">Forwarded</div>
+                            ) : null}
+                            {replied && !m.deleted_at ? (
+                              <div
+                                className={`mb-1 rounded px-2 py-1 text-[11px] border-l-2 ${
+                                  mine ? 'border-white/50 bg-white/10' : 'border-gray-300 bg-black/5'
+                                }`}
+                              >
+                                <div className="font-medium opacity-80 truncate">
+                                  {replied.sender_name || replied.sender_email || 'message'}
+                                </div>
+                                <div className="opacity-70 truncate">
+                                  {replied.deleted_at ? 'deleted message' : replied.body || 'attachment'}
+                                </div>
+                              </div>
+                            ) : null}
+                            {m.deleted_at ? (
+                              <div className="text-sm italic opacity-70">This message was deleted</div>
+                            ) : (
+                              <>
+                                {m.body ? (
+                                  <div className="text-sm whitespace-pre-wrap break-words">{m.body}</div>
+                                ) : null}
+                                {(m.team_message_files || []).map((att) => (
+                                  <button
+                                    key={att.id}
+                                    onClick={() => openFile(att)}
+                                    className={`mt-1 flex items-center gap-1 text-xs underline ${
+                                      mine ? 'text-white' : 'text-gray-700'
+                                    }`}
+                                  >
+                                    <span aria-hidden>📎</span>
+                                    <span className="truncate max-w-[12rem]">{att.file_name}</span>
+                                  </button>
+                                ))}
+                              </>
+                            )}
+                            <div
+                              className={`text-[10px] mt-1 ${
+                                mine ? 'text-gray-300' : 'text-gray-400'
+                              }`}
+                            >
+                              {timeLabel(m.created_at)}
+                              {m.edited_at && !m.deleted_at ? ' · edited' : ''}
+                            </div>
+                            {rx.length ? (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {rx.map((x) => (
+                                  <button
+                                    key={x.emoji}
+                                    onClick={() => toggleReaction(m, x.emoji)}
+                                    className={`text-[11px] rounded-full px-1.5 py-0.5 border ${
+                                      x.mine
+                                        ? mine
+                                          ? 'border-white/60 bg-white/20'
+                                          : 'border-gray-400 bg-gray-200'
+                                        : mine
+                                          ? 'border-white/30'
+                                          : 'border-gray-300'
+                                    }`}
+                                  >
+                                    {x.emoji} {x.count}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
-                        </div>
+                        )}
+                        {canAct && !mine ? (
+                          <button
+                            onClick={() => setMenuMsg(m)}
+                            className="text-gray-400 hover:text-gray-700 px-1 text-base leading-none shrink-0"
+                            title="Message options"
+                            aria-label="Message options"
+                          >
+                            ⋯
+                          </button>
+                        ) : null}
                       </div>
                     )
                   })
@@ -770,6 +1193,25 @@ export default function ChatClient() {
 
               {/* Composer */}
               <div className="mt-3 border-t border-gray-200 pt-3">
+                {replyTo ? (
+                  <div className="mb-2 flex items-start gap-2 rounded-md bg-gray-50 border border-gray-200 px-3 py-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-medium text-gray-500">
+                        Replying to {replyTo.sender_name || replyTo.sender_email || 'message'}
+                      </div>
+                      <div className="text-xs text-gray-700 truncate">
+                        {replyTo.deleted_at ? 'deleted message' : replyTo.body || 'attachment'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={cancelReply}
+                      className="text-gray-400 hover:text-gray-700 text-sm shrink-0"
+                      aria-label="Cancel reply"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : null}
                 {file ? (
                   <div className="mb-2 flex items-center gap-2 text-xs text-gray-700">
                     <span aria-hidden>📎</span>
@@ -946,6 +1388,191 @@ export default function ChatClient() {
                 className="text-sm rounded px-4 py-1.5 bg-gray-900 text-white disabled:opacity-50"
               >
                 {addingPeople ? 'Adding...' : 'Add'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Message options sheet */}
+      {menuMsg ? (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center"
+          onClick={() => setMenuMsg(null)}
+        >
+          <div
+            className="bg-white w-full sm:max-w-xs rounded-t-2xl sm:rounded-lg shadow-lg p-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {!menuMsg.deleted_at ? (
+              <div className="flex gap-1 px-2 py-2 border-b border-gray-100">
+                {EMOJIS.map((e) => (
+                  <button
+                    key={e}
+                    onClick={() => toggleReaction(menuMsg, e)}
+                    className="text-xl px-1.5 py-1 rounded hover:bg-gray-100"
+                    aria-label={`React ${e}`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {!menuMsg.deleted_at ? (
+              <button
+                onClick={() => startReply(menuMsg)}
+                className="w-full text-left px-4 py-3 text-sm text-gray-800 rounded hover:bg-gray-50"
+              >
+                Reply
+              </button>
+            ) : null}
+            {!menuMsg.deleted_at &&
+            ((menuMsg.body || '').trim() || (menuMsg.team_message_files || []).length > 0) ? (
+              <button
+                onClick={() => openForward(menuMsg)}
+                className="w-full text-left px-4 py-3 text-sm text-gray-800 rounded hover:bg-gray-50"
+              >
+                Forward
+              </button>
+            ) : null}
+            {menuMsg.sender_id === userId && !menuMsg.deleted_at ? (
+              <button
+                onClick={() => startEdit(menuMsg)}
+                className="w-full text-left px-4 py-3 text-sm text-gray-800 rounded hover:bg-gray-50"
+              >
+                Edit
+              </button>
+            ) : null}
+            {!menuMsg.deleted_at ? (
+              <button
+                onClick={() => deleteMessage(menuMsg.id)}
+                className="w-full text-left px-4 py-3 text-sm text-red-600 rounded hover:bg-red-50"
+              >
+                Delete
+              </button>
+            ) : null}
+            <button
+              onClick={() => setMenuMsg(null)}
+              className="w-full text-left px-4 py-3 text-sm text-gray-500 rounded hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Forward modal */}
+      {forwardMsg ? (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center"
+          onClick={() => setForwardMsg(null)}
+        >
+          <div
+            className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-lg shadow-lg p-4 max-h-[80dvh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-sm font-medium text-gray-900 mb-2">Forward to</div>
+            <div className="space-y-1">
+              {channels
+                .filter((c) => c.id !== activeId)
+                .map((c) => (
+                  <label
+                    key={c.id}
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={forwardTargets.includes(c.id)}
+                      onChange={() => toggleForwardTarget(c.id)}
+                    />
+                    <span className="text-sm text-gray-800 truncate">{c.name}</span>
+                  </label>
+                ))}
+            </div>
+            <div className="flex justify-end gap-3 mt-3">
+              <button onClick={() => setForwardMsg(null)} className="text-sm text-gray-500">
+                Cancel
+              </button>
+              <button
+                onClick={doForward}
+                disabled={forwarding || forwardTargets.length === 0}
+                className="text-sm rounded px-4 py-1.5 bg-gray-900 text-white disabled:opacity-50"
+              >
+                {forwarding ? 'Sending...' : 'Forward'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Manage members modal */}
+      {showManageMembers ? (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center"
+          onClick={() => setShowManageMembers(false)}
+        >
+          <div
+            className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-lg shadow-lg p-4 max-h-[80dvh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-sm font-medium text-gray-900 mb-2">Members</div>
+            <div className="space-y-1">
+              {members
+                .filter((u) => existingMemberIds.includes(u.id))
+                .map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-50"
+                  >
+                    <span className="text-sm text-gray-800 truncate">{u.name || u.email}</span>
+                    <button
+                      onClick={() => removeMember(u.id)}
+                      className="text-xs text-red-600 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              {members.filter((u) => existingMemberIds.includes(u.id)).length === 0 ? (
+                <div className="text-xs text-gray-500 px-2 py-2">No other members to remove.</div>
+              ) : null}
+            </div>
+            <div className="flex justify-end mt-3">
+              <button onClick={() => setShowManageMembers(false)} className="text-sm text-gray-500">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Rename group modal */}
+      {renaming ? (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center"
+          onClick={() => setRenaming(false)}
+        >
+          <div
+            className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-lg shadow-lg p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-sm font-medium text-gray-900 mb-2">Rename group</div>
+            <input
+              value={renameText}
+              onChange={(e) => setRenameText(e.target.value)}
+              className="w-full text-sm rounded border border-gray-300 px-3 py-2 outline-none"
+              placeholder="Group name"
+            />
+            <div className="flex justify-end gap-3 mt-3">
+              <button onClick={() => setRenaming(false)} className="text-sm text-gray-500">
+                Cancel
+              </button>
+              <button
+                onClick={saveRename}
+                disabled={savingRename || !renameText.trim()}
+                className="text-sm rounded px-4 py-1.5 bg-gray-900 text-white disabled:opacity-50"
+              >
+                {savingRename ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
