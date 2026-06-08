@@ -1,9 +1,10 @@
 /**
- * Mention email cron
+ * Notification email cron
  *
- * Runs every 5 minutes. Emails anyone tagged in Team Chat whose mention is
- * still unread (so people who already saw the red dot are not emailed). The in
- * app red dot is instant via a database trigger; this is the away fallback.
+ * Runs every 5 minutes. Emails anyone with unread Team Chat notifications
+ * (a message in a private room, or an @tag in a public channel). One email per
+ * person, listing what is waiting, so a busy room does not flood them. People
+ * who already opened Notifications (marked read) are not emailed.
  *
  * Auth: Bearer ${CRON_SECRET} header, set automatically by Vercel cron.
  * Manual: curl -H "Authorization: Bearer $CRON_SECRET" https://numatbamboo.com/api/cron/mention_emails
@@ -25,6 +26,15 @@ function esc(s: string): string {
   return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
+type Row = {
+  id: string
+  mentioned_user_id: string
+  channel_id: string
+  author_name: string | null
+  body_preview: string | null
+  created_at: string
+}
+
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${CRON_SECRET}`) {
@@ -35,58 +45,77 @@ export async function GET(req: NextRequest) {
 
   const { data: pending, error } = await sb
     .from('team_mentions')
-    .select('id, mentioned_user_id, channel_id, author_name, body_preview')
+    .select('id, mentioned_user_id, channel_id, author_name, body_preview, created_at')
     .is('emailed_at', null)
     .is('read_at', null)
     .order('created_at', { ascending: true })
-    .limit(50)
+    .limit(300)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!pending || pending.length === 0) return NextResponse.json({ ok: true, sent: 0, skipped: 0 })
+  if (!pending || pending.length === 0) return NextResponse.json({ ok: true, emails: 0, items: 0 })
 
-  const channelIds = Array.from(new Set(pending.map((p) => p.channel_id)))
+  const rows = pending as Row[]
+
+  const channelIds = Array.from(new Set(rows.map((r) => r.channel_id)))
   const { data: chans } = await sb.from('team_channels').select('id, name').in('id', channelIds)
   const channelName = new Map<string, string>()
   for (const c of (chans || []) as { id: string; name: string }[]) channelName.set(c.id, c.name)
 
-  const userIds = Array.from(new Set(pending.map((p) => p.mentioned_user_id)))
-  const emailById = new Map<string, string>()
-  for (const id of userIds) {
-    try {
-      const { data } = await sb.auth.admin.getUserById(id)
-      const email = data?.user?.email || ''
-      if (email) emailById.set(id, email)
-    } catch {
-      // skip this recipient
-    }
+  // group by recipient so each person gets one email
+  const byUser = new Map<string, Row[]>()
+  for (const r of rows) {
+    const arr = byUser.get(r.mentioned_user_id) || []
+    arr.push(r)
+    byUser.set(r.mentioned_user_id, arr)
   }
 
-  let sent = 0
-  let skipped = 0
-  for (const m of pending) {
-    const to = emailById.get(m.mentioned_user_id) || ''
+  let emails = 0
+  let items = 0
+  for (const [uid, list] of byUser) {
+    let to = ''
+    try {
+      const { data } = await sb.auth.admin.getUserById(uid)
+      to = data?.user?.email || ''
+    } catch {
+      to = ''
+    }
+    const ids = list.map((r) => r.id)
     if (!to || !to.toLowerCase().endsWith('@numat.ph')) {
-      await sb.from('team_mentions').update({ emailed_at: new Date().toISOString() }).eq('id', m.id)
-      skipped += 1
+      await sb.from('team_mentions').update({ emailed_at: new Date().toISOString() }).in('id', ids)
       continue
     }
-    const author = m.author_name || 'Someone'
-    const room = channelName.get(m.channel_id) || ''
-    const preview = esc(m.body_preview || '')
+
+    const shown = list.slice(-8).reverse() // newest first, cap 8
+    const more = list.length - shown.length
+    const lines = shown
+      .map((r) => {
+        const who = esc(r.author_name || 'Someone')
+        const room = esc(channelName.get(r.channel_id) || 'Team Chat')
+        const prev = esc(r.body_preview || '')
+        return `<div style="margin:0 0 10px">
+  <div style="font-size:13px;color:#111827"><strong>${who}</strong> <span style="color:#6b7280">in ${room}</span></div>
+  <div style="font-size:13px;color:#374151">${prev}</div>
+</div>`
+      })
+      .join('')
+    const moreLine = more > 0 ? `<div style="font-size:12px;color:#6b7280;margin:0 0 10px">and ${more} more</div>` : ''
+    const count = list.length
+    const noun = count === 1 ? 'message' : 'messages'
     const html = `<div style="font-family:Arial,Helvetica,sans-serif;background:#ffffff;color:#111827;padding:16px;max-width:560px">
-  <p style="font-size:15px;margin:0 0 8px">${esc(author)} mentioned you in NUMAT Team Chat.</p>
-  ${room ? `<p style="font-size:13px;color:#6b7280;margin:0 0 8px">Room: ${esc(room)}</p>` : ''}
-  <blockquote style="margin:0 0 16px;padding:10px 12px;background:#f9fafb;border-left:3px solid #111827;font-size:14px;color:#374151">${preview}</blockquote>
-  <a href="${APP_URL}/portal/chat" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;padding:9px 16px;border-radius:6px">Open Team Chat</a>
+  <p style="font-size:15px;margin:0 0 12px">You have ${count} new ${noun} in NUMAT Team Chat.</p>
+  ${lines}
+  ${moreLine}
+  <a href="${APP_URL}/portal/chat" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;padding:9px 16px;border-radius:6px;margin-top:6px">Open Team Chat</a>
 </div>`
     try {
-      await sendNotificationEmail({ to, subject: `${author} mentioned you in Team Chat`, html })
-      await sb.from('team_mentions').update({ emailed_at: new Date().toISOString() }).eq('id', m.id)
-      sent += 1
+      await sendNotificationEmail({ to, subject: `You have ${count} new ${noun} in Team Chat`, html })
+      await sb.from('team_mentions').update({ emailed_at: new Date().toISOString() }).in('id', ids)
+      emails += 1
+      items += list.length
     } catch (e) {
-      console.error('mention email failed', m.id, e)
+      console.error('notification email failed for', uid, e)
     }
   }
 
-  return NextResponse.json({ ok: true, sent, skipped })
+  return NextResponse.json({ ok: true, emails, items })
 }
