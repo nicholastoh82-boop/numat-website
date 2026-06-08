@@ -232,6 +232,8 @@ export default function ChatClient() {
   const [renaming, setRenaming] = useState(false)
   const [renameText, setRenameText] = useState('')
   const [savingRename, setSavingRename] = useState(false)
+  const [reads, setReads] = useState<{ user_id: string; last_read_at: string }[]>([])
+  const [memberCount, setMemberCount] = useState(0)
 
   const [loading, setLoading] = useState(true)
 
@@ -298,6 +300,36 @@ export default function ChatClient() {
       )
     },
     [supabase],
+  )
+
+  const loadReads = useCallback(
+    async (channelId: string) => {
+      const [{ data: r }, { count }] = await Promise.all([
+        supabase
+          .from('team_channel_reads')
+          .select('user_id, last_read_at')
+          .eq('channel_id', channelId),
+        supabase
+          .from('team_channel_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('channel_id', channelId),
+      ])
+      setReads((r || []) as { user_id: string; last_read_at: string }[])
+      setMemberCount(count || 0)
+    },
+    [supabase],
+  )
+
+  const markRead = useCallback(
+    async (channelId: string) => {
+      if (!channelId || !userId) return
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+      await supabase.from('team_channel_reads').upsert(
+        { channel_id: channelId, user_id: userId, last_read_at: new Date().toISOString() },
+        { onConflict: 'channel_id,user_id' },
+      )
+    },
+    [supabase, userId],
   )
 
   // Load the signed in user, auto join the public channels, then list channels.
@@ -371,6 +403,8 @@ export default function ChatClient() {
     loadMessages(activeId)
     loadActionItems(activeId)
     loadReactions(activeId)
+    loadReads(activeId)
+    markRead(activeId)
 
     const ch = supabase
       .channel(`team_chat_${activeId}`)
@@ -384,6 +418,19 @@ export default function ChatClient() {
         },
         () => {
           loadMessages(activeId)
+          markRead(activeId)
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'team_channel_reads',
+          filter: `channel_id=eq.${activeId}`,
+        },
+        () => {
+          loadReads(activeId)
         },
       )
       .on(
@@ -415,7 +462,22 @@ export default function ChatClient() {
     return () => {
       supabase.removeChannel(ch)
     }
-  }, [activeId, supabase, loadMessages, loadActionItems, loadReactions])
+  }, [activeId, supabase, loadMessages, loadActionItems, loadReactions, loadReads, markRead])
+
+  // Mark the open channel as read when the tab regains focus.
+  useEffect(() => {
+    function onVisible() {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && activeId) {
+        markRead(activeId)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [activeId, markRead])
 
   // Keep the view pinned to the newest message.
   useEffect(() => {
@@ -937,6 +999,19 @@ export default function ChatClient() {
   const isCreator = !!activeChannel && activeChannel.created_by === userId
   const hasGroupActions = !!activeChannel && (activeChannel.is_private || isCreator)
   const openItems = actionItems.filter((a) => a.status !== 'done').length
+  const lastOwnId = messages.reduce<string | null>(
+    (acc, mm) => (mm.sender_id === userId && !mm.deleted_at ? mm.id : acc),
+    null,
+  )
+  function seenLabel(createdAt: string): string {
+    const t = new Date(createdAt).getTime()
+    const others = reads.filter(
+      (r) => r.user_id !== userId && new Date(r.last_read_at).getTime() >= t,
+    )
+    if (others.length === 0) return 'Sent'
+    if (memberCount <= 2) return 'Seen'
+    return `Seen by ${others.length}`
+  }
 
   if (loading) {
     return <div className="text-sm text-gray-500 py-10">Loading the team chat...</div>
@@ -1294,6 +1369,11 @@ export default function ChatClient() {
                               {timeLabel(m.created_at)}
                               {m.edited_at && !m.deleted_at ? ' · edited' : ''}
                             </div>
+                            {mine && m.id === lastOwnId ? (
+                              <div className="text-[10px] mt-0.5 text-gray-300">
+                                {seenLabel(m.created_at)}
+                              </div>
+                            ) : null}
                             {rx.length ? (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {rx.map((x) => (
