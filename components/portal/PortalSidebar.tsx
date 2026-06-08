@@ -21,6 +21,7 @@ type NavItem = {
 
 const ALL_ITEMS: NavItem[] = [
   { href: '/portal',                label: 'Home',         roles: 'all' },
+  { href: '/portal/chat',           label: 'Team Chat',    roles: 'all' },
   { href: '/portal/scoreboard',     label: 'NuBam Hybrid', roles: 'all' },
   { href: '/portal/ceo',            label: 'CEO View',   roles: ['admin', 'ceo'] },
   { href: '/crm/dashboard',         label: 'CRM',        roles: ['admin', 'sales'] },
