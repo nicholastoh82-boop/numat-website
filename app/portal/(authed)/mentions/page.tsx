@@ -8,7 +8,7 @@ import { requirePortalUser } from '@/lib/portal/roles'
 import MentionsClient from './_components/MentionsClient'
 
 export const metadata = {
-  title: 'Mentions',
+  title: 'Notifications',
   robots: 'noindex, nofollow',
 }
 

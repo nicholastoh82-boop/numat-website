@@ -66,15 +66,15 @@ export default function MentionsClient() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold text-gray-900">Mentions</h1>
+      <h1 className="text-xl font-semibold text-gray-900">Notifications</h1>
       <p className="text-sm text-gray-600 mt-1">
-        When someone types @ and your name in Team Chat, it shows up here.
+        New messages and tags from Team Chat show up here.
       </p>
 
       {loading ? (
         <div className="text-sm text-gray-500 py-10">Loading...</div>
       ) : rows.length === 0 ? (
-        <div className="text-sm text-gray-500 py-10">No mentions yet.</div>
+        <div className="text-sm text-gray-500 py-10">Nothing yet.</div>
       ) : (
         <ul className="mt-4 divide-y divide-gray-100 border border-gray-200 rounded">
           {rows.map((r) => {
@@ -88,7 +88,7 @@ export default function MentionsClient() {
                       {wasUnread && (
                         <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-2 align-middle" aria-hidden />
                       )}
-                      <span className="font-medium">{r.author_name || 'Someone'}</span> mentioned you
+                      <span className="font-medium">{r.author_name || 'Someone'}</span>
                       {room ? <span className="text-gray-500"> in {room}</span> : null}
                     </span>
                     <span className="text-[11px] text-gray-400 whitespace-nowrap">{when(r.created_at)}</span>
