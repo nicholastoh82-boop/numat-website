@@ -1,7 +1,8 @@
 /* components/portal/PortalSidebar.tsx
    Self contained sidebar. Fetches the current user, their admin status, and the
    functions they are allowed to see (portal_access), then shows only those menu
-   items. Admins see everything. Renders nothing for a person with no access. */
+   items. Admins see everything. Renders nothing for a person with no access.
+   Also shows a live red dot on Mentions when the person has unread chat tags. */
 
 'use client'
 
@@ -23,6 +24,7 @@ type NavItem = {
 const ALL_ITEMS: NavItem[] = [
   { href: '/portal',                  label: 'Home',          feature: 'baseline' },
   { href: '/portal/chat',             label: 'Team Chat',     feature: 'chat' },
+  { href: '/portal/mentions',         label: 'Mentions',      feature: 'chat' },
   { href: '/portal/scoreboard',       label: 'NuBam Hybrid',  feature: 'scoreboard' },
   { href: '/portal/ceo',              label: 'CEO View',      feature: 'ceo' },
   { href: '/crm/dashboard',           label: 'CRM',           feature: 'crm' },
@@ -46,11 +48,14 @@ export default function PortalSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [loaded, setLoaded] = useState(false)
+  const [userId, setUserId] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string>('')
   const [isAdmin, setIsAdmin] = useState(false)
   const [features, setFeatures] = useState<string[]>([])
+  const [unread, setUnread] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  // Load the user, admin status, and allowed functions.
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -67,6 +72,7 @@ export default function PortalSidebar() {
         supabase.from('portal_access').select('feature').eq('user_id', user.id),
       ])
       if (cancelled) return
+      setUserId(user.id)
       setUserEmail(user.email || '')
       setIsAdmin((roleRows && roleRows.length > 0) || ALWAYS_ADMIN.includes(email))
       setFeatures(((featRows ?? []) as Array<{ feature: string }>).map((f) => f.feature))
@@ -74,6 +80,38 @@ export default function PortalSidebar() {
     })()
     return () => { cancelled = true }
   }, [])
+
+  // Count unread mentions. Re-checked on every navigation so opening the
+  // Mentions page (which marks them read) clears the dot.
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+    ;(async () => {
+      const supabase = createClient()
+      const { count } = await supabase
+        .from('team_mentions')
+        .select('id', { count: 'exact', head: true })
+        .eq('mentioned_user_id', userId)
+        .is('read_at', null)
+      if (!cancelled) setUnread(count || 0)
+    })()
+    return () => { cancelled = true }
+  }, [userId, pathname])
+
+  // Live bump of the dot when a new tag arrives.
+  useEffect(() => {
+    if (!userId) return
+    const supabase = createClient()
+    const ch = supabase
+      .channel(`mentions_${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'team_mentions', filter: `mentioned_user_id=eq.${userId}` },
+        () => setUnread((u) => u + 1),
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [userId])
 
   useEffect(() => { setMobileOpen(false) }, [pathname])
 
@@ -112,6 +150,9 @@ export default function PortalSidebar() {
           <line x1="3" y1="12" x2="21" y2="12" />
           <line x1="3" y1="18" x2="21" y2="18" />
         </svg>
+        {unread > 0 && (
+          <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full" aria-hidden />
+        )}
       </button>
 
       {mobileOpen && (
@@ -152,17 +193,23 @@ export default function PortalSidebar() {
             const active =
               pathname === item.href ||
               (item.href !== '/portal' && pathname?.startsWith(item.href))
+            const showDot = item.href === '/portal/mentions' && unread > 0
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className={`block px-3 py-2 text-sm rounded ${
+                className={`flex items-center justify-between px-3 py-2 text-sm rounded ${
                   active ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {showDot && (
+                  <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[11px] font-medium bg-red-500 text-white rounded-full">
+                    {unread > 9 ? '9+' : unread}
+                  </span>
+                )}
               </Link>
             )
           })}
