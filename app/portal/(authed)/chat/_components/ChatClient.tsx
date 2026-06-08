@@ -111,15 +111,53 @@ function formatMessage(raw: string, mine: boolean): string {
   s = s.replace(/(^|[\s(])_(\S(?:.*?\S)?)_(?=[\s).,!?:;]|$)/g, '$1<em>$2</em>')
   s = s.replace(/(^|[\s(])~(\S(?:.*?\S)?)~(?=[\s).,!?:;]|$)/g, '$1<del>$2</del>')
 
+  // Group lines into bullet and numbered lists; join the rest with line breaks.
+  const lines = s.split('\n')
+  const out: string[] = []
+  let i = 0
+  while (i < lines.length) {
+    if (/^\s*[-*]\s+/.test(lines[i])) {
+      const items: string[] = []
+      while (i < lines.length) {
+        const m2 = lines[i].match(/^\s*[-*]\s+(.*)$/)
+        if (!m2) break
+        items.push(`<li>${m2[1]}</li>`)
+        i++
+      }
+      out.push(`<ul class="list-disc pl-5 my-1">${items.join('')}</ul>`)
+    } else if (/^\s*\d+\.\s+/.test(lines[i])) {
+      const items: string[] = []
+      while (i < lines.length) {
+        const m2 = lines[i].match(/^\s*\d+\.\s+(.*)$/)
+        if (!m2) break
+        items.push(`<li>${m2[1]}</li>`)
+        i++
+      }
+      out.push(`<ol class="list-decimal pl-5 my-1">${items.join('')}</ol>`)
+    } else {
+      const para: string[] = []
+      while (
+        i < lines.length &&
+        !/^\s*[-*]\s+/.test(lines[i]) &&
+        !/^\s*\d+\.\s+/.test(lines[i])
+      ) {
+        para.push(lines[i])
+        i++
+      }
+      out.push(para.join('<br>'))
+    }
+  }
+  s = out.join('')
+
   s = s.replace(
     /\u0000IC(\d+)\u0000/g,
-    (_m, i: string) => `<code class="${codeClass}">${inlines[Number(i)]}</code>`,
+    (_m, i2: string) => `<code class="${codeClass}">${inlines[Number(i2)]}</code>`,
   )
   s = s.replace(
     /\u0000CB(\d+)\u0000/g,
-    (_m, i: string) => `<code class="${blockClass}">${blocks[Number(i)]}</code>`,
+    (_m, i2: string) => `<code class="${blockClass}">${blocks[Number(i2)]}</code>`,
   )
-  s = s.replace(/\u0000LK(\d+)\u0000/g, (_m, i: string) => links[Number(i)])
+  s = s.replace(/\u0000LK(\d+)\u0000/g, (_m, i2: string) => links[Number(i2)])
 
   return s
 }
@@ -199,6 +237,7 @@ export default function ChatClient() {
 
   const endRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const composerRef = useRef<HTMLTextAreaElement | null>(null)
 
   const loadChannels = useCallback(
     async (uid: string) => {
@@ -440,6 +479,48 @@ export default function ChatClient() {
     } finally {
       setSending(false)
     }
+  }
+
+  function applyWrap(before: string, after: string) {
+    const el = composerRef.current
+    if (!el) return
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const val = text
+    const selected = val.slice(start, end)
+    const next = val.slice(0, start) + before + selected + after + val.slice(end)
+    setText(next)
+    requestAnimationFrame(() => {
+      el.focus()
+      const a = start + before.length
+      el.setSelectionRange(a, a + selected.length)
+    })
+  }
+
+  function applyListPrefix(kind: 'bullet' | 'number') {
+    const el = composerRef.current
+    if (!el) return
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const val = text
+    const from = val.lastIndexOf('\n', start - 1) + 1
+    let to = val.indexOf('\n', end)
+    if (to === -1) to = val.length
+    const block = val.slice(from, to)
+    const replaced = block
+      .split('\n')
+      .map((ln, idx) => {
+        const content = ln.replace(/^\s*([-*]|\d+\.)\s+/, '')
+        return kind === 'bullet' ? `- ${content}` : `${idx + 1}. ${content}`
+      })
+      .join('\n')
+    const next = val.slice(0, from) + replaced + val.slice(to)
+    const added = next.length - val.length
+    setText(next)
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(from, to + added)
+    })
   }
 
   async function openFile(att: Attachment) {
@@ -1187,7 +1268,7 @@ export default function ChatClient() {
                               <>
                                 {m.body ? (
                                   <div
-                                    className="text-sm whitespace-pre-wrap break-words"
+                                    className="text-sm break-words leading-relaxed [&_a]:underline"
                                     dangerouslySetInnerHTML={{ __html: formatMessage(m.body, mine) }}
                                   />
                                 ) : null}
@@ -1289,6 +1370,57 @@ export default function ChatClient() {
                     </button>
                   </div>
                 ) : null}
+                <div className="flex items-center gap-1 mb-1">
+                  <button
+                    onClick={() => applyWrap('*', '*')}
+                    className="h-7 w-7 rounded text-sm font-bold text-gray-700 hover:bg-gray-100"
+                    title="Bold"
+                    aria-label="Bold"
+                  >
+                    B
+                  </button>
+                  <button
+                    onClick={() => applyWrap('_', '_')}
+                    className="h-7 w-7 rounded text-sm italic text-gray-700 hover:bg-gray-100"
+                    title="Italic"
+                    aria-label="Italic"
+                  >
+                    I
+                  </button>
+                  <button
+                    onClick={() => applyWrap('~', '~')}
+                    className="h-7 w-7 rounded text-sm line-through text-gray-700 hover:bg-gray-100"
+                    title="Strikethrough"
+                    aria-label="Strikethrough"
+                  >
+                    S
+                  </button>
+                  <button
+                    onClick={() => applyWrap('`', '`')}
+                    className="h-7 px-1.5 rounded text-xs font-mono text-gray-700 hover:bg-gray-100"
+                    title="Code"
+                    aria-label="Code"
+                  >
+                    &lt;/&gt;
+                  </button>
+                  <span className="w-px h-5 bg-gray-200 mx-1" />
+                  <button
+                    onClick={() => applyListPrefix('bullet')}
+                    className="h-7 px-2 rounded text-sm text-gray-700 hover:bg-gray-100"
+                    title="Bullet list"
+                    aria-label="Bullet list"
+                  >
+                    • List
+                  </button>
+                  <button
+                    onClick={() => applyListPrefix('number')}
+                    className="h-7 px-2 rounded text-sm text-gray-700 hover:bg-gray-100"
+                    title="Numbered list"
+                    aria-label="Numbered list"
+                  >
+                    1. List
+                  </button>
+                </div>
                 <div className="flex items-end gap-2">
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -1305,6 +1437,7 @@ export default function ChatClient() {
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
                   />
                   <textarea
+                    ref={composerRef}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     onKeyDown={(e) => {
@@ -1324,9 +1457,6 @@ export default function ChatClient() {
                   >
                     {sending ? '...' : 'Send'}
                   </button>
-                </div>
-                <div className="mt-1 text-[11px] text-gray-400">
-                  {'Format: *bold*, _italic_, ~strike~, `code`'}
                 </div>
               </div>
             </>
