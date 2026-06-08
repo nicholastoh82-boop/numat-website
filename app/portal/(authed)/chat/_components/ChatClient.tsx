@@ -650,8 +650,9 @@ export default function ChatClient() {
 
   async function doForward() {
     if (!forwardMsg || forwardTargets.length === 0 || !userId) return
-    const fwd = (forwardMsg.body || '').trim()
-    if (!fwd) {
+    const fwdBody = (forwardMsg.body || '').trim()
+    const files = forwardMsg.team_message_files || []
+    if (!fwdBody && files.length === 0) {
       setForwardMsg(null)
       return
     }
@@ -662,10 +663,23 @@ export default function ChatClient() {
         sender_id: userId,
         sender_name: userName,
         sender_email: userEmail,
-        body: fwd,
+        body: fwdBody || null,
         forwarded: true,
       }))
-      await supabase.from('team_messages').insert(rows)
+      const ins = await supabase.from('team_messages').insert(rows).select('id')
+      const newIds = ((ins.data || []) as { id: string }[]).map((r) => r.id)
+      if (files.length > 0 && newIds.length > 0) {
+        const fileRows = newIds.flatMap((mid) =>
+          files.map((f) => ({
+            message_id: mid,
+            file_path: f.file_path,
+            file_name: f.file_name,
+            file_type: f.file_type,
+            file_size: f.file_size,
+          })),
+        )
+        await supabase.from('team_message_files').insert(fileRows)
+      }
       setForwardMsg(null)
       setForwardTargets([])
       await loadMessages(activeId)
@@ -1412,7 +1426,8 @@ export default function ChatClient() {
                 Reply
               </button>
             ) : null}
-            {!menuMsg.deleted_at && (menuMsg.body || '').trim() ? (
+            {!menuMsg.deleted_at &&
+            ((menuMsg.body || '').trim() || (menuMsg.team_message_files || []).length > 0) ? (
               <button
                 onClick={() => openForward(menuMsg)}
                 className="w-full text-left px-4 py-3 text-sm text-gray-800 rounded hover:bg-gray-50"
