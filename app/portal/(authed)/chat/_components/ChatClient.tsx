@@ -107,6 +107,11 @@ export default function ChatClient() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [creatingPrivate, setCreatingPrivate] = useState(false)
 
+  const [showAddPeople, setShowAddPeople] = useState(false)
+  const [addSelectedIds, setAddSelectedIds] = useState<string[]>([])
+  const [existingMemberIds, setExistingMemberIds] = useState<string[]>([])
+  const [addingPeople, setAddingPeople] = useState(false)
+
   const [loading, setLoading] = useState(true)
 
   const endRef = useRef<HTMLDivElement | null>(null)
@@ -412,6 +417,55 @@ export default function ChatClient() {
     )
   }
 
+  async function ensureMembersLoaded() {
+    if (members.length > 0) return
+    setLoadingMembers(true)
+    try {
+      const res = await fetch('/api/team_chat/members')
+      const data = await res.json()
+      if (res.ok) setMembers((data.members || []) as Member[])
+      else setNotice(data.error || 'Could not load teammates.')
+    } catch {
+      setNotice('Could not load teammates.')
+    } finally {
+      setLoadingMembers(false)
+    }
+  }
+
+  async function openAddPeople() {
+    if (!activeId) return
+    setShowAddPeople(true)
+    setAddSelectedIds([])
+    await ensureMembersLoaded()
+    const { data } = await supabase
+      .from('team_channel_members')
+      .select('user_id')
+      .eq('channel_id', activeId)
+    setExistingMemberIds(((data || []) as { user_id: string }[]).map((r) => r.user_id))
+  }
+
+  function toggleAddSelect(id: string) {
+    setAddSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  async function addPeople() {
+    if (!activeId || addSelectedIds.length === 0) return
+    setAddingPeople(true)
+    try {
+      const rows = addSelectedIds.map((uid) => ({ channel_id: activeId, user_id: uid }))
+      await supabase
+        .from('team_channel_members')
+        .upsert(rows, { onConflict: 'channel_id,user_id', ignoreDuplicates: true })
+      setShowAddPeople(false)
+      setAddSelectedIds([])
+      await loadChannels(userId)
+    } finally {
+      setAddingPeople(false)
+    }
+  }
+
   async function createPrivate() {
     if (!userId || selectedIds.length === 0) return
     setCreatingPrivate(true)
@@ -501,7 +555,7 @@ export default function ChatClient() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-9rem)]">
+    <div className="flex flex-col h-[calc(100dvh-7rem)] md:h-[calc(100dvh-9rem)]">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-3">
         <div className="min-w-0">
@@ -513,6 +567,15 @@ export default function ChatClient() {
           ) : null}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {activeChannel?.is_private ? (
+            <button
+              onClick={openAddPeople}
+              className="text-sm rounded px-3 py-1.5 border border-gray-300 text-gray-800 hover:bg-gray-100"
+              title="Add people to this group"
+            >
+              Add people
+            </button>
+          ) : null}
           <button
             onClick={handleSummarise}
             disabled={summarising}
@@ -822,6 +885,67 @@ export default function ChatClient() {
                 className="text-sm rounded px-4 py-1.5 bg-gray-900 text-white disabled:opacity-50"
               >
                 {creatingPrivate ? 'Starting...' : 'Start chat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Add people to an existing private group */}
+      {showAddPeople ? (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setShowAddPeople(false)}
+        >
+          <div
+            className="bg-white rounded-lg w-full max-w-sm max-h-[80dvh] flex flex-col shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-gray-200">
+              <h2 className="text-sm font-semibold text-gray-900">Add people</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Pick who to add. They will be able to read this group's messages.
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {loadingMembers ? (
+                <p className="text-sm text-gray-500 p-3">Loading teammates...</p>
+              ) : members.filter((m) => !existingMemberIds.includes(m.id)).length === 0 ? (
+                <p className="text-sm text-gray-500 p-3">Everyone is already in this group.</p>
+              ) : (
+                members
+                  .filter((m) => !existingMemberIds.includes(m.id))
+                  .map((m) => (
+                    <label
+                      key={m.id}
+                      className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={addSelectedIds.includes(m.id)}
+                        onChange={() => toggleAddSelect(m.id)}
+                      />
+                      <div className="min-w-0">
+                        <div className="text-sm text-gray-900 truncate">{m.name}</div>
+                        <div className="text-[11px] text-gray-500 truncate">{m.email}</div>
+                      </div>
+                    </label>
+                  ))
+              )}
+            </div>
+            <div className="px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
+              <button
+                onClick={() => setShowAddPeople(false)}
+                className="text-sm rounded px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addPeople}
+                disabled={addingPeople || addSelectedIds.length === 0}
+                className="text-sm rounded px-4 py-1.5 bg-gray-900 text-white disabled:opacity-50"
+              >
+                {addingPeople ? 'Adding...' : 'Add'}
               </button>
             </div>
           </div>
