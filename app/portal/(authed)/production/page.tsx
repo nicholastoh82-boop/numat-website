@@ -4,7 +4,7 @@
    Server gates by role; client component handles tab switching. */
 
 import Link from 'next/link'
-import { requireRole } from '@/lib/portal/roles'
+import { requireFeature } from '@/lib/portal/roles'
 import { createClient } from '@/lib/supabase/server'
 import ProductionShell from './_components/ProductionShell'
 
@@ -40,7 +40,7 @@ const TOOLS = [
 export default async function PortalProduction() {
   // Sales (Bryan as COO) is included so he can use the QC tool from this page.
   // Station entry forms below are primarily for admin/ceo/ops day to day use.
-  const user = await requireRole(['admin', 'ceo', 'ops', 'sales'])
+  const user = await requireFeature('production')
   const supabase = await createClient()
 
   // Active board variants for the board run dropdown

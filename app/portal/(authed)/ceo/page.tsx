@@ -2,7 +2,7 @@
    Server component. Auth via Supabase + role check (admin or ceo only).
    Reads period from query params and forwards to the edge function. */
 
-import { requireRole } from '@/lib/portal/roles'
+import { requireFeature } from '@/lib/portal/roles'
 import CeoDashboard from './_components/CeoDashboard'
 
 export const metadata = {
@@ -54,7 +54,7 @@ export default async function CeoPage({
 }: {
   searchParams: Promise<SearchParams>
 }) {
-  await requireRole(['admin', 'ceo'])
+  await requireFeature('ceo')
   const params = await searchParams
   const result = await loadCeoData(params)
 

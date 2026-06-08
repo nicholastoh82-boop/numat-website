@@ -3,9 +3,9 @@
    This is where Boyet will eventually submit receipts as pending. */
 
 import { redirect } from 'next/navigation'
-import { requireRole } from '@/lib/portal/roles'
+import { requireFeature } from '@/lib/portal/roles'
 
 export default async function PortalReceiptsRedirect() {
-  await requireRole(['admin', 'finance', 'ops'])
+  await requireFeature('receipts')
   redirect('/finance/new')
 }

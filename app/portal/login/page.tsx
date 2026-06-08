@@ -25,11 +25,8 @@ export default async function PortalLogin({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user) {
-    const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-    if (roles && roles.length > 0) {
+    const email = (user.email || '').toLowerCase()
+    if (email.endsWith('@numat.ph')) {
       redirect(redirectTo)
     }
   }

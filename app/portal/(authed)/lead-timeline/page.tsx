@@ -3,7 +3,7 @@
    Timeline (Gantt). Both show the active leads with deal value and the key
    milestone dates. Visible to admin, ceo, sales, and viewer (Wavemaker Impact). */
 
-import { requireRole } from '@/lib/portal/roles'
+import { requireFeature } from '@/lib/portal/roles'
 import LeadStatusTabs from '@/components/portal/LeadStatusTabs'
 
 export const metadata = {
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function LeadStatusPage() {
-  await requireRole(['admin', 'ceo', 'sales', 'viewer'])
+  await requireFeature('lead_timeline')
 
   return (
     <div className="space-y-6">

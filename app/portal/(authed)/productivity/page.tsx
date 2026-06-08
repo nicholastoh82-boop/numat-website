@@ -3,7 +3,7 @@
    The counter itself is scoped server side by the API: admin and ceo see all
    reps, sales reps see only their own. */
 
-import { requireRole } from '@/lib/portal/roles'
+import { requireFeature } from '@/lib/portal/roles'
 import EmailCounter from '@/components/portal/EmailCounter'
 
 export const metadata = {
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function ProductivityPage() {
-  await requireRole(['admin', 'ceo', 'sales'])
+  await requireFeature('productivity')
 
   return (
     <div className="space-y-6">

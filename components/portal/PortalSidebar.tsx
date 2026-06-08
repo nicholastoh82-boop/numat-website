@@ -1,8 +1,7 @@
 /* components/portal/PortalSidebar.tsx
-   Self contained sidebar that fetches the current user and roles on mount.
-   Renders nothing for users who do not have a portal role assigned.
-   Drop into any layout to give it the portal navigation.
-   Mobile: collapses behind a hamburger toggle, opens as overlay. */
+   Self contained sidebar. Fetches the current user, their admin status, and the
+   functions they are allowed to see (portal_access), then shows only those menu
+   items. Admins see everything. Renders nothing for a person with no access. */
 
 'use client'
 
@@ -11,33 +10,36 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-type PortalRole = 'admin' | 'ceo' | 'sales' | 'finance' | 'ops'
+const ALWAYS_ADMIN = ['nick@numat.ph']
 
 type NavItem = {
   href: string
   label: string
-  roles: PortalRole[] | 'all'
+  // 'baseline' shows for everyone, 'admin' shows for admins only,
+  // anything else is a feature key checked against the user's access.
+  feature: string
 }
 
 const ALL_ITEMS: NavItem[] = [
-  { href: '/portal',                label: 'Home',         roles: 'all' },
-  { href: '/portal/chat',           label: 'Team Chat',    roles: 'all' },
-  { href: '/portal/scoreboard',     label: 'NuBam Hybrid', roles: 'all' },
-  { href: '/portal/ceo',            label: 'CEO View',   roles: ['admin', 'ceo'] },
-  { href: '/crm/dashboard',         label: 'CRM',        roles: ['admin', 'sales'] },
-  { href: '/portal/lead-timeline',  label: 'Lead Status', roles: ['admin', 'ceo', 'sales', 'viewer'] },
-  { href: '/crm/search',            label: 'KB Search',  roles: ['admin', 'sales'] },
-  { href: '/crm/outreach',          label: 'Outreach',   roles: ['admin', 'sales', 'rep'] },
-  { href: '/crm/signals',           label: 'Buying Signals', roles: ['admin', 'sales'] },
-  { href: '/portal/productivity',   label: 'Email Counter', roles: ['admin', 'ceo', 'sales'] },
-  { href: '/finance',               label: 'Financials', roles: ['admin', 'ceo', 'finance'] },
-  { href: '/finance/new',           label: 'Receipts',   roles: ['admin', 'finance', 'ops'] },
-  { href: '/portal/verify',         label: 'Verify',     roles: ['admin', 'finance'] },
-  { href: '/portal/production',       label: 'Production', roles: ['admin', 'ceo', 'ops', 'sales'] },
-  { href: '/crm/production/qc',       label: '↳ QC Check', roles: ['admin', 'ops', 'sales'] },
-  { href: '/crm/production/forecast', label: '↳ Forecast',  roles: ['admin', 'ceo', 'ops'] },
-  { href: '/finance/reports',       label: 'Reports',    roles: ['admin', 'ceo', 'finance'] },
-  { href: '/portal/settings',       label: 'Settings',   roles: ['admin'] },
+  { href: '/portal',                  label: 'Home',          feature: 'baseline' },
+  { href: '/portal/chat',             label: 'Team Chat',     feature: 'chat' },
+  { href: '/portal/scoreboard',       label: 'NuBam Hybrid',  feature: 'scoreboard' },
+  { href: '/portal/ceo',              label: 'CEO View',      feature: 'ceo' },
+  { href: '/crm/dashboard',           label: 'CRM',           feature: 'crm' },
+  { href: '/portal/lead-timeline',    label: 'Lead Status',   feature: 'lead_timeline' },
+  { href: '/crm/search',              label: 'KB Search',     feature: 'crm' },
+  { href: '/crm/outreach',            label: 'Outreach',      feature: 'crm' },
+  { href: '/crm/signals',             label: 'Buying Signals',feature: 'crm' },
+  { href: '/portal/productivity',     label: 'Email Counter', feature: 'productivity' },
+  { href: '/finance',                 label: 'Financials',    feature: 'financials' },
+  { href: '/finance/new',             label: 'Receipts',      feature: 'receipts' },
+  { href: '/portal/verify',           label: 'Verify',        feature: 'verify' },
+  { href: '/portal/production',       label: 'Production',    feature: 'production' },
+  { href: '/crm/production/qc',       label: '↳ QC Check',    feature: 'production' },
+  { href: '/crm/production/forecast', label: '↳ Forecast',    feature: 'production' },
+  { href: '/finance/reports',         label: 'Reports',       feature: 'reports' },
+  { href: '/portal/access',           label: 'Access',        feature: 'admin' },
+  { href: '/portal/settings',         label: 'Settings',      feature: 'admin' },
 ]
 
 export default function PortalSidebar() {
@@ -45,7 +47,8 @@ export default function PortalSidebar() {
   const router = useRouter()
   const [loaded, setLoaded] = useState(false)
   const [userEmail, setUserEmail] = useState<string>('')
-  const [roles, setRoles] = useState<PortalRole[]>([])
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [features, setFeatures] = useState<string[]>([])
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
@@ -58,32 +61,37 @@ export default function PortalSidebar() {
         setLoaded(true)
         return
       }
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
+      const email = (user.email || '').toLowerCase()
+      const [{ data: roleRows }, { data: featRows }] = await Promise.all([
+        supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin'),
+        supabase.from('portal_access').select('feature').eq('user_id', user.id),
+      ])
       if (cancelled) return
       setUserEmail(user.email || '')
-      setRoles(((data ?? []) as Array<{ role: string }>).map(r => r.role as PortalRole))
+      setIsAdmin((roleRows && roleRows.length > 0) || ALWAYS_ADMIN.includes(email))
+      setFeatures(((featRows ?? []) as Array<{ feature: string }>).map((f) => f.feature))
       setLoaded(true)
     })()
     return () => { cancelled = true }
   }, [])
 
-  // Close mobile sidebar when route changes
   useEffect(() => { setMobileOpen(false) }, [pathname])
 
   if (!loaded) {
     return <aside className="hidden md:block w-60 shrink-0 border-r border-gray-200 bg-white" aria-hidden />
   }
 
-  if (roles.length === 0) {
-    return null
+  const allowed = (item: NavItem) => {
+    if (item.feature === 'baseline') return true
+    if (item.feature === 'admin') return isAdmin
+    return isAdmin || features.includes(item.feature)
   }
 
-  const items = ALL_ITEMS.filter(
-    (i) => i.roles === 'all' || i.roles.some((r) => roles.includes(r)),
-  )
+  const items = ALL_ITEMS.filter(allowed)
+
+  if (items.length === 0) {
+    return null
+  }
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -93,7 +101,6 @@ export default function PortalSidebar() {
 
   return (
     <>
-      {/* Mobile hamburger button (only visible on mobile) */}
       <button
         type="button"
         onClick={() => setMobileOpen(true)}
@@ -107,7 +114,6 @@ export default function PortalSidebar() {
         </svg>
       </button>
 
-      {/* Backdrop on mobile when sidebar is open */}
       {mobileOpen && (
         <div
           className="md:hidden fixed inset-0 bg-black/40 z-40"
@@ -116,7 +122,6 @@ export default function PortalSidebar() {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`
           w-60 shrink-0 border-r border-gray-200 bg-white flex flex-col h-screen
@@ -154,9 +159,7 @@ export default function PortalSidebar() {
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
                 className={`block px-3 py-2 text-sm rounded ${
-                  active
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
+                  active ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 {item.label}
@@ -170,7 +173,7 @@ export default function PortalSidebar() {
             {userEmail}
           </div>
           <div className="text-gray-500 mt-0.5">
-            {roles.join(', ')}
+            {isAdmin ? 'admin' : 'team'}
           </div>
           <button
             type="button"
