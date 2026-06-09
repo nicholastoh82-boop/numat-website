@@ -645,10 +645,17 @@ export default function ChatClient() {
     setActionItems((prev) =>
       prev.map((a) => (a.id === item.id ? { ...a, status: next } : a)),
     )
-    await supabase
-      .from('team_action_items')
-      .update({ status: next, done_at: next === 'done' ? new Date().toISOString() : null })
-      .eq('id', item.id)
+    const { error } = await supabase.rpc('tc_set_task_status', {
+      p_task_id: item.id,
+      p_done: next === 'done',
+    })
+    if (error) {
+      setActionItems((prev) =>
+        prev.map((a) => (a.id === item.id ? { ...a, status: item.status } : a)),
+      )
+      setNotice('Only the assigned person can change this task.')
+      return
+    }
     if (next === 'done' && activeId && userId) {
       await supabase.from('team_messages').insert({
         channel_id: activeId,
@@ -1320,7 +1327,7 @@ export default function ChatClient() {
           {/* Tasks panel on small screens */}
           {tasksOpen ? (
             <div className="lg:hidden flex-1 min-h-0 overflow-y-auto border border-gray-200 rounded p-3 mb-2">
-              <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} onSetDue={setTaskDue} members={members} onAddTask={addTask} />
+              <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} onSetDue={setTaskDue} members={members} onAddTask={addTask} currentUserId={userId} />
             </div>
           ) : null}
 
@@ -1612,7 +1619,7 @@ export default function ChatClient() {
 
         {/* Tasks, desktop */}
         <aside className="hidden lg:flex flex-col w-72 shrink-0 border-l border-gray-200 pl-3 overflow-y-auto">
-          <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} onSetDue={setTaskDue} members={members} onAddTask={addTask} />
+          <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} onSetDue={setTaskDue} members={members} onAddTask={addTask} currentUserId={userId} />
         </aside>
       </div>
 
@@ -1936,6 +1943,7 @@ function TasksPanel({
   onSetDue: (item: ActionItem, value: string) => void
   members: Member[]
   onAddTask: (title: string, assigneeId: string, dueValue: string) => void
+  currentUserId: string
 }) {
   const [newTitle, setNewTitle] = useState('')
   const [newAssignee, setNewAssignee] = useState('')
@@ -1968,7 +1976,17 @@ function TasksPanel({
                   type="checkbox"
                   checked={it.status === 'done'}
                   onChange={() => onToggle(it)}
-                  className="mt-0.5"
+                  disabled={!!it.assignee_id && it.assignee_id !== currentUserId}
+                  title={
+                    !!it.assignee_id && it.assignee_id !== currentUserId
+                      ? 'Only the assigned person can change this'
+                      : undefined
+                  }
+                  className={`mt-0.5 ${
+                    !!it.assignee_id && it.assignee_id !== currentUserId
+                      ? 'opacity-40 cursor-not-allowed'
+                      : ''
+                  }`}
                 />
                 <div className="min-w-0">
                   <div
