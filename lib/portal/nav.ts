@@ -6,6 +6,7 @@
 
 export type PortalGroupKey =
   | 'overview'
+  | 'people'
   | 'sales'
   | 'finance'
   | 'production'
@@ -27,6 +28,7 @@ export type PortalNavItem = {
 // Order the groups appear on the home page.
 export const PORTAL_GROUPS: { key: PortalGroupKey; title: string }[] = [
   { key: 'overview', title: 'My day' },
+  { key: 'people', title: 'People' },
   { key: 'sales', title: 'Sales' },
   { key: 'finance', title: 'Finance' },
   { key: 'production', title: 'Production' },
@@ -39,6 +41,7 @@ export const PORTAL_GROUPS: { key: PortalGroupKey; title: string }[] = [
 export const PORTAL_NAV: PortalNavItem[] = [
   { href: '/portal', label: 'Home', feature: 'baseline' },
   { href: '/portal/announcements', label: 'Announcements', feature: 'announcements', group: 'overview' },
+  { href: '/portal/leave', label: 'Leave', feature: 'leave', group: 'people' },
   { href: '/portal/chat', label: 'Team Chat', feature: 'chat', group: 'team' },
   { href: '/portal/mentions', label: 'Notifications', feature: 'chat', group: 'team' },
   { href: '/portal/scoreboard', label: 'NuBam Hybrid', feature: 'scoreboard', group: 'overview' },

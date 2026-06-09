@@ -14,6 +14,7 @@ import {
 import {
   LayoutDashboard,
   Users,
+  UsersRound,
   Wallet,
   Factory,
   MessageSquare,
@@ -24,6 +25,7 @@ import {
 
 const GROUP_ICON: Record<PortalGroupKey, LucideIcon> = {
   overview: LayoutDashboard,
+  people: UsersRound,
   sales: Users,
   finance: Wallet,
   production: Factory,
