@@ -285,15 +285,19 @@ export default function ChatClient() {
 
   const loadMessages = useCallback(
     async (channelId: string) => {
+      // Latest 100, newest first from the database, then reversed so the oldest
+      // of the batch sits at the top of the view. This keeps big channels fast
+      // and means new messages always show. The old query took the oldest 300,
+      // which would have hidden new messages once a channel passed 300.
       const { data } = await supabase
         .from('team_messages')
         .select(
           'id, channel_id, sender_id, sender_name, sender_email, body, created_at, edited_at, deleted_at, reply_to, forwarded, team_message_files(id, file_path, file_name, file_type, file_size)',
         )
         .eq('channel_id', channelId)
-        .order('created_at', { ascending: true })
-        .limit(300)
-      setMessages((data || []) as Message[])
+        .order('created_at', { ascending: false })
+        .limit(100)
+      setMessages((((data || []) as Message[])).slice().reverse())
     },
     [supabase],
   )

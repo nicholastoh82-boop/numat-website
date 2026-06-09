@@ -2,8 +2,11 @@
   app/api/team_chat/channel_members/route.ts
 
   Returns the people who are members of one channel, with names and emails.
-  Uses the service role to read names from auth. The caller must be signed in
-  and must themselves be a member of the channel they are asking about.
+  One fast database call through tc_channel_people, which replaces the old
+  approach of two queries plus downloading the entire user list through the
+  auth admin API. The function only returns rows when the caller is themselves
+  a member of the channel, and a member always appears in their own channel,
+  so an empty result means the caller is not a member.
 */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -33,28 +36,18 @@ export async function GET(req: NextRequest) {
       { auth: { persistSession: false } },
     )
 
-    const { data: rows, error } = await admin
-      .from('team_channel_members')
-      .select('user_id')
-      .eq('channel_id', channelId)
+    const { data, error } = await admin.rpc('tc_channel_people', {
+      p_channel: channelId,
+      p_requester: user.id,
+    })
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const memberIds = new Set((rows || []).map((r) => r.user_id as string))
-    if (!memberIds.has(user.id)) {
+    const members = (data || []) as { id: string; name: string; email: string }[]
+    if (members.length === 0) {
       return NextResponse.json({ error: 'Not a member' }, { status: 403 })
     }
-
-    const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-    const members = (list?.users || [])
-      .filter((u) => memberIds.has(u.id))
-      .map((u) => {
-        const meta = (u.user_metadata || {}) as Record<string, unknown>
-        const name = (meta.full_name as string) || (meta.name as string) || u.email || 'Member'
-        return { id: u.id, name, email: u.email || '' }
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
 
     return NextResponse.json({ members })
   } catch (e) {
