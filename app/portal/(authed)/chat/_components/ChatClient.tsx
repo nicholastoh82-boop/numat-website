@@ -1931,6 +1931,68 @@ export default function ChatClient() {
   )
 }
 
+function TaskRow({
+  it,
+  onToggle,
+  onSetDue,
+  currentUserId,
+}: {
+  it: ActionItem
+  onToggle: (item: ActionItem) => void
+  onSetDue: (item: ActionItem, value: string) => void
+  currentUserId: string
+}) {
+  const locked = !!it.assignee_id && it.assignee_id !== currentUserId
+  return (
+    <li className="flex items-start gap-2">
+      <input
+        type="checkbox"
+        checked={it.status === 'done'}
+        onChange={() => onToggle(it)}
+        disabled={locked}
+        title={locked ? 'Only the assigned person can change this' : undefined}
+        className={`mt-0.5 ${locked ? 'opacity-40 cursor-not-allowed' : ''}`}
+      />
+      <div className="min-w-0">
+        <div
+          className={`text-sm ${
+            it.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800'
+          }`}
+        >
+          {it.title}
+        </div>
+        {(it.owner || it.due_hint) && (
+          <div className="text-[11px] text-gray-500">
+            {it.owner ? it.owner : ''}
+            {it.owner && it.due_hint ? ', ' : ''}
+            {it.due_hint ? it.due_hint : ''}
+          </div>
+        )}
+        {it.status !== 'done' && (
+          <div className="mt-1 flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] text-gray-500">Remind:</span>
+            <input
+              type="datetime-local"
+              value={it.due_at ? toLocalInput(it.due_at) : ''}
+              onChange={(e) => onSetDue(it, e.target.value)}
+              className="text-[11px] border border-gray-300 rounded px-1 py-0.5 text-gray-700"
+            />
+            {it.due_at ? (
+              <button
+                onClick={() => onSetDue(it, '')}
+                className="text-[11px] text-gray-400 hover:text-gray-700"
+                aria-label="Clear reminder"
+              >
+                clear
+              </button>
+            ) : null}
+          </div>
+        )}
+      </div>
+    </li>
+  )
+}
+
 function TasksPanel({
   summary,
   items,
@@ -1951,6 +2013,9 @@ function TasksPanel({
   const [newTitle, setNewTitle] = useState('')
   const [newAssignee, setNewAssignee] = useState('')
   const [newDue, setNewDue] = useState('')
+  const [showDone, setShowDone] = useState(false)
+  const openItems = items.filter((i) => i.status !== 'done')
+  const doneItems = items.filter((i) => i.status === 'done')
   return (
     <div className="space-y-4">
       <div>
@@ -1969,63 +2034,18 @@ function TasksPanel({
         <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
           Action items
         </h2>
-        {items.length === 0 ? (
+        {openItems.length === 0 ? (
           <p className="text-xs text-gray-400">Nothing tracked yet.</p>
         ) : (
           <ul className="space-y-2">
-            {items.map((it) => (
-              <li key={it.id} className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  checked={it.status === 'done'}
-                  onChange={() => onToggle(it)}
-                  disabled={!!it.assignee_id && it.assignee_id !== currentUserId}
-                  title={
-                    !!it.assignee_id && it.assignee_id !== currentUserId
-                      ? 'Only the assigned person can change this'
-                      : undefined
-                  }
-                  className={`mt-0.5 ${
-                    !!it.assignee_id && it.assignee_id !== currentUserId
-                      ? 'opacity-40 cursor-not-allowed'
-                      : ''
-                  }`}
-                />
-                <div className="min-w-0">
-                  <div
-                    className={`text-sm ${
-                      it.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800'
-                    }`}
-                  >
-                    {it.title}
-                  </div>
-                  {(it.owner || it.due_hint) && (
-                    <div className="text-[11px] text-gray-500">
-                      {it.owner ? it.owner : ''}
-                      {it.owner && it.due_hint ? ', ' : ''}
-                      {it.due_hint ? it.due_hint : ''}
-                    </div>
-                  )}
-                  <div className="mt-1 flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] text-gray-500">Remind:</span>
-                    <input
-                      type="datetime-local"
-                      value={it.due_at ? toLocalInput(it.due_at) : ''}
-                      onChange={(e) => onSetDue(it, e.target.value)}
-                      className="text-[11px] border border-gray-300 rounded px-1 py-0.5 text-gray-700"
-                    />
-                    {it.due_at ? (
-                      <button
-                        onClick={() => onSetDue(it, '')}
-                        className="text-[11px] text-gray-400 hover:text-gray-700"
-                        aria-label="Clear reminder"
-                      >
-                        clear
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </li>
+            {openItems.map((it) => (
+              <TaskRow
+                key={it.id}
+                it={it}
+                onToggle={onToggle}
+                onSetDue={onSetDue}
+                currentUserId={currentUserId}
+              />
             ))}
           </ul>
         )}
@@ -2070,6 +2090,29 @@ function TasksPanel({
           </button>
         </div>
       </div>
+      {doneItems.length > 0 && (
+        <div>
+          <button
+            onClick={() => setShowDone((s) => !s)}
+            className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2"
+          >
+            Completed ({doneItems.length}) {showDone ? '▾' : '▸'}
+          </button>
+          {showDone && (
+            <ul className="space-y-2">
+              {doneItems.map((it) => (
+                <TaskRow
+                  key={it.id}
+                  it={it}
+                  onToggle={onToggle}
+                  onSetDue={onSetDue}
+                  currentUserId={currentUserId}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   )
 }
