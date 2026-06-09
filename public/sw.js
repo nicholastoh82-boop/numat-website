@@ -3,7 +3,7 @@
    Static assets are served from cache, then refreshed.
    Auth and api traffic is never cached. */
 
-const VERSION = 'numat_pwa_v1'
+const VERSION = 'numat_pwa_v2'
 const STATIC_CACHE = VERSION + '_static'
 const OFFLINE_URL = '/offline.html'
 const PRECACHE = [OFFLINE_URL, '/icon-192.png', '/icon-512.png']
@@ -72,4 +72,62 @@ self.addEventListener('fetch', (event) => {
     )
   }
   // Everything else uses default network handling, with no caching of dynamic signed in content.
+})
+
+// Push: we send a wake signal with no payload, then fetch the text to show.
+self.addEventListener('push', (event) => {
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch (e) {
+    data = {}
+  }
+  event.waitUntil(showNotificationFor(data))
+})
+
+async function showNotificationFor(data) {
+  let title = data.title
+  let body = data.body
+  let url = data.url
+
+  if (!title) {
+    try {
+      const res = await fetch('/api/portal/push/pending', { credentials: 'include' })
+      if (res.ok) {
+        const j = await res.json()
+        if (j && j.title) {
+          title = j.title
+          body = j.body
+          url = j.url
+        }
+      }
+    } catch (e) {
+      // Ignore. A generic notification is shown below.
+    }
+  }
+
+  await self.registration.showNotification(title || 'NUMAT', {
+    body: body || 'Tap to open the portal.',
+    data: { url: url || '/portal' },
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+  })
+}
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = (event.notification.data && event.notification.data.url) || '/portal'
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((list) => {
+        for (const c of list) {
+          if ('focus' in c) {
+            c.navigate(url)
+            return c.focus()
+          }
+        }
+        if (self.clients.openWindow) return self.clients.openWindow(url)
+      })
+  )
 })

@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { notifyUsers } from '@/lib/portal/push'
 
 export const runtime = 'nodejs'
 
@@ -102,5 +103,24 @@ export async function PATCH(req: NextRequest) {
     })
     .eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  try {
+    const { data: row } = await a
+      .from('leave_requests')
+      .select('user_id, start_date, end_date')
+      .eq('id', id)
+      .maybeSingle()
+    if (row?.user_id) {
+      await notifyUsers({
+        userIds: [row.user_id],
+        title: decision === 'approved' ? 'Leave approved' : 'Leave rejected',
+        body: `${row.start_date} to ${row.end_date}`,
+        url: '/portal/leave',
+      })
+    }
+  } catch {
+    // Push is best effort.
+  }
+
   return NextResponse.json({ ok: true })
 }

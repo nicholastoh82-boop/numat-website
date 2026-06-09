@@ -6,6 +6,7 @@
 
 import { requirePortalUser } from '@/lib/portal/roles'
 import MentionsClient from './_components/MentionsClient'
+import { PushToggle } from '@/components/portal/push-toggle'
 
 export const metadata = {
   title: 'Notifications',
@@ -14,5 +15,10 @@ export const metadata = {
 
 export default async function MentionsPage() {
   await requirePortalUser()
-  return <MentionsClient />
+  return (
+    <div className="space-y-6">
+      <PushToggle />
+      <MentionsClient />
+    </div>
+  )
 }
