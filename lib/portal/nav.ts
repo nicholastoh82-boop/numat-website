@@ -38,6 +38,7 @@ export const PORTAL_GROUPS: { key: PortalGroupKey; title: string }[] = [
 // reordering is not needed here.
 export const PORTAL_NAV: PortalNavItem[] = [
   { href: '/portal', label: 'Home', feature: 'baseline' },
+  { href: '/portal/announcements', label: 'Announcements', feature: 'announcements', group: 'overview' },
   { href: '/portal/chat', label: 'Team Chat', feature: 'chat', group: 'team' },
   { href: '/portal/mentions', label: 'Notifications', feature: 'chat', group: 'team' },
   { href: '/portal/scoreboard', label: 'NuBam Hybrid', feature: 'scoreboard', group: 'overview' },
