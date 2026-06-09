@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline | NUMAT</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        color: #1c1917;
+        font-family: system-ui, sans-serif;
+      }
+      .card {
+        text-align: center;
+        padding: 32px;
+        max-width: 360px;
+      }
+      .mark {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: #16361f;
+        margin: 0 auto 16px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 8px;
+      }
+      p {
+        margin: 0;
+        color: #57534e;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      button {
+        margin-top: 20px;
+        border: 0;
+        background: #16361f;
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 10px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="mark"></div>
+      <h1>You are offline</h1>
+      <p>NUMAT needs a connection to load this page. Check your network and try again.</p>
+      <button onclick="location.reload()">Retry</button>
+    </div>
+  </body>
+</html>

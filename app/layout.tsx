@@ -1,11 +1,12 @@
 import React from 'react'
-import type { Viewport } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { DM_Sans, DM_Serif_Display } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/toaster'
 import { CurrencyProvider } from '@/components/providers/currency-provider'
 import CountrySelectorModal from '@/components/country-selector-modal'
 import PublicOnlyWidgets from '@/components/public-only-widgets'
+import PwaRegister from '@/components/pwa-register'
 import Script from 'next/script'
 import {
   globalMetadata,
@@ -25,7 +26,20 @@ const dmSerif = DM_Serif_Display({
   variable: '--font-serif',
 })
 
-export const metadata = globalMetadata
+export const metadata: Metadata = {
+  ...globalMetadata,
+  applicationName: 'NUMAT Portal',
+  appleWebApp: {
+    capable: true,
+    title: 'NUMAT',
+    statusBarStyle: 'default',
+  },
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon-180.png',
+  },
+}
 
 export const viewport: Viewport = {
   themeColor: '#16361f',
@@ -80,6 +94,7 @@ export default function RootLayout({
           <PublicOnlyWidgets />
           <Toaster />
           <Analytics />
+          <PwaRegister />
         </CurrencyProvider>
       </body>
     </html>
