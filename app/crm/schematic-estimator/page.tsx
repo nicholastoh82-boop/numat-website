@@ -229,7 +229,7 @@ export default function SchematicEstimatorPage() {
         data: { user: authUser },
       } = await supabase.auth.getUser();
       if (!authUser) {
-        router.push("/crm/login");
+        router.push("/portal/login?redirectTo=/crm/schematic-estimator");
         return;
       }
       const { data } = await supabase
@@ -344,7 +344,7 @@ export default function SchematicEstimatorPage() {
         body: JSON.stringify({ imageBase64: base64, mediaType }),
       });
       if (res.status === 401) {
-        router.push("/crm/login");
+        router.push("/portal/login?redirectTo=/crm/schematic-estimator");
         return;
       }
       if (!res.ok) {
@@ -502,7 +502,7 @@ export default function SchematicEstimatorPage() {
             Your account is either inactive or not registered in the CRM. Ask an admin to activate your profile.
           </p>
           <Link
-            href="/crm/login"
+            href="/portal/login"
             className="inline-block mt-4 text-sm underline"
             style={{ color: BAMBOO }}
           >
