@@ -22,7 +22,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
       } = await supabase.auth.getUser();
 
       if (!user) {
-        router.replace('/crm/login');
+        router.replace('/portal/login?redirectTo=' + encodeURIComponent(pathname || '/finance'));
         return;
       }
 
@@ -83,7 +83,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
                 <button
                   onClick={async () => {
                     await supabase.auth.signOut();
-                    router.replace('/crm/login');
+                    router.replace('/portal/login');
                   }}
                   className="text-gray-500 hover:text-gray-900"
                 >

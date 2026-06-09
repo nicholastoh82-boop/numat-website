@@ -1,6 +1,6 @@
 /* app/portal/login/page.tsx
    Dedicated login for the portal. Accepts any user with a portal role assigned
-   (admin, ceo, sales, finance, ops). Independent from /crm/login. */
+   (admin, ceo, sales, finance, ops). This is the single sign in for everything. */
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'

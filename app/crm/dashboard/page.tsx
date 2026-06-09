@@ -422,9 +422,9 @@ export default function CRMDashboard() {
 
   const loadUser = useCallback(async () => {
     const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) { router.push('/crm/login'); return null }
+    if (!authUser) { router.push('/portal/login?redirectTo=/crm/dashboard'); return null }
     const { data } = await supabase.from('crm_users').select('*').eq('email', authUser.email).single()
-    if (!data) { router.push('/crm/login'); return null }
+    if (!data) { router.push('/portal/no-access'); return null }
     setUser(data)
     // Load the real active reps for the assign-to-rep dropdown, so it does not
     // depend on which leads happen to be loaded.
@@ -1673,7 +1673,7 @@ export default function CRMDashboard() {
     setAddLeadSubmitting(false)
   }
 
-  const signOut = async () => { await supabase.auth.signOut(); router.push('/crm/login') }
+  const signOut = async () => { await supabase.auth.signOut(); router.push('/portal/login') }
   const repOptions = Array.from(new Set(leads.map(l => l.rep_email).filter(Boolean))) as string[]
   const segmentOptions = Array.from(new Set(leads.map(l => l.segment).filter(Boolean))) as string[]
 
