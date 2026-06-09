@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { PORTAL_NAV } from '@/lib/portal/nav'
 
 const ALWAYS_ADMIN = ['nick@numat.ph']
 
@@ -21,28 +22,7 @@ type NavItem = {
   feature: string
 }
 
-const ALL_ITEMS: NavItem[] = [
-  { href: '/portal',                  label: 'Home',          feature: 'baseline' },
-  { href: '/portal/chat',             label: 'Team Chat',     feature: 'chat' },
-  { href: '/portal/mentions',         label: 'Notifications', feature: 'chat' },
-  { href: '/portal/scoreboard',       label: 'NuBam Hybrid',  feature: 'scoreboard' },
-  { href: '/portal/ceo',              label: 'CEO View',      feature: 'ceo' },
-  { href: '/crm/dashboard',           label: 'CRM',           feature: 'crm' },
-  { href: '/portal/lead-timeline',    label: 'Lead Status',   feature: 'lead_timeline' },
-  { href: '/crm/search',              label: 'KB Search',     feature: 'crm' },
-  { href: '/crm/outreach',            label: 'Outreach',      feature: 'crm' },
-  { href: '/crm/signals',             label: 'Buying Signals',feature: 'crm' },
-  { href: '/portal/productivity',     label: 'Email Counter', feature: 'productivity' },
-  { href: '/finance',                 label: 'Financials',    feature: 'financials' },
-  { href: '/finance/new',             label: 'Receipts',      feature: 'receipts' },
-  { href: '/portal/verify',           label: 'Verify',        feature: 'verify' },
-  { href: '/portal/production',       label: 'Production',    feature: 'production' },
-  { href: '/crm/production/qc',       label: '↳ QC Check',    feature: 'production' },
-  { href: '/crm/production/forecast', label: '↳ Forecast',    feature: 'production' },
-  { href: '/finance/reports',         label: 'Reports',       feature: 'reports' },
-  { href: '/portal/access',           label: 'Access',        feature: 'admin' },
-  { href: '/portal/settings',         label: 'Settings',      feature: 'admin' },
-]
+const ALL_ITEMS: NavItem[] = PORTAL_NAV
 
 export default function PortalSidebar() {
   const pathname = usePathname()
