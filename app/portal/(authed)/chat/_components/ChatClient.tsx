@@ -1936,6 +1936,9 @@ function TasksPanel({
   items,
   onToggle,
   onSetDue,
+  members,
+  onAddTask,
+  currentUserId,
 }: {
   summary: string
   items: ActionItem[]
