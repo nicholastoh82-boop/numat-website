@@ -43,6 +43,38 @@ export async function GET(req: NextRequest) {
 
   const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
+  // Turn tasks whose due time has passed into notifications for everyone in
+  // that chat. These flow through the same unread dot and email below.
+  try {
+    const nowIso = new Date().toISOString()
+    const { data: dueTasks } = await sb
+      .from('team_action_items')
+      .select('id, channel_id, title')
+      .lte('due_at', nowIso)
+      .is('reminded_at', null)
+      .neq('status', 'done')
+      .limit(100)
+    for (const t of (dueTasks || []) as { id: string; channel_id: string; title: string }[]) {
+      const { data: mem } = await sb
+        .from('team_channel_members')
+        .select('user_id')
+        .eq('channel_id', t.channel_id)
+      const reminderRows = ((mem || []) as { user_id: string }[]).map((m) => ({
+        channel_id: t.channel_id,
+        message_id: null,
+        mentioned_user_id: m.user_id,
+        author_name: 'Task reminder',
+        body_preview: (t.title || '').slice(0, 200),
+      }))
+      if (reminderRows.length > 0) {
+        await sb.from('team_mentions').insert(reminderRows)
+      }
+      await sb.from('team_action_items').update({ reminded_at: nowIso }).eq('id', t.id)
+    }
+  } catch (e) {
+    console.error('task reminder generation failed', e)
+  }
+
   const { data: pending, error } = await sb
     .from('team_mentions')
     .select('id, mentioned_user_id, channel_id, author_name, body_preview, created_at')

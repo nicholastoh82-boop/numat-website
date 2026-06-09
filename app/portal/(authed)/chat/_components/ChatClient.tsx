@@ -58,6 +58,8 @@ type ActionItem = {
   due_hint: string | null
   status: string
   created_at: string
+  due_at: string | null
+  reminded_at: string | null
 }
 
 type Member = { id: string; name: string; email: string }
@@ -160,6 +162,13 @@ function formatMessage(raw: string, mine: boolean): string {
   s = s.replace(/\u0000LK(\d+)\u0000/g, (_m, i2: string) => links[Number(i2)])
 
   return s
+}
+
+function toLocalInput(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function timeLabel(iso: string): string {
@@ -281,7 +290,7 @@ export default function ChatClient() {
     async (channelId: string) => {
       const { data } = await supabase
         .from('team_action_items')
-        .select('id, title, owner, due_hint, status, created_at')
+        .select('id, title, owner, due_hint, status, created_at, due_at, reminded_at')
         .eq('channel_id', channelId)
         .order('created_at', { ascending: false })
       setActionItems((data || []) as ActionItem[])
@@ -632,6 +641,17 @@ export default function ChatClient() {
     await supabase
       .from('team_action_items')
       .update({ status: next, done_at: next === 'done' ? new Date().toISOString() : null })
+      .eq('id', item.id)
+  }
+
+  async function setTaskDue(item: ActionItem, value: string) {
+    const due = value ? new Date(value).toISOString() : null
+    setActionItems((prev) =>
+      prev.map((a) => (a.id === item.id ? { ...a, due_at: due, reminded_at: null } : a)),
+    )
+    await supabase
+      .from('team_action_items')
+      .update({ due_at: due, reminded_at: null })
       .eq('id', item.id)
   }
 
@@ -1261,7 +1281,7 @@ export default function ChatClient() {
           {/* Tasks panel on small screens */}
           {tasksOpen ? (
             <div className="lg:hidden flex-1 min-h-0 overflow-y-auto border border-gray-200 rounded p-3 mb-2">
-              <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} />
+              <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} onSetDue={setTaskDue} />
             </div>
           ) : (
             <>
@@ -1553,7 +1573,7 @@ export default function ChatClient() {
 
         {/* Tasks, desktop */}
         <aside className="hidden lg:flex flex-col w-72 shrink-0 border-l border-gray-200 pl-3 overflow-y-auto">
-          <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} />
+          <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} onSetDue={setTaskDue} />
         </aside>
       </div>
 
@@ -1869,10 +1889,12 @@ function TasksPanel({
   summary,
   items,
   onToggle,
+  onSetDue,
 }: {
   summary: string
   items: ActionItem[]
   onToggle: (item: ActionItem) => void
+  onSetDue: (item: ActionItem, value: string) => void
 }) {
   return (
     <div className="space-y-4">
@@ -1919,6 +1941,24 @@ function TasksPanel({
                       {it.due_hint ? it.due_hint : ''}
                     </div>
                   )}
+                  <div className="mt-1 flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] text-gray-500">Remind:</span>
+                    <input
+                      type="datetime-local"
+                      value={it.due_at ? toLocalInput(it.due_at) : ''}
+                      onChange={(e) => onSetDue(it, e.target.value)}
+                      className="text-[11px] border border-gray-300 rounded px-1 py-0.5 text-gray-700"
+                    />
+                    {it.due_at ? (
+                      <button
+                        onClick={() => onSetDue(it, '')}
+                        className="text-[11px] text-gray-400 hover:text-gray-700"
+                        aria-label="Clear reminder"
+                      >
+                        clear
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               </li>
             ))}
