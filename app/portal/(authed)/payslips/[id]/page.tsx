@@ -16,7 +16,7 @@ export const metadata = {
 }
 
 const COMPANY = {
-  name: 'Global Agro Milling Corp.',
+  name: 'Numat Sustainable Manufacturing Inc.',
   line1: 'Warehouse B22, Barangay Alae',
   line2: 'Manolo Fortich 8703',
   line3: 'Bukidnon, Mindanao',
@@ -167,8 +167,13 @@ export default async function PayslipViewPage({ params }: { params: Promise<{ id
       <div id="payslip" className="mx-auto max-w-3xl rounded-lg border border-gray-200 bg-white p-8 text-sm text-gray-800">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
-          <div className="text-lg font-bold tracking-wide text-[#16361f]">{COMPANY.name}</div>
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/numat-icon.jpeg" alt="NUMAT" className="h-12 w-12 rounded" />
+            <div className="text-lg font-bold tracking-wide text-[#16361f]">NUMAT</div>
+          </div>
           <div className="text-right text-xs text-gray-600">
+            <div className="text-sm font-bold text-gray-900">{COMPANY.name}</div>
             <div>{COMPANY.line1}</div>
             <div>{COMPANY.line2}</div>
             <div>{COMPANY.line3}</div>
