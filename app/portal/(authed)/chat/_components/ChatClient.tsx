@@ -60,6 +60,7 @@ type ActionItem = {
   created_at: string
   due_at: string | null
   reminded_at: string | null
+  assignee_id: string | null
 }
 
 type Member = { id: string; name: string; email: string }
@@ -290,7 +291,7 @@ export default function ChatClient() {
     async (channelId: string) => {
       const { data } = await supabase
         .from('team_action_items')
-        .select('id, title, owner, due_hint, status, created_at, due_at, reminded_at')
+        .select('id, title, owner, due_hint, status, created_at, due_at, reminded_at, assignee_id')
         .eq('channel_id', channelId)
         .order('created_at', { ascending: false })
       setActionItems((data || []) as ActionItem[])
@@ -501,6 +502,12 @@ export default function ChatClient() {
     el.style.height = Math.min(el.scrollHeight, 128) + 'px'
   }, [text])
 
+  // Load teammates once so the task assignee picker is populated.
+  useEffect(() => {
+    ensureMembersLoaded()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function handleSend() {
     const body = text.trim()
     if (!body && !file) return
@@ -642,6 +649,38 @@ export default function ChatClient() {
       .from('team_action_items')
       .update({ status: next, done_at: next === 'done' ? new Date().toISOString() : null })
       .eq('id', item.id)
+    if (next === 'done' && activeId && userId) {
+      await supabase.from('team_messages').insert({
+        channel_id: activeId,
+        sender_id: userId,
+        sender_name: userName,
+        sender_email: userEmail,
+        body: `✓ Task completed: ${item.title}`,
+      })
+      loadMessages(activeId)
+    }
+  }
+
+  async function addTask(title: string, assigneeId: string, dueValue: string) {
+    const t = title.trim()
+    if (!t || !activeId || !userId) return
+    const assignee = members.find((m) => m.id === assigneeId) || null
+    const due = dueValue ? new Date(dueValue).toISOString() : null
+    const { error } = await supabase.from('team_action_items').insert({
+      channel_id: activeId,
+      title: t.slice(0, 500),
+      owner: assignee ? assignee.name : null,
+      assignee_id: assignee ? assignee.id : null,
+      due_at: due,
+      status: 'open',
+      source: 'manual',
+      created_by: userId,
+    })
+    if (error) {
+      setNotice('Could not add the task.')
+    } else {
+      await loadActionItems(activeId)
+    }
   }
 
   async function setTaskDue(item: ActionItem, value: string) {
@@ -1160,7 +1199,7 @@ export default function ChatClient() {
             onClick={() => setTasksOpen((v) => !v)}
             className="lg:hidden text-sm rounded px-3 py-1.5 border border-gray-300 text-gray-800 hover:bg-gray-100"
           >
-            Tasks{openItems ? ` (${openItems})` : ''}
+            {tasksOpen ? 'Chat' : `Tasks${openItems ? ` (${openItems})` : ''}`}
           </button>
         </div>
       </div>
@@ -1281,10 +1320,11 @@ export default function ChatClient() {
           {/* Tasks panel on small screens */}
           {tasksOpen ? (
             <div className="lg:hidden flex-1 min-h-0 overflow-y-auto border border-gray-200 rounded p-3 mb-2">
-              <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} onSetDue={setTaskDue} />
+              <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} onSetDue={setTaskDue} members={members} onAddTask={addTask} />
             </div>
-          ) : (
-            <>
+          ) : null}
+
+          <div className={`${tasksOpen ? 'hidden lg:flex' : 'flex'} flex-1 min-h-0 flex-col`}>
               {/* Messages */}
               <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
                 {messages.length === 0 ? (
@@ -1567,13 +1607,12 @@ export default function ChatClient() {
                   </button>
                 </div>
               </div>
-            </>
-          )}
+          </div>
         </section>
 
         {/* Tasks, desktop */}
         <aside className="hidden lg:flex flex-col w-72 shrink-0 border-l border-gray-200 pl-3 overflow-y-auto">
-          <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} onSetDue={setTaskDue} />
+          <TasksPanel summary={summary} items={actionItems} onToggle={toggleDone} onSetDue={setTaskDue} members={members} onAddTask={addTask} />
         </aside>
       </div>
 
@@ -1895,7 +1934,12 @@ function TasksPanel({
   items: ActionItem[]
   onToggle: (item: ActionItem) => void
   onSetDue: (item: ActionItem, value: string) => void
+  members: Member[]
+  onAddTask: (title: string, assigneeId: string, dueValue: string) => void
 }) {
+  const [newTitle, setNewTitle] = useState('')
+  const [newAssignee, setNewAssignee] = useState('')
+  const [newDue, setNewDue] = useState('')
   return (
     <div className="space-y-4">
       <div>
@@ -1964,6 +2008,46 @@ function TasksPanel({
             ))}
           </ul>
         )}
+        <div className="mt-3 border-t border-gray-100 pt-2 space-y-1">
+          <input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            placeholder="Add a task"
+            className="w-full text-sm border border-gray-300 rounded px-2 py-1.5 text-gray-800"
+          />
+          <div className="flex gap-1">
+            <select
+              value={newAssignee}
+              onChange={(e) => setNewAssignee(e.target.value)}
+              className="flex-1 min-w-0 text-[12px] border border-gray-300 rounded px-1 py-1 text-gray-700"
+            >
+              <option value="">Assign to</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name || m.email}
+                </option>
+              ))}
+            </select>
+            <input
+              type="datetime-local"
+              value={newDue}
+              onChange={(e) => setNewDue(e.target.value)}
+              className="text-[12px] border border-gray-300 rounded px-1 py-1 text-gray-700"
+            />
+          </div>
+          <button
+            onClick={() => {
+              if (!newTitle.trim()) return
+              onAddTask(newTitle, newAssignee, newDue)
+              setNewTitle('')
+              setNewAssignee('')
+              setNewDue('')
+            }}
+            className="w-full text-sm rounded px-3 py-1.5 bg-gray-900 text-white"
+          >
+            Add task
+          </button>
+        </div>
       </div>
     </div>
   )
