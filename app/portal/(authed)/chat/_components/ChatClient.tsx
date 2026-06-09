@@ -1219,8 +1219,8 @@ export default function ChatClient() {
   return (
     <div className="flex flex-col h-[calc(100dvh-7rem)] md:h-[calc(100dvh-9rem)]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-3">
-        <div className="min-w-0">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between border-b border-gray-200 pb-3 mb-3">
+        <div className="min-w-0 order-2 md:order-1">
           <h1 className="text-lg font-semibold text-gray-900 truncate">
             {activeChannel ? `${activeChannel.is_private ? '🔒 ' : ''}${activeChannel.name}` : 'Team Chat'}
           </h1>
@@ -1228,7 +1228,7 @@ export default function ChatClient() {
             <p className="text-xs text-gray-500 truncate">{activeChannel.description}</p>
           ) : null}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap shrink-0 order-1 md:order-2">
           {activeChannel ? (
             <button
               onClick={openChannelMembers}
