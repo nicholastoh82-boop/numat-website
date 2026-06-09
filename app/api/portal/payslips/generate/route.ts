@@ -1,10 +1,11 @@
 /*
   app/api/portal/payslips/generate/route.ts
   POST builds payslips for a month. People with a fixed salary (staff_salaries)
-  get one Basic Salary line in their own currency. Everyone else (weekly factory
-  workers) gets their actual verified payouts as lines. Only staff who were paid
-  that month are included. The month is rebuilt cleanly each run. DELETE removes
-  one payslip. Admin only.
+  get one Basic Salary line in their own currency, plus any bonus or reimbursement
+  extras recorded for them that month (payslip_additions). Everyone else (weekly
+  factory workers) gets their actual verified payouts as lines, with no extras.
+  Only staff who were paid that month are included. The month is rebuilt cleanly
+  each run. DELETE removes one payslip. Admin only.
 */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -39,6 +40,14 @@ type Txn = {
   amount: number
   description: string | null
   category_id: number | null
+}
+
+type Addition = {
+  staff_id: string
+  kind: string
+  description: string | null
+  amount: number
+  currency: string
 }
 
 export async function POST(req: NextRequest) {
@@ -83,6 +92,18 @@ export async function POST(req: NextRequest) {
   const salaryMap = new Map<string, { amount: number; currency: string }>()
   for (const r of (salaryRows || []) as { staff_id: string; monthly_salary: number; currency: string }[]) {
     salaryMap.set(r.staff_id, { amount: Number(r.monthly_salary), currency: r.currency })
+  }
+
+  // Extras (bonuses, reimbursements) recorded for this month, grouped per staff.
+  const { data: addRows } = await a
+    .from('payslip_additions')
+    .select('staff_id, kind, description, amount, currency')
+    .eq('period', period)
+  const addByStaff = new Map<string, Addition[]>()
+  for (const r of (addRows || []) as Addition[]) {
+    const arr = addByStaff.get(r.staff_id) || []
+    arr.push(r)
+    addByStaff.set(r.staff_id, arr)
   }
 
   const { data: userList } = await a.auth.admin.listUsers({ page: 1, perPage: 1000 })
@@ -134,18 +155,29 @@ export async function POST(req: NextRequest) {
 
     const fixed = salaryMap.get(staffId)
     if (fixed) {
-      // Fixed salary: one Basic Salary line in the agreed currency.
+      // Fixed salary: Basic Salary, then any extras in the same currency.
+      const earnings: { date: string; description: string; amount: number }[] = [
+        { date: payDate, description: 'Basic Salary', amount: fixed.amount },
+      ]
+      let total = fixed.amount
+      for (const ex of addByStaff.get(staffId) || []) {
+        if ((ex.currency || '').toUpperCase() !== fixed.currency.toUpperCase()) continue
+        const label = ex.description ? `${ex.kind}: ${ex.description}` : ex.kind
+        const amt = Number(ex.amount || 0)
+        earnings.push({ date: payDate, description: label, amount: amt })
+        total += amt
+      }
       rows.push({
         ...base,
         pay_date: payDate,
         currency: fixed.currency,
-        earnings: [{ date: payDate, description: 'Basic Salary', amount: fixed.amount }],
-        gross: fixed.amount,
+        earnings,
+        gross: total,
         deductions: 0,
-        net: fixed.amount,
+        net: total,
       })
     } else {
-      // Variable: actual payouts, grouped by currency.
+      // Variable: actual payouts, grouped by currency. Weekly payout only.
       const byCur = new Map<string, Txn[]>()
       for (const t of list) {
         const cur = (t.currency || 'PHP').toUpperCase()
@@ -173,7 +205,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Rebuild the month cleanly so a change of logic or data leaves no stale rows.
+  // Rebuild the month cleanly so a change of data or logic leaves no stale rows.
   await a.from('staff_payslips').delete().eq('period', period)
   const { error } = await a.from('staff_payslips').insert(rows)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

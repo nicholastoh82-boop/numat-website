@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { requirePortalUser } from '@/lib/portal/roles'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
-import { GenerateForm, DeletePayslip } from '@/components/portal/payslips-tools'
+import { GenerateForm, DeletePayslip, AdditionsManager } from '@/components/portal/payslips-tools'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,14 +43,23 @@ export default async function PayslipsPage() {
   const mine = (mineData ?? []) as Mine[]
 
   let all: All[] = []
+  let salaryStaff: { id: string; name: string; currency: string }[] = []
   if (user.isAdmin) {
-    const { data } = await adminClient()
+    const a = adminClient()
+    const { data } = await a
       .from('staff_payslips')
       .select('id, period, period_label, currency, net, employee_name, user_id')
       .order('period', { ascending: false })
       .order('employee_name', { ascending: true })
       .limit(1000)
     all = (data ?? []) as All[]
+
+    const { data: sal } = await a.from('staff_salaries').select('staff_id, currency')
+    const { data: fs } = await a.from('fin_staff').select('id, name')
+    const nameById = new Map(((fs ?? []) as { id: string; name: string }[]).map((s) => [s.id, s.name]))
+    salaryStaff = ((sal ?? []) as { staff_id: string; currency: string }[])
+      .map((r) => ({ id: r.staff_id, name: nameById.get(r.staff_id) || 'Staff', currency: r.currency }))
+      .sort((x, y) => x.name.localeCompare(y.name))
   }
 
   // Group admin list by period.
@@ -91,6 +100,8 @@ export default async function PayslipsPage() {
       {user.isAdmin && (
         <>
           <GenerateForm />
+
+          <AdditionsManager staffOptions={salaryStaff} />
 
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
