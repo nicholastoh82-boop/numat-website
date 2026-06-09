@@ -249,6 +249,13 @@ export default function ChatClient() {
   const [reads, setReads] = useState<{ user_id: string; last_read_at: string }[]>([])
   const [memberCount, setMemberCount] = useState(0)
 
+  // @ mention picker
+  const [mentionPeople, setMentionPeople] = useState<Member[]>([])
+  const [mentionOpen, setMentionOpen] = useState(false)
+  const [mentionQuery, setMentionQuery] = useState('')
+  const [mentionStart, setMentionStart] = useState(0)
+  const [mentionIndex, setMentionIndex] = useState(0)
+
   const [loading, setLoading] = useState(true)
 
   const endRef = useRef<HTMLDivElement | null>(null)
@@ -512,6 +519,27 @@ export default function ChatClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Load this channel's members so the @ mention picker can suggest names.
+  useEffect(() => {
+    if (!activeId) {
+      setMentionPeople([])
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/team_chat/channel_members?channelId=${activeId}`)
+        const j = await res.json().catch(() => ({}))
+        if (!cancelled) setMentionPeople(res.ok ? j.members || [] : [])
+      } catch {
+        if (!cancelled) setMentionPeople([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [activeId])
+
   async function handleSend() {
     const body = text.trim()
     if (!body && !file) return
@@ -562,6 +590,7 @@ export default function ChatClient() {
       }
 
       setText('')
+      setMentionOpen(false)
       setReplyTo(null)
       setFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -569,6 +598,49 @@ export default function ChatClient() {
     } finally {
       setSending(false)
     }
+  }
+
+  const mentionMatches = mentionOpen
+    ? mentionPeople
+        .filter((p) => p.id !== userId && p.name.toLowerCase().includes(mentionQuery.toLowerCase()))
+        .slice(0, 6)
+    : []
+
+  // Watch what is typed near the caret and open the picker on an @ token.
+  function detectMention(value: string, caret: number) {
+    const upto = value.slice(0, caret)
+    const at = upto.lastIndexOf('@')
+    if (at === -1) {
+      setMentionOpen(false)
+      return
+    }
+    const okBefore = at === 0 || /\s/.test(upto[at - 1])
+    const token = upto.slice(at + 1)
+    if (!okBefore || !/^[A-Za-z0-9._-]*$/.test(token)) {
+      setMentionOpen(false)
+      return
+    }
+    setMentionStart(at)
+    setMentionQuery(token)
+    setMentionIndex(0)
+    setMentionOpen(true)
+  }
+
+  // Insert the chosen name as a token the server recognises (no spaces).
+  function chooseMention(p: Member) {
+    const tokenName = '@' + p.name.replace(/\s+/g, '') + ' '
+    const next =
+      text.slice(0, mentionStart) + tokenName + text.slice(mentionStart + 1 + mentionQuery.length)
+    setText(next)
+    setMentionOpen(false)
+    const caret = mentionStart + tokenName.length
+    requestAnimationFrame(() => {
+      const el = composerRef.current
+      if (el) {
+        el.focus()
+        el.setSelectionRange(caret, caret)
+      }
+    })
   }
 
   function applyWrap(before: string, after: string) {
@@ -1634,20 +1706,68 @@ export default function ChatClient() {
                     className="hidden"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
                   />
-                  <textarea
-                    ref={composerRef}
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                        e.preventDefault()
-                        handleSend()
-                      }
-                    }}
-                    rows={1}
-                    placeholder="Write a message"
-                    className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm max-h-32"
-                  />
+                  <div className="relative flex-1">
+                    {mentionOpen && mentionMatches.length > 0 ? (
+                      <div className="absolute bottom-full left-0 mb-1 w-64 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg z-20">
+                        {mentionMatches.map((p, i) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              chooseMention(p)
+                            }}
+                            className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                              i === mentionIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            <span className="text-gray-900 truncate">{p.name}</span>
+                            <span className="text-[11px] text-gray-400 truncate">{p.email}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    <textarea
+                      ref={composerRef}
+                      value={text}
+                      onChange={(e) => {
+                        setText(e.target.value)
+                        detectMention(e.target.value, e.target.selectionStart)
+                      }}
+                      onKeyDown={(e) => {
+                        if (mentionOpen && mentionMatches.length > 0) {
+                          if (e.key === 'ArrowDown') {
+                            e.preventDefault()
+                            setMentionIndex((i) => (i + 1) % mentionMatches.length)
+                            return
+                          }
+                          if (e.key === 'ArrowUp') {
+                            e.preventDefault()
+                            setMentionIndex((i) => (i - 1 + mentionMatches.length) % mentionMatches.length)
+                            return
+                          }
+                          if (e.key === 'Enter' || e.key === 'Tab') {
+                            e.preventDefault()
+                            const pick = mentionMatches[mentionIndex] || mentionMatches[0]
+                            if (pick) chooseMention(pick)
+                            return
+                          }
+                          if (e.key === 'Escape') {
+                            e.preventDefault()
+                            setMentionOpen(false)
+                            return
+                          }
+                        }
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                          e.preventDefault()
+                          handleSend()
+                        }
+                      }}
+                      rows={1}
+                      placeholder="Write a message"
+                      className="w-full resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm max-h-32"
+                    />
+                  </div>
                   <button
                     onClick={handleSend}
                     disabled={sending || (!text.trim() && !file)}
