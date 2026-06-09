@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     const { data: messages, error: mErr } = await supabase
       .from('team_messages')
-      .select('sender_name, sender_email, body, created_at')
+      .select('sender_id, sender_name, sender_email, body, created_at')
       .eq('channel_id', channelId)
       .order('created_at', { ascending: true })
       .limit(300)
@@ -54,6 +54,37 @@ export async function POST(req: NextRequest) {
       })
       .join('\n')
 
+    type Person = { id: string; name: string; email: string }
+    const people: Person[] = Array.from(
+      new Map(
+        (messages as { sender_id?: string; sender_name?: string; sender_email?: string }[])
+          .filter((m) => m.sender_id)
+          .map((m) => [
+            m.sender_id as string,
+            { id: m.sender_id as string, name: m.sender_name || '', email: m.sender_email || '' },
+          ]),
+      ).values(),
+    )
+    const peopleNames = people.map((p) => p.name).filter(Boolean)
+
+    function findAssignee(owner?: string): { id: string | null; name: string | null } {
+      if (!owner) return { id: null, name: null }
+      const o = owner.trim().toLowerCase()
+      if (!o) return { id: null, name: null }
+      let hit = people.find((p) => p.name.trim().toLowerCase() === o)
+      if (!hit) hit = people.find((p) => p.email.trim().toLowerCase() === o)
+      if (!hit) {
+        const cands = people.filter((p) => {
+          const n = p.name.trim().toLowerCase()
+          if (!n) return false
+          const first = n.split(/\s+/)[0]
+          return n.startsWith(o) || o.startsWith(first) || n.includes(o)
+        })
+        if (cands.length === 1) hit = cands[0]
+      }
+      return hit ? { id: hit.id, name: hit.name } : { id: null, name: owner }
+    }
+
     const prompt = [
       'You are reading a work chat for the NUMAT team.',
       'Do two things and reply ONLY as JSON. No markdown, no backticks, no extra words.',
@@ -62,7 +93,9 @@ export async function POST(req: NextRequest) {
       '1. "summary": a short plain summary of what was discussed and decided.',
       '2. "actionItems": an array of things people said they would do.',
       '   Each item is an object with keys "title", "owner", "dueHint".',
-      '   "title" is the task in plain words. "owner" is who said they would do it, or an empty string.',
+      '   "title" is the task in plain words.',
+      '   "owner" must be EXACTLY one of these names copied verbatim, or an empty string if you are not sure who owns it:',
+      '   ' + (peopleNames.length ? peopleNames.join(', ') : '(no names available)'),
       '   "dueHint" is any timing mentioned such as Friday, or an empty string.',
       '   Only include real commitments, not chit chat. If there are none, return an empty array.',
       '',
@@ -104,14 +137,18 @@ export async function POST(req: NextRequest) {
 
     let inserted: unknown[] = []
     if (items.length > 0) {
-      const rows = items.map((i) => ({
-        channel_id: channelId,
-        title: String(i.title).slice(0, 500),
-        owner: i.owner ? String(i.owner).slice(0, 120) : null,
-        due_hint: i.dueHint ? String(i.dueHint).slice(0, 120) : null,
-        created_by: user.id,
-        source: 'ai',
-      }))
+      const rows = items.map((i) => {
+        const a = findAssignee(i.owner)
+        return {
+          channel_id: channelId,
+          title: String(i.title).slice(0, 500),
+          owner: a.name ? String(a.name).slice(0, 120) : null,
+          assignee_id: a.id,
+          due_hint: i.dueHint ? String(i.dueHint).slice(0, 120) : null,
+          created_by: user.id,
+          source: 'ai',
+        }
+      })
       const { data: ins } = await supabase.from('team_action_items').insert(rows).select()
       inserted = ins || []
     }
