@@ -1,12 +1,13 @@
 /* app/portal/(authed)/payslips/page.tsx
-   Payslips. Every signed in staff member can open this and see only their own.
-   Admins also get an upload form and the full list. Files are served through
-   short lived signed links, never public. */
+   Payslips. Generated from salary payouts in your financials. Every staff
+   member sees their own and opens each to download. Admins generate a month
+   and see everyone, including factory staff who have no login. */
 
+import Link from 'next/link'
 import { requirePortalUser } from '@/lib/portal/roles'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
-import { OpenButton, DeleteButton, AdminUpload } from '@/components/portal/payslips-tools'
+import { GenerateForm, DeletePayslip } from '@/components/portal/payslips-tools'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,8 +16,8 @@ export const metadata = {
   robots: 'noindex, nofollow',
 }
 
-type Mine = { id: string; period: string; file_name: string | null; created_at: string }
-type All = Mine & { user_email: string | null }
+type Mine = { id: string; period: string; period_label: string; currency: string; net: number }
+type All = Mine & { employee_name: string; user_id: string | null }
 
 function adminClient() {
   return createAdmin(
@@ -26,55 +27,62 @@ function adminClient() {
   )
 }
 
+function money(currency: string, n: number): string {
+  return `${currency} ${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
 export default async function PayslipsPage() {
   const user = await requirePortalUser()
   const supabase = await createClient()
 
   const { data: mineData } = await supabase
-    .from('payslips')
-    .select('id, period, file_name, created_at')
+    .from('staff_payslips')
+    .select('id, period, period_label, currency, net')
     .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+    .order('period', { ascending: false })
   const mine = (mineData ?? []) as Mine[]
 
   let all: All[] = []
   if (user.isAdmin) {
     const { data } = await adminClient()
-      .from('payslips')
-      .select('id, user_email, period, file_name, created_at')
-      .order('created_at', { ascending: false })
-      .limit(200)
+      .from('staff_payslips')
+      .select('id, period, period_label, currency, net, employee_name, user_id')
+      .order('period', { ascending: false })
+      .order('employee_name', { ascending: true })
+      .limit(1000)
     all = (data ?? []) as All[]
+  }
+
+  // Group admin list by period.
+  const byPeriod = new Map<string, All[]>()
+  for (const p of all) {
+    const arr = byPeriod.get(p.period_label) || []
+    arr.push(p)
+    byPeriod.set(p.period_label, arr)
   }
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold text-gray-900">Payslips</h1>
-        <p className="text-sm text-gray-600">Your payslips are private to you.</p>
+        <p className="text-sm text-gray-600">Generated from your salary payouts. Private to you.</p>
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-          My payslips
-        </h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">My payslips</h2>
         {mine.length === 0 ? (
           <p className="text-sm text-gray-500">No payslips yet.</p>
         ) : (
           <div className="space-y-2">
             {mine.map((p) => (
-              <div
+              <Link
                 key={p.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm"
+                href={`/portal/payslips/${p.id}`}
+                className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm hover:bg-gray-50"
               >
-                <div className="min-w-0">
-                  <div className="font-medium text-gray-900">{p.period}</div>
-                  <div className="truncate text-gray-500">
-                    {p.file_name || 'Payslip'} | {formatDate(p.created_at)}
-                  </div>
-                </div>
-                <OpenButton id={p.id} />
-              </div>
+                <span className="font-medium text-gray-900">{p.period_label}</span>
+                <span className="text-gray-500">{money(p.currency, p.net)}</span>
+              </Link>
             ))}
           </div>
         )}
@@ -82,34 +90,42 @@ export default async function PayslipsPage() {
 
       {user.isAdmin && (
         <>
-          <AdminUpload />
+          <GenerateForm />
 
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               All payslips
             </h2>
             {all.length === 0 ? (
-              <p className="text-sm text-gray-500">Nothing uploaded yet.</p>
+              <p className="text-sm text-gray-500">Nothing generated yet.</p>
             ) : (
-              <div className="space-y-2">
-                {all.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm"
-                  >
-                    <div className="min-w-0">
-                      <div className="font-medium text-gray-900">
-                        {p.user_email || 'Staff'}
-                        <span className="ml-2 font-normal text-gray-500">{p.period}</span>
+              <div className="space-y-4">
+                {Array.from(byPeriod.entries()).map(([label, rows]) => (
+                  <div key={label} className="space-y-2">
+                    <div className="text-xs font-medium text-gray-700">{label}</div>
+                    {rows.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3 text-sm"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-medium text-gray-900">{p.employee_name}</div>
+                          <div className="text-gray-500">
+                            {money(p.currency, p.net)}
+                            {!p.user_id ? ' | no login' : ''}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Link
+                            href={`/portal/payslips/${p.id}`}
+                            className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700"
+                          >
+                            Open
+                          </Link>
+                          <DeletePayslip id={p.id} />
+                        </div>
                       </div>
-                      <div className="truncate text-gray-500">
-                        {p.file_name || 'Payslip'} | {formatDate(p.created_at)}
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <OpenButton id={p.id} />
-                      <DeleteButton id={p.id} />
-                    </div>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -119,16 +135,4 @@ export default async function PayslipsPage() {
       )}
     </div>
   )
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  } catch {
-    return iso
-  }
 }
