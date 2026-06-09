@@ -484,6 +484,14 @@ export default function ChatClient() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Grow the message box with its content, up to a limit.
+  useEffect(() => {
+    const el = composerRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 128) + 'px'
+  }, [text])
+
   async function handleSend() {
     const body = text.trim()
     if (!body && !file) return
@@ -1521,7 +1529,7 @@ export default function ChatClient() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                         e.preventDefault()
                         handleSend()
                       }
