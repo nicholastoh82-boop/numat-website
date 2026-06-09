@@ -239,6 +239,9 @@ export default function ChatClient() {
   const [forwardTargets, setForwardTargets] = useState<string[]>([])
   const [forwarding, setForwarding] = useState(false)
   const [showManageMembers, setShowManageMembers] = useState(false)
+  const [showChannelMembers, setShowChannelMembers] = useState(false)
+  const [channelMembers, setChannelMembers] = useState<Member[]>([])
+  const [loadingChannelMembers, setLoadingChannelMembers] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [renameText, setRenameText] = useState('')
   const [savingRename, setSavingRename] = useState(false)
@@ -988,6 +991,21 @@ export default function ChatClient() {
     }
   }
 
+  async function openChannelMembers() {
+    if (!activeId) return
+    setShowChannelMembers(true)
+    setLoadingChannelMembers(true)
+    try {
+      const res = await fetch(`/api/team_chat/channel_members?channelId=${activeId}`)
+      const data = await res.json()
+      setChannelMembers(res.ok ? ((data.members || []) as Member[]) : [])
+    } catch {
+      setChannelMembers([])
+    } finally {
+      setLoadingChannelMembers(false)
+    }
+  }
+
   async function openManageMembers() {
     setHeaderMenuOpen(false)
     await ensureMembersLoaded()
@@ -1127,6 +1145,16 @@ export default function ChatClient() {
           ) : null}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {activeChannel ? (
+            <button
+              onClick={openChannelMembers}
+              className="text-sm rounded px-2.5 py-1.5 border border-gray-300 text-gray-800 hover:bg-gray-100"
+              title="View members"
+              aria-label="View members"
+            >
+              Members
+            </button>
+          ) : null}
           {hasGroupActions ? (
             <div className="relative">
               <button
@@ -1676,6 +1704,50 @@ export default function ChatClient() {
                 className="text-sm rounded px-4 py-1.5 bg-gray-900 text-white disabled:opacity-50"
               >
                 {creatingPrivate ? 'Starting...' : 'Start chat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* View members of the current channel */}
+      {showChannelMembers ? (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setShowChannelMembers(false)}
+        >
+          <div
+            className="bg-white rounded-lg w-full max-w-sm max-h-[80dvh] flex flex-col shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-gray-200">
+              <h2 className="text-sm font-semibold text-gray-900">
+                Members{channelMembers.length ? ` (${channelMembers.length})` : ''}
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">Everyone in this chat.</p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {loadingChannelMembers ? (
+                <p className="text-sm text-gray-500 p-3">Loading members...</p>
+              ) : channelMembers.length === 0 ? (
+                <p className="text-sm text-gray-500 p-3">No members found.</p>
+              ) : (
+                channelMembers.map((m) => (
+                  <div key={m.id} className="flex items-center gap-2 px-2 py-2 rounded">
+                    <div className="min-w-0">
+                      <div className="text-sm text-gray-900 truncate">{m.name}</div>
+                      <div className="text-[11px] text-gray-500 truncate">{m.email}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="px-4 py-3 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={() => setShowChannelMembers(false)}
+                className="text-sm rounded px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                Close
               </button>
             </div>
           </div>
