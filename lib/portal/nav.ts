@@ -46,6 +46,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { href: '/portal/payslips', label: 'Payslips', feature: 'baseline', group: 'people' },
   { href: '/portal/directory', label: 'Directory', feature: 'baseline', group: 'people' },
   { href: '/portal/buying', label: 'Buying', feature: 'buying', group: 'production' },
+  { href: '/portal/orders', label: 'Orders', feature: 'orders', group: 'sales' },
   { href: '/portal/chat', label: 'Team Chat', feature: 'chat', group: 'team' },
   { href: '/portal/mentions', label: 'Notifications', feature: 'chat', group: 'team' },
   { href: '/portal/scoreboard', label: 'NuBam Hybrid', feature: 'scoreboard', group: 'overview' },

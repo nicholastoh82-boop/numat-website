@@ -30,6 +30,7 @@ const FEATURES: { key: string; label: string }[] = [
   { key: 'leave', label: 'Leave' },
   { key: 'attendance', label: 'Clock In' },
   { key: 'buying', label: 'Buying' },
+  { key: 'orders', label: 'Orders' },
 ]
 const FEATURE_KEYS = new Set(FEATURES.map((f) => f.key))
 
