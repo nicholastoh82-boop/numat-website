@@ -1,8 +1,10 @@
 /*
   app/api/portal/payslips/generate/route.ts
-  POST builds payslips for a month from verified salary payouts in
-  fin_transactions, one per staff per currency, with the tranche breakdown.
-  DELETE removes one payslip. Admin only.
+  POST builds payslips for a month. People with a fixed salary (staff_salaries)
+  get one Basic Salary line in their own currency. Everyone else (weekly factory
+  workers) gets their actual verified payouts as lines. Only staff who were paid
+  that month are included. The month is rebuilt cleanly each run. DELETE removes
+  one payslip. Admin only.
 */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -11,14 +13,8 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
-// Management, Factory, Others salary. Advances and reversals are excluded by
-// the entry_type and status filters below.
 const SALARY_CATEGORIES = [54, 55, 56]
-const DEPARTMENT: Record<number, string> = {
-  54: 'Management',
-  55: 'Factory',
-  56: 'Operations',
-}
+const DEPARTMENT: Record<number, string> = { 54: 'Management', 55: 'Factory', 56: 'Operations' }
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -33,15 +29,7 @@ function adminClient() {
 }
 
 function initials(name: string): string {
-  return (
-    name
-      .trim()
-      .split(/\s+/)
-      .slice(0, 3)
-      .map((w) => w[0])
-      .join('')
-      .toUpperCase() || 'X'
-  )
+  return name.trim().split(/\s+/).slice(0, 3).map((w) => w[0]).join('').toUpperCase() || 'X'
 }
 
 type Txn = {
@@ -58,7 +46,7 @@ export async function POST(req: NextRequest) {
   if (!me) return NextResponse.json({ error: 'Not allowed' }, { status: 403 })
   if (!me.isAdmin) return NextResponse.json({ error: 'Admins only' }, { status: 403 })
 
-  const { month } = await req.json() // 'YYYY-MM'
+  const { month } = await req.json()
   const m = /^(\d{4})-(\d{2})$/.exec(String(month || ''))
   if (!m) return NextResponse.json({ error: 'Pick a month.' }, { status: 400 })
   const year = Number(m[1])
@@ -85,11 +73,16 @@ export async function POST(req: NextRequest) {
   if (txnErr) return NextResponse.json({ error: txnErr.message }, { status: 500 })
   const txns = (txnData ?? []) as Txn[]
 
-  // Staff master and portal user mapping.
   const { data: staffRows } = await a.from('fin_staff').select('id, name, role, email')
   const staffMap = new Map<string, { name: string; role: string | null; email: string | null }>()
   for (const s of (staffRows || []) as { id: string; name: string; role: string | null; email: string | null }[]) {
     staffMap.set(s.id, { name: s.name, role: s.role, email: s.email })
+  }
+
+  const { data: salaryRows } = await a.from('staff_salaries').select('staff_id, monthly_salary, currency')
+  const salaryMap = new Map<string, { amount: number; currency: string }>()
+  for (const r of (salaryRows || []) as { staff_id: string; monthly_salary: number; currency: string }[]) {
+    salaryMap.set(r.staff_id, { amount: Number(r.monthly_salary), currency: r.currency })
   }
 
   const { data: userList } = await a.auth.admin.listUsers({ page: 1, perPage: 1000 })
@@ -98,61 +91,91 @@ export async function POST(req: NextRequest) {
     if (u.email) emailToUser.set(u.email.toLowerCase(), u.id)
   }
 
-  // Group by staff and currency.
-  type Group = { staff_id: string; currency: string; lines: Txn[]; categories: number[] }
-  const groups = new Map<string, Group>()
+  // Group the month's payouts per staff (who was paid, their dates, categories).
+  const perStaff = new Map<string, Txn[]>()
   for (const t of txns) {
     if (!t.staff_id) continue
-    const cur = (t.currency || 'PHP').toUpperCase()
-    const key = `${t.staff_id}|${cur}`
-    const g = groups.get(key) || { staff_id: t.staff_id, currency: cur, lines: [], categories: [] }
-    g.lines.push(t)
-    if (t.category_id != null) g.categories.push(t.category_id)
-    groups.set(key, g)
+    const arr = perStaff.get(t.staff_id) || []
+    arr.push(t)
+    perStaff.set(t.staff_id, arr)
   }
 
-  if (groups.size === 0) {
+  if (perStaff.size === 0) {
     return NextResponse.json({ ok: true, count: 0, period_label: periodLabel })
   }
 
-  const rows = Array.from(groups.values()).map((g) => {
-    const staff = staffMap.get(g.staff_id)
+  const rows: Record<string, unknown>[] = []
+  for (const [staffId, list] of perStaff.entries()) {
+    const staff = staffMap.get(staffId)
     const name = staff?.name || 'Staff'
     const email = staff?.email ? staff.email.toLowerCase() : null
-    const gross = g.lines.reduce((s, l) => s + Number(l.amount || 0), 0)
-    const payDate = g.lines.reduce((d, l) => (l.transaction_date > d ? l.transaction_date : d), g.lines[0].transaction_date)
-    const cat = g.categories[0]
-    return {
-      staff_id: g.staff_id,
+    const userId = email ? emailToUser.get(email) || null : null
+    const cat = list.find((l) => l.category_id != null)?.category_id ?? null
+    const department = cat != null ? DEPARTMENT[cat] || 'Operations' : 'Operations'
+    const payDate = list.reduce((d, l) => (l.transaction_date > d ? l.transaction_date : d), list[0].transaction_date)
+    const reference = `PS/${m[1]}/${m[2]}/${initials(name)}`
+
+    const base = {
+      staff_id: staffId,
       employee_name: name,
       employee_role: staff?.role || null,
-      department: cat != null ? DEPARTMENT[cat] || 'Operations' : 'Operations',
+      department,
       employee_email: email,
-      user_id: email ? emailToUser.get(email) || null : null,
+      user_id: userId,
       period,
       period_label: periodLabel,
       period_start: periodStart,
       period_end: periodEnd,
-      pay_date: payDate,
-      reference_no: `PS/${m[1]}/${m[2]}/${initials(name)}`,
-      currency: g.currency,
-      earnings: g.lines.map((l) => ({
-        date: l.transaction_date,
-        description: l.description || 'Salary',
-        amount: Number(l.amount || 0),
-      })),
-      gross,
-      deductions: 0,
-      net: gross,
+      reference_no: reference,
       generated_by: me.id,
       generated_by_email: me.email,
       updated_at: new Date().toISOString(),
     }
-  })
 
-  const { error } = await a
-    .from('staff_payslips')
-    .upsert(rows, { onConflict: 'staff_id,period,currency' })
+    const fixed = salaryMap.get(staffId)
+    if (fixed) {
+      // Fixed salary: one Basic Salary line in the agreed currency.
+      rows.push({
+        ...base,
+        pay_date: payDate,
+        currency: fixed.currency,
+        earnings: [{ date: payDate, description: 'Basic Salary', amount: fixed.amount }],
+        gross: fixed.amount,
+        deductions: 0,
+        net: fixed.amount,
+      })
+    } else {
+      // Variable: actual payouts, grouped by currency.
+      const byCur = new Map<string, Txn[]>()
+      for (const t of list) {
+        const cur = (t.currency || 'PHP').toUpperCase()
+        const arr = byCur.get(cur) || []
+        arr.push(t)
+        byCur.set(cur, arr)
+      }
+      for (const [cur, items] of byCur.entries()) {
+        const gross = items.reduce((s, l) => s + Number(l.amount || 0), 0)
+        const cPay = items.reduce((d, l) => (l.transaction_date > d ? l.transaction_date : d), items[0].transaction_date)
+        rows.push({
+          ...base,
+          pay_date: cPay,
+          currency: cur,
+          earnings: items.map((l) => ({
+            date: l.transaction_date,
+            description: l.description || 'Salary',
+            amount: Number(l.amount || 0),
+          })),
+          gross,
+          deductions: 0,
+          net: gross,
+        })
+      }
+    }
+  }
+
+  // Rebuild the month cleanly so a change of logic or data leaves no stale rows.
+  await a.from('staff_payslips').delete().eq('period', period)
+  const { error } = await a.from('staff_payslips').insert(rows)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ ok: true, count: rows.length, period_label: periodLabel })
