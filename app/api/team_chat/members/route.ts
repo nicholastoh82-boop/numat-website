@@ -2,8 +2,10 @@
   app/api/team_chat/members/route.ts
 
   Returns everyone on the portal (any numat.ph account that has signed in), so
-  the chat can show a teammate picker for private chats and groups. Uses the
-  service role to read names and emails from auth. The caller must be signed in.
+  the chat can show a teammate picker for private chats and groups. One fast
+  database call through tc_portal_people, which replaces the old approach of
+  downloading the entire user list through the auth admin API. The caller must
+  be signed in.
 */
 
 import { NextResponse } from 'next/server'
@@ -28,17 +30,14 @@ export async function GET() {
       { auth: { persistSession: false } },
     )
 
-    const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+    const { data, error } = await admin.rpc('tc_portal_people')
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 
-    const members = (list?.users || [])
-      .filter((u) => (u.email || '').toLowerCase().endsWith('@numat.ph'))
-      .filter((u) => u.id !== user.id)
-      .map((u) => {
-        const meta = (u.user_metadata || {}) as Record<string, unknown>
-        const name = (meta.full_name as string) || (meta.name as string) || u.email || 'Member'
-        return { id: u.id, name, email: u.email || '' }
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
+    const members = ((data || []) as { id: string; name: string; email: string }[]).filter(
+      (m) => m.id !== user.id,
+    )
 
     return NextResponse.json({ members })
   } catch (e) {
