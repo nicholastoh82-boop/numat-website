@@ -169,15 +169,23 @@ export async function POST(req: NextRequest) {
       tasks = actionItems.map((a) => ({ title: a.text || '', owner: '', dueHint: '' }))
     }
 
-    // 6. Map participants to numat.ph accounts by email.
-    const { data: list } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 })
-    const dir = new Map<string, { id: string; name: string }>()
-    for (const u of list?.users || []) {
-      const email = (u.email || '').toLowerCase()
-      if (!email.endsWith('@numat.ph')) continue
-      const meta = (u.user_metadata || {}) as Record<string, unknown>
-      const name = (meta.full_name as string) || (meta.name as string) || u.email || 'Member'
-      dir.set(email, { id: u.id, name })
+    // 6. Build the numat.ph directory once, through one fast database call,
+    // keyed three ways: by email, by full name, and by first name when that
+    // first name is unique. This matches whichever form the meeting notes use.
+    const { data: people } = await db.rpc('tc_portal_people')
+    const byEmail = new Map<string, { id: string; name: string }>()
+    const byName = new Map<string, { id: string; name: string }>()
+    const byFirst = new Map<string, { id: string; name: string } | null>()
+    for (const p of (people || []) as { id: string; name: string; email: string }[]) {
+      const email = (p.email || '').toLowerCase()
+      const person = { id: p.id, name: p.name || p.email }
+      if (email) byEmail.set(email, person)
+      const full = (p.name || '').trim().toLowerCase()
+      if (full) {
+        byName.set(full, person)
+        const first = full.split(' ')[0]
+        if (first) byFirst.set(first, byFirst.has(first) ? null : person)
+      }
     }
     const nameToEmail = new Map<string, string>()
     for (const p of participants) {
@@ -188,24 +196,39 @@ export async function POST(req: NextRequest) {
       if (!ownerName) return { id: null, name: null }
       const key = ownerName.trim().toLowerCase()
       const email = nameToEmail.get(key)
-      if (email && dir.has(email)) {
-        const d = dir.get(email)!
+      if (email && byEmail.has(email)) {
+        const d = byEmail.get(email)!
         return { id: d.id, name: d.name }
       }
-      if (dir.has(key)) {
-        const d = dir.get(key)!
+      if (byEmail.has(key)) {
+        const d = byEmail.get(key)!
         return { id: d.id, name: d.name }
       }
+      const full = byName.get(key)
+      if (full) return { id: full.id, name: full.name }
+      const first = byFirst.get(key.split(' ')[0])
+      if (first) return { id: first.id, name: first.name }
       return { id: null, name: ownerName }
     }
 
+    // The action item text usually names the person, in the shape
+    // Name will do the thing. Use that when the model gives no owner.
+    function ownerFromText(taskTitle?: string): string {
+      const t = String(taskTitle || '')
+      const at = t.indexOf(' will ')
+      if (at <= 0) return ''
+      const lead = t.slice(0, at).trim()
+      if (!lead || lead.split(' ').length > 4) return ''
+      return lead
+    }
+
     const ownerEmail = (owner.email || '').toLowerCase()
-    const createdBy = ownerEmail && dir.has(ownerEmail) ? dir.get(ownerEmail)!.id : null
+    const createdBy = ownerEmail && byEmail.has(ownerEmail) ? byEmail.get(ownerEmail)!.id : null
 
     const rows = tasks
       .filter((t) => t.title && String(t.title).trim())
       .map((t) => {
-        const a = resolveAssignee(t.owner)
+        const a = resolveAssignee(t.owner || ownerFromText(t.title))
         return {
           channel_id: GENERAL_CHANNEL_ID,
           title: `${String(t.title).slice(0, 460)} (from ${title.slice(0, 30)})`.slice(0, 500),
