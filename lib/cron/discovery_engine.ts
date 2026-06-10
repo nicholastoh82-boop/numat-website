@@ -72,6 +72,7 @@ export type SearchResponse = {
   results: SearchResult[];
   summary?: string;
   totalSize?: number;
+  nextPageToken?: string;
 };
 
 /**
@@ -83,7 +84,7 @@ export type SearchResponse = {
  */
 export async function searchKb(
   query: string,
-  opts: { pageSize?: number; generateSummary?: boolean } = {}
+  opts: { pageSize?: number; offset?: number; generateSummary?: boolean } = {}
 ): Promise<SearchResponse> {
   const token = await getGcpAccessToken();
   // Engine-level serving config for SEARCH solution type is named `default_search`.
@@ -98,6 +99,11 @@ export async function searchKb(
       snippetSpec: { returnSnippet: true },
     },
   };
+  // Offset lets the caller page through results. Page 2 at pageSize 20 sends
+  // offset 20, and so on. Vertex returns the slice starting at that offset.
+  if (typeof opts.offset === 'number' && opts.offset > 0) {
+    body.offset = opts.offset;
+  }
   // Note: extractiveContentSpec and summarySpec require Enterprise edition to
   // be enabled on the data store (not just the engine tier). We use plain
   // snippet search for now; turn on enterprise edition in the data store
@@ -137,5 +143,6 @@ export async function searchKb(
     results,
     summary: data.summary?.summaryText,
     totalSize: data.totalSize,
+    nextPageToken: data.nextPageToken,
   };
 }
