@@ -37,12 +37,14 @@ export async function GET(req: NextRequest) {
   const pageSize = url.searchParams.get('pageSize')
     ? Math.min(parseInt(url.searchParams.get('pageSize')!, 10) || 10, 50)
     : 10;
+  const page = Math.max(parseInt(url.searchParams.get('page') || '1', 10) || 1, 1);
+  const offset = (page - 1) * pageSize;
   if (!q) {
     return NextResponse.json({ ok: false, error: 'q required' }, { status: 400 });
   }
 
   try {
-    const data = await searchKb(q, { pageSize });
+    const data = await searchKb(q, { pageSize, offset });
 
     const uuids = Array.from(
       new Set(data.results.map(extractUuid).filter((u): u is string => !!u))
@@ -87,6 +89,8 @@ export async function GET(req: NextRequest) {
       query: q,
       results: enriched,
       totalSize: data.totalSize,
+      page,
+      pageSize,
       ms: Date.now() - started,
     });
   } catch (err) {

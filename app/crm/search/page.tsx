@@ -43,26 +43,32 @@ const ICP_BADGE = (score: number | null): string => {
 };
 
 export default function CrmSearchPage() {
+  const PAGE_SIZE = 20;
   const [query, setQuery] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [totalSize, setTotalSize] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [elapsed, setElapsed] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const doSearch = useCallback(async (q: string) => {
+  const doSearch = useCallback(async (q: string, p: number) => {
     if (!q.trim()) return;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(
-        `/api/crm/kb-search?q=${encodeURIComponent(q)}&pageSize=20`
+        `/api/crm/kb-search?q=${encodeURIComponent(q)}&pageSize=${PAGE_SIZE}&page=${p}`
       );
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Search failed');
       setResults(data.results || []);
       setTotalSize(data.totalSize ?? null);
       setElapsed(data.ms ?? null);
+      setPage(data.page ?? p);
+      setSubmittedQuery(q);
+      if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setResults([]);
@@ -73,8 +79,11 @@ export default function CrmSearchPage() {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    doSearch(query);
+    doSearch(query, 1);
   };
+
+  const totalPages =
+    totalSize !== null ? Math.max(1, Math.ceil(totalSize / PAGE_SIZE)) : 1;
 
   return (
     <div className="min-h-screen bg-white px-6 py-8 max-w-5xl mx-auto">
@@ -109,9 +118,10 @@ export default function CrmSearchPage() {
         </div>
       )}
 
-      {totalSize !== null && !error && (
+      {totalSize !== null && !error && results.length > 0 && (
         <div className="mb-4 text-sm text-slate-500">
-          {totalSize} total matches. Showing {results.length}. ({elapsed} ms)
+          {totalSize} total matches. Showing {(page - 1) * PAGE_SIZE + 1} to{' '}
+          {(page - 1) * PAGE_SIZE + results.length}. ({elapsed} ms)
         </div>
       )}
 
@@ -200,6 +210,30 @@ export default function CrmSearchPage() {
           </div>
         )}
       </div>
+
+      {totalSize !== null && totalSize > PAGE_SIZE && results.length > 0 && (
+        <div className="flex items-center justify-between mt-6">
+          <button
+            type="button"
+            onClick={() => doSearch(submittedQuery, page - 1)}
+            disabled={loading || page <= 1}
+            className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-slate-500">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => doSearch(submittedQuery, page + 1)}
+            disabled={loading || page >= totalPages}
+            className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
