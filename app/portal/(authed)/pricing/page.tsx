@@ -80,12 +80,19 @@ function priceCell(onRequest: boolean | null, price: number | null, notes: strin
 }
 
 function spec(v: Variant): string {
-  if (v.size_label && v.size_label.trim()) return v.size_label.trim()
-  const parts: string[] = []
-  if (v.thickness_mm) parts.push(v.thickness_mm + 'mm')
-  if (v.length_mm && v.width_mm) parts.push(v.length_mm + ' by ' + v.width_mm + 'mm')
-  if (v.ply_count) parts.push(v.ply_count + ' ply')
-  return parts.join(', ') || 'Standard'
+  const base =
+    v.size_label && v.size_label.trim()
+      ? v.size_label.trim()
+      : [
+          v.thickness_mm ? v.thickness_mm + 'mm' : '',
+          v.length_mm && v.width_mm ? v.length_mm + ' by ' + v.width_mm + 'mm' : '',
+        ]
+          .filter(Boolean)
+          .join(', ') || 'Standard'
+  const extra: string[] = []
+  if (v.ply_count) extra.push(v.ply_count + ' ply')
+  if (v.core_type && v.core_type.trim()) extra.push(v.core_type.trim())
+  return extra.length ? base + ' (' + extra.join(', ') + ')' : base
 }
 
 export default async function PortalPricingPage() {
