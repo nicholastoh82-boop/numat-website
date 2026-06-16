@@ -14,6 +14,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [canSeeAll, setCanSeeAll] = useState(false);
+  const [hasReceipts, setHasReceipts] = useState(false);
+  const [hasReports, setHasReports] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -34,21 +37,39 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
       const [{ data: adminRows }, { data: featRows }] = await Promise.all([
         supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin'),
-        supabase.from('portal_access').select('feature').eq('user_id', user.id).eq('feature', 'financials'),
+        supabase.from('portal_access').select('feature').eq('user_id', user.id),
       ]);
+      const features = new Set((featRows || []).map((r) => r.feature as string));
+      const isAdmin = (adminRows && adminRows.length > 0) || ALWAYS_ADMIN.includes(email);
+      const financials = features.has('financials');
+      const receipts = features.has('receipts');
+      const reports = features.has('reports');
+
+      // The finance area used to need the financials feature for every page,
+      // which blocked anyone granted only Receipts or only Reports. Now the
+      // dashboard, fund and all transactions still need financials, but the New
+      // Transaction (Receipts) page accepts the receipts feature, and the
+      // Reports page accepts the reports feature.
+      const path = pathname || '';
+      const onReceipts = path === '/finance/new' || path.startsWith('/finance/new');
+      const onReports = path === '/finance/reports' || path.startsWith('/finance/reports');
       const ok =
-        (adminRows && adminRows.length > 0) ||
-        ALWAYS_ADMIN.includes(email) ||
-        (featRows && featRows.length > 0);
+        isAdmin ||
+        financials ||
+        (receipts && onReceipts) ||
+        (reports && onReports);
       if (!ok) {
         router.replace('/portal/no-access');
         return;
       }
 
+      setCanSeeAll(isAdmin || financials);
+      setHasReceipts(receipts);
+      setHasReports(reports);
       setUserEmail(user.email || null);
       setReady(true);
     })();
-  }, [router]);
+  }, [router, pathname]);
 
   if (!ready) {
     return (
@@ -58,14 +79,20 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
     );
   }
 
-  // Finance sub-navigation. Portal item dropped because the sidebar already has Home.
-  const navItems = [
-    { href: '/finance', label: 'Dashboard' },
-    { href: '/finance/new', label: 'New Transaction' },
-    { href: '/finance/fund', label: 'Revolving Fund' },
-    { href: '/finance/transactions', label: 'All Transactions' },
-    { href: '/finance/reports', label: 'Reports' },
-  ];
+  // Finance sub-navigation. Full set for financials and admins, otherwise only
+  // the pages the person is allowed to open.
+  const navItems = canSeeAll
+    ? [
+        { href: '/finance', label: 'Dashboard' },
+        { href: '/finance/new', label: 'New Transaction' },
+        { href: '/finance/fund', label: 'Revolving Fund' },
+        { href: '/finance/transactions', label: 'All Transactions' },
+        { href: '/finance/reports', label: 'Reports' },
+      ]
+    : [
+        ...(hasReceipts ? [{ href: '/finance/new', label: 'New Transaction' }] : []),
+        ...(hasReports ? [{ href: '/finance/reports', label: 'Reports' }] : []),
+      ];
 
   return (
     <div className="flex min-h-screen bg-white">
