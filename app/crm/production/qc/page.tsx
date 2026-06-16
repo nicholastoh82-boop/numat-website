@@ -95,6 +95,7 @@ export default function ProductionQcPage() {
   const [recent, setRecent] = useState<QcPhoto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void loadRecent();
@@ -128,6 +129,7 @@ export default function ProductionQcPage() {
     setFileBlob(null);
     setPreviewUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+    if (uploadInputRef.current) uploadInputRef.current.value = '';
   }
 
   async function submit() {
@@ -216,13 +218,29 @@ export default function ProductionQcPage() {
               className="hidden"
               id="qc-file-input"
             />
+            <input
+              ref={uploadInputRef}
+              type="file"
+              accept="image/*"
+              onChange={onFileChange}
+              className="hidden"
+              id="qc-upload-input"
+            />
             {!previewUrl ? (
-              <label
-                htmlFor="qc-file-input"
-                className="block bg-blue-600 text-white text-lg font-medium rounded-lg p-6 text-center cursor-pointer hover:bg-blue-700"
-              >
-                📷 Take photo
-              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label
+                  htmlFor="qc-file-input"
+                  className="block bg-blue-600 text-white text-lg font-medium rounded-lg p-6 text-center cursor-pointer hover:bg-blue-700"
+                >
+                  📷 Take photo
+                </label>
+                <label
+                  htmlFor="qc-upload-input"
+                  className="block bg-white border border-blue-600 text-blue-700 text-lg font-medium rounded-lg p-6 text-center cursor-pointer hover:bg-blue-50"
+                >
+                  Upload photo
+                </label>
+              </div>
             ) : (
               <div className="bg-white border border-slate-300 rounded-lg p-3">
                 <img
