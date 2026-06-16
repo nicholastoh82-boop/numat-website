@@ -60,6 +60,16 @@ export default function RecentEntries({ station, refreshKey, userEmail, variants
                   {r.voided && <span className="ml-2 px-1.5 py-0.5 rounded bg-red-200 text-red-800 text-[10px] font-semibold">VOIDED</span>}
                 </div>
                 <div className="text-gray-600 mt-0.5">{summarise(station, r, variantById)}</div>
+                {station === 'borax' && r.photo_url && (
+                  <a
+                    href={r.photo_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 mt-0.5 inline-block"
+                  >
+                    View treatment photo
+                  </a>
+                )}
                 <div className="text-gray-400 mt-0.5">by <span className="font-mono">{r.submitted_by}</span> on {new Date(r.submitted_at).toLocaleString()}</div>
                 {r.void_reason && <div className="text-red-700 mt-0.5">Voided: {r.void_reason}</div>}
               </div>

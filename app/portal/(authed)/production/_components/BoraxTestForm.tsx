@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Field, ShiftOperator, inputCls, todayISO } from './_shared'
 
 type Batch = {
@@ -29,7 +29,27 @@ export default function BoraxTestForm({ userEmail, onSubmitted }: Props) {
   const [fail, setFail] = useState('')
   const [notes, setNotes] = useState('')
   const [shiftOp, setShiftOp] = useState('')
+  const [photo, setPhoto] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const camRef = useRef<HTMLInputElement>(null)
+  const upRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
+
+  const onPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhoto(file)
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(URL.createObjectURL(file))
+    setMsg(null)
+  }
+  const clearPhoto = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPhoto(null)
+    setPreviewUrl(null)
+    if (camRef.current) camRef.current.value = ''
+    if (upRef.current) upRef.current.value = ''
+  }
   const [loadingBatches, setLoadingBatches] = useState(false)
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err' | 'warn'; text: string } | null>(null)
 
@@ -49,7 +69,7 @@ export default function BoraxTestForm({ userEmail, onSubmitted }: Props) {
   const totalTested = p + f
   // 5% of slats_received (rounded up)
   const recommended = batch ? Math.ceil(batch.slats_received * 0.05) : 0
-  const isValid = !!batchId && totalTested > 0 && p >= 0 && f >= 0
+  const isValid = !!batchId && totalTested > 0 && p >= 0 && f >= 0 && !!photo
   const willFlag = f > 0
   const willPass = p > 0 && f === 0
 
@@ -57,21 +77,22 @@ export default function BoraxTestForm({ userEmail, onSubmitted }: Props) {
     if (!isValid || busy) return
     setBusy(true); setMsg(null)
     try {
-      const res = await fetch('/api/production/borax-test', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slat_receipt_id: batchId, event_date: date,
-          slats_pass: p, slats_fail: f,
-          notes: notes || null, shift_operator: shiftOp || null,
-        }),
-      })
+      const fd = new FormData()
+      fd.append('slat_receipt_id', batchId)
+      fd.append('event_date', date)
+      fd.append('slats_pass', String(p))
+      fd.append('slats_fail', String(f))
+      if (notes) fd.append('notes', notes)
+      if (shiftOp) fd.append('shift_operator', shiftOp)
+      if (photo) fd.append('photo', photo, photo.name || 'borax.jpg')
+      const res = await fetch('/api/production/borax-test', { method: 'POST', body: fd })
       const out = await res.json()
       if (!res.ok || out.error) throw new Error(out.error || `HTTP ${res.status}`)
       const verdictText = willFlag
         ? `${f} slat(s) failed the test. Batch flagged for review by Mark or Bryan before further use.`
         : `All ${p} tested slats passed. Batch marked as passed.`
       setMsg({ kind: willFlag ? 'warn' : 'ok', text: `Recorded: ${verdictText}` })
-      setBatchId(''); setPass(''); setFail(''); setNotes(''); setShiftOp('')
+      setBatchId(''); setPass(''); setFail(''); setNotes(''); setShiftOp(''); clearPhoto()
       loadBatches()
       onSubmitted()
     } catch (e: any) { setMsg({ kind: 'err', text: e?.message || 'Failed to submit' }) }
@@ -139,6 +160,33 @@ export default function BoraxTestForm({ userEmail, onSubmitted }: Props) {
           )}
         </div>
       )}
+
+      <Field label="Treatment photo" required hint="Photo of the tested slats or the turmeric result, kept as documentation">
+        <input ref={camRef} type="file" accept="image/*" capture="environment" onChange={onPhoto} className="hidden" id="borax-cam-input" />
+        <input ref={upRef} type="file" accept="image/*" onChange={onPhoto} className="hidden" id="borax-upload-input" />
+        {!previewUrl ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label htmlFor="borax-cam-input" className="block bg-blue-600 text-white text-sm font-medium rounded p-3 text-center cursor-pointer hover:bg-blue-700">
+              📷 Take photo
+            </label>
+            <label htmlFor="borax-upload-input" className="block bg-white border border-blue-600 text-blue-700 text-sm font-medium rounded p-3 text-center cursor-pointer hover:bg-blue-50">
+              Upload photo
+            </label>
+          </div>
+        ) : (
+          <div className="border border-gray-300 rounded p-2">
+            <img src={previewUrl} alt="treatment photo preview" className="rounded w-full max-h-72 object-contain bg-gray-100" />
+            <div className="flex gap-2 mt-2">
+              <label htmlFor="borax-upload-input" className="flex-1 bg-gray-200 text-gray-800 text-sm font-medium rounded p-2 text-center cursor-pointer hover:bg-gray-300">
+                Choose another
+              </label>
+              <button type="button" onClick={clearPhoto} className="flex-1 bg-gray-100 text-gray-700 text-sm font-medium rounded p-2 hover:bg-gray-200">
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
+      </Field>
 
       <Field label="Notes (optional)"><textarea value={notes} rows={2} onChange={e => setNotes(e.target.value)} className={inputCls + ' resize-none'} placeholder="e.g. used fresh turmeric solution batch from today" /></Field>
       <ShiftOperator value={shiftOp} onChange={setShiftOp} />
