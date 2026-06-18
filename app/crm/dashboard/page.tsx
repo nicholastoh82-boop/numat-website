@@ -414,6 +414,7 @@ export default function CRMDashboard() {
   const [selectedLeadForForm, setSelectedLeadForForm] = useState<{ id: string; name: string } | null>(null)
   // Enrichment drawer state. Shows Gemini enrichment data for a single lead.
   const [selectedLeadForEnrichment, setSelectedLeadForEnrichment] = useState<Lead | null>(null)
+  const [leadsWithForm, setLeadsWithForm] = useState<Set<string>>(new Set())
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
@@ -446,7 +447,7 @@ export default function CRMDashboard() {
   }, [supabase, router])
 
   const loadLeads = useCallback(async (crmUser: CRMUser) => {
-    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,proposal_signed_at,payment_due_at,order_completed_at,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,source_payload,business_description,products_offered,employee_size_band,icp_fit_score,icp_fit_reason,pain_hooks,product_recommendations,buying_signal_strength,buying_signal_summary,buying_signal_evidence,buying_signal_detected_at,buying_signal_scanned_at,last_enriched_at,product_focus,marketing_sourced'
+    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,proposal_signed_at,payment_due_at,order_completed_at,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,products_offered,employee_size_band,icp_fit_score,buying_signal_strength,buying_signal_detected_at,buying_signal_scanned_at,last_enriched_at,product_focus,marketing_sourced'
     const PAGE_SIZE = 1000
     const allLeads: Lead[] = []
     let from = 0
@@ -472,6 +473,24 @@ export default function CRMDashboard() {
     }
 
     setLeads(allLeads)
+
+    // Which leads have a form submission (source_payload). Ids only, so the list
+    // stays light. The Form button uses this set instead of loading the payload.
+    let formQuery = supabase.from('master_leads').select('id').not('source_payload', 'is', null)
+    if (crmUser.role === 'rep') formQuery = formQuery.eq('rep_email', crmUser.email)
+    const { data: formRows } = await formQuery
+    setLeadsWithForm(new Set(((formRows || []) as { id: string }[]).map((r) => r.id)))
+  }, [supabase])
+
+  // Open the enrichment drawer. The heavy enrichment columns are not in the
+  // list, so fetch them for this one lead, then open with the full data.
+  const openEnrichment = useCallback(async (lead: Lead) => {
+    const { data } = await supabase
+      .from('master_leads')
+      .select('business_description,icp_fit_reason,pain_hooks,product_recommendations,buying_signal_summary,buying_signal_evidence')
+      .eq('id', lead.id)
+      .maybeSingle()
+    setSelectedLeadForEnrichment({ ...lead, ...((data || {}) as Partial<Lead>) })
   }, [supabase])
 
   const loadQuotes = useCallback(async () => {
@@ -2029,7 +2048,7 @@ export default function CRMDashboard() {
                       Timeline
                     </button>)}
                     <button
-                      onClick={e => { e.stopPropagation(); setSelectedLeadForEnrichment(lead) }}
+                      onClick={e => { e.stopPropagation(); openEnrichment(lead) }}
                       title={lead.last_enriched_at ? `ICP fit ${lead.icp_fit_score ?? '?'} / 100` : 'Lead not yet enriched'}
                       className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
                         lead.buying_signal_strength === 'hot'
@@ -2050,7 +2069,7 @@ export default function CRMDashboard() {
                             ? `Fit ${lead.icp_fit_score}`
                             : 'Insights'}
                     </button>
-                    {lead.source_payload && (
+                    {leadsWithForm.has(lead.id) && (
                       <button
                         onClick={e => { e.stopPropagation(); setSelectedLeadForForm({ id: lead.id, name: displayName }) }}
                         title="View full form submission and admin actions"
