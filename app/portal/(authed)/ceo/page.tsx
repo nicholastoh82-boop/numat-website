@@ -4,6 +4,7 @@
 
 import { requireFeature } from '@/lib/portal/roles'
 import CeoDashboard from './_components/CeoDashboard'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
 export const metadata = {
   title: 'CEO Dashboard | NUMAT Portal',
@@ -49,6 +50,47 @@ async function loadCeoData(params: SearchParams): Promise<{ ok: true; data: any 
   }
 }
 
+// Fixed rate for the monthly reporting table, as requested. One source of truth:
+// the rpt_pa_monthly view in the same Supabase the rest of the dashboard uses.
+const FX_RATE = 60
+
+async function loadMonthly(): Promise<any[]> {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return []
+  const admin = createAdmin(url, key, { auth: { persistSession: false } })
+
+  // Last 12 calendar months.
+  const since = new Date()
+  since.setMonth(since.getMonth() - 11)
+  since.setDate(1)
+  const sinceStr = since.toISOString().slice(0, 10)
+
+  const { data, error } = await admin
+    .from('rpt_pa_monthly')
+    .select('month,currency,booked_revenue,earned_revenue,cash_collected,cash_out,net_cash')
+    .gte('month', sinceStr)
+    .order('month', { ascending: true })
+  if (error || !data) return []
+
+  // Combine the per currency rows into one PHP total per month. Amounts not in
+  // PHP are folded in at the fixed rate. The view already limits cash received
+  // for sales to customer income, so capital is excluded.
+  const byMonth = new Map<string, any>()
+  for (const row of data as any[]) {
+    const factor = row.currency === 'PHP' ? 1 : FX_RATE
+    const cur = byMonth.get(row.month) || { month: row.month, booked: 0, earned: 0, collected: 0, cashout: 0, net: 0 }
+    cur.booked += Number(row.booked_revenue || 0) * factor
+    cur.earned += Number(row.earned_revenue || 0) * factor
+    cur.collected += Number(row.cash_collected || 0) * factor
+    cur.cashout += Number(row.cash_out || 0) * factor
+    cur.net = cur.collected - cur.cashout
+    byMonth.set(row.month, cur)
+  }
+  // Most recent month first.
+  return Array.from(byMonth.values()).sort((a, b) => (a.month < b.month ? 1 : -1))
+}
+
 export default async function CeoPage({
   searchParams,
 }: {
@@ -56,7 +98,7 @@ export default async function CeoPage({
 }) {
   await requireFeature('ceo')
   const params = await searchParams
-  const result = await loadCeoData(params)
+  const [result, paMonthly] = await Promise.all([loadCeoData(params), loadMonthly()])
 
   if (!result.ok) {
     return (
@@ -67,5 +109,5 @@ export default async function CeoPage({
     )
   }
 
-  return <CeoDashboard data={result.data} />
+  return <CeoDashboard data={{ ...result.data, pa_monthly: paMonthly }} />
 }

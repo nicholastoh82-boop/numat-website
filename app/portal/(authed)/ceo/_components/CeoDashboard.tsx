@@ -65,6 +65,7 @@ export default function CeoDashboard({ data }: Props) {
   // Custom range pickers state (only relevant when period === 'custom')
   const [customFrom, setCustomFrom] = useState<string>(periodInfo.start || '')
   const [customTo, setCustomTo] = useState<string>(periodInfo.end || '')
+  const [view, setView] = useState<'overview' | 'monthly'>('overview')
 
   function setPeriod(p: 'mtd' | 'ytd' | 'all') {
     router.push(`${pathname}?period=${p}`)
@@ -97,6 +98,25 @@ export default function CeoDashboard({ data }: Props) {
         <div className="text-xs text-gray-500">Generated {generatedAt}</div>
       </header>
 
+      {/* Tabs: Overview and Monthly reporting */}
+      <div className="flex gap-1 border border-gray-200 rounded-lg p-1 w-fit">
+        {(['overview', 'monthly'] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`px-3 py-1.5 rounded text-xs font-medium ${
+              view === v ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {v === 'overview' ? 'Overview' : 'Monthly reporting'}
+          </button>
+        ))}
+      </div>
+
+      {view === 'monthly' && <MonthlyReporting rows={data.pa_monthly || []} />}
+
+      {view === 'overview' && (
+      <>
       {/* EMAIL PRODUCTIVITY COUNTER (scoped server side; ceo sees all reps) */}
       <EmailCounter />
 
@@ -351,11 +371,90 @@ export default function CeoDashboard({ data }: Props) {
           </Card>
         </div>
       </Section>
+      </>
+      )}
     </div>
   )
 }
 
 /* ----- small reusable bits ----- */
+
+function MonthlyReporting({ rows }: { rows: any[] }) {
+  const RATE = 60
+  const php = (n: number) => 'PHP ' + Math.round(n || 0).toLocaleString('en-US')
+  const usd = (n: number) => 'USD ' + Math.round((n || 0) / RATE).toLocaleString('en-US')
+  const monthLabel = (m: string) => {
+    const d = new Date(m + 'T00:00:00')
+    return d.toLocaleString('en-US', { month: 'short', year: 'numeric' })
+  }
+
+  if (!rows || rows.length === 0) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-600">
+        No monthly data yet.
+      </div>
+    )
+  }
+
+  const cell = (n: number, key: string) => (
+    <td key={key} className="py-2 px-3 text-right tabular-nums">
+      <div className="text-gray-900">{php(n)}</div>
+      <div className="text-xs text-gray-500">{usd(n)}</div>
+    </td>
+  )
+
+  const cols: { key: string; label: string }[] = [
+    { key: 'booked', label: 'Booked revenue' },
+    { key: 'earned', label: 'Earned revenue' },
+    { key: 'collected', label: 'Cash received for sales' },
+    { key: 'cashout', label: 'Cash out' },
+  ]
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
+      <div>
+        <h2 className="text-sm font-semibold text-gray-900">Monthly reporting</h2>
+        <p className="text-xs text-gray-500 mt-1">
+          Figures in PHP with the USD equivalent at a fixed rate of 1 USD to 60 PHP. Any amounts originally in another currency are folded into the same total at that rate.
+        </p>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 text-left text-xs text-gray-500">
+              <th className="py-2 px-3 font-medium">Month</th>
+              {cols.map((c) => (
+                <th key={c.key} className="py-2 px-3 font-medium text-right">{c.label}</th>
+              ))}
+              <th className="py-2 px-3 font-medium text-right">Net cash</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r: any, i: number) => (
+              <tr key={i} className="border-b border-gray-100">
+                <td className="py-2 px-3 text-gray-900 whitespace-nowrap">{monthLabel(r.month)}</td>
+                {cols.map((c) => cell(Number(r[c.key] || 0), `${i}-${c.key}`))}
+                <td className="py-2 px-3 text-right tabular-nums">
+                  <div className={(r.net || 0) < 0 ? 'text-red-700' : 'text-emerald-700'}>{php(r.net)}</div>
+                  <div className="text-xs text-gray-500">{usd(r.net)}</div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="text-xs text-gray-500 leading-relaxed border-t border-gray-100 pt-3">
+        <p>Booked revenue: value of invoices signed in the month, counted in full that month.</p>
+        <p>Earned revenue: value of product delivered in the month.</p>
+        <p>Cash received for sales: customer sales cash received in the month, capital excluded.</p>
+        <p>Cash out: cash paid out in the month.</p>
+        <p>Net cash: cash received for sales minus cash out.</p>
+      </div>
+    </div>
+  )
+}
 
 function AccountKpi({
   accounts,
