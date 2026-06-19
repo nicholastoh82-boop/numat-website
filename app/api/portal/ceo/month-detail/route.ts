@@ -53,29 +53,27 @@ export async function GET(req: NextRequest) {
       .neq('status', 'reversed').eq('entry_type', 'income').eq('revenue_class', 'customer')
       .order('transaction_date', { ascending: true }),
     db.from('fin_transactions')
-      .select('amount,currency,entry_type,category_id')
+      .select('transaction_date,amount,currency,entry_type,category_id,vendor_payee,description')
       .gte('transaction_date', startStr).lt('transaction_date', endStr)
-      .neq('status', 'reversed').in('entry_type', CASHOUT_TYPES),
+      .neq('status', 'reversed').in('entry_type', CASHOUT_TYPES)
+      .order('transaction_date', { ascending: true }),
     db.from('fin_categories').select('id,name'),
   ])
 
-  // Cash out grouped by category, so it is easy to see what is being paid out.
-  // Category name where set, otherwise the transaction type. Foreign amounts are
-  // folded into PHP at the fixed rate so the breakdown matches the summary total.
+  // Cash out line items with a resolved category, so the client can show a
+  // category summary and let Mark open any category to see its transactions.
+  // Category name where set, otherwise the transaction type.
   const catName = new Map<number, string>()
   for (const c of (catRes.data || []) as any[]) catName.set(c.id, c.name)
   const pretty = (s: string) => (s || '').replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
-  const groups = new Map<string, { category: string; count: number; total_php: number }>()
-  for (const r of (cashoutRes.data || []) as any[]) {
-    const named = r.category_id != null ? catName.get(r.category_id) : undefined
-    const key = named || pretty(r.entry_type)
-    const factor = r.currency === 'PHP' ? 1 : 60
-    const g = groups.get(key) || { category: key, count: 0, total_php: 0 }
-    g.count += 1
-    g.total_php += Number(r.amount || 0) * factor
-    groups.set(key, g)
-  }
-  const cashout = Array.from(groups.values()).sort((a, b) => b.total_php - a.total_php)
+  const cashout = ((cashoutRes.data || []) as any[]).map((r) => ({
+    transaction_date: r.transaction_date,
+    vendor_payee: r.vendor_payee,
+    description: r.description,
+    currency: r.currency,
+    amount: r.amount,
+    category: (r.category_id != null ? catName.get(r.category_id) : undefined) || pretty(r.entry_type),
+  }))
 
   return NextResponse.json({
     booked: bookedRes.data || [],
