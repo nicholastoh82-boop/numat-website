@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import EmailCounter from '@/components/portal/EmailCounter'
 
@@ -383,10 +383,28 @@ function MonthlyReporting({ rows }: { rows: any[] }) {
   const RATE = 60
   const php = (n: number) => 'PHP ' + Math.round(n || 0).toLocaleString('en-US')
   const usd = (n: number) => 'USD ' + Math.round((n || 0) / RATE).toLocaleString('en-US')
-  const monthLabel = (m: string) => {
-    const d = new Date(m + 'T00:00:00')
-    return d.toLocaleString('en-US', { month: 'short', year: 'numeric' })
-  }
+  const monthLabel = (m: string) => new Date(m + 'T00:00:00').toLocaleString('en-US', { month: 'long', year: 'numeric' })
+
+  const months: string[] = (rows || []).map((r: any) => r.month)
+  const currentMonth = (() => { const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10) })()
+  const defaultMonth = months.includes(currentMonth) ? currentMonth : (months[0] || currentMonth)
+
+  const [month, setMonth] = useState<string>(defaultMonth)
+  const [detail, setDetail] = useState<any | null>(null)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [open, setOpen] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setDetail(null)
+    fetch(`/api/portal/ceo/month-detail?month=${month}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((d) => { if (!cancelled) setDetail(d) })
+      .catch(() => { if (!cancelled) setDetail({ error: true }) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [month])
 
   if (!rows || rows.length === 0) {
     return (
@@ -396,62 +414,214 @@ function MonthlyReporting({ rows }: { rows: any[] }) {
     )
   }
 
-  const cell = (n: number, key: string) => (
-    <td key={key} className="py-2 px-3 text-right tabular-nums">
-      <div className="text-gray-900">{php(n)}</div>
-      <div className="text-xs text-gray-500">{usd(n)}</div>
-    </td>
-  )
-
-  const cols: { key: string; label: string }[] = [
-    { key: 'booked', label: 'Booked revenue' },
-    { key: 'earned', label: 'Earned revenue' },
-    { key: 'collected', label: 'Cash received for sales' },
-    { key: 'cashout', label: 'Cash out' },
+  const summary = (rows || []).find((r: any) => r.month === month) || { booked: 0, earned: 0, collected: 0, cashout: 0, net: 0 }
+  const metrics = [
+    { key: 'booked', label: 'Booked revenue', value: summary.booked },
+    { key: 'earned', label: 'Earned revenue', value: summary.earned },
+    { key: 'collected', label: 'Cash received for sales', value: summary.collected },
+    { key: 'cashout', label: 'Cash out', value: summary.cashout },
+    { key: 'net', label: 'Net cash', value: summary.net },
   ]
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
-      <div>
-        <h2 className="text-sm font-semibold text-gray-900">Monthly reporting</h2>
-        <p className="text-xs text-gray-500 mt-1">
-          Figures in PHP with the USD equivalent at a fixed rate of 1 USD to 60 PHP. Any amounts originally in another currency are folded into the same total at that rate.
-        </p>
+    <div className="space-y-4">
+      <div className="rounded-lg border border-gray-200 bg-white p-4 flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <div className="text-sm font-semibold text-gray-900">Monthly reporting</div>
+          <div className="text-xs text-gray-500 mt-1">Figures in PHP with the USD equivalent at a fixed 1 USD to 60 PHP. Pick a month, then open a row to see what makes it up.</div>
+        </div>
+        <select
+          value={month}
+          onChange={(e) => { setMonth(e.target.value); setOpen(null) }}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 bg-white"
+        >
+          {months.map((m) => (
+            <option key={m} value={m}>{monthLabel(m)}</option>
+          ))}
+        </select>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-xs text-gray-500">
-              <th className="py-2 px-3 font-medium">Month</th>
-              {cols.map((c) => (
-                <th key={c.key} className="py-2 px-3 font-medium text-right">{c.label}</th>
-              ))}
-              <th className="py-2 px-3 font-medium text-right">Net cash</th>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {metrics.map((m) => (
+          <div key={m.key} className="rounded-lg border border-gray-200 bg-white p-3">
+            <div className="text-xs text-gray-500">{m.label}</div>
+            <div className={`text-lg font-semibold mt-1 tabular-nums ${m.key === 'net' ? ((m.value || 0) < 0 ? 'text-red-700' : 'text-emerald-700') : 'text-gray-900'}`}>{php(m.value)}</div>
+            <div className="text-xs text-gray-500 tabular-nums">{usd(m.value)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100">
+        <Acc id="collected" title="Cash received for sales" hint="Customer payments received this month." open={open} setOpen={setOpen} loading={loading}>
+          <CollectedTable items={detail?.collected || []} />
+        </Acc>
+        <Acc id="booked" title="Booked revenue" hint="Invoices signed this month. Outstanding and due date show what to chase." open={open} setOpen={setOpen} loading={loading}>
+          <BookedTable items={detail?.booked || []} />
+        </Acc>
+        <Acc id="earned" title="Earned revenue" hint="Product delivered this month." open={open} setOpen={setOpen} loading={loading}>
+          <EarnedTable items={detail?.earned || []} />
+        </Acc>
+        <Acc id="cashout" title="Cash out" hint="Cash paid out this month." open={open} setOpen={setOpen} loading={loading}>
+          <CashoutTable items={detail?.cashout || []} />
+        </Acc>
+      </div>
+
+      <p className="text-xs text-gray-500">Net cash is cash received for sales minus cash out.</p>
+    </div>
+  )
+}
+
+function Acc({ id, title, hint, open, setOpen, loading, children }: { id: string; title: string; hint: string; open: string | null; setOpen: (v: string | null) => void; loading: boolean; children: React.ReactNode }) {
+  const isOpen = open === id
+  return (
+    <div>
+      <button onClick={() => setOpen(isOpen ? null : id)} className="w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-gray-50">
+        <div>
+          <div className="text-sm font-medium text-gray-900">{title}</div>
+          <div className="text-xs text-gray-500">{hint}</div>
+        </div>
+        <span className="text-xs text-gray-500 shrink-0">{isOpen ? 'Hide' : 'Show'}</span>
+      </button>
+      {isOpen && (
+        <div className="px-3 pb-3">
+          {loading ? <div className="text-xs text-gray-500 py-2">Loading</div> : children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function money(cur: string, n: number): string {
+  return (cur || 'PHP') + ' ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function dateShort(s: string): string {
+  if (!s) return ''
+  return new Date(s + 'T00:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+}
+
+function Empty() {
+  return <div className="text-xs text-gray-500 py-2">No items for this month.</div>
+}
+
+function CollectedTable({ items }: { items: any[] }) {
+  if (!items || items.length === 0) return <Empty />
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-left text-gray-500 border-b border-gray-200">
+            <th className="py-1.5 px-2 font-medium">Date</th>
+            <th className="py-1.5 px-2 font-medium">From</th>
+            <th className="py-1.5 px-2 font-medium">Description</th>
+            <th className="py-1.5 px-2 font-medium text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((r: any, i: number) => (
+            <tr key={i} className="border-b border-gray-100">
+              <td className="py-1.5 px-2 text-gray-700 whitespace-nowrap">{dateShort(r.transaction_date)}</td>
+              <td className="py-1.5 px-2 text-gray-900">{r.vendor_payee || 'Unknown'}</td>
+              <td className="py-1.5 px-2 text-gray-600">{r.description || ''}</td>
+              <td className="py-1.5 px-2 text-right tabular-nums text-gray-900 whitespace-nowrap">{money(r.currency, r.amount)}</td>
             </tr>
-          </thead>
-          <tbody>
-            {rows.map((r: any, i: number) => (
-              <tr key={i} className="border-b border-gray-100">
-                <td className="py-2 px-3 text-gray-900 whitespace-nowrap">{monthLabel(r.month)}</td>
-                {cols.map((c) => cell(Number(r[c.key] || 0), `${i}-${c.key}`))}
-                <td className="py-2 px-3 text-right tabular-nums">
-                  <div className={(r.net || 0) < 0 ? 'text-red-700' : 'text-emerald-700'}>{php(r.net)}</div>
-                  <div className="text-xs text-gray-500">{usd(r.net)}</div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
-      <div className="text-xs text-gray-500 leading-relaxed border-t border-gray-100 pt-3">
-        <p>Booked revenue: value of invoices signed in the month, counted in full that month.</p>
-        <p>Earned revenue: value of product delivered in the month.</p>
-        <p>Cash received for sales: customer sales cash received in the month, capital excluded.</p>
-        <p>Cash out: cash paid out in the month.</p>
-        <p>Net cash: cash received for sales minus cash out.</p>
-      </div>
+function BookedTable({ items }: { items: any[] }) {
+  if (!items || items.length === 0) return <Empty />
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-left text-gray-500 border-b border-gray-200">
+            <th className="py-1.5 px-2 font-medium">Invoice</th>
+            <th className="py-1.5 px-2 font-medium">Customer</th>
+            <th className="py-1.5 px-2 font-medium text-right">Value</th>
+            <th className="py-1.5 px-2 font-medium text-right">Outstanding</th>
+            <th className="py-1.5 px-2 font-medium">Due</th>
+            <th className="py-1.5 px-2 font-medium">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((r: any, i: number) => (
+            <tr key={i} className="border-b border-gray-100">
+              <td className="py-1.5 px-2 text-gray-700 whitespace-nowrap">{r.invoice_number || ''}</td>
+              <td className="py-1.5 px-2 text-gray-900">{r.customer || 'Unknown'}</td>
+              <td className="py-1.5 px-2 text-right tabular-nums text-gray-900 whitespace-nowrap">{money(r.currency, r.invoice_value)}</td>
+              <td className={`py-1.5 px-2 text-right tabular-nums whitespace-nowrap ${Number(r.outstanding_amount || 0) > 0 ? 'text-red-700' : 'text-gray-400'}`}>{money(r.currency, r.outstanding_amount)}</td>
+              <td className="py-1.5 px-2 text-gray-700 whitespace-nowrap">{dateShort(r.due_date)}</td>
+              <td className="py-1.5 px-2 text-gray-600">{r.status || ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function EarnedTable({ items }: { items: any[] }) {
+  if (!items || items.length === 0) return <Empty />
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-left text-gray-500 border-b border-gray-200">
+            <th className="py-1.5 px-2 font-medium">Date</th>
+            <th className="py-1.5 px-2 font-medium">Customer</th>
+            <th className="py-1.5 px-2 font-medium">Product</th>
+            <th className="py-1.5 px-2 font-medium text-right">Qty</th>
+            <th className="py-1.5 px-2 font-medium text-right">Value</th>
+            <th className="py-1.5 px-2 font-medium">Invoice</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((r: any, i: number) => (
+            <tr key={i} className="border-b border-gray-100">
+              <td className="py-1.5 px-2 text-gray-700 whitespace-nowrap">{dateShort(r.delivery_date)}</td>
+              <td className="py-1.5 px-2 text-gray-900">{r.customer || 'Unknown'}</td>
+              <td className="py-1.5 px-2 text-gray-700">{r.product || ''}</td>
+              <td className="py-1.5 px-2 text-right tabular-nums text-gray-700 whitespace-nowrap">{Number(r.qty || 0).toLocaleString('en-US')} {r.unit || ''}</td>
+              <td className="py-1.5 px-2 text-right tabular-nums text-gray-900 whitespace-nowrap">{money(r.currency, r.delivered_value)}</td>
+              <td className="py-1.5 px-2 text-gray-600 whitespace-nowrap">{r.invoice_number || ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function CashoutTable({ items }: { items: any[] }) {
+  if (!items || items.length === 0) return <Empty />
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-left text-gray-500 border-b border-gray-200">
+            <th className="py-1.5 px-2 font-medium">Date</th>
+            <th className="py-1.5 px-2 font-medium">Paid to</th>
+            <th className="py-1.5 px-2 font-medium">Type</th>
+            <th className="py-1.5 px-2 font-medium">Description</th>
+            <th className="py-1.5 px-2 font-medium text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((r: any, i: number) => (
+            <tr key={i} className="border-b border-gray-100">
+              <td className="py-1.5 px-2 text-gray-700 whitespace-nowrap">{dateShort(r.transaction_date)}</td>
+              <td className="py-1.5 px-2 text-gray-900">{r.vendor_payee || 'Unknown'}</td>
+              <td className="py-1.5 px-2 text-gray-600 whitespace-nowrap">{(r.entry_type || '').replace(/_/g, ' ')}</td>
+              <td className="py-1.5 px-2 text-gray-600">{r.description || ''}</td>
+              <td className="py-1.5 px-2 text-right tabular-nums text-gray-900 whitespace-nowrap">{money(r.currency, r.amount)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
