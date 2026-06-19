@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
   const db = admin()
 
-  const [bookedRes, earnedRes, collectedRes, cashoutRes] = await Promise.all([
+  const [bookedRes, earnedRes, collectedRes, cashoutRes, catRes] = await Promise.all([
     db.from('accounts_receivable')
       .select('invoice_number,customer,invoice_date,invoice_value,outstanding_amount,due_date,status,currency')
       .gte('invoice_date', startStr).lt('invoice_date', endStr)
@@ -53,16 +53,34 @@ export async function GET(req: NextRequest) {
       .neq('status', 'reversed').eq('entry_type', 'income').eq('revenue_class', 'customer')
       .order('transaction_date', { ascending: true }),
     db.from('fin_transactions')
-      .select('transaction_date,amount,currency,vendor_payee,description,entry_type')
+      .select('amount,currency,entry_type,category_id')
       .gte('transaction_date', startStr).lt('transaction_date', endStr)
-      .neq('status', 'reversed').in('entry_type', CASHOUT_TYPES)
-      .order('transaction_date', { ascending: true }),
+      .neq('status', 'reversed').in('entry_type', CASHOUT_TYPES),
+    db.from('fin_categories').select('id,name'),
   ])
+
+  // Cash out grouped by category, so it is easy to see what is being paid out.
+  // Category name where set, otherwise the transaction type. Foreign amounts are
+  // folded into PHP at the fixed rate so the breakdown matches the summary total.
+  const catName = new Map<number, string>()
+  for (const c of (catRes.data || []) as any[]) catName.set(c.id, c.name)
+  const pretty = (s: string) => (s || '').replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())
+  const groups = new Map<string, { category: string; count: number; total_php: number }>()
+  for (const r of (cashoutRes.data || []) as any[]) {
+    const named = r.category_id != null ? catName.get(r.category_id) : undefined
+    const key = named || pretty(r.entry_type)
+    const factor = r.currency === 'PHP' ? 1 : 60
+    const g = groups.get(key) || { category: key, count: 0, total_php: 0 }
+    g.count += 1
+    g.total_php += Number(r.amount || 0) * factor
+    groups.set(key, g)
+  }
+  const cashout = Array.from(groups.values()).sort((a, b) => b.total_php - a.total_php)
 
   return NextResponse.json({
     booked: bookedRes.data || [],
     earned: earnedRes.data || [],
     collected: collectedRes.data || [],
-    cashout: cashoutRes.data || [],
+    cashout,
   })
 }

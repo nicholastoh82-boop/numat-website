@@ -461,7 +461,7 @@ function MonthlyReporting({ rows }: { rows: any[] }) {
         <Acc id="earned" title="Earned revenue" hint="Product delivered this month." open={open} setOpen={setOpen} loading={loading}>
           <EarnedTable items={detail?.earned || []} />
         </Acc>
-        <Acc id="cashout" title="Cash out" hint="Cash paid out this month." open={open} setOpen={setOpen} loading={loading}>
+        <Acc id="cashout" title="Cash out" hint="Cash paid out this month, grouped by category." open={open} setOpen={setOpen} loading={loading}>
           <CashoutTable items={detail?.cashout || []} />
         </Acc>
       </div>
@@ -598,29 +598,37 @@ function EarnedTable({ items }: { items: any[] }) {
 
 function CashoutTable({ items }: { items: any[] }) {
   if (!items || items.length === 0) return <Empty />
+  const RATE = 60
+  const total = items.reduce((s: number, r: any) => s + Number(r.total_php || 0), 0)
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
           <tr className="text-left text-gray-500 border-b border-gray-200">
-            <th className="py-1.5 px-2 font-medium">Date</th>
-            <th className="py-1.5 px-2 font-medium">Paid to</th>
-            <th className="py-1.5 px-2 font-medium">Type</th>
-            <th className="py-1.5 px-2 font-medium">Description</th>
+            <th className="py-1.5 px-2 font-medium">Category</th>
+            <th className="py-1.5 px-2 font-medium text-right">Items</th>
             <th className="py-1.5 px-2 font-medium text-right">Amount</th>
           </tr>
         </thead>
         <tbody>
           {items.map((r: any, i: number) => (
             <tr key={i} className="border-b border-gray-100">
-              <td className="py-1.5 px-2 text-gray-700 whitespace-nowrap">{dateShort(r.transaction_date)}</td>
-              <td className="py-1.5 px-2 text-gray-900">{r.vendor_payee || 'Unknown'}</td>
-              <td className="py-1.5 px-2 text-gray-600 whitespace-nowrap">{(r.entry_type || '').replace(/_/g, ' ')}</td>
-              <td className="py-1.5 px-2 text-gray-600">{r.description || ''}</td>
-              <td className="py-1.5 px-2 text-right tabular-nums text-gray-900 whitespace-nowrap">{money(r.currency, r.amount)}</td>
+              <td className="py-1.5 px-2 text-gray-900">{r.category || 'Other'}</td>
+              <td className="py-1.5 px-2 text-right tabular-nums text-gray-600">{r.count}</td>
+              <td className="py-1.5 px-2 text-right tabular-nums text-gray-900 whitespace-nowrap">
+                <div>{'PHP ' + Math.round(r.total_php || 0).toLocaleString('en-US')}</div>
+                <div className="text-gray-500">{'USD ' + Math.round((r.total_php || 0) / RATE).toLocaleString('en-US')}</div>
+              </td>
             </tr>
           ))}
         </tbody>
+        <tfoot>
+          <tr className="border-t border-gray-200 font-medium">
+            <td className="py-1.5 px-2 text-gray-900">Total</td>
+            <td className="py-1.5 px-2"></td>
+            <td className="py-1.5 px-2 text-right tabular-nums text-gray-900 whitespace-nowrap">{'PHP ' + Math.round(total).toLocaleString('en-US')}</td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   )
