@@ -91,6 +91,28 @@ async function loadMonthly(): Promise<any[]> {
   return Array.from(byMonth.values()).sort((a, b) => (a.month < b.month ? 1 : -1))
 }
 
+async function loadCashAtBank(): Promise<{ usd_total: number; accounts: any[] }> {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return { usd_total: 0, accounts: [] }
+  const admin = createAdmin(url, key, { auth: { persistSession: false } })
+  // Bank accounts only. The revolving fund is petty cash, not cash at bank.
+  const { data, error } = await admin
+    .from('fin_account_balances')
+    .select('name,currency,current_balance,account_type')
+    .eq('account_type', 'bank')
+  if (error || !data) return { usd_total: 0, accounts: [] }
+  const accounts = (data as any[])
+    .map((a) => {
+      const bal = Number(a.current_balance || 0)
+      const usd = a.currency === 'PHP' ? bal / FX_RATE : bal
+      return { name: a.name, currency: a.currency, balance: bal, usd }
+    })
+    .sort((x, y) => y.usd - x.usd)
+  const usd_total = accounts.reduce((s, a) => s + a.usd, 0)
+  return { usd_total, accounts }
+}
+
 export default async function CeoPage({
   searchParams,
 }: {
@@ -98,7 +120,7 @@ export default async function CeoPage({
 }) {
   await requireFeature('ceo')
   const params = await searchParams
-  const [result, paMonthly] = await Promise.all([loadCeoData(params), loadMonthly()])
+  const [result, paMonthly, cashAtBank] = await Promise.all([loadCeoData(params), loadMonthly(), loadCashAtBank()])
 
   if (!result.ok) {
     return (
@@ -109,5 +131,5 @@ export default async function CeoPage({
     )
   }
 
-  return <CeoDashboard data={{ ...result.data, pa_monthly: paMonthly }} />
+  return <CeoDashboard data={{ ...result.data, pa_monthly: paMonthly, cash_at_bank: cashAtBank }} />
 }
