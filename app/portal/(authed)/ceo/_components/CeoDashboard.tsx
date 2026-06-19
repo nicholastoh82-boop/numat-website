@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import EmailCounter from '@/components/portal/EmailCounter'
 
@@ -597,9 +597,23 @@ function EarnedTable({ items }: { items: any[] }) {
 }
 
 function CashoutTable({ items }: { items: any[] }) {
-  if (!items || items.length === 0) return <Empty />
   const RATE = 60
-  const total = items.reduce((s: number, r: any) => s + Number(r.total_php || 0), 0)
+  const [openCat, setOpenCat] = useState<string | null>(null)
+  if (!items || items.length === 0) return <Empty />
+
+  const map = new Map<string, { category: string; count: number; total: number; rows: any[] }>()
+  for (const r of items) {
+    const key = r.category || 'Other'
+    const factor = r.currency === 'PHP' ? 1 : RATE
+    const g = map.get(key) || { category: key, count: 0, total: 0, rows: [] }
+    g.count += 1
+    g.total += Number(r.amount || 0) * factor
+    g.rows.push(r)
+    map.set(key, g)
+  }
+  const groups = Array.from(map.values()).sort((a, b) => b.total - a.total)
+  const grand = groups.reduce((s, g) => s + g.total, 0)
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
@@ -611,22 +625,39 @@ function CashoutTable({ items }: { items: any[] }) {
           </tr>
         </thead>
         <tbody>
-          {items.map((r: any, i: number) => (
-            <tr key={i} className="border-b border-gray-100">
-              <td className="py-1.5 px-2 text-gray-900">{r.category || 'Other'}</td>
-              <td className="py-1.5 px-2 text-right tabular-nums text-gray-600">{r.count}</td>
-              <td className="py-1.5 px-2 text-right tabular-nums text-gray-900 whitespace-nowrap">
-                <div>{'PHP ' + Math.round(r.total_php || 0).toLocaleString('en-US')}</div>
-                <div className="text-gray-500">{'USD ' + Math.round((r.total_php || 0) / RATE).toLocaleString('en-US')}</div>
-              </td>
-            </tr>
-          ))}
+          {groups.map((g) => {
+            const isOpen = openCat === g.category
+            return (
+              <Fragment key={g.category}>
+                <tr className="border-b border-gray-100 cursor-pointer hover:bg-gray-50" onClick={() => setOpenCat(isOpen ? null : g.category)}>
+                  <td className="py-1.5 px-2 text-gray-900">
+                    <span className="text-gray-400 mr-1">{isOpen ? '\u25be' : '\u25b8'}</span>{g.category}
+                  </td>
+                  <td className="py-1.5 px-2 text-right tabular-nums text-gray-600">{g.count}</td>
+                  <td className="py-1.5 px-2 text-right tabular-nums text-gray-900 whitespace-nowrap">
+                    <div>{'PHP ' + Math.round(g.total).toLocaleString('en-US')}</div>
+                    <div className="text-gray-500">{'USD ' + Math.round(g.total / RATE).toLocaleString('en-US')}</div>
+                  </td>
+                </tr>
+                {isOpen && g.rows.map((r: any, i: number) => (
+                  <tr key={i} className="bg-gray-50 border-b border-gray-100">
+                    <td className="py-1 px-2 pl-6">
+                      <div className="text-gray-700">{r.vendor_payee || 'Unknown'}</div>
+                      <div className="text-gray-400">{dateShort(r.transaction_date)}{r.description ? ' (' + r.description + ')' : ''}</div>
+                    </td>
+                    <td></td>
+                    <td className="py-1 px-2 text-right tabular-nums text-gray-700 whitespace-nowrap align-top">{money(r.currency, r.amount)}</td>
+                  </tr>
+                ))}
+              </Fragment>
+            )
+          })}
         </tbody>
         <tfoot>
           <tr className="border-t border-gray-200 font-medium">
             <td className="py-1.5 px-2 text-gray-900">Total</td>
             <td className="py-1.5 px-2"></td>
-            <td className="py-1.5 px-2 text-right tabular-nums text-gray-900 whitespace-nowrap">{'PHP ' + Math.round(total).toLocaleString('en-US')}</td>
+            <td className="py-1.5 px-2 text-right tabular-nums text-gray-900 whitespace-nowrap">{'PHP ' + Math.round(grand).toLocaleString('en-US')}</td>
           </tr>
         </tfoot>
       </table>
