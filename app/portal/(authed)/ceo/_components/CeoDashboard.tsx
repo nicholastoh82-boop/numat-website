@@ -113,7 +113,7 @@ export default function CeoDashboard({ data }: Props) {
         ))}
       </div>
 
-      {view === 'monthly' && <MonthlyReporting rows={data.pa_monthly || []} />}
+      {view === 'monthly' && <MonthlyReporting rows={data.pa_monthly || []} cashAtBank={data.cash_at_bank || { usd_total: 0, accounts: [] }} />}
 
       {view === 'overview' && (
       <>
@@ -379,7 +379,7 @@ export default function CeoDashboard({ data }: Props) {
 
 /* ----- small reusable bits ----- */
 
-function MonthlyReporting({ rows }: { rows: any[] }) {
+function MonthlyReporting({ rows, cashAtBank }: { rows: any[]; cashAtBank: { usd_total: number; accounts: any[] } }) {
   const RATE = 60
   const php = (n: number) => 'PHP ' + Math.round(n || 0).toLocaleString('en-US')
   const usd = (n: number) => 'USD ' + Math.round((n || 0) / RATE).toLocaleString('en-US')
@@ -425,6 +425,20 @@ function MonthlyReporting({ rows }: { rows: any[] }) {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <div className="flex items-baseline justify-between flex-wrap gap-2">
+          <div className="text-xs text-gray-500">Cash at bank now (bank accounts, current balance)</div>
+          <div className="text-xl font-semibold text-gray-900 tabular-nums">{'USD ' + Math.round(cashAtBank?.usd_total || 0).toLocaleString('en-US')}</div>
+        </div>
+        {cashAtBank?.accounts?.length ? (
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+            {cashAtBank.accounts.map((a: any) => (
+              <span key={a.name} className="tabular-nums">{a.name}: {'USD ' + Math.round(a.usd || 0).toLocaleString('en-US')}</span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
       <div className="rounded-lg border border-gray-200 bg-white p-4 flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="text-sm font-semibold text-gray-900">Monthly reporting</div>
