@@ -286,8 +286,11 @@ export default async function InvestorPage() {
     }
     const months = Object.keys(byMonth).sort().slice(-3);
     if (months.length > 0) {
-      const avg = months.reduce((a,m)=> a + (byMonth[m].out - byMonth[m].in), 0) / months.length;
-      snapshot.monthly_net_burn = Math.max(avg, 1);
+      const avgOut = months.reduce((a,m)=> a + byMonth[m].out, 0) / months.length;
+      const avgIn = months.reduce((a,m)=> a + byMonth[m].in, 0) / months.length;
+      snapshot.monthly_net_burn = Math.max(avgOut - avgIn, 1);
+      snapshot.monthly_collections = avgIn;
+      snapshot.monthly_gross_outflow = avgOut;
     }
   }
   snapshot.period_label = "Live, refreshed " + new Date().toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" });
