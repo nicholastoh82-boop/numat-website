@@ -155,6 +155,7 @@ async function getBoardData() {
   ]);
   const pa = (paRes.data || []) as PaRow[];
   const months = Array.from(new Set(pa.map((r) => r.month))).sort();
+  let cumBooked = 0, cumEarned = 0;
   const rows = months.map((ym) => {
     const php = pa.find((r) => r.month === ym && r.currency === "PHP");
     const usd = pa.find((r) => r.month === ym && r.currency === "USD");
@@ -164,7 +165,9 @@ async function getBoardData() {
     const collectedPhp = php?.cash_collected || 0;
     const cashOutPhp = (php?.cash_out || 0) + ((usd?.cash_out || 0) + (sgd?.cash_out || 0)) * FX_RATE;
     const netPhp = collectedPhp - cashOutPhp;
-    return { month: ym, bookedPhp, bookedUsd: bookedPhp / FX_RATE, earnedPhp, earnedUsd: earnedPhp / FX_RATE, collectedPhp, collectedUsd: collectedPhp / FX_RATE, cashOutPhp, cashOutUsd: cashOutPhp / FX_RATE, netPhp, netUsd: netPhp / FX_RATE };
+    cumBooked += bookedPhp; cumEarned += earnedPhp;
+    const unrealisedPhp = Math.max(cumBooked - cumEarned, 0);
+    return { month: ym, bookedPhp, bookedUsd: bookedPhp / FX_RATE, earnedPhp, earnedUsd: earnedPhp / FX_RATE, collectedPhp, collectedUsd: collectedPhp / FX_RATE, cashOutPhp, cashOutUsd: cashOutPhp / FX_RATE, unrealisedPhp, unrealisedUsd: unrealisedPhp / FX_RATE, netPhp, netUsd: netPhp / FX_RATE };
   });
   return { months: rows, pipeline: (pipeRes.data || []) as { stage: string; leads: number }[], deals: (dealsRes.data || []) as Record<string, unknown>[] };
 }
