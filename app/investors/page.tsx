@@ -1,9 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import Dashboard from "./Dashboard";
-import { notFound } from "next/navigation";
+import BoardLoginForm from "@/components/board-portal/BoardLoginForm";
+import BoardDashboard from "@/components/board-portal/BoardDashboard";
 
-// Refresh the page from Supabase every 60 seconds
-export const revalidate = 60;
+// Gated per request, so render dynamically.
+export const dynamic = "force-dynamic";
 
 type Snapshot = {
   id: string;
@@ -133,11 +135,53 @@ function shortDate(d: Date) {
   return d.toLocaleDateString("en", { month: "short", year: "numeric" });
 }
 
+const FX_RATE = 60;
+type PaRow = { month: string; currency: string; booked_revenue: number; earned_revenue: number; cash_collected: number; cash_out: number; net_cash: number };
+
+function admin() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+}
+async function getConfig(key: string): Promise<string | null> {
+  const { data } = await admin().from("config_kv").select("value").eq("key", key).maybeSingle();
+  const v = data ? (data as { value: unknown }).value : null;
+  return typeof v === "string" ? v : null;
+}
+async function getBoardData() {
+  const c = admin();
+  const [paRes, pipeRes, dealsRes] = await Promise.all([
+    c.from("rpt_pa_monthly").select("*").gte("month", "2026-01-01").order("month", { ascending: true }),
+    c.from("rpt_board_pipeline").select("*"),
+    c.from("rpt_board_active_deals").select("*"),
+  ]);
+  const pa = (paRes.data || []) as PaRow[];
+  const months = Array.from(new Set(pa.map((r) => r.month))).sort();
+  const rows = months.map((ym) => {
+    const php = pa.find((r) => r.month === ym && r.currency === "PHP");
+    const usd = pa.find((r) => r.month === ym && r.currency === "USD");
+    const sgd = pa.find((r) => r.month === ym && r.currency === "SGD");
+    const bookedPhp = php?.booked_revenue || 0;
+    const earnedPhp = php?.earned_revenue || 0;
+    const collectedPhp = php?.cash_collected || 0;
+    const cashOutPhp = (php?.cash_out || 0) + ((usd?.cash_out || 0) + (sgd?.cash_out || 0)) * FX_RATE;
+    const netPhp = collectedPhp - cashOutPhp;
+    return { month: ym, bookedPhp, bookedUsd: bookedPhp / FX_RATE, earnedPhp, earnedUsd: earnedPhp / FX_RATE, collectedPhp, collectedUsd: collectedPhp / FX_RATE, cashOutPhp, cashOutUsd: cashOutPhp / FX_RATE, netPhp, netUsd: netPhp / FX_RATE };
+  });
+  return { months: rows, pipeline: (pipeRes.data || []) as { stage: string; leads: number }[], deals: (dealsRes.data || []) as Record<string, unknown>[] };
+}
+
 export default async function InvestorPage() {
+  const cookieStore = await cookies();
+  const session = cookieStore.get("board_session")?.value;
+  const sessionKey = await getConfig("board_portal_session_key");
+  if (!(sessionKey && session === sessionKey)) {
+    return <BoardLoginForm />;
+  }
+
   const { snapshot, impact, trend } = await getDashboardData();
+  const board = await getBoardData();
 
   if (!snapshot) {
-    return notFound();
+    return <BoardDashboard months={board.months} pipeline={board.pipeline} deals={board.deals} fxRate={60} />;
   }
 
   // Derived metrics
@@ -261,5 +305,10 @@ export default async function InvestorPage() {
     },
   };
 
-  return <Dashboard data={dashboardData} />;
+  return (
+    <>
+      <Dashboard data={dashboardData} />
+      <BoardDashboard embedded months={board.months} pipeline={board.pipeline} deals={board.deals} fxRate={60} />
+    </>
+  );
 }
