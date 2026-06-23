@@ -134,6 +134,15 @@ export default function BoardDashboard({
                 {deals.length === 0 && (
                   <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-400">No active deals.</td></tr>
                 )}
+                {deals.length > 0 && (() => {
+                  const totalPhp = deals.reduce((a, d) => a + (Number(d.deal_value_php) || 0), 0)
+                  return (
+                    <tr className="bg-gray-50 font-semibold">
+                      <td className="px-4 py-3" colSpan={5}>Total ({deals.length} deals)</td>
+                      <td className="px-4 py-3 text-right">{usd(totalPhp / fxRate)}<div className="text-xs font-normal text-gray-400">{php(totalPhp)}</div></td>
+                    </tr>
+                  )
+                })()}
               </tbody>
             </table>
           </div>
