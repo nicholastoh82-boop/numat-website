@@ -2,14 +2,15 @@
 
 type MonthRow = {
   month: string
-  rate: number
   bookedPhp: number
   bookedUsd: number
   earnedPhp: number
   earnedUsd: number
   collectedPhp: number
   collectedUsd: number
+  cashOutPhp: number
   cashOutUsd: number
+  netPhp: number
   netUsd: number
 }
 
@@ -28,12 +29,12 @@ export default function BoardDashboard({
   months,
   pipeline,
   deals,
-  latestRate,
+  fxRate,
 }: {
   months: MonthRow[]
   pipeline: { stage: string; leads: number }[]
   deals: Record<string, unknown>[]
-  latestRate: number
+  fxRate: number
 }) {
   const order = ['new', 'contacted', 'qualified', 'proposal_sent', 'negotiating', 'won', 'lost']
   const pipeSorted = [...pipeline].sort((a, b) => order.indexOf(a.stage) - order.indexOf(b.stage))
@@ -45,7 +46,7 @@ export default function BoardDashboard({
         <header className="mb-8">
           <h1 className="text-2xl font-semibold">NUMAT Board View</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Monthly performance and live pipeline. USD figures are converted from pesos at monthly average rates (latest {latestRate.toFixed(2)}).
+            Monthly performance and live pipeline. USD figures use a fixed rate of {fxRate} pesos per USD, the same rate as the CEO dashboard.
           </p>
         </header>
 
@@ -70,8 +71,8 @@ export default function BoardDashboard({
                     <td className="px-4 py-3">{usd(r.bookedUsd)}<div className="text-xs text-gray-400">{php(r.bookedPhp)}</div></td>
                     <td className="px-4 py-3">{usd(r.earnedUsd)}<div className="text-xs text-gray-400">{php(r.earnedPhp)}</div></td>
                     <td className="px-4 py-3">{usd(r.collectedUsd)}<div className="text-xs text-gray-400">{php(r.collectedPhp)}</div></td>
-                    <td className="px-4 py-3">{usd(r.cashOutUsd)}</td>
-                    <td className={'px-4 py-3 ' + (r.netUsd < 0 ? 'text-red-600' : 'text-green-700')}>{usd(r.netUsd)}</td>
+                    <td className="px-4 py-3">{usd(r.cashOutUsd)}<div className="text-xs text-gray-400">{php(r.cashOutPhp)}</div></td>
+                    <td className={'px-4 py-3 ' + (r.netUsd < 0 ? 'text-red-600' : 'text-green-700')}>{usd(r.netUsd)}<div className="text-xs text-gray-400">{php(r.netPhp)}</div></td>
                   </tr>
                 ))}
               </tbody>

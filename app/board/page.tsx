@@ -7,7 +7,8 @@ export const dynamic = 'force-dynamic'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const SGD_USD = 0.74
+// Fixed rate, matches the CEO dashboard monthly reporting so the two stay in sync.
+const FX_RATE = 60
 
 function sb() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
@@ -20,7 +21,6 @@ async function getConfig(key: string): Promise<string | null> {
 }
 
 type PaRow = { month: string; currency: string; booked_revenue: number; earned_revenue: number; cash_collected: number; cash_out: number; net_cash: number }
-type FxRow = { year: number; month: number; avg_rate: number }
 
 export default async function BoardPage() {
   const cookieStore = await cookies()
@@ -30,39 +30,31 @@ export default async function BoardPage() {
   if (!authed) return <BoardLoginForm />
 
   const client = sb()
-  const [paRes, fxRes, pipeRes, dealsRes] = await Promise.all([
+  const [paRes, pipeRes, dealsRes] = await Promise.all([
     client.from('rpt_pa_monthly').select('*').gte('month', '2026-01-01').order('month', { ascending: true }),
-    client.from('fin_fx_rates_monthly').select('year, month, avg_rate').order('year', { ascending: false }).order('month', { ascending: false }),
     client.from('rpt_board_pipeline').select('*'),
     client.from('rpt_board_active_deals').select('*'),
   ])
 
   const pa = (paRes.data || []) as PaRow[]
-  const fx = (fxRes.data || []) as FxRow[]
-  const latestRate = fx.length ? Number(fx[0].avg_rate) : 58.5
-  const rateFor = (ym: string) => {
-    const [y, m] = ym.split('-').map(Number)
-    const hit = fx.find((r) => r.year === y && r.month === m)
-    return hit ? Number(hit.avg_rate) : latestRate
-  }
-
   const months = Array.from(new Set(pa.map((r) => r.month))).sort()
   const rows = months.map((ym) => {
     const php = pa.find((r) => r.month === ym && r.currency === 'PHP')
     const usd = pa.find((r) => r.month === ym && r.currency === 'USD')
     const sgd = pa.find((r) => r.month === ym && r.currency === 'SGD')
-    const rate = rateFor(ym)
+    // Fold any non peso amounts into pesos at the fixed rate, exactly like the CEO view.
     const bookedPhp = php?.booked_revenue || 0
     const earnedPhp = php?.earned_revenue || 0
     const collectedPhp = php?.cash_collected || 0
-    const collectedUsd = collectedPhp / rate
-    const cashOutUsd = (php?.cash_out || 0) / rate + (usd?.cash_out || 0) + (sgd?.cash_out || 0) * SGD_USD
+    const cashOutPhp = (php?.cash_out || 0) + ((usd?.cash_out || 0) + (sgd?.cash_out || 0)) * FX_RATE
+    const netPhp = collectedPhp - cashOutPhp
     return {
-      month: ym, rate,
-      bookedPhp, bookedUsd: bookedPhp / rate,
-      earnedPhp, earnedUsd: earnedPhp / rate,
-      collectedPhp, collectedUsd,
-      cashOutUsd, netUsd: collectedUsd - cashOutUsd,
+      month: ym,
+      bookedPhp, bookedUsd: bookedPhp / FX_RATE,
+      earnedPhp, earnedUsd: earnedPhp / FX_RATE,
+      collectedPhp, collectedUsd: collectedPhp / FX_RATE,
+      cashOutPhp, cashOutUsd: cashOutPhp / FX_RATE,
+      netPhp, netUsd: netPhp / FX_RATE,
     }
   })
 
@@ -71,7 +63,7 @@ export default async function BoardPage() {
       months={rows}
       pipeline={(pipeRes.data || []) as { stage: string; leads: number }[]}
       deals={(dealsRes.data || []) as Record<string, unknown>[]}
-      latestRate={latestRate}
+      fxRate={FX_RATE}
     />
   )
 }
