@@ -305,6 +305,34 @@ export default async function InvestorPage() {
   ];
   // Refresh scenarios from live numbers
   const fundsOut = (mos: number) => { const d = new Date(); d.setMonth(d.getMonth() + Math.floor(mos)); return d.toLocaleDateString("en", { month: "short", year: "numeric" }); };
+  // Live impact calculation from deliveries, grounded in peer-reviewed LCA data
+  const PLANK_M2 = 0.3048 * 1.2192;            // 1ft x 4ft per plank
+  const PLANK_M3 = PLANK_M2 * 0.016;            // 16mm thick
+  const CO2_AVOIDED_PER_M2 = 1.59;              // kg CO2e/m² (plywood ~5.1 vs bamboo ~3.1 scaled to 16mm)
+  const FINISHED_DENSITY = 700;                 // kg/m³ bamboo composite
+  const RAW_TO_FINISHED = 0.30;                 // 30% conversion ratio (Restrepo 2016)
+  const D_ASPER_YIELD_TPHY = 25;                // tonnes/ha/year sustainable yield (ACIAR)
+  const delivRes = await admin().from("deliveries").select("delivery_date, qty, product");
+  const delivs = (delivRes.data || []) as Array<{delivery_date:string;qty:number;product:string}>;
+  const totalPlanks = delivs.reduce((a,d)=>a+Number(d.qty||0),0);
+  const totalM2 = totalPlanks * PLANK_M2;
+  const totalM3 = totalPlanks * PLANK_M3;
+  const finishedTonnes = totalM3 * FINISHED_DENSITY / 1000;
+  const rawTonnes = finishedTonnes / RAW_TO_FINISHED;
+  const haEquivalent = rawTonnes / D_ASPER_YIELD_TPHY;
+  const co2AvoidedT = (totalM2 * CO2_AVOIDED_PER_M2) / 1000;
+  // Current period = latest delivery month
+  const latestMo = delivs.length ? delivs.map(d=>d.delivery_date.slice(0,7)).sort().reverse()[0] : null;
+  const periodM2 = latestMo ? delivs.filter(d=>d.delivery_date.startsWith(latestMo)).reduce((a,d)=>a+Number(d.qty||0)*PLANK_M2,0) : 0;
+  const periodCo2T = (periodM2 * CO2_AVOIDED_PER_M2) / 1000;
+  if (impact) {
+    impact.co2_avoided_period_tonnes = Number(periodCo2T.toFixed(2));
+    impact.co2_avoided_cumulative_tonnes = Number(co2AvoidedT.toFixed(2));
+    impact.bamboo_sourced_hectares = Number(haEquivalent.toFixed(2));
+    impact.period_label = latestMo ? new Date(latestMo + "-01").toLocaleDateString("en", { month: "long", year: "numeric" }) : impact.period_label;
+    impact.methodology_note = `Live calculation as of ${new Date().toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" })}. CO2 avoided uses cradle to gate factors from peer reviewed LCA (Sustainability 2025; MOSO 2015): tropical hardwood plywood approximately 4.2 to 6.0 kg CO2e/m² and engineered bamboo scrimber approximately 3.11 kg CO2e/m² at 20mm reference thickness, scaled to NuFloor 16mm thickness; net avoided 1.59 kg CO2e/m². Hectares equivalent uses Dendrocalamus asper sustainable yield of 25 tonnes/ha/year (ACIAR; Northern Mindanao carbon stock study) and 30% raw to finished conversion ratio (Restrepo et al 2016). Direct rural employment of 23 verified at the B22 facility. Full third party verified LCA targeted for Q3 2026 board cycle.`;
+  }
+
   snapshot.scenarios = [
     { key: "base", label: "Base", burn: Math.round(burnNum), assumption: "Three month trailing average burn maintained", funds_out: fundsOut(runwayMo), runway_months: Number(runwayMo.toFixed(1)), raise_implication: "Begin next raise conversations this quarter" },
     { key: "optimised", label: "Optimised", burn: Math.round(burnNum * 0.7), assumption: "30% burn reduction via cost discipline plus modest revenue lift", funds_out: fundsOut(totalCashUsd / (burnNum * 0.7)), runway_months: Number((totalCashUsd / (burnNum * 0.7)).toFixed(1)), raise_implication: "Raise from position of strength next quarter" },
