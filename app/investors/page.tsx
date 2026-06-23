@@ -165,8 +165,9 @@ async function getBoardData() {
     const collectedPhp = php?.cash_collected || 0;
     const cashOutPhp = (php?.cash_out || 0) + ((usd?.cash_out || 0) + (sgd?.cash_out || 0)) * FX_RATE;
     const netPhp = collectedPhp - cashOutPhp;
-    cumBooked += bookedPhp; cumEarned += earnedPhp;
-    const unrealisedPhp = Math.max(cumBooked - cumEarned, 0);
+    // Track cumulative only from June 2026 onward
+    if (ym >= "2026-06-01") { cumBooked += bookedPhp; cumEarned += earnedPhp; }
+    const unrealisedPhp = ym >= "2026-06-01" ? Math.max(cumBooked - cumEarned, 0) : 0;
     return { month: ym, bookedPhp, bookedUsd: bookedPhp / FX_RATE, earnedPhp, earnedUsd: earnedPhp / FX_RATE, collectedPhp, collectedUsd: collectedPhp / FX_RATE, cashOutPhp, cashOutUsd: cashOutPhp / FX_RATE, unrealisedPhp, unrealisedUsd: unrealisedPhp / FX_RATE, netPhp, netUsd: netPhp / FX_RATE };
   });
   return { months: rows, pipeline: (pipeRes.data || []) as { stage: string; leads: number }[], deals: (dealsRes.data || []) as Record<string, unknown>[] };
