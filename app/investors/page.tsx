@@ -252,22 +252,35 @@ export default async function InvestorPage() {
   snapshot.pipeline_quoted = live.funnel.quoted;
   snapshot.pipeline_closed_won = live.funnel.closed_won;
   snapshot.pipeline_weighted_value = live.openPipelineUsd;
-  if (ceo) {
-    const fx = Number(ceo?.fx?.php_per_usd) || 60;
-    const total = Number(ceo?.cash_at_bank?.usd_total || 0);
-    let phUsd = 0;
-    for (const a of (ceo?.fin?.account_balances || [])) {
-      const nm = String(a?.account_name || a?.name || "").toUpperCase();
-      const bal = Number(a?.balance || 0);
-      const cur = a?.currency;
-      if (nm.includes("RCBC") || nm.includes("REVOLV") || cur === "PHP") {
-        phUsd += cur === "PHP" ? bal / fx : cur === "SGD" ? bal * 0.74 : bal;
-      }
+  // Live cash and burn, read directly from the same Supabase tables the CEO dashboard uses.
+  const SGD_USD = 0.74;
+  const FX = 60;
+  snapshot.fx_rate_php_usd = FX;
+  {
+    const bals = (((await admin().from("fin_account_balances").select("currency, current_balance, account_type, code")).data) || []) as Array<{currency:string;current_balance:string|number;code:string}>;
+    let phUsd = 0, sgUsd = 0;
+    for (const a of bals) {
+      const bal = Number(a.current_balance) || 0;
+      const usd = a.currency === "PHP" ? bal / FX : a.currency === "SGD" ? bal * SGD_USD : bal;
+      if (a.code === "RCBC_PHP" || a.code === "RF_B22") phUsd += usd; else sgUsd += usd;
     }
     snapshot.cash_ph_usd = phUsd;
-    snapshot.cash_sg_usd = Math.max(total - phUsd, 0);
-    const burn = Number(ceo?.fin?.monthly_burn_estimate);
-    if (burn) snapshot.monthly_net_burn = burn;
+    snapshot.cash_sg_usd = sgUsd;
+
+    const pa = (((await admin().from("rpt_pa_monthly").select("month, currency, cash_collected, cash_out").gte("month", new Date(Date.now() - 100*24*3600*1000).toISOString().slice(0,10))).data) || []) as Array<{month:string;currency:string;cash_collected:number;cash_out:number}>;
+    const byMonth: Record<string,{in:number;out:number}> = {};
+    for (const r of pa) {
+      const m = r.month.slice(0,7);
+      if (!byMonth[m]) byMonth[m] = {in:0, out:0};
+      const inUsd = (r.currency === "PHP" ? Number(r.cash_collected||0)/FX : r.currency === "SGD" ? Number(r.cash_collected||0)*SGD_USD : Number(r.cash_collected||0));
+      const outUsd = (r.currency === "PHP" ? Number(r.cash_out||0)/FX : r.currency === "SGD" ? Number(r.cash_out||0)*SGD_USD : Number(r.cash_out||0));
+      byMonth[m].in += inUsd; byMonth[m].out += outUsd;
+    }
+    const months = Object.keys(byMonth).sort().slice(-3);
+    if (months.length > 0) {
+      const avg = months.reduce((a,m)=> a + (byMonth[m].out - byMonth[m].in), 0) / months.length;
+      snapshot.monthly_net_burn = Math.max(avg, 1);
+    }
   }
   snapshot.period_label = "Live, refreshed " + new Date().toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" });
 
