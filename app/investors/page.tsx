@@ -171,10 +171,12 @@ async function getBoardData() {
 
 async function getLiveDeck() {
   const c = admin();
-  const [funnelRes, revRes] = await Promise.all([
+  const [funnelRes, revRes, finRes] = await Promise.all([
     c.from("rpt_board_funnel").select("*").maybeSingle(),
     c.from("rpt_board_revenue_by_product").select("*"),
+    c.from("rpt_finance_deck").select("*").maybeSingle(),
   ]);
+  const fin = (finRes.data || {}) as Record<string, number>;
   const f = (funnelRes.data || {}) as Record<string, number>;
   const revRows = (revRes.data || []) as { product: string; php: number }[];
   const revByProductUsd: Record<string, number> = {};
@@ -188,6 +190,9 @@ async function getLiveDeck() {
     },
     revByProductUsd, revenueTotalUsd: totalUsd,
     openPipelineUsd: Number(f.open_pipeline_php || 0) / FX_RATE,
+    cashPhUsd: Number(fin.cash_ph_usd || 0),
+    cashSgUsd: Number(fin.cash_sg_usd || 0),
+    monthlyBurnUsd: Number(fin.monthly_burn_usd || 0),
     periodLabel: "Actuals to " + today,
   };
 }
