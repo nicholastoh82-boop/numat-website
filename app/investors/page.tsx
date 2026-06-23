@@ -192,6 +192,19 @@ async function getLiveDeck() {
   };
 }
 
+const CEO_EDGE = "https://peuwxnrojlfybdymkazj.supabase.co/functions/v1/ceo-dashboard";
+async function getCeoData(): Promise<Record<string, any> | null> {
+  const secret = process.env.NUMAT_CEO_SECRET;
+  if (!secret) return null;
+  try {
+    const res = await fetch(CEO_EDGE, { headers: { Authorization: `Bearer ${secret}` }, cache: "no-store" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export default async function InvestorPage() {
   const cookieStore = await cookies();
   const session = cookieStore.get("board_session")?.value;
@@ -203,19 +216,30 @@ export default async function InvestorPage() {
   const { snapshot, impact, trend } = await getDashboardData();
   const board = await getBoardData();
   const live = await getLiveDeck();
+  const ceo = await getCeoData();
+  const pl = (((await admin().from("rpt_investor_pl").select("*").maybeSingle()).data) || {}) as Record<string, number>;
 
   if (!snapshot) {
     return <BoardDashboard months={board.months} pipeline={board.pipeline} deals={board.deals} fxRate={60} />;
   }
 
-  // Override stale hand entered figures with live actuals.
+  // Live actuals, one source: CRM funnel, deliveries revenue, ledger P&L, CEO cash feed. Trailing 3 month monthly basis.
+  const nuFloorMo = (live.revByProductUsd["NuFloor"] || 0) / 3;
   snapshot.rev_nubam_boards = 0;
   snapshot.rev_nuwall = 0;
   snapshot.rev_nudoor = 0;
-  snapshot.rev_nufloor = live.revByProductUsd["NuFloor"] || 0;
+  snapshot.rev_nufloor = nuFloorMo;
   snapshot.rev_nuslat = 0;
-  snapshot.revenue_total = live.revenueTotalUsd;
+  snapshot.revenue_total = nuFloorMo;
   snapshot.revenue_prev_month = 0;
+  snapshot.cogs_total = Number(pl.cogs_total || 0);
+  snapshot.monthly_gross_outflow = Number(pl.opex_total || 0);
+  snapshot.opex_salaries = Number(pl.opex_salaries || 0);
+  snapshot.opex_rent_utilities = Number(pl.opex_rent_utilities || 0);
+  snapshot.opex_materials = Number(pl.opex_materials || 0);
+  snapshot.opex_sales_marketing = Number(pl.opex_sales_marketing || 0);
+  snapshot.opex_software = Number(pl.opex_software || 0);
+  snapshot.opex_professional = Number(pl.opex_professional || 0);
   snapshot.pipeline_sourced = live.funnel.sourced;
   snapshot.pipeline_engaged = live.funnel.engaged;
   snapshot.pipeline_replied = live.funnel.replied;
@@ -223,7 +247,24 @@ export default async function InvestorPage() {
   snapshot.pipeline_quoted = live.funnel.quoted;
   snapshot.pipeline_closed_won = live.funnel.closed_won;
   snapshot.pipeline_weighted_value = live.openPipelineUsd;
-  snapshot.period_label = live.periodLabel;
+  if (ceo) {
+    const fx = Number(ceo?.fx?.php_per_usd) || 60;
+    const total = Number(ceo?.cash_at_bank?.usd_total || 0);
+    let phUsd = 0;
+    for (const a of (ceo?.fin?.account_balances || [])) {
+      const nm = String(a?.account_name || a?.name || "").toUpperCase();
+      const bal = Number(a?.balance || 0);
+      const cur = a?.currency;
+      if (nm.includes("RCBC") || nm.includes("REVOLV") || cur === "PHP") {
+        phUsd += cur === "PHP" ? bal / fx : cur === "SGD" ? bal * 0.74 : bal;
+      }
+    }
+    snapshot.cash_ph_usd = phUsd;
+    snapshot.cash_sg_usd = Math.max(total - phUsd, 0);
+    const burn = Number(ceo?.fin?.monthly_burn_estimate);
+    if (burn) snapshot.monthly_net_burn = burn;
+  }
+  snapshot.period_label = "Live, refreshed " + new Date().toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" });
 
   // Derived metrics
   const totalCash = snapshot.cash_ph_usd + snapshot.cash_sg_usd;
