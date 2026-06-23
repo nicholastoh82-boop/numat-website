@@ -7,6 +7,7 @@ type MonthRow = {
   earnedPhp: number; earnedUsd: number
   collectedPhp: number; collectedUsd: number
   cashOutPhp: number; cashOutUsd: number
+  unrealisedPhp: number; unrealisedUsd: number
   netPhp: number; netUsd: number
 }
 
@@ -64,6 +65,7 @@ export default function BoardDashboard({
                   <th className="px-4 py-3 font-medium">Booked</th>
                   <th className="px-4 py-3 font-medium">Earned</th>
                   <th className="px-4 py-3 font-medium">Cash collected</th>
+                  <th className="px-4 py-3 font-medium">Unrealised</th>
                   <th className="px-4 py-3 font-medium">Cash out</th>
                   <th className="px-4 py-3 font-medium">Net cash</th>
                 </tr>
@@ -75,6 +77,7 @@ export default function BoardDashboard({
                     <td className="px-4 py-3">{usd(r.bookedUsd)}<div className="text-xs text-gray-400">{php(r.bookedPhp)}</div></td>
                     <td className="px-4 py-3">{usd(r.earnedUsd)}<div className="text-xs text-gray-400">{php(r.earnedPhp)}</div></td>
                     <td className="px-4 py-3">{usd(r.collectedUsd)}<div className="text-xs text-gray-400">{php(r.collectedPhp)}</div></td>
+                    <td className="px-4 py-3" title="Cumulative booked minus delivered: customer commitments still pending fulfillment">{usd(r.unrealisedUsd)}<div className="text-xs text-gray-400">{php(r.unrealisedPhp)}</div></td>
                     <td className="px-4 py-3">{usd(r.cashOutUsd)}<div className="text-xs text-gray-400">{php(r.cashOutPhp)}</div></td>
                     <td className={'px-4 py-3 ' + (r.netUsd < 0 ? 'text-red-600' : 'text-green-700')}>{usd(r.netUsd)}<div className="text-xs text-gray-400">{php(r.netPhp)}</div></td>
                   </tr>
@@ -83,7 +86,7 @@ export default function BoardDashboard({
             </table>
           </div>
           <p className="mt-2 text-xs text-gray-400">
-            Booked is contracts or invoices signed that month. Earned is product delivered that month, shown from June onward when delivery logging began.
+            Booked is contracts or invoices signed that month. Earned is product delivered that month, shown from June onward when delivery logging began. Unrealised is cumulative booked minus delivered: customer commitments still pending fulfillment.
           </p>
         </section>
       )}
