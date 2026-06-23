@@ -229,7 +229,15 @@ export default async function InvestorPage() {
   }
 
   // Live actuals, one source: CRM funnel, deliveries revenue, ledger P&L, CEO cash feed. Trailing 3 month monthly basis.
-  const nuFloorMo = (live.revByProductUsd["NuFloor"] || 0) / 3;
+  // Revenue tile = latest delivered month, not all time average
+  const lastDeliveredMo = await (async () => {
+    const r = await admin().from("deliveries").select("delivery_date, delivered_value").order("delivery_date", { ascending: false }).limit(50);
+    const rows = (r.data || []) as Array<{delivery_date:string; delivered_value:number}>;
+    if (!rows.length) return 0;
+    const latestMonth = rows[0].delivery_date.slice(0,7);
+    return rows.filter(x => x.delivery_date.startsWith(latestMonth)).reduce((a,x)=>a+Number(x.delivered_value||0),0) / 60;
+  })();
+  const nuFloorMo = lastDeliveredMo;
   snapshot.rev_nubam_boards = 0;
   snapshot.rev_nuwall = 0;
   snapshot.rev_nudoor = 0;
@@ -283,6 +291,25 @@ export default async function InvestorPage() {
     }
   }
   snapshot.period_label = "Live, refreshed " + new Date().toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" });
+
+  // Replace stale narrative with auto generated live snapshot
+  const totalCashUsd = (snapshot.cash_ph_usd || 0) + (snapshot.cash_sg_usd || 0);
+  const burnNum = snapshot.monthly_net_burn || 1;
+  const runwayMo = totalCashUsd / burnNum;
+  snapshot.ceo_commentary = `Live snapshot as of ${new Date().toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" })}. Cash on hand approximately $${Math.round(totalCashUsd/1000)}k across all entities ($${Math.round((snapshot.cash_ph_usd||0)/1000)}k PH, $${Math.round((snapshot.cash_sg_usd||0)/1000)}k SG). Three month average net burn approximately $${(burnNum/1000).toFixed(1)}k per month, giving runway of approximately ${runwayMo.toFixed(1)} months at current pace. Pipeline: ${snapshot.pipeline_sourced} sourced, ${snapshot.pipeline_quoted} active quotes, ${snapshot.pipeline_closed_won} closed won. Latest delivered revenue $${Math.round(snapshot.revenue_total)}.`;
+  snapshot.watchlist_items = [
+    { title: "Pipeline conversion", detail: `${snapshot.pipeline_quoted} active quotes and ${snapshot.pipeline_engaged} engaged contacts. Conversion rate from engaged to quote remains the lever to watch.` },
+    { title: "Revenue concentration", detail: `Only NuFloor has delivered revenue to date. Diversification into NuBam, NuWall, NuDoor, NuSlat is still in pipeline.` },
+    { title: "Runway", detail: `At ${runwayMo.toFixed(1)} months on current burn, next raise discussions need to begin within the next quarter.` },
+    { title: "Cost capture", detail: "COGS by category not yet tagged at transaction level, so gross margin is pending. Closing this gap is the priority for next reporting cycle." },
+  ];
+  // Refresh scenarios from live numbers
+  const fundsOut = (mos: number) => { const d = new Date(); d.setMonth(d.getMonth() + Math.floor(mos)); return d.toLocaleDateString("en", { month: "short", year: "numeric" }); };
+  snapshot.scenarios = [
+    { key: "base", label: "Base", burn: Math.round(burnNum), assumption: "Three month trailing average burn maintained", funds_out: fundsOut(runwayMo), runway_months: Number(runwayMo.toFixed(1)), raise_implication: "Begin next raise conversations this quarter" },
+    { key: "optimised", label: "Optimised", burn: Math.round(burnNum * 0.7), assumption: "30% burn reduction via cost discipline plus modest revenue lift", funds_out: fundsOut(totalCashUsd / (burnNum * 0.7)), runway_months: Number((totalCashUsd / (burnNum * 0.7)).toFixed(1)), raise_implication: "Raise from position of strength next quarter" },
+    { key: "downside", label: "Downside", burn: Math.round(burnNum * 1.3), assumption: "30% burn increase, no new revenue, AR delays", funds_out: fundsOut(totalCashUsd / (burnNum * 1.3)), runway_months: Number((totalCashUsd / (burnNum * 1.3)).toFixed(1)), raise_implication: "Bridge round needed within the quarter" },
+  ];
 
   // Derived metrics
   const totalCash = snapshot.cash_ph_usd + snapshot.cash_sg_usd;
