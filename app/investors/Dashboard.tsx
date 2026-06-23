@@ -542,8 +542,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           </div>
           <div className="p-6 border-r" style={{ borderColor: "var(--line)" }}>
             <div className="stat_label">Gross Margin</div>
-            <div className="num display text-[36px] mt-3 font-[400]" style={{color:"var(--ink_soft)"}}>—</div>
-            <div className="text-[11px] mt-1" style={{color:"var(--ink_soft)"}}>Pending cost data</div><div className="mt-2"><span className="pill pill_neg num">vs 45% target</span></div>
+            <div className="num display text-[36px] mt-3 font-[400]">{fmtPct(derived.grossMarginPct)}</div><div className="mt-2"><span className="pill pill_neg num">vs 45% target</span></div>
           </div>
           <div className="p-6">
             <div className="stat_label">Active Customers</div>
@@ -581,8 +580,6 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         </div>
       </section>
 
-      {/* SECTION II + III hidden until COGS data is captured */}
-      {false && (<>
       {/* SECTION II · UNIT ECONOMICS */}
       <section id="unit_econs" className="max-w-[1400px] mx-auto px-10 py-12 border-t" style={{ borderColor: "var(--ink)" }}>
         <div className="flex items-baseline justify-between mb-8">
@@ -749,7 +746,6 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         </div>
       </section>
 
-      </>)}
       {/* SECTION IV · CASH & RUNWAY */}
       <section id="cash" className="max-w-[1400px] mx-auto px-10 py-12 border-t" style={{ borderColor: "var(--ink)" }}>
         <div className="flex items-baseline justify-between mb-8">

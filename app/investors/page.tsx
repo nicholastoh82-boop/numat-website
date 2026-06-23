@@ -295,6 +295,35 @@ export default async function InvestorPage() {
   }
   snapshot.period_label = "Live, refreshed " + new Date().toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" });
 
+  // Live COGS and S&M from categorized transactions (3 month trailing avg PHP / 60)
+  const COGS_FX = 60;
+  const plRows = (((await admin().rpc("exec_sql_select", {q: "select 1"}).then(()=>null).catch(()=>null)) || null) as null);
+  const cogsRes = await admin().from("fin_transactions").select("transaction_date, amount, category:fin_categories(pl_section, name)").gte("transaction_date","2026-03-01").lte("transaction_date","2026-05-31").eq("currency","PHP");
+  const cogsRows = (cogsRes.data || []) as Array<{transaction_date:string;amount:number;category:{pl_section:string;name:string}|null}>;
+  let cogsTotalPhp = 0, smTotalPhp = 0, opexTotalPhp = 0;
+  for (const r of cogsRows) {
+    const sec = r.category?.pl_section || "";
+    const nm = (r.category?.name || "").toLowerCase();
+    const amt = Number(r.amount) || 0;
+    if (sec === "Cost of Goods Sold") cogsTotalPhp += amt;
+    else if (sec === "Operating Expenses" || sec === "Expenses") {
+      opexTotalPhp += amt;
+      if (nm.includes("market") || nm.includes("sales") || nm.includes("advert")) smTotalPhp += amt;
+    }
+  }
+  const cogsMoUsd = (cogsTotalPhp / 3) / COGS_FX;
+  const smMoUsd = (smTotalPhp / 3) / COGS_FX;
+  snapshot.cogs_total = cogsMoUsd;
+  snapshot.opex_sales_marketing = smMoUsd;
+  // CAC: trailing 6 month S&M / closed customers; LTV: monthly gross profit per customer x 12
+  const smTrailing6 = smTotalPhp * 2 / COGS_FX;  // 3mo x2 = 6mo proxy
+  const closedCustomers = Math.max(snapshot.pipeline_closed_won || 1, 1);
+  snapshot.cac_total = smTrailing6 / closedCustomers;
+  const customers = Math.max(snapshot.active_customers || 1, 1);
+  const monthlyGp = snapshot.revenue_total - cogsMoUsd;
+  const annualGpPerCustomer = (monthlyGp * 12) / customers;
+  snapshot.ltv_total = annualGpPerCustomer * (snapshot.ltv_retention_years || 1);
+
   // Replace stale narrative with auto generated live snapshot
   const totalCashUsd = (snapshot.cash_ph_usd || 0) + (snapshot.cash_sg_usd || 0);
   const burnNum = snapshot.monthly_net_burn || 1;
