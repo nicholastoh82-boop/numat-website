@@ -5,7 +5,7 @@
 
 import Link from 'next/link'
 import { requireFeature } from '@/lib/portal/roles'
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 import ProductionShell from './_components/ProductionShell'
 
 export const metadata = { title: 'Production | NUMAT Portal', robots: 'noindex, nofollow' }
@@ -41,10 +41,14 @@ export default async function PortalProduction() {
   // Sales (Bryan as COO) is included so he can use the QC tool from this page.
   // Station entry forms below are primarily for admin/ceo/ops day to day use.
   const user = await requireFeature('production')
-  const supabase = await createClient()
+  const admin = createAdmin(
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  )
 
   // Active board variants for the board run dropdown
-  const { data: stdVariants } = await supabase
+  const { data: stdVariants } = await admin
     .from('product_variants')
     .select('id, sku, thickness_mm, size_label, ply_count, products(name)')
     .eq('is_available', true)
@@ -53,7 +57,7 @@ export default async function PortalProduction() {
 
   // NuBam Hybrid variant stays is_available=false (hidden from the public site and quotes).
   // It is surfaced here only so production can log hybrid board runs.
-  const { data: hybridVariants } = await supabase
+  const { data: hybridVariants } = await admin
     .from('product_variants')
     .select('id, sku, thickness_mm, size_label, ply_count, products(name)')
     .ilike('sku', 'NBH%')
@@ -62,7 +66,7 @@ export default async function PortalProduction() {
   const variants = [...(stdVariants ?? []), ...(hybridVariants ?? [])]
 
   // Inventory snapshot
-  const { data: inv } = await supabase
+  const { data: inv } = await admin
     .from('prod_inventory')
     .select('product_type, variant_id, on_hand, updated_at')
 
