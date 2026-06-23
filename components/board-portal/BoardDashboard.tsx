@@ -32,6 +32,7 @@ export default function BoardDashboard({
   embedded?: boolean
 }) {
   const [view, setView] = useState<'all' | 'monthly' | 'pipeline' | 'deals'>('all')
+  const [stageFilter, setStageFilter] = useState<string>('all')
   const show = (k: string) => view === 'all' || view === k
   const order = ['new', 'contacted', 'qualified', 'proposal_sent', 'negotiating', 'won', 'lost']
   const pipeSorted = [...pipeline].sort((a, b) => order.indexOf(a.stage) - order.indexOf(b.stage))
@@ -94,60 +95,74 @@ export default function BoardDashboard({
       {show('pipeline') && (
         <section className="mb-10">
           <h2 className="mb-3 text-lg font-semibold">Pipeline by stage</h2>
+          <p className="mb-3 text-xs text-gray-500">Click a stage to see those deals below.</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-            {pipeSorted.map((p) => (
-              <div key={p.stage} className="rounded-xl border border-gray-200 p-4">
-                <div className="text-2xl font-semibold">{p.leads.toLocaleString('en-US')}</div>
-                <div className="mt-1 text-xs capitalize text-gray-500">{p.stage.replace('_', ' ')}</div>
-              </div>
-            ))}
+            {pipeSorted.map((p) => {
+              const active = stageFilter === p.stage
+              return (
+                <button
+                  key={p.stage}
+                  onClick={() => setStageFilter(active ? 'all' : p.stage)}
+                  className={'rounded-xl border p-4 text-left transition ' + (active ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white hover:border-gray-400')}
+                >
+                  <div className="text-2xl font-semibold">{p.leads.toLocaleString('en-US')}</div>
+                  <div className={'mt-1 text-xs capitalize ' + (active ? 'text-gray-200' : 'text-gray-500')}>{p.stage.replace('_', ' ')}</div>
+                </button>
+              )
+            })}
           </div>
         </section>
       )}
 
-      {show('deals') && (
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">Active deals</h2>
-          <div className="overflow-x-auto rounded-xl border border-gray-200">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 text-left text-gray-600">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Company</th>
-                  <th className="px-4 py-3 font-medium">Contact</th>
-                  <th className="px-4 py-3 font-medium">Rep</th>
-                  <th className="px-4 py-3 font-medium">Stage</th>
-                  <th className="px-4 py-3 font-medium">Country</th>
-                  <th className="px-4 py-3 text-right font-medium">Value</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {deals.map((d, i) => (
-                  <tr key={i}>
-                    <td className="px-4 py-3 font-medium">{s(d.company)}</td>
-                    <td className="px-4 py-3 text-gray-600">{s(d.full_name)}</td>
-                    <td className="px-4 py-3 text-gray-600">{s(d.rep_assigned)}</td>
-                    <td className="px-4 py-3 capitalize">{s(d.pipeline_stage).replace('_', ' ')}</td>
-                    <td className="px-4 py-3 text-gray-600">{s(d.country)}</td>
-                    <td className="px-4 py-3 text-right">{d.deal_value_php ? php(Number(d.deal_value_php)) : 'n/a'}</td>
+      {(show('deals') || (view === 'pipeline' && stageFilter !== 'all')) && (() => {
+        const filteredDeals = stageFilter === 'all' ? deals : deals.filter(d => String(d.pipeline_stage) === stageFilter)
+        const totalPhp = filteredDeals.reduce((a, d) => a + (Number(d.deal_value_php) || 0), 0)
+        const stageLabel = stageFilter === 'all' ? 'All' : stageFilter.replace('_', ' ')
+        return (
+          <section>
+            <div className="mb-3 flex items-baseline justify-between flex-wrap gap-2">
+              <h2 className="text-lg font-semibold">Active deals <span className="text-sm font-normal text-gray-500 capitalize">— {stageLabel}</span></h2>
+              {stageFilter !== 'all' && (
+                <button onClick={() => setStageFilter('all')} className="text-xs text-gray-500 underline hover:text-gray-900">Clear filter</button>
+              )}
+            </div>
+            <div className="mb-4 rounded-xl border border-gray-300 bg-gray-50 p-4">
+              <div className="text-xs uppercase tracking-wide text-gray-500">Total ({filteredDeals.length} deals)</div>
+              <div className="mt-1 text-2xl font-semibold">{usd(totalPhp / fxRate)}</div>
+              <div className="text-xs text-gray-500">{php(totalPhp)}</div>
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-gray-200">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50 text-left text-gray-600">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Company</th>
+                    <th className="px-4 py-3 font-medium">Contact</th>
+                    <th className="px-4 py-3 font-medium">Rep</th>
+                    <th className="px-4 py-3 font-medium">Stage</th>
+                    <th className="px-4 py-3 font-medium">Country</th>
+                    <th className="px-4 py-3 text-right font-medium">Value</th>
                   </tr>
-                ))}
-                {deals.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-400">No active deals.</td></tr>
-                )}
-                {deals.length > 0 && (() => {
-                  const totalPhp = deals.reduce((a, d) => a + (Number(d.deal_value_php) || 0), 0)
-                  return (
-                    <tr className="bg-gray-50 font-semibold">
-                      <td className="px-4 py-3" colSpan={5}>Total ({deals.length} deals)</td>
-                      <td className="px-4 py-3 text-right">{usd(totalPhp / fxRate)}<div className="text-xs font-normal text-gray-400">{php(totalPhp)}</div></td>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredDeals.map((d, i) => (
+                    <tr key={i}>
+                      <td className="px-4 py-3 font-medium">{s(d.company)}</td>
+                      <td className="px-4 py-3 text-gray-600">{s(d.full_name)}</td>
+                      <td className="px-4 py-3 text-gray-600">{s(d.rep_assigned)}</td>
+                      <td className="px-4 py-3 capitalize">{s(d.pipeline_stage).replace('_', ' ')}</td>
+                      <td className="px-4 py-3 text-gray-600">{s(d.country)}</td>
+                      <td className="px-4 py-3 text-right">{d.deal_value_php ? php(Number(d.deal_value_php)) : 'n/a'}</td>
                     </tr>
-                  )
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+                  ))}
+                  {filteredDeals.length === 0 && (
+                    <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-400">No deals at this stage.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )
+      })()}
     </>
   )
 
