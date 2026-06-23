@@ -496,7 +496,9 @@ export default function Dashboard({ data }: { data: DashboardData }) {
         <div className="rule_thick"></div>
         <div className="grid grid-cols-12 py-4 text-[11px] uppercase" style={{ letterSpacing: "0.14em", color: "var(--ink_soft)" }}>
           <a href="#snapshot" className="col-span-2">I · Snapshot</a>
-                              <a href="#cash" className="col-span-2">IV · Cash &amp; Runway</a>
+          <a href="#unit_econs" className="col-span-2">II · Unit Economics</a>
+          <a href="#margins" className="col-span-2">III · Margin Structure</a>
+          <a href="#cash" className="col-span-2">IV · Cash &amp; Runway</a>
           <a href="#operations" className="col-span-2">V · Operations</a>
           <a href="#impact" className="col-span-2">VI · Impact &amp; Risks</a>
         </div>
