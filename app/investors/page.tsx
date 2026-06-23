@@ -169,6 +169,29 @@ async function getBoardData() {
   return { months: rows, pipeline: (pipeRes.data || []) as { stage: string; leads: number }[], deals: (dealsRes.data || []) as Record<string, unknown>[] };
 }
 
+async function getLiveDeck() {
+  const c = admin();
+  const [funnelRes, revRes] = await Promise.all([
+    c.from("rpt_board_funnel").select("*").maybeSingle(),
+    c.from("rpt_board_revenue_by_product").select("*"),
+  ]);
+  const f = (funnelRes.data || {}) as Record<string, number>;
+  const revRows = (revRes.data || []) as { product: string; php: number }[];
+  const revByProductUsd: Record<string, number> = {};
+  let totalUsd = 0;
+  for (const r of revRows) { const u = Number(r.php) / FX_RATE; revByProductUsd[r.product] = u; totalUsd += u; }
+  const today = new Date().toLocaleDateString("en", { day: "numeric", month: "short", year: "numeric" });
+  return {
+    funnel: {
+      sourced: Number(f.sourced || 0), engaged: Number(f.engaged || 0), replied: Number(f.replied || 0),
+      discovery_booked: Number(f.discovery_booked || 0), quoted: Number(f.quoted || 0), closed_won: Number(f.closed_won || 0),
+    },
+    revByProductUsd, revenueTotalUsd: totalUsd,
+    openPipelineUsd: Number(f.open_pipeline_php || 0) / FX_RATE,
+    periodLabel: "Actuals to " + today,
+  };
+}
+
 export default async function InvestorPage() {
   const cookieStore = await cookies();
   const session = cookieStore.get("board_session")?.value;
@@ -179,10 +202,28 @@ export default async function InvestorPage() {
 
   const { snapshot, impact, trend } = await getDashboardData();
   const board = await getBoardData();
+  const live = await getLiveDeck();
 
   if (!snapshot) {
     return <BoardDashboard months={board.months} pipeline={board.pipeline} deals={board.deals} fxRate={60} />;
   }
+
+  // Override stale hand entered figures with live actuals.
+  snapshot.rev_nubam_boards = 0;
+  snapshot.rev_nuwall = 0;
+  snapshot.rev_nudoor = 0;
+  snapshot.rev_nufloor = live.revByProductUsd["NuFloor"] || 0;
+  snapshot.rev_nuslat = 0;
+  snapshot.revenue_total = live.revenueTotalUsd;
+  snapshot.revenue_prev_month = 0;
+  snapshot.pipeline_sourced = live.funnel.sourced;
+  snapshot.pipeline_engaged = live.funnel.engaged;
+  snapshot.pipeline_replied = live.funnel.replied;
+  snapshot.pipeline_discovery_booked = live.funnel.discovery_booked;
+  snapshot.pipeline_quoted = live.funnel.quoted;
+  snapshot.pipeline_closed_won = live.funnel.closed_won;
+  snapshot.pipeline_weighted_value = live.openPipelineUsd;
+  snapshot.period_label = live.periodLabel;
 
   // Derived metrics
   const totalCash = snapshot.cash_ph_usd + snapshot.cash_sg_usd;
