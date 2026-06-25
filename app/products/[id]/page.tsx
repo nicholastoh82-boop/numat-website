@@ -38,6 +38,7 @@ type Product = {
   category: string | null
   unit?: string | null
   base_price_usd?: number | null
+  is_price_on_request?: boolean
   sku?: string | null
   thickness_mm?: number | null
   ply_count?: number | null
@@ -389,11 +390,13 @@ function OptionPills({
   value,
   onChange,
   options,
+  lockAll,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   options: SelectOption[]
+  lockAll?: boolean
 }) {
   if (!options.length) return null
 
@@ -403,7 +406,7 @@ function OptionPills({
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
           const isActive = value === opt.value
-          const isDisabled = opt.disabled === true
+          const isDisabled = lockAll === true || opt.disabled === true
 
           return (
             <button
@@ -516,6 +519,12 @@ export default function ProductDetailPage() {
   )
 
   const options = useMemo(() => getConfiguratorOptions(family), [family])
+
+  // When a product is flagged price-on-request at the product level (used as a
+  // repricing freeze), lock every configurator option into the disabled
+  // (greyed, struck-through) style and suppress the price. This reverts the
+  // moment the product flag is set back to false.
+  const repricingLock = product?.is_price_on_request === true
 
   const pricedVariants = useMemo(
     () =>
@@ -1289,21 +1298,21 @@ export default function ProductDetailPage() {
                 <div className="space-y-8">
                   {(family === 'nubam-boards' || family === 'nuwall') && (
                     <>
-                      <OptionPills
+                      <OptionPills lockAll={repricingLock}
                         label="Core Type"
                         value={selectedCoreType}
                         onChange={setSelectedCoreType}
                         options={coreTypeOptions}
                       />
 
-                      <OptionPills
+                      <OptionPills lockAll={repricingLock}
                         label="Thickness"
                         value={selectedThickness}
                         onChange={setSelectedThickness}
                         options={thicknessOptionsForBoards}
                       />
 
-                      <OptionPills
+                      <OptionPills lockAll={repricingLock}
                         label="Ply"
                         value={selectedPly}
                         onChange={setSelectedPly}
@@ -1313,7 +1322,7 @@ export default function ProductDetailPage() {
                   )}
 
                   {family === 'nudoor' && nudoorGradeOptions.length > 0 && (
-                    <OptionPills
+                    <OptionPills lockAll={repricingLock}
                       label="Grade"
                       value={selectedModel}
                       onChange={setSelectedModel}
@@ -1323,7 +1332,7 @@ export default function ProductDetailPage() {
 
                   {family === 'nufloor' && (
                     <>
-                      <OptionPills
+                      <OptionPills lockAll={repricingLock}
                         label="Thickness"
                         value={selectedThickness}
                         onChange={setSelectedThickness}
@@ -1343,14 +1352,14 @@ export default function ProductDetailPage() {
 
                   {family === 'nuslat' && (
                     <>
-                      <OptionPills
+                      <OptionPills lockAll={repricingLock}
                         label="Length"
                         value={selectedLength}
                         onChange={setSelectedLength}
                         options={slatLengthOptions}
                       />
 
-                      <OptionPills
+                      <OptionPills lockAll={repricingLock}
                         label="Thickness"
                         value={selectedThickness}
                         onChange={setSelectedThickness}
