@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     reply_to_message_id?: string;
     thread_id_to_reply?: string;
     references_header?: string;
+    attachments?: { filename: string; mimeType: string; contentBase64: string }[];
   };
 
   try {
@@ -44,6 +45,20 @@ export async function POST(req: NextRequest) {
       { error: 'rep_email, to, subject are required' },
       { status: 400 }
     );
+  }
+
+  // Guard attachment size (base64 inflates ~33 percent; keep total raw under ~3 MB)
+  if (Array.isArray(body.attachments) && body.attachments.length > 0) {
+    const totalBytes = body.attachments.reduce(
+      (sum, a) => sum + Math.ceil(((a?.contentBase64?.length ?? 0) * 3) / 4),
+      0
+    );
+    if (totalBytes > 4 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'attachments too large; keep total under 3 MB' },
+        { status: 413 }
+      );
+    }
   }
 
   // Look up the rep's display name from crm_users so new hires
@@ -73,6 +88,7 @@ export async function POST(req: NextRequest) {
       inReplyToMessageId: body.reply_to_message_id,
       threadIdToReply: body.thread_id_to_reply,
       referencesHeader: body.references_header,
+      attachments: body.attachments,
     });
 
     const sentAt = new Date().toISOString();

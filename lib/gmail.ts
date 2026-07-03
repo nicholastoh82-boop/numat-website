@@ -105,6 +105,7 @@ export type SendArgs = {
   inReplyToMessageId?: string; // Gmail Message-Id header value of the parent
   threadIdToReply?: string; // Gmail thread id (preferred for threading)
   referencesHeader?: string; // existing References chain
+  attachments?: { filename: string; mimeType: string; contentBase64: string }[];
 };
 
 function encodeBase64Url(str: string): string {
@@ -116,15 +117,11 @@ function encodeBase64Url(str: string): string {
 }
 
 function buildRfc822(args: SendArgs): string {
-  const boundary = 'numat_' + Math.random().toString(36).slice(2);
   const fromHeader = args.fromName
     ? `${args.fromName} <${args.fromEmail}>`
     : args.fromEmail;
 
-  const headers: string[] = [
-    `From: ${fromHeader}`,
-    `To: ${args.to}`,
-  ];
+  const headers: string[] = [`From: ${fromHeader}`, `To: ${args.to}`];
   if (args.cc) headers.push(`Cc: ${args.cc}`);
   if (args.bcc) headers.push(`Bcc: ${args.bcc}`);
   headers.push(`Subject: ${args.subject}`);
@@ -138,34 +135,73 @@ function buildRfc822(args: SendArgs): string {
     headers.push(`References: ${refs}`);
   }
 
-  if (args.bodyHtml && args.bodyText) {
-    headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
-    const body = [
-      '',
-      `--${boundary}`,
-      'Content-Type: text/plain; charset="UTF-8"',
-      'Content-Transfer-Encoding: 7bit',
-      '',
-      args.bodyText,
-      '',
-      `--${boundary}`,
-      'Content-Type: text/html; charset="UTF-8"',
-      'Content-Transfer-Encoding: 7bit',
-      '',
-      args.bodyHtml,
-      '',
-      `--${boundary}--`,
-    ].join('\r\n');
-    return headers.join('\r\n') + '\r\n' + body;
+  // Body section (alternative / html / text) without top level headers.
+  function bodyBlock(): { ctype: string; body: string } {
+    if (args.bodyHtml && args.bodyText) {
+      const alt = 'alt_' + Math.random().toString(36).slice(2);
+      const body = [
+        `--${alt}`,
+        'Content-Type: text/plain; charset="UTF-8"',
+        'Content-Transfer-Encoding: 7bit',
+        '',
+        args.bodyText,
+        '',
+        `--${alt}`,
+        'Content-Type: text/html; charset="UTF-8"',
+        'Content-Transfer-Encoding: 7bit',
+        '',
+        args.bodyHtml,
+        '',
+        `--${alt}--`,
+      ].join('\r\n');
+      return { ctype: `multipart/alternative; boundary="${alt}"`, body };
+    }
+    if (args.bodyHtml) {
+      return { ctype: 'text/html; charset="UTF-8"', body: args.bodyHtml };
+    }
+    return { ctype: 'text/plain; charset="UTF-8"', body: args.bodyText ?? '' };
   }
 
-  if (args.bodyHtml) {
-    headers.push('Content-Type: text/html; charset="UTF-8"');
-    return headers.join('\r\n') + '\r\n\r\n' + args.bodyHtml;
+  const atts = args.attachments ?? [];
+  const bb = bodyBlock();
+
+  if (atts.length === 0) {
+    return (
+      headers.join('\r\n') +
+      '\r\n' +
+      `Content-Type: ${bb.ctype}` +
+      '\r\n\r\n' +
+      bb.body
+    );
   }
 
-  headers.push('Content-Type: text/plain; charset="UTF-8"');
-  return headers.join('\r\n') + '\r\n\r\n' + (args.bodyText ?? '');
+  const mixed = 'mixed_' + Math.random().toString(36).slice(2);
+  const parts: string[] = [];
+  parts.push(`--${mixed}`);
+  parts.push(`Content-Type: ${bb.ctype}`);
+  parts.push('');
+  parts.push(bb.body);
+  for (const a of atts) {
+    const safeName = String(a.filename || 'attachment').replace(/["\\\r\n]/g, '_');
+    const b64 = String(a.contentBase64 || '').replace(/\s+/g, '');
+    parts.push(`--${mixed}`);
+    parts.push(
+      `Content-Type: ${a.mimeType || 'application/octet-stream'}; name="${safeName}"`
+    );
+    parts.push('Content-Transfer-Encoding: base64');
+    parts.push(`Content-Disposition: attachment; filename="${safeName}"`);
+    parts.push('');
+    parts.push(b64.replace(/(.{76})/g, '$1\r\n'));
+  }
+  parts.push(`--${mixed}--`);
+
+  return (
+    headers.join('\r\n') +
+    '\r\n' +
+    `Content-Type: multipart/mixed; boundary="${mixed}"` +
+    '\r\n\r\n' +
+    parts.join('\r\n')
+  );
 }
 
 export async function sendGmail(args: SendArgs): Promise<{

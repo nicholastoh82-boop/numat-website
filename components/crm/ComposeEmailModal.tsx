@@ -44,8 +44,39 @@ export default function ComposeEmailModal({
   const [bodyText, setBodyText] = useState('');
   const [sending, setSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<{ filename: string; mimeType: string; contentBase64: string; size: number }[]>([]);
 
   if (!open) return null;
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setErrorMsg(null);
+    const readOne = (file: File) =>
+      new Promise<{ filename: string; mimeType: string; contentBase64: string; size: number }>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = String(reader.result || '');
+          const base64 = result.includes(',') ? result.split(',')[1] : result;
+          resolve({ filename: file.name, mimeType: file.type || 'application/octet-stream', contentBase64: base64, size: file.size });
+        };
+        reader.onerror = () => reject(new Error('Could not read ' + file.name));
+        reader.readAsDataURL(file);
+      });
+    try {
+      const read = await Promise.all(Array.from(files).map(readOne));
+      setAttachments((prev) => {
+        const next = [...prev, ...read];
+        const total = next.reduce((sum, a) => sum + a.size, 0);
+        if (total > 3 * 1024 * 1024) {
+          setErrorMsg('Attachments are too big. Keep the total under 3 MB.');
+          return prev;
+        }
+        return next;
+      });
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : 'Could not read file');
+    }
+  }
 
   async function handleSend() {
     setSending(true);
@@ -71,6 +102,7 @@ export default function ComposeEmailModal({
           reply_to_message_id: replyTo?.message_id,
           thread_id_to_reply: replyTo?.thread_id,
           references_header: replyTo?.references,
+          attachments: attachments.length > 0 ? attachments.map((a) => ({ filename: a.filename, mimeType: a.mimeType, contentBase64: a.contentBase64 })) : undefined,
         }),
       });
 
@@ -158,6 +190,27 @@ export default function ComposeEmailModal({
             resize: 'vertical',
           }}
         />
+
+        <label style={{ fontSize: 12, color: '#555' }}>Attachments</label>
+        <div>
+          <input
+            type="file"
+            multiple
+            onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }}
+            disabled={sending}
+            style={{ fontSize: 13 }}
+          />
+        </div>
+        {attachments.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {attachments.map((a, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, background: '#f3f4f6', borderRadius: 4, padding: '4px 8px' }}>
+                <span>{a.filename} ({Math.ceil(a.size / 1024)} KB)</span>
+                <button type="button" onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))} disabled={sending} style={{ border: 0, background: 'transparent', cursor: 'pointer', color: '#b00020' }}>remove</button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {errorMsg && (
           <div style={{ color: '#b00020', fontSize: 13 }}>{errorMsg}</div>
