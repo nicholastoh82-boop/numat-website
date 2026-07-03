@@ -309,20 +309,25 @@ export default function CeoDashboard({ data }: Props) {
       </Section>
 
       {/* AR */}
-      <Section title="Accounts Receivable" sub={`${(ar.records || []).filter((r: any) => !['settled','written_off'].includes(r.status)).length} open invoices`}>
+      <Section title="Accounts Receivable" sub={`${(ar.records || []).filter((r: any) => !['settled','written_off'].includes(r.status) && Number(r.outstanding_amount || 0) > 0).length} open invoices`}>
         <Card title="">
           <ArTable records={ar.records || []} />
         </Card>
       </Section>
 
-      {/* OUTSTANDING ORDERS (master orders not yet fully delivered) */}
-      {data.outstanding_orders && data.outstanding_orders.count > 0 && (
-        <Section title="Outstanding Orders (yet to deliver)" sub={`${data.outstanding_orders.count} active master order(s) | Total remaining value PHP ${Number(data.outstanding_orders.total_remaining_value_php || 0).toLocaleString()}`}>
-          <Card title="">
-            <OutstandingOrdersTable records={data.outstanding_orders.records || []} />
-          </Card>
-        </Section>
-      )}
+      {/* ORDERS YET TO DELIVER (from undelivered AR) */}
+      {(() => {
+        const undel = (ar.records || []).filter((r: any) => Number(r.undelivered_value || 0) > 0)
+        if (undel.length === 0) return null
+        const undelTotal = undel.reduce((s: number, r: any) => s + Number(r.undelivered_value || 0), 0)
+        return (
+          <Section title="Orders yet to deliver" sub={`${undel.length} order(s) | Total to deliver PHP ${undelTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}>
+            <Card title="">
+              <OutstandingOrdersTable records={undel} total={undelTotal} />
+            </Card>
+          </Section>
+        )
+      })()}
 
       {/* OUTREACH + QUOTES */}
       <Section title="Outreach and Quotes">
@@ -817,7 +822,8 @@ function UtilBar({ current, breakEven, avgContrib, beBoards, capacity }: { curre
 }
 
 function ArTable({ records }: { records: any[] }) {
-  const open = records.filter((r) => !['settled', 'written_off'].includes(r.status))
+  const open = records.filter((r) => !['settled', 'written_off'].includes(r.status) && Number(r.outstanding_amount || 0) > 0)
+  const arTotal = open.reduce((s: number, r: any) => s + Number(r.outstanding_amount || 0), 0)
   if (open.length === 0) {
     return <div className="text-sm text-gray-500">No open invoices.</div>
   }
@@ -847,15 +853,19 @@ function ArTable({ records }: { records: any[] }) {
               </tr>
             )
           })}
+          <tr className="border-t-2 border-gray-300 font-semibold">
+            <td className="py-1.5 px-1 text-gray-900" colSpan={4}>Total</td>
+            <td className="py-1.5 px-1 text-right tabular-nums text-gray-900">PHP {arTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+          </tr>
         </tbody>
       </table>
     </div>
   )
 }
 
-function OutstandingOrdersTable({ records }: { records: any[] }) {
+function OutstandingOrdersTable({ records, total }: { records: any[]; total: number }) {
   if (!records || records.length === 0) {
-    return <div className="text-sm text-gray-500">No active master orders.</div>
+    return <div className="text-sm text-gray-500">No orders yet to deliver.</div>
   }
   return (
     <div className="overflow-x-auto -mx-1">
@@ -863,36 +873,29 @@ function OutstandingOrdersTable({ records }: { records: any[] }) {
         <thead className="text-gray-700">
           <tr className="border-b border-gray-200">
             <th className="text-left py-2 px-1 font-medium">Customer</th>
-            <th className="text-left py-2 px-1 font-medium">Master order</th>
-            <th className="text-right py-2 px-1 font-medium">Ordered</th>
-            <th className="text-right py-2 px-1 font-medium">Delivered</th>
-            <th className="text-right py-2 px-1 font-medium">Remaining</th>
-            <th className="text-right py-2 px-1 font-medium">Remaining value</th>
-            <th className="text-right py-2 px-1 font-medium">Deposit on file</th>
+            <th className="text-left py-2 px-1 font-medium">Invoice</th>
+            <th className="text-right py-2 px-1 font-medium">Qty to deliver</th>
+            <th className="text-right py-2 px-1 font-medium">Value</th>
           </tr>
         </thead>
         <tbody>
           {records.map((r: any, i: number) => {
-            const ordered = Number(r.qty_ordered || 0)
-            const delivered = Number(r.qty_delivered || 0)
-            const remaining = Number(r.qty_remaining || 0)
-            const unit = r.quantity_unit || 'units'
+            const qty = r.undelivered_qty
             const cur = r.currency || 'PHP'
-            const progress = ordered > 0 ? Math.round((delivered / ordered) * 100) : 0
+            const hasQty = qty !== null && qty !== undefined && qty !== ''
             return (
               <tr key={i} className="border-b border-gray-100">
-                <td className="py-1.5 px-1 text-gray-900">{r.customer_name || 'Unknown'}</td>
-                <td className="py-1.5 px-1 text-gray-700">{r.master_invoice_number || '-'}</td>
-                <td className="py-1.5 px-1 text-right tabular-nums text-gray-900">{ordered.toLocaleString()} {unit}</td>
-                <td className="py-1.5 px-1 text-right tabular-nums text-gray-700">
-                  {delivered.toLocaleString()} ({progress}%)
-                </td>
-                <td className="py-1.5 px-1 text-right tabular-nums font-medium text-gray-900">{remaining.toLocaleString()} {unit}</td>
-                <td className="py-1.5 px-1 text-right tabular-nums text-gray-900">{cur} {Number(r.remaining_value || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                <td className="py-1.5 px-1 text-right tabular-nums text-emerald-700">{cur} {Number(r.deposit_on_file || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td className="py-1.5 px-1 text-gray-900">{r.customer || r.customer_name || ''}</td>
+                <td className="py-1.5 px-1 text-gray-700">{r.invoice_number || ''}</td>
+                <td className="py-1.5 px-1 text-right tabular-nums text-gray-900">{hasQty ? Number(qty).toLocaleString() : 'not tracked'}</td>
+                <td className="py-1.5 px-1 text-right tabular-nums text-gray-900">{cur} {Number(r.undelivered_value || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
               </tr>
             )
           })}
+          <tr className="border-t-2 border-gray-300 font-semibold">
+            <td className="py-1.5 px-1 text-gray-900" colSpan={3}>Total</td>
+            <td className="py-1.5 px-1 text-right tabular-nums text-gray-900">PHP {total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+          </tr>
         </tbody>
       </table>
     </div>
