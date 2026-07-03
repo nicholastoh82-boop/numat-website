@@ -330,6 +330,7 @@ export default function CRMDashboard() {
   const [search, setSearch] = useState('')
   const [stageFilter, setStageFilter] = useState('all')
   const [repFilter, setRepFilter] = useState('all')
+  const [segmentFilter, setSegmentFilter] = useState('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
   const [quoteModal, setQuoteModal] = useState<{
@@ -621,8 +622,9 @@ export default function CRMDashboard() {
     }
     if (stageFilter !== 'all') result = result.filter(l => l.pipeline_stage === stageFilter)
     if (repFilter !== 'all') result = result.filter(l => l.rep_email === repFilter)
+    if (segmentFilter !== 'all') result = result.filter(l => (l.segment || '') === segmentFilter)
     setFiltered(result)
-  }, [leads, search, stageFilter, repFilter])
+  }, [leads, search, stageFilter, repFilter, segmentFilter])
 
   const saveViewerSettings = async (next: ViewerSettings) => {
     setViewerSettings(next)
@@ -1881,9 +1883,15 @@ export default function CRMDashboard() {
                   <ul className="space-y-1 text-sm max-h-40 overflow-y-auto">
                     {analytics.bySegment.length === 0 && <li className="text-gray-400 text-xs">No data</li>}
                     {analytics.bySegment.map(([seg, count]) => (
-                      <li key={seg} className="flex justify-between gap-2">
-                        <span className="text-gray-700 truncate">{seg}</span>
-                        <span className="text-gray-500 tabular-nums">{count.toLocaleString()}</span>
+                      <li key={seg}>
+                        <button
+                          type="button"
+                          onClick={() => setSegmentFilter(segmentFilter === seg ? 'all' : seg)}
+                          className={`w-full flex justify-between gap-2 rounded px-1 py-0.5 text-left transition-colors ${segmentFilter === seg ? 'bg-green-50 text-green-700 font-medium' : 'hover:bg-gray-50 text-gray-700'}`}
+                          title={segmentFilter === seg ? 'Click to clear this filter' : `Show ${seg} leads`}>
+                          <span className="truncate">{seg}</span>
+                          <span className="tabular-nums text-gray-500">{count.toLocaleString()}</span>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -1959,6 +1967,14 @@ export default function CRMDashboard() {
           ))}
         </div>
 
+        {segmentFilter !== 'all' && (
+          <div className="mb-3 flex items-center gap-2 text-sm">
+            <span className="text-gray-500">Filtered by segment:</span>
+            <button type="button" onClick={() => setSegmentFilter('all')} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-medium hover:bg-green-100">
+              {segmentFilter} <span aria-hidden>✕</span>
+            </button>
+          </div>
+        )}
         <div className="space-y-2">
           {filtered.length === 0 && (
             <div className="text-center py-16 text-gray-400">
@@ -1972,7 +1988,7 @@ export default function CRMDashboard() {
             const stageColor = STAGE_COLORS[lead.pipeline_stage || 'new'] || 'bg-gray-100 text-gray-600'
             const stageLabel = STAGE_LABELS[lead.pipeline_stage || 'new'] || lead.pipeline_stage || 'New'
             const statusColor = STATUS_COLORS[lead.status || ''] || 'bg-gray-100 text-gray-600'
-            const lastContact = relDate(mostRecent(lead.last_activity_at, lead.last_email_sent))
+            const lastEmailTs = mostRecent(lead.last_email_sent, lead.last_rep_touch_at)
             return (
               <div key={lead.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="flex flex-col md:flex-row md:items-center px-4 py-3 cursor-pointer hover:bg-gray-50 select-none gap-3 md:gap-0"
@@ -2000,7 +2016,9 @@ export default function CRMDashboard() {
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5 truncate">
                       {[lead.email, lead.city, lead.country].filter(Boolean).join(' · ')}
-                      {lastContact && <span className="ml-2 text-gray-400">· {lastContact}</span>}
+                      {lastEmailTs
+                        ? <span className="ml-2 text-gray-400" title={`Last email sent ${new Date(lastEmailTs).toLocaleString()}`}>· ✉ {relDate(lastEmailTs)}</span>
+                        : <span className="ml-2 text-gray-300">· ✉ no email yet</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 md:ml-3 shrink-0 flex-wrap" onClick={e => e.stopPropagation()}>
