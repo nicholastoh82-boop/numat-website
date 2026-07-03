@@ -622,7 +622,7 @@ export default function CRMDashboard() {
     }
     if (stageFilter !== 'all') result = result.filter(l => l.pipeline_stage === stageFilter)
     if (repFilter !== 'all') result = result.filter(l => l.rep_email === repFilter)
-    if (segmentFilter !== 'all') result = result.filter(l => (l.segment || '') === segmentFilter)
+    if (segmentFilter !== 'all') result = result.filter(l => (l.segment || 'Unspecified') === segmentFilter)
     setFiltered(result)
   }, [leads, search, stageFilter, repFilter, segmentFilter])
 
