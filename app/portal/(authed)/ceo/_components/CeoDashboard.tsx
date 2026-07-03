@@ -85,6 +85,9 @@ export default function CeoDashboard({ data }: Props) {
   const runway = fin.runway_months ?? 0
   const arOutstanding = ar.total_outstanding_php || 0
   const arOverdue = ar.overdue_total_php || 0
+  const arUndeliveredRecords = (ar.records || []).filter((r: any) => !['settled','written_off'].includes(r.status) && parseFloat(String(r.undelivered_value || 0)) > 0)
+  const arUndeliveredTotal = arUndeliveredRecords.reduce((s: number, r: any) => s + parseFloat(String(r.undelivered_value || 0)), 0)
+  const arUndeliveredCount = arUndeliveredRecords.length
   const pipelineWeighted = wp.total_weighted_php || 0
   const replyRate = out.reply_rate_pct || 0
 
@@ -338,7 +341,8 @@ export default function CeoDashboard({ data }: Props) {
             <div className="space-y-1.5 text-xs">
               <Row label="Active proformas" value={`${quotes.proformas_active_count || 0} · ${full(quotes.proformas_total_php || 0)}`} />
               <Row label="Converted proformas" value={`${quotes.proformas_converted_count || 0} · ${full(quotes.proformas_converted_php || 0)}`} />
-              <Row label="Unpaid invoices" value={`${quotes.invoices_unpaid_count || 0} · ${full(quotes.invoices_unpaid_total_php || 0)}`} />
+              <Row label="Delivered, unpaid" value={`${quotes.invoices_unpaid_count || 0} · ${full(quotes.invoices_unpaid_total_php || 0)}`} />
+              <Row label="Undelivered" value={`${arUndeliveredCount} · ${full(arUndeliveredTotal)}`} />
             </div>
             {(() => {
               const recent = quotes.recent || []
