@@ -201,10 +201,15 @@ export default function CeoDashboard({ data }: Props) {
 
       {/* TOP STRIP: per account balances */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <AccountKpi accounts={fin.account_balances || []} matchCurrency="PHP" matchName="RCBC" label="RCBC PHP" />
-        <AccountKpi accounts={fin.account_balances || []} matchCurrency="USD" matchName="OCBC" label="OCBC USD" />
-        <AccountKpi accounts={fin.account_balances || []} matchCurrency="SGD" matchName="OCBC" label="OCBC SGD" />
+        <AccountKpi accounts={fin.account_balances || []} matchCurrency="PHP" matchName="RCBC" label="RCBC PHP" stale={!!fin.data_stale} />
+        <AccountKpi accounts={fin.account_balances || []} matchCurrency="USD" matchName="OCBC" label="OCBC USD" stale={!!fin.data_stale} />
+        <AccountKpi accounts={fin.account_balances || []} matchCurrency="SGD" matchName="OCBC" label="OCBC SGD" stale={!!fin.data_stale} />
       </div>
+      {fin.data_stale && (
+        <p className="text-xs text-amber-700 -mt-2">
+          Balances and runway could not be refreshed this load (a database query failed after retry). Reload to try again; figures below are cached defaults, not confirmed zero balances.
+        </p>
+      )}
 
       {/* KPI STRIP */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -693,11 +698,13 @@ function AccountKpi({
   matchCurrency,
   matchName,
   label,
+  stale,
 }: {
   accounts: any[]
   matchCurrency: string
   matchName: string
   label: string
+  stale?: boolean
 }) {
   const acc = accounts.find(
     (a) =>
@@ -706,15 +713,18 @@ function AccountKpi({
   )
   const balance = acc ? Number(acc.balance || 0) : 0
   const found = !!acc
+  const subLabel = found
+    ? (acc.account_name || acc.name || '')
+    : stale
+      ? 'Data refresh failed, not a confirmed zero'
+      : 'Account not found in feed'
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+    <div className={`rounded-lg border p-4 ${stale && !found ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'}`}>
       <div className="text-[11px] uppercase tracking-wide text-gray-600">{label}</div>
-      <div className="text-xl font-semibold mt-1 text-emerald-900 tabular-nums">
-        {matchCurrency} {balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      <div className={`text-xl font-semibold mt-1 tabular-nums ${stale && !found ? 'text-amber-900' : 'text-emerald-900'}`}>
+        {found ? `${matchCurrency} ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
       </div>
-      <div className="text-[11px] text-gray-500 mt-1 truncate">
-        {found ? (acc.account_name || acc.name || '') : 'Account not found in feed'}
-      </div>
+      <div className="text-[11px] text-gray-500 mt-1 truncate">{subLabel}</div>
     </div>
   )
 }
