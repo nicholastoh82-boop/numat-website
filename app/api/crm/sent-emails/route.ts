@@ -36,6 +36,7 @@ const SEE_ALL_ROLES = ['admin', 'ceo']
 // Feature that guards the productivity page and this view.
 const REQUIRED_FEATURE = 'productivity'
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function isNumat(email?: string | null): boolean {
   return !!email && email.toLowerCase().endsWith('@numat.ph')
@@ -88,6 +89,34 @@ export async function GET(req: NextRequest) {
   }
 
   const url = new URL(req.url)
+  const seeAll = user.isAdmin || user.roles.some((r) => SEE_ALL_ROLES.includes(r))
+
+  // Detail branch: return the full content of one sent email by id. Non
+  // elevated users can only open their own emails; elevated users can open any.
+  const idParam = url.searchParams.get('id')
+  if (idParam) {
+    if (!UUID_RE.test(idParam)) {
+      return NextResponse.json({ error: 'Invalid id.' }, { status: 400 })
+    }
+    let detailQuery = adminClient
+      .from('crm_emails')
+      .select(
+        'id, rep_email, subject, from_email, to_email, cc, sent_at, has_attachments, attachment_meta, body_text, body_html, gmail_thread_id',
+      )
+      .eq('id', idParam)
+      .eq('direction', 'sent')
+      .limit(1)
+    if (!seeAll) detailQuery = detailQuery.eq('rep_email', user.email)
+    const { data: one, error: oneError } = await detailQuery.maybeSingle()
+    if (oneError) {
+      return NextResponse.json({ error: oneError.message }, { status: 500 })
+    }
+    if (!one) {
+      return NextResponse.json({ error: 'Not found.' }, { status: 404 })
+    }
+    return NextResponse.json({ email: one })
+  }
+
   const dateParam = url.searchParams.get('date') || ''
   if (!DATE_RE.test(dateParam)) {
     return NextResponse.json({ error: 'Invalid or missing date. Use YYYY-MM-DD.' }, { status: 400 })
@@ -100,8 +129,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid date.' }, { status: 400 })
   }
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000)
-
-  const seeAll = user.isAdmin || user.roles.some((r) => SEE_ALL_ROLES.includes(r))
 
   // Elevated users may narrow to one rep. Everyone else is pinned to their own
   // email regardless of any rep parameter.
