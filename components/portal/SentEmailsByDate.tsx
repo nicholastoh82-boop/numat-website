@@ -2,8 +2,12 @@
    Lets a rep pick a date and see the actual emails that went out that day.
    Fetches /api/crm/sent-emails, which is scoped server side: admin and ceo can
    see every rep, everyone else with the productivity feature (for example
-   Erica) sees only their own sends. Times are shown in Malaysia time. White
-   background to match the portal finance surfaces. */
+   Erica) sees only their own sends. Times are shown in Malaysia time.
+
+   Mobile first: each email renders as a stacked card so a long recipient
+   address wraps cleanly inside a full width card instead of being crushed into
+   a narrow table column on a phone. White background to match the portal
+   finance surfaces. */
 
 'use client';
 
@@ -87,23 +91,25 @@ export default function SentEmailsByDate() {
     load(date);
   }, [date, load]);
 
+  const isToday = date >= todayLocal();
   const showRep = data?.scope === 'all';
   const emails = data?.emails ?? [];
 
-  const navBtn =
-    'px-3 py-1.5 text-sm rounded-md border bg-white text-gray-700 border-gray-300 hover:bg-gray-50 transition-colors';
+  const btn =
+    'shrink-0 px-3 py-2 text-sm rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors';
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-4">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+      {/* Header and date controls */}
+      <div className="space-y-3">
         <div>
           <h2 className="text-base font-semibold text-gray-900">Sent emails by date</h2>
           <p className="text-xs text-gray-500 mt-0.5">
             Emails that went out on the selected day. Times shown in Malaysia time.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setDate((d) => shiftDate(d, -1))} className={navBtn}>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" aria-label="Previous day" onClick={() => setDate((d) => shiftDate(d, -1))} className={btn}>
             Prev
           </button>
           <input
@@ -111,17 +117,23 @@ export default function SentEmailsByDate() {
             value={date}
             max={todayLocal()}
             onChange={(e) => setDate(e.target.value)}
-            className="px-3 py-1.5 text-sm rounded-md border border-gray-300 bg-white text-gray-900"
+            className="flex-1 min-w-[8rem] px-3 py-2 text-sm rounded-md border border-gray-300 bg-white text-gray-900"
           />
           <button
             type="button"
+            aria-label="Next day"
             onClick={() => setDate((d) => shiftDate(d, 1))}
-            disabled={date >= todayLocal()}
-            className={`${navBtn} disabled:opacity-40 disabled:cursor-not-allowed`}
+            disabled={isToday}
+            className={`${btn} disabled:opacity-40 disabled:cursor-not-allowed`}
           >
             Next
           </button>
-          <button type="button" onClick={() => setDate(todayLocal())} className={navBtn}>
+          <button
+            type="button"
+            onClick={() => setDate(todayLocal())}
+            disabled={isToday}
+            className={`${btn} disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
             Today
           </button>
         </div>
@@ -139,57 +151,30 @@ export default function SentEmailsByDate() {
           </p>
 
           {emails.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr>
-                    <th className="text-left font-semibold text-gray-700 border border-gray-200 bg-gray-50 px-3 py-2 whitespace-nowrap">
-                      Time
-                    </th>
-                    {showRep && (
-                      <th className="text-left font-semibold text-gray-700 border border-gray-200 bg-gray-50 px-3 py-2 whitespace-nowrap">
-                        Rep
-                      </th>
+            <ul className="space-y-2">
+              {emails.map((m) => (
+                <li key={m.id} className="rounded-lg border border-gray-200 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-gray-500 tabular-nums">{timeMyt(m.sent_at)}</span>
+                    {m.has_attachments && (
+                      <span className="shrink-0 rounded bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600">Attachment</span>
                     )}
-                    <th className="text-left font-semibold text-gray-700 border border-gray-200 bg-gray-50 px-3 py-2">
-                      Subject
-                    </th>
-                    <th className="text-left font-semibold text-gray-700 border border-gray-200 bg-gray-50 px-3 py-2">
-                      To
-                    </th>
-                    <th className="text-left font-semibold text-gray-700 border border-gray-200 bg-gray-50 px-3 py-2 whitespace-nowrap">
-                      Attachment
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {emails.map((m) => (
-                    <tr key={m.id} className="align-top">
-                      <td className="border border-gray-200 px-3 py-2 text-gray-700 tabular-nums whitespace-nowrap">
-                        {timeMyt(m.sent_at)}
-                      </td>
-                      {showRep && (
-                        <td className="border border-gray-200 px-3 py-2 text-gray-700 whitespace-nowrap">
-                          {m.rep_email}
-                        </td>
-                      )}
-                      <td className="border border-gray-200 px-3 py-2 text-gray-900">
-                        <div className="font-medium">{m.subject || '(no subject)'}</div>
-                        {m.snippet && <div className="text-xs text-gray-500 mt-0.5 line-clamp-2">{m.snippet}</div>}
-                      </td>
-                      <td className="border border-gray-200 px-3 py-2 text-gray-700 break-all">{m.to_email || ''}</td>
-                      <td className="border border-gray-200 px-3 py-2 text-gray-700">
-                        {m.has_attachments ? (
-                          <span className="inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">Yes</span>
-                        ) : (
-                          ''
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </div>
+                  <div className="mt-1 text-sm font-medium text-gray-900 break-words">{m.subject || '(no subject)'}</div>
+                  <div className="mt-1 text-xs text-gray-600">
+                    <span className="text-gray-400">To </span>
+                    <span className="break-all">{m.to_email || '(unknown)'}</span>
+                  </div>
+                  {showRep && (
+                    <div className="mt-0.5 text-xs text-gray-500">
+                      <span className="text-gray-400">Rep </span>
+                      <span className="break-all">{m.rep_email}</span>
+                    </div>
+                  )}
+                  {m.snippet && <p className="mt-1 text-xs text-gray-500 truncate">{m.snippet}</p>}
+                </li>
+              ))}
+            </ul>
           ) : (
             <p className="text-sm text-gray-500 py-6 text-center">No emails sent on this date.</p>
           )}
