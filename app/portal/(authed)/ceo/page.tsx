@@ -113,6 +113,26 @@ async function loadCashAtBank(): Promise<{ usd_total: number; accounts: any[] }>
   return { usd_total, accounts }
 }
 
+// Per rep email KPIs come from the v_rep_email_kpis view (CRM email activity in
+// crm_emails). The view already computes every column and sorts active reps
+// first, so we only read it here, the same way the other server side loaders
+// read their views. This is deliberately not the sequence_events based tracking.
+async function loadRepEmailKpis(): Promise<any[]> {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return []
+  const admin = createAdmin(url, key, { auth: { persistSession: false } })
+  const { data, error } = await admin
+    .from('v_rep_email_kpis')
+    .select(
+      'rep_email,rep_name,rep_active,total_sent,sent_24h,sent_7d,sent_30d,leads_contacted,total_received,received_7d,leads_replied,reply_rate_pct,last_sent_at',
+    )
+    .order('rep_active', { ascending: false })
+    .order('total_sent', { ascending: false })
+  if (error || !data) return []
+  return data as any[]
+}
+
 export default async function CeoPage({
   searchParams,
 }: {
@@ -120,7 +140,12 @@ export default async function CeoPage({
 }) {
   await requireFeature('ceo')
   const params = await searchParams
-  const [result, paMonthly, cashAtBank] = await Promise.all([loadCeoData(params), loadMonthly(), loadCashAtBank()])
+  const [result, paMonthly, cashAtBank, repEmailKpis] = await Promise.all([
+    loadCeoData(params),
+    loadMonthly(),
+    loadCashAtBank(),
+    loadRepEmailKpis(),
+  ])
 
   if (!result.ok) {
     return (
@@ -131,5 +156,5 @@ export default async function CeoPage({
     )
   }
 
-  return <CeoDashboard data={{ ...result.data, pa_monthly: paMonthly, cash_at_bank: cashAtBank }} />
+  return <CeoDashboard data={{ ...result.data, pa_monthly: paMonthly, cash_at_bank: cashAtBank, rep_email_kpis: repEmailKpis }} />
 }
