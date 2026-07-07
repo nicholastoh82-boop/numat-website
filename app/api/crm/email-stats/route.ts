@@ -32,6 +32,7 @@ const REP_DISPLAY_NAME: Record<string, string> = {
   'bryan@numat.ph': 'Bryan',
   'mohan@numat.ph': 'Mohan',
   'eugene@numat.ph': 'Eugene',
+  'erica@numat.ph': 'Erica',
 };
 
 type StatRow = { rep_email: string; bucket: string; sent: number; replies: number };
