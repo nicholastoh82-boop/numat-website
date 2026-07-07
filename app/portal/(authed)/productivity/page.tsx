@@ -5,6 +5,7 @@
 
 import { requireFeature } from '@/lib/portal/roles'
 import EmailCounter from '@/components/portal/EmailCounter'
+import SentEmailsByDate from '@/components/portal/SentEmailsByDate'
 
 export const metadata = {
   title: 'Email Counter | NUMAT Portal',
@@ -26,6 +27,7 @@ export default async function ProductivityPage() {
         </p>
       </div>
       <EmailCounter />
+      <SentEmailsByDate />
     </div>
   )
 }
