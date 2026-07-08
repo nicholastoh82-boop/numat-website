@@ -154,10 +154,28 @@ type SendGmailOpts = {
   }>;
 };
 
+// Resolve a rep's Gmail refresh token: prefer a token they connected through the
+// portal (stored in rep_gmail_tokens), otherwise fall back to the per rep Vercel
+// env var. This lets reps self connect sending without anyone editing env vars.
+async function resolveRefreshToken(rep: RepKey): Promise<string> {
+  const email = REP_EMAIL[rep];
+  if (email) {
+    try {
+      const rows = await supabaseGetRaw<Array<{ refresh_token: string }>>(
+        `rep_gmail_tokens?email=eq.${encodeURIComponent(email)}&select=refresh_token&limit=1`
+      );
+      if (rows && rows[0]?.refresh_token) return rows[0].refresh_token;
+    } catch {
+      // fall through to the env var
+    }
+  }
+  const envName = REP_REFRESH_TOKEN_ENV[rep];
+  if (!envName) throw new Error(`Unknown rep: ${rep}`);
+  return required(envName);
+}
+
 export async function sendGmail(opts: SendGmailOpts): Promise<string> {
-  const envName = REP_REFRESH_TOKEN_ENV[opts.from];
-  if (!envName) throw new Error(`Unknown rep: ${opts.from}`);
-  const refreshToken = required(envName);
+  const refreshToken = await resolveRefreshToken(opts.from);
   const fromEmail = REP_EMAIL[opts.from];
   const accessToken = await getAccessToken(refreshToken);
 
@@ -235,9 +253,7 @@ export async function gmailCreateReplyDraft(opts: {
   threadId: string;
   inReplyToMessageIdHeader?: string; // the RFC822 Message-ID of the message being replied to
 }): Promise<string> {
-  const envName = REP_REFRESH_TOKEN_ENV[opts.rep];
-  if (!envName) throw new Error(`Unknown rep: ${opts.rep}`);
-  const refreshToken = required(envName);
+  const refreshToken = await resolveRefreshToken(opts.rep);
   const fromEmail = REP_EMAIL[opts.rep];
   const accessToken = await getAccessToken(refreshToken);
 
@@ -295,9 +311,7 @@ export type GmailMessageSummary = {
 };
 
 async function repAccessToken(rep: RepKey): Promise<string> {
-  const envName = REP_REFRESH_TOKEN_ENV[rep];
-  if (!envName) throw new Error(`Unknown rep: ${rep}`);
-  return getAccessToken(required(envName));
+  return getAccessToken(await resolveRefreshToken(rep));
 }
 
 function decodeBase64Url(s: string): string {
@@ -508,4 +522,32 @@ export const ALL_REPS: RepKey[] = ["Nick", "Bryan", "Erica"];
 
 export function repEmailFor(rep: RepKey): string {
   return REP_EMAIL[rep];
+}
+
+// Reverse lookup: which rep does this email belong to, if any. Only the active
+// reps in ALL_REPS are considered, so departed keys never match.
+export function repKeyForEmail(email: string): RepKey | null {
+  const e = (email || "").toLowerCase();
+  return ALL_REPS.find((r) => REP_EMAIL[r].toLowerCase() === e) ?? null;
+}
+
+// Store a Gmail refresh token a rep connected through the portal.
+export async function storeRepRefreshToken(
+  email: string,
+  refreshToken: string,
+  connectedBy: string,
+  scope?: string
+): Promise<void> {
+  await supabasePost(
+    "rep_gmail_tokens",
+    {
+      email: email.toLowerCase(),
+      refresh_token: refreshToken,
+      scope: scope ?? null,
+      connected_by: connectedBy,
+      connected_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    "resolution=merge-duplicates,return=minimal"
+  );
 }
