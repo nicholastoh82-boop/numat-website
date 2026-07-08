@@ -33,6 +33,9 @@ const adminClient = createClient(
 const ALWAYS_ADMIN = ['nick@numat.ph']
 // Roles that may look across every rep. Everyone else sees only their own.
 const SEE_ALL_ROLES = ['admin', 'ceo']
+// Non admin, non ceo people who still see every rep's sends, for example the
+// Head of Marketing who oversees the sales reps.
+const SEE_ALL_EMAILS = ['erica@numat.ph']
 // Feature that guards the productivity page and this view.
 const REQUIRED_FEATURE = 'productivity'
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -89,7 +92,8 @@ export async function GET(req: NextRequest) {
   }
 
   const url = new URL(req.url)
-  const seeAll = user.isAdmin || user.roles.some((r) => SEE_ALL_ROLES.includes(r))
+  const seeAll =
+    user.isAdmin || user.roles.some((r) => SEE_ALL_ROLES.includes(r)) || SEE_ALL_EMAILS.includes(user.email)
 
   // Detail branch: return the full content of one sent email by id. Non
   // elevated users can only open their own emails; elevated users can open any.
