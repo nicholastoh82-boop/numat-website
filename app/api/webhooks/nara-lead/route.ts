@@ -50,8 +50,8 @@ export async function POST(req: Request) {
     const country = (body.country ?? "").toUpperCase().trim();
     const location = (body.location ?? "").toUpperCase();
     const isPH = country === "PHILIPPINES" || country === "PH" || location.includes("PHILIPPINES");
-    const repEmail = isPH ? "bryan@numat.ph" : "mohan@numat.ph";
-    const repName = isPH ? "Bryan" : "Mohan";
+    const repEmail = isPH ? "bryan@numat.ph" : "erica@numat.ph";
+    const repName = isPH ? "Bryan" : "Erica";
 
     const nameParts = (body.contact_name ?? "").trim().split(" ");
     const firstName = nameParts[0] || "there";

@@ -43,8 +43,8 @@ function classifyAndEnrich(lead: StalledQuoteLead, minDays: number, maxDays: num
     month: "long",
     year: "numeric",
   });
-  const repEmail = (lead.quote_issued_by || "mohan@numat.ph").toLowerCase();
-  const repKey: RepKey = repEmail.includes("bryan") ? "Bryan" : "Mohan";
+  const repEmail = (lead.quote_issued_by || "erica@numat.ph").toLowerCase();
+  const repKey: RepKey = repEmail.includes("bryan") ? "Bryan" : "Erica";
 
   return { ...lead, firstName, validUntil, repEmail, repKey };
 }
