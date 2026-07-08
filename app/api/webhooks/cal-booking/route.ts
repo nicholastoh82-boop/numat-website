@@ -65,8 +65,8 @@ export async function POST(req: Request) {
     const organizer = payload.organizer ?? {};
 
     const organizerEmail = (organizer.email ?? "").toLowerCase();
-    const repKey: RepKey = organizerEmail.includes("bryan") ? "Bryan" : "Mohan";
-    const repEmail = repKey === "Bryan" ? "bryan@numat.ph" : "mohan@numat.ph";
+    const repKey: RepKey = organizerEmail.includes("bryan") ? "Bryan" : "Erica";
+    const repEmail = repKey === "Bryan" ? "bryan@numat.ph" : "erica@numat.ph";
 
     const startTime = payload.startTime ?? new Date().toISOString();
     const startDate = new Date(startTime);

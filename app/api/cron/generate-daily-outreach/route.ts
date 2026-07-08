@@ -53,7 +53,7 @@ type LeadRow = {
 };
 
 type RepConfig = {
-  key: 'mohan' | 'eugene';
+  key: 'erica_intl' | 'erica_ph';
   email: string;
   full_name: string;
   title: string;
@@ -62,17 +62,17 @@ type RepConfig = {
 
 const REPS: RepConfig[] = [
   {
-    key: 'mohan',
-    email: 'mohan@numat.ph',
-    full_name: 'Mohan Louis',
-    title: 'Head of Growth',
+    key: 'erica_intl',
+    email: 'erica@numat.ph',
+    full_name: 'Erica Lu',
+    title: 'Chief Marketing Officer',
     filter: 'international',
   },
   {
-    key: 'eugene',
-    email: 'eugene@numat.ph',
-    full_name: 'Eugene Chan',
-    title: 'Business Development',
+    key: 'erica_ph',
+    email: 'erica@numat.ph',
+    full_name: 'Erica Lu',
+    title: 'Chief Marketing Officer',
     filter: 'philippines',
   },
 ];
