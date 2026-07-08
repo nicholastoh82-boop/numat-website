@@ -5,6 +5,7 @@
 import { requireFeature } from '@/lib/portal/roles'
 import CeoDashboard from './_components/CeoDashboard'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 
 export const metadata = {
   title: 'CEO Dashboard | NUMAT Portal',
@@ -23,30 +24,40 @@ type SearchParams = {
   to?: string
 }
 
-async function loadCeoData(params: SearchParams): Promise<{ ok: true; data: any } | { ok: false; error: string }> {
-  const secret = process.env.NUMAT_CEO_SECRET
-  if (!secret) {
-    return { ok: false, error: 'Server configuration missing: NUMAT_CEO_SECRET not set in environment.' }
-  }
-  const qs = new URLSearchParams()
-  if (params.period) qs.set('period', params.period)
-  if (params.from) qs.set('from', params.from)
-  if (params.to) qs.set('to', params.to)
-  const url = qs.toString() ? `${EDGE_URL}?${qs}` : EDGE_URL
-
-  try {
+// The edge function aggregates a lot of data and can take many seconds. Cache
+// its result for a few minutes in the Next data cache, so the dashboard serves
+// near instantly and refreshes in the background instead of recomputing on
+// every visit. The inner function throws on failure, which unstable_cache does
+// not store, so a transient error is never pinned for the whole window.
+const fetchCeoData = unstable_cache(
+  async (period: string, from: string, to: string): Promise<any> => {
+    const secret = process.env.NUMAT_CEO_SECRET
+    if (!secret) throw new Error('Server configuration missing: NUMAT_CEO_SECRET not set in environment.')
+    const qs = new URLSearchParams()
+    if (period) qs.set('period', period)
+    if (from) qs.set('from', from)
+    if (to) qs.set('to', to)
+    const url = qs.toString() ? `${EDGE_URL}?${qs}` : EDGE_URL
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${secret}` },
       cache: 'no-store',
     })
     if (!res.ok) {
       const text = await res.text()
-      return { ok: false, error: `Edge function returned ${res.status}: ${text.slice(0, 200)}` }
+      throw new Error(`Edge function returned ${res.status}: ${text.slice(0, 200)}`)
     }
-    const data = await res.json()
+    return res.json()
+  },
+  ['ceo-dashboard-data'],
+  { revalidate: 300 },
+)
+
+async function loadCeoData(params: SearchParams): Promise<{ ok: true; data: any } | { ok: false; error: string }> {
+  try {
+    const data = await fetchCeoData(params.period || '', params.from || '', params.to || '')
     return { ok: true, data }
   } catch (e: any) {
-    return { ok: false, error: `Failed to fetch dashboard data: ${e?.message || 'unknown error'}` }
+    return { ok: false, error: e?.message || 'Failed to fetch dashboard data' }
   }
 }
 
