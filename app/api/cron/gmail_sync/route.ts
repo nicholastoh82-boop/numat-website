@@ -19,6 +19,7 @@ const FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
 const REP_NAME_MAP: Record<string, string> = {
   'nick@numat.ph': 'Nicholas Toh',
   'bryan@numat.ph': 'Bryan Suarin',
+  'erica@numat.ph': 'Erica',
   'mohan@numat.ph': 'Mohan Louis',
 };
 

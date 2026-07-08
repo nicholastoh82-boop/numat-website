@@ -41,6 +41,7 @@ type RepActivity = {
 const REP_DISPLAY_NAME: Record<string, string> = {
   "nick@numat.ph": "Nick",
   "bryan@numat.ph": "Bryan",
+  "erica@numat.ph": "Erica",
   "mohan@numat.ph": "Mohan",
   "eugene@numat.ph": "Eugene",
 };
