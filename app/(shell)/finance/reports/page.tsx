@@ -2,8 +2,10 @@
 // Reports landing page. Add more report types here as you build them.
 
 import Link from "next/link";
+import { requireAnyFeature } from "@/lib/portal/roles";
 
-export default function ReportsIndexPage() {
+export default async function ReportsIndexPage() {
+  await requireAnyFeature(["financials", "reports"]);
   const reports = [
     {
       href: "/finance/reports/pl",
