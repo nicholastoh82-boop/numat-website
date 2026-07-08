@@ -29,7 +29,7 @@ export async function POST(req: Request) {
 
     await resend.emails.send({
       from: 'noreply@numat.ph',
-      to: ['sales@numat.ph', 'mohan@numat.ph', 'nick@numat.ph'],
+      to: ['sales@numat.ph', 'nick@numat.ph'],
       subject: `🌿 New Lead: ${name} – ${interest === 'sample' ? 'Free Sample' : 'Quote Request'}`,
       html: `
         <h2 style="color:#0d1b2a">New Lead Captured</h2>

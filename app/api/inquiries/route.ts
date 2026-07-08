@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           from: process.env.RESEND_FROM_EMAIL,
-          to: ['sales@numat.ph', 'mohan@numat.ph', 'nick@numat.ph'],
+          to: ['sales@numat.ph', 'nick@numat.ph'],
           reply_to: email.trim().toLowerCase(),
           subject: `New Inquiry: ${subject} — ${name}`,
           html: generateInquiryNotificationHTML({
