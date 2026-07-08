@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js'
 import { detectSpam, sanitizeInput } from '@/lib/spam-detection'
-import { sendEmail } from '@/lib/sendgrid'
+import { sendEmail, sendNotificationEmail } from '@/lib/sendgrid'
 import { generateQuoteEmailHTML } from '@/lib/email-templates'
 
 interface QuoteContact {
@@ -31,6 +31,10 @@ interface QuoteItem {
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 const RATE_LIMIT = 10
 const RATE_LIMIT_WINDOW = 60000
+
+// Recipient alerted on every inbound website quote submission. Erica heads the
+// CRM, so she gets each new request. Change this address to reroute the alert.
+const INBOUND_LEAD_NOTIFY = 'erica@numat.ph'
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()
@@ -200,6 +204,65 @@ export async function POST(request: NextRequest) {
         },
         { status: isFloorBlock ? 422 : 500 }
       )
+    }
+
+    // Notify the inbound lead owner on every website quote submission,
+    // whichever delivery channel the visitor picked. This is a side alert:
+    // a failure here must never break the submission, so it is caught and logged.
+    try {
+      const esc = (s: string | null | undefined) =>
+        String(s ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+
+      const itemRows = items
+        .map(
+          (it) => `
+      <tr>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee;">${esc(it.product_name)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee;color:#555;">${esc(it.product_specs)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">${it.quantity}</td>
+      </tr>`
+        )
+        .join('')
+
+      const notifyHtml = `
+    <div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:640px;">
+      <h2 style="margin:0 0 4px;">New quote request from the website</h2>
+      <p style="margin:0 0 16px;color:#555;">Reference ${esc(createdQuoteNumber)}</p>
+      <table style="border-collapse:collapse;margin-bottom:16px;">
+        <tr><td style="padding:4px 12px 4px 0;color:#555;">Name</td><td style="padding:4px 0;"><strong>${esc(contact.name)}</strong></td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#555;">Company</td><td style="padding:4px 0;">${esc(contact.company) || 'Not given'}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#555;">Email</td><td style="padding:4px 0;">${esc(contact.email)}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#555;">Phone</td><td style="padding:4px 0;">${esc(formattedPhone)}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#555;">Preferred channel</td><td style="padding:4px 0;">${esc(contact.channel)}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#555;">Application</td><td style="padding:4px 0;">${esc(contact.application) || 'Not given'}</td></tr>
+      </table>
+      ${contact.notes ? `<p style="margin:0 0 16px;"><span style="color:#555;">Notes:</span><br>${esc(contact.notes)}</p>` : ''}
+      <table style="border-collapse:collapse;width:100%;margin-bottom:12px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #111;">Product</th>
+            <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #111;">Specs</th>
+            <th style="text-align:right;padding:6px 10px;border-bottom:2px solid #111;">Qty</th>
+          </tr>
+        </thead>
+        <tbody>${itemRows}</tbody>
+      </table>
+      <p style="margin:0;color:#555;">Preview total ${esc(contact.display_currency ?? 'USD')} ${Math.round(
+        contact.display_total ?? total
+      ).toLocaleString()}</p>
+    </div>`
+
+      await sendNotificationEmail({
+        to: INBOUND_LEAD_NOTIFY,
+        subject: `New quote request: ${contact.name}${contact.company ? ` (${contact.company})` : ''}`,
+        html: notifyHtml,
+      })
+      console.log(`[Inbound Lead Notify] Sent to ${INBOUND_LEAD_NOTIFY} for ${createdQuoteNumber}`)
+    } catch (notifyErr) {
+      console.error('[Inbound Lead Notify] Failed to send:', notifyErr)
     }
 
     // Send email directly
