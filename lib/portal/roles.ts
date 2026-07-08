@@ -92,6 +92,16 @@ export async function requireFeature(feature: string): Promise<PortalUser> {
   redirect('/portal/no-access')
 }
 
+// Passes if the person has any one of the listed features (admins always pass).
+// Used for pages reachable under more than one grant, for example the New
+// Transaction page which both financials and receipts holders may open.
+export async function requireAnyFeature(features: string[]): Promise<PortalUser> {
+  const user = await requirePortalUser()
+  if (user.isAdmin) return user
+  if (features.some((f) => user.features.includes(f))) return user
+  redirect('/portal/no-access')
+}
+
 export async function requireAdmin(): Promise<PortalUser> {
   const user = await requirePortalUser()
   if (!user.isAdmin) redirect('/portal/no-access')
