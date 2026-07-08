@@ -15,6 +15,42 @@ import EnrichmentDrawer from '@/components/crm/EnrichmentDrawer'
 // stay assignable and keep showing up in the rep dropdown.
 const MANAGER_EMAILS = ['erica@numat.ph']
 
+// Pipeline hygiene checks. Each flags leads whose figures are missing or stale,
+// so they can be found and fixed from the CRM list via the quick filter chips.
+const HYGIENE_CHECKS: { key: string; label: string }[] = [
+  { key: 'needs_value', label: 'Needs value' },
+  { key: 'past_close', label: 'Past close date' },
+  { key: 'unassigned', label: 'Unassigned' },
+  { key: 'inactive_rep', label: 'Inactive rep' },
+  { key: 'stale', label: 'No activity 14 days' },
+]
+// Stages where a deal value is expected. Used for both the hygiene flag and the
+// rail that blocks advancing without a value.
+const NEEDS_VALUE_STAGES = ['proposal_sent', 'negotiation']
+const ACTIVE_WORK_STAGES = ['contacted', 'qualified', 'proposal_sent', 'meeting_booked', 'negotiation']
+
+function leadHasDealValue(l: { deal_value_php: number | null; deal_value_usd: number | null }): boolean {
+  return (Number(l.deal_value_php) || 0) > 0 || (Number(l.deal_value_usd) || 0) > 0
+}
+
+function hygieneMatch(l: Lead, key: string, validOwners: Set<string>, todayStr: string, staleBeforeIso: string): boolean {
+  const stage = l.pipeline_stage || 'new'
+  switch (key) {
+    case 'needs_value':
+      return NEEDS_VALUE_STAGES.includes(stage) && !leadHasDealValue(l)
+    case 'past_close':
+      return !!l.close_date && String(l.close_date).slice(0, 10) < todayStr && stage !== 'won' && stage !== 'lost'
+    case 'unassigned':
+      return !l.rep_email
+    case 'inactive_rep':
+      return !!l.rep_email && !validOwners.has(l.rep_email.toLowerCase())
+    case 'stale':
+      return ACTIVE_WORK_STAGES.includes(stage) && (!l.last_activity_at || String(l.last_activity_at) < staleBeforeIso)
+    default:
+      return true
+  }
+}
+
 interface Lead {
   id: string
   first_name: string | null
@@ -338,6 +374,8 @@ export default function CRMDashboard() {
   const [stageFilter, setStageFilter] = useState('all')
   const [repFilter, setRepFilter] = useState('all')
   const [segmentFilter, setSegmentFilter] = useState('all')
+  const [hygieneFilter, setHygieneFilter] = useState('none')
+  const [activeOwnerEmails, setActiveOwnerEmails] = useState<Set<string>>(new Set())
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [saving, setSaving] = useState<string | null>(null)
@@ -450,6 +488,10 @@ export default function CRMDashboard() {
           .map(r => ({ email: r.email, name: r.rep_assigned_name || r.name || r.email.split('@')[0] }))
       )
     }
+    // Active owners (any active CRM user) for the "assigned to an inactive rep"
+    // hygiene check.
+    const { data: owners } = await supabase.from('crm_users').select('email').eq('is_active', true)
+    if (owners) setActiveOwnerEmails(new Set((owners as { email: string }[]).map(o => o.email.toLowerCase())))
     const { data: vs } = await supabase.from('crm_viewer_settings').select('*').eq('id', 1).single()
     if (vs) setViewerSettings(vs as ViewerSettings)
     return data as CRMUser
@@ -631,8 +673,24 @@ export default function CRMDashboard() {
     if (stageFilter !== 'all') result = result.filter(l => l.pipeline_stage === stageFilter)
     if (repFilter !== 'all') result = result.filter(l => l.rep_email === repFilter)
     if (segmentFilter !== 'all') result = result.filter(l => (l.segment || 'Unspecified') === segmentFilter)
+    if (hygieneFilter !== 'none') {
+      const todayStr = new Date().toISOString().slice(0, 10)
+      const staleBeforeIso = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+      result = result.filter(l => hygieneMatch(l, hygieneFilter, activeOwnerEmails, todayStr, staleBeforeIso))
+    }
     setFiltered(result)
-  }, [leads, search, stageFilter, repFilter, segmentFilter])
+  }, [leads, search, stageFilter, repFilter, segmentFilter, hygieneFilter, activeOwnerEmails])
+
+  // Counts for the hygiene chips, over everything the user can see.
+  const hygieneCounts = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10)
+    const staleBeforeIso = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+    const counts: Record<string, number> = {}
+    for (const c of HYGIENE_CHECKS) {
+      counts[c.key] = leads.filter(l => hygieneMatch(l, c.key, activeOwnerEmails, todayStr, staleBeforeIso)).length
+    }
+    return counts
+  }, [leads, activeOwnerEmails])
 
   // Reset to the first page whenever the filters change (but not when the
   // leads array updates from an edit, so an inline edit does not jump pages).
@@ -1958,6 +2016,24 @@ export default function CRMDashboard() {
           </div>
         )}
 
+        <div className="flex flex-wrap gap-2 mb-4">
+          {HYGIENE_CHECKS.map(c => {
+            const count = hygieneCounts[c.key] || 0
+            const active = hygieneFilter === c.key
+            return (
+              <button key={c.key} type="button"
+                onClick={() => setHygieneFilter(active ? 'none' : c.key)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${active ? 'bg-amber-600 text-white border-amber-600' : count > 0 ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
+                {c.label}
+                <span className={`inline-flex items-center justify-center min-w-[1.25rem] px-1 rounded-full text-[11px] ${active ? 'bg-white/25' : 'bg-white'}`}>{count}</span>
+              </button>
+            )
+          })}
+          {hygieneFilter !== 'none' && (
+            <button type="button" onClick={() => setHygieneFilter('none')} className="inline-flex items-center px-3 py-1.5 rounded-full text-xs text-gray-600 hover:bg-gray-100">Clear</button>
+          )}
+        </div>
+
         <div className="flex flex-wrap gap-3 mb-5">
           <input type="text" placeholder="Search name, company, email, city..." value={search}
             onChange={e => setSearch(e.target.value)}
@@ -2140,9 +2216,17 @@ export default function CRMDashboard() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div>
                         <label className="text-xs font-medium text-gray-400 block mb-1">Pipeline Stage</label>
-                        <select disabled={isViewer} defaultValue={lead.pipeline_stage || 'new'}
+                        <select disabled={isViewer} value={lead.pipeline_stage || 'new'}
                           onChange={e => {
                             const v = e.target.value
+                            if (NEEDS_VALUE_STAGES.includes(v) && !leadHasDealValue(lead)) {
+                              showToast('Add a deal value before moving to ' + (STAGE_LABELS[v] || v), 'error')
+                              return
+                            }
+                            if ((v === 'won' || v === 'lost') && !lead.close_date) {
+                              showToast('Set a close date before marking ' + (v === 'won' ? 'Won' : 'Lost'), 'error')
+                              return
+                            }
                             const patch: Record<string, unknown> = { pipeline_stage: v }
                             if (v === 'won' && !lead.order_completed_at) patch.order_completed_at = new Date().toISOString()
                             updateLead(lead.id, patch)
