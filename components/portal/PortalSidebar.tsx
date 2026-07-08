@@ -10,19 +10,11 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { PORTAL_NAV } from '@/lib/portal/nav'
+import { PORTAL_NAV, canSee, type PortalNavItem } from '@/lib/portal/nav'
 
 const ALWAYS_ADMIN = ['nick@numat.ph']
 
-type NavItem = {
-  href: string
-  label: string
-  // 'baseline' shows for everyone, 'admin' shows for admins only,
-  // anything else is a feature key checked against the user's access.
-  feature: string
-}
-
-const ALL_ITEMS: NavItem[] = PORTAL_NAV
+const ALL_ITEMS: PortalNavItem[] = PORTAL_NAV
 
 export default function PortalSidebar() {
   const pathname = usePathname()
@@ -99,13 +91,8 @@ export default function PortalSidebar() {
     return <aside className="hidden md:block w-60 shrink-0 border-r border-gray-200 bg-white" aria-hidden />
   }
 
-  const allowed = (item: NavItem) => {
-    if (item.feature === 'baseline') return true
-    if (item.feature === 'admin') return isAdmin
-    return isAdmin || features.includes(item.feature)
-  }
-
-  const items = ALL_ITEMS.filter(allowed)
+  const access = { isAdmin, features }
+  const items = ALL_ITEMS.filter((item) => canSee(item, access))
 
   if (items.length === 0) {
     return null
@@ -180,8 +167,15 @@ export default function PortalSidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center justify-between px-3 py-2 text-sm rounded ${
-                  active ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'
+                title={item.tooltip}
+                className={`flex items-center justify-between py-2 text-sm rounded ${
+                  item.indent ? 'pr-3 pl-8' : 'px-3'
+                } ${
+                  active
+                    ? 'bg-gray-900 text-white'
+                    : item.indent
+                      ? 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                      : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 <span>{item.label}</span>
