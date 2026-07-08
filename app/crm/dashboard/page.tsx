@@ -339,6 +339,7 @@ export default function CRMDashboard() {
   const [repFilter, setRepFilter] = useState('all')
   const [segmentFilter, setSegmentFilter] = useState('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
   const [saving, setSaving] = useState<string | null>(null)
   const [quoteModal, setQuoteModal] = useState<{
     lead: Lead;
@@ -632,6 +633,18 @@ export default function CRMDashboard() {
     if (segmentFilter !== 'all') result = result.filter(l => (l.segment || 'Unspecified') === segmentFilter)
     setFiltered(result)
   }, [leads, search, stageFilter, repFilter, segmentFilter])
+
+  // Reset to the first page whenever the filters change (but not when the
+  // leads array updates from an edit, so an inline edit does not jump pages).
+  useEffect(() => { setPage(0) }, [search, stageFilter, repFilter, segmentFilter])
+
+  // Client side pagination for the lead list. Only a page of rows is mounted at
+  // a time, so clicking a lead no longer re-renders thousands of rows. The stat
+  // cards still count the full filtered set; only the rendered list is paged.
+  const LIST_PAGE_SIZE = 50
+  const listPageCount = Math.max(1, Math.ceil(filtered.length / LIST_PAGE_SIZE))
+  const listPage = Math.min(page, listPageCount - 1)
+  const pageLeads = filtered.slice(listPage * LIST_PAGE_SIZE, listPage * LIST_PAGE_SIZE + LIST_PAGE_SIZE)
 
   const saveViewerSettings = async (next: ViewerSettings) => {
     setViewerSettings(next)
@@ -1985,6 +1998,20 @@ export default function CRMDashboard() {
             </button>
           </div>
         )}
+        {filtered.length > LIST_PAGE_SIZE && (
+          <div className="flex items-center justify-between gap-2 mb-3 text-sm flex-wrap">
+            <span className="text-gray-500">
+              Showing {listPage * LIST_PAGE_SIZE + 1} to {Math.min((listPage + 1) * LIST_PAGE_SIZE, filtered.length)} of {filtered.length.toLocaleString()}
+            </span>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => { setExpandedId(null); setPage(Math.max(0, listPage - 1)) }} disabled={listPage <= 0}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Prev</button>
+              <span className="text-gray-500">Page {listPage + 1} of {listPageCount}</span>
+              <button type="button" onClick={() => { setExpandedId(null); setPage(Math.min(listPageCount - 1, listPage + 1)) }} disabled={listPage >= listPageCount - 1}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Next</button>
+            </div>
+          </div>
+        )}
         <div className="space-y-2">
           {filtered.length === 0 && (
             <div className="text-center py-16 text-gray-400">
@@ -1992,7 +2019,7 @@ export default function CRMDashboard() {
               <p className="text-sm mt-1">Adjust your search or filters</p>
             </div>
           )}
-          {filtered.map(lead => {
+          {pageLeads.map(lead => {
             const displayName = lead.first_name || lead.full_name?.split(' ')[0] || 'Unknown'
             const isExpanded = expandedId === lead.id
             const stageColor = STAGE_COLORS[lead.pipeline_stage || 'new'] || 'bg-gray-100 text-gray-600'
