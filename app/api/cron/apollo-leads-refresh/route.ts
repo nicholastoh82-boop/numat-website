@@ -125,7 +125,7 @@ type LeadRecord = {
   segment: string;
   priority_score: number;
   priority_tier: "hot" | "warm" | "cool" | "cold";
-  rep_assigned: "Bryan" | "Mohan";
+  rep_assigned: "Bryan" | "Erica";
   rep_email: string;
   status: string;
   source: string;
@@ -180,9 +180,9 @@ function tierFor(score: number): LeadRecord["priority_tier"] {
   return "cold";
 }
 
-function assignRep(country: string): { rep_assigned: "Bryan" | "Mohan"; rep_email: string } {
+function assignRep(country: string): { rep_assigned: "Bryan" | "Erica"; rep_email: string } {
   if ((country ?? "").toLowerCase() === "philippines") return { rep_assigned: "Bryan", rep_email: "bryan@numat.ph" };
-  return { rep_assigned: "Mohan", rep_email: "mohan@numat.ph" };
+  return { rep_assigned: "Erica", rep_email: "erica@numat.ph" };
 }
 
 // ============================================================================
