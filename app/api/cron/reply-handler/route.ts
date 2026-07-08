@@ -203,6 +203,7 @@ const REP_EMAIL_FOR: Record<RepKey, string> = {
   Mohan: "mohan@numat.ph",
   Bryan: "bryan@numat.ph",
   Eugene: "eugene@numat.ph",
+  Erica: "erica@numat.ph",
 };
 
 const REP_NAME_FOR: Record<RepKey, string> = {
@@ -210,6 +211,7 @@ const REP_NAME_FOR: Record<RepKey, string> = {
   Mohan: "Mohan Louis",
   Bryan: "Bryan Suarin",
   Eugene: "Eugene Chan",
+  Erica: "Erica Lu",
 };
 
 // Fetch the rep's saved Gmail signature HTML (set via /crm/profile), if any.
