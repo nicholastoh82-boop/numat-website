@@ -1566,7 +1566,7 @@ export default function ProductDetailPage() {
                   </button>
 
                   <a
-                    href={`https://wa.me/60162958983?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
+                    href={`https://wa.me/639613076458?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
@@ -1607,7 +1607,7 @@ export default function ProductDetailPage() {
                 Add to Quote
               </button>
               <a
-                href={`https://wa.me/60162958983?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
+                href={`https://wa.me/639613076458?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center rounded-full border border-emerald-600 bg-emerald-600 px-4 py-3 text-stone-50 transition hover:bg-emerald-700"

@@ -244,7 +244,7 @@ export const localBusinessSchema = {
     addressCountry: 'PH',
   },
   email: 'sales@numat.ph',
-  telephone: '+60162958983',
+  telephone: '+639613076458',
   priceRange: '$$',
   currenciesAccepted: 'PHP USD SGD MYR',
   paymentAccepted: 'Bank Transfer, TT',

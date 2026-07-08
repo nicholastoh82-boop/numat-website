@@ -68,7 +68,7 @@ export default function ContactPage() {
                     <div>
                       <h3 className="font-semibold text-foreground">Phone</h3>
                       <p className="text-muted-foreground mt-1">
-                        +60 16-295 8983
+                        +63 961 307 6458
                       </p>
                     </div>
                   </div>

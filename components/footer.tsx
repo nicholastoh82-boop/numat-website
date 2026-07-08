@@ -62,7 +62,7 @@ export default function Footer() {
 
             <div className="mt-6 space-y-2 text-sm text-white/68">
               <p>Sales: sales@numat.ph</p>
-              <p>WhatsApp: +60162958983</p>
+              <p>WhatsApp: +639613076458</p>
               <a
                 href="https://www.facebook.com/NuMatPH/"
                 target="_blank"
