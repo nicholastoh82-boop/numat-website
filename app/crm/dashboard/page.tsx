@@ -10,6 +10,11 @@ import LeadTimelineDrawer from '@/components/crm/LeadTimelineDrawer'
 import QualificationFormDrawer from '@/components/crm/QualificationFormDrawer'
 import EnrichmentDrawer from '@/components/crm/EnrichmentDrawer'
 
+// Non admin people who can assign leads across every rep and see all leads, for
+// example the Head of Marketing. They remain a normal rep otherwise, so they
+// stay assignable and keep showing up in the rep dropdown.
+const MANAGER_EMAILS = ['erica@numat.ph']
+
 interface Lead {
   id: string
   first_name: string | null
@@ -321,6 +326,8 @@ export default function CRMDashboard() {
   const [viewerPanelOpen, setViewerPanelOpen] = useState(false)
   const [viewerSaving, setViewerSaving] = useState(false)
   const isViewer = user?.role === 'viewer'
+  const canManageAssignments =
+    user?.role === 'admin' || (!!user?.email && MANAGER_EMAILS.includes(user.email.toLowerCase()))
   const canSeeDealValues = !(user?.role === 'viewer') || viewerSettings.show_deal_values
   const canSeeContact = !(user?.role === 'viewer') || viewerSettings.show_contact_details
   const [leads, setLeads] = useState<Lead[]>([])
@@ -461,7 +468,7 @@ export default function CRMDashboard() {
         .order('created_at', { ascending: false })
         .range(from, from + PAGE_SIZE - 1)
 
-      if (crmUser.role === 'rep') {
+      if (crmUser.role === 'rep' && !MANAGER_EMAILS.includes((crmUser.email || '').toLowerCase())) {
         query = query.eq('rep_email', crmUser.email)
       }
 
@@ -478,7 +485,7 @@ export default function CRMDashboard() {
     // Which leads have a form submission (source_payload). Ids only, so the list
     // stays light. The Form button uses this set instead of loading the payload.
     let formQuery = supabase.from('master_leads').select('id').not('source_payload', 'is', null)
-    if (crmUser.role === 'rep') formQuery = formQuery.eq('rep_email', crmUser.email)
+    if (crmUser.role === 'rep' && !MANAGER_EMAILS.includes((crmUser.email || '').toLowerCase())) formQuery = formQuery.eq('rep_email', crmUser.email)
     const { data: formRows } = await formQuery
     setLeadsWithForm(new Set(((formRows || []) as { id: string }[]).map((r) => r.id)))
   }, [supabase])
@@ -1630,8 +1637,11 @@ export default function CRMDashboard() {
     const isPlaceholderEmail = !rawEmail
     setAddLeadSubmitting(true)
     if (isViewer) { setAddLeadSubmitting(false); return }
-    // Non-admins can only create leads assigned to themselves
-    const repEmail = user.role === 'admin' ? (newLead.rep_email || null) : user.email
+    // Managers and admins can assign to any rep; everyone else self-assigns.
+    const repEmail =
+      user.role === 'admin' || MANAGER_EMAILS.includes((user.email || '').toLowerCase())
+        ? (newLead.rep_email || null)
+        : user.email
     const repName = repEmail
       ? (repList.find(r => r.email === repEmail)?.name || repEmail.split('@')[0])
       : null
@@ -1944,7 +1954,7 @@ export default function CRMDashboard() {
             <option value="all">All Stages</option>
             {PIPELINE_STAGES.map(s => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
           </select>
-          {user?.role === 'admin' && repOptions.length > 0 && (
+          {canManageAssignments && repOptions.length > 0 && (
             <select value={repFilter} onChange={e => setRepFilter(e.target.value)}
               className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
               <option value="all">All Reps</option>
@@ -2319,18 +2329,13 @@ export default function CRMDashboard() {
                           )}
                         </select>
                       </div>
-                      {user?.role === 'admin' && (
+                      {canManageAssignments && (
                         <div>
                           <label className="text-xs font-medium text-gray-400 block mb-1">Rep Assigned</label>
                           <select disabled={isViewer} defaultValue={lead.rep_email || ''}
                             onChange={e => {
                               const email = e.target.value
-                              const repNameMap: Record<string,string> = {
-                                'mohan@numat.ph': 'Mohan',
-                                'bryan@numat.ph': 'Bryan',
-                                'eugene@numat.ph': 'Eugene',
-                              }
-                              const name = repNameMap[email] || email.split('@')[0]
+                              const name = email ? (repList.find(r => r.email === email)?.name || email.split('@')[0]) : ''
                               updateLead(lead.id, {
                                 rep_email: email || null,
                                 rep_assigned: email ? name : null,
@@ -2339,9 +2344,7 @@ export default function CRMDashboard() {
                             }}
                             className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                             <option value="">— Unassigned —</option>
-                            <option value="mohan@numat.ph">Mohan (International)</option>
-                            <option value="bryan@numat.ph">Bryan (Philippines)</option>
-                            <option value="eugene@numat.ph">Eugene (Philippines)</option>
+                            {repList.map(r => <option key={r.email} value={r.email}>{r.name}</option>)}
                           </select>
                         </div>
                       )}
@@ -3468,7 +3471,7 @@ export default function CRMDashboard() {
                       className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                   </div>
                 </div>
-                {user?.role === 'admin' && (
+                {canManageAssignments && (
                   <div>
                     <label className="text-xs font-medium text-gray-500 block mb-1">Assign To</label>
                     <select value={newLead.rep_email}
@@ -3489,7 +3492,7 @@ export default function CRMDashboard() {
               </div>
 
               <div className="bg-green-50 rounded-xl px-4 py-3 text-xs text-green-700">
-                This lead will be saved with <strong>source: manual</strong>. {user?.role !== 'admin' && <>It will be auto-assigned to <strong>{user?.email}</strong>.</>}
+                This lead will be saved with <strong>source: manual</strong>. {!canManageAssignments && <>It will be auto-assigned to <strong>{user?.email}</strong>.</>}
               </div>
             </div>
 
