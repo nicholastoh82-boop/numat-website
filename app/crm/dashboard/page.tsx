@@ -378,6 +378,9 @@ export default function CRMDashboard() {
   const [activeOwnerEmails, setActiveOwnerEmails] = useState<Set<string>>(new Set())
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [page, setPage] = useState(0)
+  // Detail fields are not fetched in the list; they load when a lead is opened.
+  const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null)
+  const [detailLoadedIds, setDetailLoadedIds] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState<string | null>(null)
   const [quoteModal, setQuoteModal] = useState<{
     lead: Lead;
@@ -498,7 +501,9 @@ export default function CRMDashboard() {
   }, [supabase, router])
 
   const loadLeads = useCallback(async (crmUser: CRMUser) => {
-    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,priority_tier,notes,deal_value_php,deal_value_usd,proposal_signed_at,payment_due_at,order_completed_at,quoted_at,quote_currency,quote_notes,quote_issued_by,last_activity_at,created_at,title,website,linkedin_url,email_sent_at,replied_at,last_email_sent,last_activity_type,reply_classification,appointment_date,close_date,follow_up,booking_confirmed,won_lost,qty,unit,meeting_link,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,products_offered,employee_size_band,icp_fit_score,buying_signal_strength,buying_signal_detected_at,buying_signal_scanned_at,last_enriched_at,product_focus,marketing_sourced'
+    setDetailLoadedIds(new Set())
+    setExpandedId(null)
+    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,deal_value_php,deal_value_usd,quoted_at,last_activity_at,created_at,last_email_sent,close_date,qty,unit,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,icp_fit_score,buying_signal_strength,last_enriched_at'
     const PAGE_SIZE = 1000
     const allLeads: Lead[] = []
     let from = 0
@@ -518,7 +523,7 @@ export default function CRMDashboard() {
       const { data, error } = await query
       if (error) { showToast('Failed to load leads', 'error'); return }
       if (!data || data.length === 0) break
-      allLeads.push(...data)
+      allLeads.push(...(data as unknown as Lead[]))
       if (data.length < PAGE_SIZE) break
       from += PAGE_SIZE
     }
@@ -538,11 +543,28 @@ export default function CRMDashboard() {
   const openEnrichment = useCallback(async (lead: Lead) => {
     const { data } = await supabase
       .from('master_leads')
-      .select('business_description,icp_fit_reason,pain_hooks,product_recommendations,buying_signal_summary,buying_signal_evidence')
+      .select('business_description,icp_fit_reason,pain_hooks,product_recommendations,buying_signal_summary,buying_signal_evidence,products_offered,employee_size_band,buying_signal_detected_at,buying_signal_scanned_at')
       .eq('id', lead.id)
       .maybeSingle()
     setSelectedLeadForEnrichment({ ...lead, ...((data || {}) as Partial<Lead>) })
   }, [supabase])
+
+  // Open a lead: fetch its detail fields (kept out of the list query for speed),
+  // merge them in, then expand. Toggling a loaded lead is instant.
+  const toggleExpand = async (lead: Lead) => {
+    if (expandedId === lead.id) { setExpandedId(null); return }
+    if (detailLoadedIds.has(lead.id)) { setExpandedId(lead.id); return }
+    setLoadingDetailId(lead.id)
+    const { data } = await supabase
+      .from('master_leads')
+      .select('id,notes,proposal_signed_at,payment_due_at,order_completed_at,quote_notes,quote_issued_by,title,reply_classification,appointment_date,follow_up,product_focus,marketing_sourced')
+      .eq('id', lead.id)
+      .maybeSingle()
+    if (data) setLeads(prev => prev.map(l => (l.id === lead.id ? { ...l, ...(data as Partial<Lead>) } : l)))
+    setDetailLoadedIds(prev => new Set(prev).add(lead.id))
+    setLoadingDetailId(null)
+    setExpandedId(lead.id)
+  }
 
   const loadQuotes = useCallback(async () => {
     const { data } = await supabase
@@ -2105,10 +2127,11 @@ export default function CRMDashboard() {
             return (
               <div key={lead.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="flex flex-col md:flex-row md:items-center px-4 py-3 cursor-pointer hover:bg-gray-50 select-none gap-3 md:gap-0"
-                  onClick={() => setExpandedId(isExpanded ? null : lead.id)}>
+                  onClick={() => toggleExpand(lead)}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-800">{displayName}</span>
+                      {loadingDetailId === lead.id && <span className="inline-block w-3 h-3 border-2 border-green-500 border-t-transparent rounded-full animate-spin" aria-label="Loading" />}
                       {lead.company && <span className="text-gray-500 text-sm">{lead.company}</span>}
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${stageColor}`}>{stageLabel}</span>
                       {lead.status && (
