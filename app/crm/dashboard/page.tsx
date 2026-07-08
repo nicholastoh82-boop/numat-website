@@ -51,6 +51,13 @@ function hygieneMatch(l: Lead, key: string, validOwners: Set<string>, todayStr: 
   }
 }
 
+// Session cache of the loaded leads, keyed by user, so returning to the CRM
+// within a session shows instantly and then revalidates in the background. It
+// is only reused when the current user matches, so one person never sees
+// another's cached leads.
+let cachedLeads: Lead[] | null = null
+let cachedLeadsUser: string | null = null
+
 interface Lead {
   id: string
   first_name: string | null
@@ -529,6 +536,8 @@ export default function CRMDashboard() {
     }
 
     setLeads(allLeads)
+    cachedLeads = allLeads
+    cachedLeadsUser = crmUser.email
 
     // Which leads have a form submission (source_payload). Ids only, so the list
     // stays light. The Form button uses this set instead of loading the payload.
@@ -648,8 +657,10 @@ export default function CRMDashboard() {
   useEffect(() => {
     setLoading(true)
     loadUser().then(u => {
-      if (u) loadLeads(u).then(() => { setLoading(false); loadQuotes(); loadReceipts(); loadSamples(); loadPayments() })
-      else setLoading(false)
+      if (!u) { setLoading(false); return }
+      // Show this user's cached leads instantly if we have them, then revalidate.
+      if (cachedLeads && cachedLeadsUser === u.email) { setLeads(cachedLeads); setLoading(false) }
+      loadLeads(u).then(() => { setLoading(false); loadQuotes(); loadReceipts(); loadSamples(); loadPayments() })
     })
   }, [loadUser, loadLeads, loadQuotes, loadReceipts, loadSamples, loadPayments])
 
