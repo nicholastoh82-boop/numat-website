@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { notifyUsers } from '@/lib/portal/push'
+import { sendNotificationEmail } from '@/lib/sendgrid'
+
+function escapeHtml(s: string): string {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
 
 // Managers can assign tasks and see every task. Everyone else (the reps) sees and
 // updates only their own. Erica, Nick, and Mark are the managers.
@@ -100,6 +106,56 @@ export async function POST(request: NextRequest) {
     console.error('[rep-tasks] create failed:', error)
     return NextResponse.json({ error: 'Could not create the task.' }, { status: 500 })
   }
+
+  // Notify the rep. A push and in-portal notification (instant, if they have a
+  // device subscribed) plus an email (reliable, everyone has one). Best effort:
+  // a notification problem must never fail the task creation.
+  try {
+    const assignerLabel = me?.name || email.split('@')[0]
+    const dueLine = body?.due_date ? `, due ${body.due_date}` : ''
+    const summary = `${title}${dueLine}`
+
+    try {
+      const { data: userList } = await db.auth.admin.listUsers()
+      const repUser = userList?.users?.find((u) => u.email?.toLowerCase() === assignedTo)
+      if (repUser?.id) {
+        await notifyUsers({
+          userIds: [repUser.id],
+          title: `New task from ${assignerLabel}`,
+          body: summary,
+          url: '/portal/rep-tasks',
+        })
+      }
+    } catch (pushErr) {
+      console.error('[rep-tasks] push notify failed:', pushErr)
+    }
+
+    try {
+      await sendNotificationEmail({
+        to: assignedTo,
+        subject: `New task from ${assignerLabel}: ${title}`,
+        html: `
+          <div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:560px;">
+            <h2 style="margin:0 0 8px;">You have a new task</h2>
+            <p style="margin:0 0 16px;color:#555;">${escapeHtml(assignerLabel)} assigned you a task in the NUMAT portal.</p>
+            <table style="border-collapse:collapse;">
+              <tr><td style="padding:4px 12px 4px 0;color:#555;">Task</td><td style="padding:4px 0;"><strong>${escapeHtml(title)}</strong></td></tr>
+              ${body?.due_date ? `<tr><td style="padding:4px 12px 4px 0;color:#555;">Due</td><td style="padding:4px 0;">${escapeHtml(String(body.due_date))}</td></tr>` : ''}
+              <tr><td style="padding:4px 12px 4px 0;color:#555;">Priority</td><td style="padding:4px 0;">${['low', 'normal', 'high'].includes(body?.priority) ? body.priority : 'normal'}</td></tr>
+              ${body?.description ? `<tr><td style="padding:4px 12px 4px 0;color:#555;vertical-align:top;">Details</td><td style="padding:4px 0;">${escapeHtml(String(body.description))}</td></tr>` : ''}
+            </table>
+            <p style="margin:16px 0 0;">
+              <a href="https://numatbamboo.com/portal/rep-tasks" style="display:inline-block;background:#111;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Open your tasks</a>
+            </p>
+          </div>`,
+      })
+    } catch (mailErr) {
+      console.error('[rep-tasks] email notify failed:', mailErr)
+    }
+  } catch (notifyErr) {
+    console.error('[rep-tasks] notify failed:', notifyErr)
+  }
+
   return NextResponse.json({ ok: true, id: data.id })
 }
 
