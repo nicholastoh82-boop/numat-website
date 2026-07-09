@@ -23,6 +23,7 @@ const HYGIENE_CHECKS: { key: string; label: string }[] = [
   { key: 'unassigned', label: 'Unassigned' },
   { key: 'inactive_rep', label: 'Inactive rep' },
   { key: 'stale', label: 'No activity 14 days' },
+  { key: 'inbound_new', label: 'Inbound to assign' },
 ]
 // Stages where a deal value is expected. Used for both the hygiene flag and the
 // rail that blocks advancing without a value.
@@ -46,6 +47,10 @@ function hygieneMatch(l: Lead, key: string, validOwners: Set<string>, todayStr: 
       return !!l.rep_email && !validOwners.has(l.rep_email.toLowerCase())
     case 'stale':
       return ACTIVE_WORK_STAGES.includes(stage) && (!l.last_activity_at || String(l.last_activity_at) < staleBeforeIso)
+    case 'inbound_new':
+      // Inbound leads still sitting with Erica, waiting to be distributed. They
+      // drop off this list as soon as she reassigns them to a rep.
+      return !!l.source_type && l.source_type.startsWith('inbound_') && (l.rep_email || '').toLowerCase() === 'erica@numat.ph'
     default:
       return true
   }
@@ -73,6 +78,7 @@ interface Lead {
   pipeline_stage: string | null
   rep_assigned: string | null
   rep_email: string | null
+  source_type: string | null
   priority_tier: string | null
   notes: string | null
   deal_value_php: number | null
@@ -510,7 +516,7 @@ export default function CRMDashboard() {
   const loadLeads = useCallback(async (crmUser: CRMUser) => {
     setDetailLoadedIds(new Set())
     setExpandedId(null)
-    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,deal_value_php,deal_value_usd,quoted_at,last_activity_at,created_at,last_email_sent,close_date,qty,unit,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,icp_fit_score,buying_signal_strength,last_enriched_at'
+    const SELECT_FIELDS = 'id,first_name,last_name,full_name,email,company,country,city,phone,segment,status,pipeline_stage,rep_assigned,rep_email,deal_value_php,deal_value_usd,quoted_at,last_activity_at,created_at,last_email_sent,close_date,qty,unit,last_rep_touch_at,last_rep_touch_by,last_rep_touch_subject,rep_reply_count,icp_fit_score,buying_signal_strength,last_enriched_at,source_type'
     const PAGE_SIZE = 1000
     const allLeads: Lead[] = []
     let from = 0

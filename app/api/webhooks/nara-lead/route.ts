@@ -71,6 +71,7 @@ export async function POST(req: Request) {
       notes: notesPreview,
       lead_source: "NARA Website Chat",
       source: "nara_chat",
+      source_type: "inbound_chat",
       pipeline_stage: "new",
       status: "active",
       rep_email: repEmail,
