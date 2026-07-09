@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { upsertInboundLead } from '@/lib/leads/inbound'
 
 /**
  * Webhook Handler for Twilio WhatsApp Events
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Handle incoming message
     if (data.Body || data.NumMedia) {
-      return await handleIncomingMessage(data as TwilioWebhookPayload, supabase)
+      return await handleIncomingMessage(data as TwilioWebhookPayload)
     }
 
     return NextResponse.json({
@@ -91,7 +92,7 @@ async function handleStatusCallback(
     }
 
     // Map Twilio status to our status
-    const status = mapTwilioStatus(MessageStatus)
+    const status = mapTwilioStatus(MessageStatus || '')
 
     // Update communication record
     const { error: updateError } = await supabase
@@ -132,82 +133,38 @@ async function handleStatusCallback(
 }
 
 /**
- * Handle incoming WhatsApp messages
+ * Handle incoming WhatsApp messages: turn each inbound message into a tracked
+ * CRM lead in master_leads (deduped by phone) with an owner, and log the message
+ * as an activity. Previously this wrote to customers and incoming_messages tables
+ * that do not exist, so inbound WhatsApp was silently lost.
  */
-async function handleIncomingMessage(
-  data: TwilioWebhookPayload,
-  supabase: any
-) {
+async function handleIncomingMessage(data: TwilioWebhookPayload) {
   const { From, To, Body, MessageSid, NumMedia } = data
+  const phoneNumber = From.replace('whatsapp:', '')
 
-  console.log(`[Webhook] Received incoming message from ${From}:`, Body || `[Media x${NumMedia}]`)
+  console.log(`[Webhook] Incoming WhatsApp from ${phoneNumber}:`, Body || `[Media x${NumMedia}]`)
 
   try {
-    // Extract phone number (WhatsApp format: whatsapp:+1234567890)
-    const phoneNumber = From.replace('whatsapp:', '')
-
-    // Find customer by phone number
-    const { data: customer, error: customerError } = await supabase
-      .from('customers')
-      .select('id, name, email')
-      .eq('phone', phoneNumber)
-      .single()
-
-    if (customerError) {
-      console.warn(`[Webhook] Could not find customer with phone ${phoneNumber}`)
-      // Still store the message for reference
-      await storeIncomingMessage(data, supabase, null)
-      return NextResponse.json({ success: true })
-    }
-
-    // Store incoming message
-    await storeIncomingMessage(data, supabase, customer?.id)
-
-    // Optional: Auto-respond or log for manual follow-up
-    console.log(`[Webhook] Stored incoming message from ${customer.name}`)
-
-    return NextResponse.json({
-      success: true,
-      customerId: customer.id,
-      message: 'Incoming message processed',
+    await upsertInboundLead({
+      phone: phoneNumber,
+      sourceType: 'inbound_whatsapp',
+      leadSource: 'Inbound WhatsApp',
+      contactChannel: 'whatsapp',
+      notes: Body ? String(Body).slice(0, 800) : null,
+      sourcePayload: {
+        message_sid: MessageSid,
+        from: phoneNumber,
+        to: To.replace('whatsapp:', ''),
+        body: Body ? String(Body).slice(0, 1000) : null,
+        media_count: Number(NumMedia) || 0,
+      },
     })
+
+    return NextResponse.json({ success: true, message: 'Incoming message recorded as a lead' })
   } catch (error) {
-    console.error('[Webhook] Error in handleIncomingMessage:', error)
+    console.error('[Webhook] Error recording incoming WhatsApp:', error)
+    // Always return 200 so Twilio does not retry.
     return NextResponse.json({ success: true })
-  }
-}
-
-/**
- * Store incoming message in database
- */
-async function storeIncomingMessage(
-  data: TwilioWebhookPayload,
-  supabase: any,
-  customerId?: string
-) {
-  const { From, To, Body, MessageSid, NumMedia } = data
-
-  try {
-    const { error } = await supabase
-      .from('incoming_messages')
-      .insert({
-        message_id: MessageSid,
-        from_phone: From.replace('whatsapp:', ''),
-        to_phone: To.replace('whatsapp:', ''),
-        body: Body || null,
-        has_media: NumMedia > 0,
-        media_count: NumMedia || 0,
-        customer_id: customerId,
-        platform: 'whatsapp',
-        raw_data: data,
-        received_at: new Date().toISOString(),
-      })
-
-    if (error) {
-      console.error('[Webhook] Error storing incoming message:', error)
-    }
-  } catch (error) {
-    console.error('[Webhook] Exception storing incoming message:', error)
   }
 }
 
