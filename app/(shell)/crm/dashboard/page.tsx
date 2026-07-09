@@ -1961,7 +1961,7 @@ export default function CRMDashboard() {
           </div>
         </details>
 
-        {user?.role === 'admin' && (
+        {canManageAssignments && (
           <div className="bg-white rounded-xl border border-gray-200 mb-5 overflow-hidden">
             <button
               onClick={() => setAnalyticsOpen(o => !o)}
