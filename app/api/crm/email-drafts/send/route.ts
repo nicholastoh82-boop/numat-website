@@ -124,9 +124,21 @@ export async function POST(req: NextRequest) {
   }
 
   const rep = repKeyFor(draft.rep_email);
-  if (!rep) {
+
+  // A rep can send if they have a connected mailbox (rep_gmail_tokens, the per rep
+  // OAuth flow) or, for the older setup, a known env token (a RepKey like Bryan).
+  // This lets Erica, Janna, and Lionel send once they connect, even though they
+  // are not in the legacy env-token list.
+  let connected = false;
+  try {
+    await getRepToken(draft.rep_email);
+    connected = true;
+  } catch {
+    connected = false;
+  }
+  if (!connected && !rep) {
     return NextResponse.json(
-      { error: `no Gmail token registered for ${draft.rep_email}` },
+      { error: `No Gmail connection for ${draft.rep_email}. Connect Gmail in the portal first.` },
       { status: 400 }
     );
   }
@@ -148,18 +160,6 @@ export async function POST(req: NextRequest) {
 
   let gmailMessageId: string;
   try {
-    // Prefer the rep's connected mailbox (rep_gmail_tokens, the per rep OAuth
-    // system). Fall back to the env-based token for reps who connected the older
-    // way (e.g. Bryan). This is what lets Erica actually send, since she connected
-    // through the per rep flow rather than an environment variable.
-    let connected = false;
-    try {
-      await getRepToken(draft.rep_email);
-      connected = true;
-    } catch {
-      connected = false;
-    }
-
     if (connected) {
       const sent = await sendGmailConnected({
         fromEmail: draft.rep_email,
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
       gmailMessageId = sent.messageId;
     } else {
       gmailMessageId = await sendGmail({
-        from: rep,
+        from: rep!,
         to: draft.recipient_email,
         subject: draft.subject || '(no subject)',
         html: fullHtml,
