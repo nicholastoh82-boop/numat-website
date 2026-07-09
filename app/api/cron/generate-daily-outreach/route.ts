@@ -76,13 +76,6 @@ const REPS: RepConfig[] = [
     filter: 'philippines',
   },
   {
-    key: 'janna_intl',
-    email: 'janna@numat.ph',
-    full_name: 'Janna Gutierez',
-    title: 'Sales Representative',
-    filter: 'international',
-  },
-  {
     key: 'lionel_ph',
     email: 'lionel@numat.ph',
     full_name: 'Lionel Tolibas',
