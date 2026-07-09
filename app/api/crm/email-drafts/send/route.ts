@@ -14,6 +14,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { sendGmail, RepKey, repEmailFor, ALL_REPS } from '@/lib/cron/helpers';
+import { getRepToken, sendGmail as sendGmailConnected } from '@/lib/gmail';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -147,15 +148,38 @@ export async function POST(req: NextRequest) {
 
   let gmailMessageId: string;
   try {
-    gmailMessageId = await sendGmail({
-      from: rep,
-      to: draft.recipient_email,
-      subject: draft.subject || '(no subject)',
-      html: fullHtml,
-      // Plain text fallback uses the raw draft body. Signature is omitted
-      // from the plaintext alternative since it's HTML markup.
-      text: draft.body || '',
-    });
+    // Prefer the rep's connected mailbox (rep_gmail_tokens, the per rep OAuth
+    // system). Fall back to the env-based token for reps who connected the older
+    // way (e.g. Bryan). This is what lets Erica actually send, since she connected
+    // through the per rep flow rather than an environment variable.
+    let connected = false;
+    try {
+      await getRepToken(draft.rep_email);
+      connected = true;
+    } catch {
+      connected = false;
+    }
+
+    if (connected) {
+      const sent = await sendGmailConnected({
+        fromEmail: draft.rep_email,
+        to: draft.recipient_email,
+        subject: draft.subject || '(no subject)',
+        bodyHtml: fullHtml,
+        bodyText: draft.body || '',
+      });
+      gmailMessageId = sent.messageId;
+    } else {
+      gmailMessageId = await sendGmail({
+        from: rep,
+        to: draft.recipient_email,
+        subject: draft.subject || '(no subject)',
+        html: fullHtml,
+        // Plain text fallback uses the raw draft body. Signature is omitted
+        // from the plaintext alternative since it's HTML markup.
+        text: draft.body || '',
+      });
+    }
   } catch (e) {
     return NextResponse.json(
       { error: `Gmail send failed: ${(e as Error).message}` },
