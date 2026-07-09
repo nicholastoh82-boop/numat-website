@@ -760,7 +760,7 @@ export default function CRMDashboard() {
   }
 
   const deleteLead = async (lead: Lead) => {
-    if (user?.role !== 'admin') return
+    if (!canManageAssignments) return
     const label = lead.full_name || lead.company || lead.email || 'this lead'
     if (!window.confirm(`Delete ${label}?\n\nThis permanently removes the lead and cannot be undone.`)) return
     setSaving(lead.id)
@@ -1906,8 +1906,8 @@ export default function CRMDashboard() {
             </div>
             <span className="font-semibold text-gray-800">NUMAT CRM</span>
             <span className="text-gray-400 text-sm hidden sm:block">{user?.name}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user?.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-              {user?.role}
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${canManageAssignments ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+              {user?.role === 'admin' ? 'admin' : canManageAssignments ? 'manager' : user?.role}
             </span>
             {user?.role === 'admin' && (
               <button onClick={() => setViewerPanelOpen(o => !o)}
