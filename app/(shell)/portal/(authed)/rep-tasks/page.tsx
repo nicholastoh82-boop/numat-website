@@ -127,6 +127,23 @@ export default function RepTasksPage() {
     }
   }
 
+  async function reassign(id: string, assigned_to_email: string) {
+    try {
+      const res = await fetch('/api/portal/rep-tasks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, assigned_to_email }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data?.error || 'Reassign failed')
+      }
+      await load()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Reassign failed')
+    }
+  }
+
   async function remove(id: string) {
     try {
       const res = await fetch(`/api/portal/rep-tasks?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
@@ -274,7 +291,23 @@ export default function RepTasksPage() {
                 return (
                   <tr key={t.id} className="border-t border-gray-100 align-top">
                     {isManager && (
-                      <td className="px-3 py-2 whitespace-nowrap text-gray-700">{t.assigned_to_name}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <select
+                          value={t.assigned_to_email}
+                          onChange={(e) => reassign(t.id, e.target.value)}
+                          className="text-gray-700 text-xs border border-transparent hover:border-gray-200 rounded px-1 py-0.5 bg-transparent cursor-pointer"
+                          title="Reassign this task"
+                        >
+                          {reps.some((r) => r.email === t.assigned_to_email) ? null : (
+                            <option value={t.assigned_to_email}>{t.assigned_to_name}</option>
+                          )}
+                          {reps.map((r) => (
+                            <option key={r.email} value={r.email}>
+                              {r.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
                     )}
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">

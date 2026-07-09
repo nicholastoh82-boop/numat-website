@@ -8,6 +8,10 @@
       "schedule": "0 */3 * * *"
     },
     {
+      "path": "/api/cron/rep-task-overdue",
+      "schedule": "0 1 * * *"
+    },
+    {
       "path": "/api/cron/gmail_sync",
       "schedule": "*/10 * * * *"
     },
