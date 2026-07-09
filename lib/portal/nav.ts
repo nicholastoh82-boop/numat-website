@@ -61,6 +61,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { href: '/portal/ceo', label: 'CEO View', feature: 'ceo', group: 'overview' },
   { href: '/crm/dashboard', label: 'CRM', feature: 'crm', group: 'sales', tooltip: 'Sales pipeline and leads' },
   { href: '/portal/lead-timeline', label: 'Lead Status', feature: 'lead_timeline', group: 'sales' },
+  { href: '/portal/rep-tasks', label: 'Tasks', feature: 'crm', group: 'sales', tooltip: 'Tasks assigned to sales reps' },
   { href: '/crm/search', label: 'KB Search', feature: 'crm', group: 'sales', tooltip: 'Knowledge base search' },
   { href: '/crm/outreach', label: 'Outreach', feature: 'crm', group: 'sales' },
   { href: '/crm/signals', label: 'Buying Signals', feature: 'crm', group: 'sales', tooltip: 'Prospects showing buying intent' },
