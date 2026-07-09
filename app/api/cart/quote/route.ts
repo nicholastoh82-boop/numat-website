@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js'
 import { detectSpam, sanitizeInput } from '@/lib/spam-detection'
 import { sendEmail, sendNotificationEmail } from '@/lib/sendgrid'
+import { upsertInboundLead } from '@/lib/leads/inbound'
 import { generateQuoteEmailHTML } from '@/lib/email-templates'
 
 interface QuoteContact {
@@ -204,6 +205,32 @@ export async function POST(request: NextRequest) {
         },
         { status: isFloorBlock ? 422 : 500 }
       )
+    }
+
+    // Create or update the CRM lead in master_leads with attribution and an
+    // owner, so this quote appears on a rep board and is tracked for productivity.
+    try {
+      await upsertInboundLead({
+        email: contact.email,
+        phone: formattedPhone,
+        fullName: contact.name,
+        company: contact.company || null,
+        sourceType: 'inbound_quote',
+        leadSource: 'Website Quote Form',
+        contactChannel: contact.channel || 'form',
+        sourcePayload: {
+          quote_id: quoteId,
+          quote_number: createdQuoteNumber,
+          channel: contact.channel ?? null,
+          application: contact.application ?? null,
+          item_count: items.length,
+          display_currency: contact.display_currency ?? 'USD',
+          display_total: contact.display_total ?? total,
+        },
+        notes: contact.notes || null,
+      })
+    } catch (leadErr) {
+      console.error('[Quote -> master_leads] Failed:', leadErr)
     }
 
     // Notify the inbound lead owner on every website quote submission,

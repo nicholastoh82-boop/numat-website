@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 import { detectSpam, sanitizeInput, validateSubmissionPattern } from '@/lib/spam-detection'
+import { upsertInboundLead } from '@/lib/leads/inbound'
 
 // --- Rate Limiting Setup ---
 const rateLimitMap: Map<string, { count: number; resetTime: number }> = new Map()
@@ -163,24 +164,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit inquiry.' }, { status: 500 })
     }
 
-    // Send webhook to n8n
+    // Create or update the CRM lead in master_leads with attribution and an
+    // owner, so this inquiry appears on a rep board and is tracked. This
+    // replaces a retired n8n webhook that used to handle the routing.
     try {
-      await fetch('https://nicholastoh.app.n8n.cloud/webhook/numat-lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: inquiry.id,
-          name: sanitizeInput(name.trim()),
-          email: email.trim().toLowerCase(),
-          phone: phone ? sanitizeInput(phone.trim()) : null,
-          company: company ? sanitizeInput(company.trim()) : null,
+      await upsertInboundLead({
+        email: email.trim().toLowerCase(),
+        phone: phone ? phone.trim() : null,
+        fullName: sanitizeInput(name.trim()),
+        company: company ? sanitizeInput(company.trim()) : null,
+        sourceType: 'inbound_inquiry',
+        leadSource: 'Website Contact Form',
+        contactChannel: 'form',
+        sourcePayload: {
+          inquiry_id: inquiry.id,
           subject: sanitizeInput(subject.trim()),
-          message: sanitizeInput(message.trim()),
-          source: 'contact_form',
-        }),
+          message: sanitizeInput(message.trim()).slice(0, 500),
+        },
+        notes: sanitizeInput(message.trim()).slice(0, 800),
       })
-    } catch (webhookError) {
-      console.error('[n8n Webhook] Failed:', webhookError)
+    } catch (leadError) {
+      console.error('[Inquiry -> master_leads] Failed:', leadError)
     }
 
     // Send email notification via Resend
