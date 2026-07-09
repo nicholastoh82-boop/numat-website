@@ -2,6 +2,7 @@ import React from 'react'
 import type { Metadata, Viewport } from 'next'
 import { DM_Sans, DM_Serif_Display } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import WhatsAppClickTracker from '@/components/WhatsAppClickTracker'
 import { Toaster } from '@/components/ui/toaster'
 import { CurrencyProvider } from '@/components/providers/currency-provider'
 import CountrySelectorModal from '@/components/country-selector-modal'
@@ -94,6 +95,7 @@ export default function RootLayout({
           <PublicOnlyWidgets />
           <Toaster />
           <Analytics />
+          <WhatsAppClickTracker />
           <PwaRegister />
         </CurrencyProvider>
       </body>
