@@ -60,6 +60,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { href: '/portal/scoreboard', label: 'NuBam Hybrid', feature: 'scoreboard', group: 'overview', tooltip: 'NuBam Hybrid KPI scoreboard' },
   { href: '/portal/ceo', label: 'CEO View', feature: 'ceo', group: 'overview' },
   { href: '/crm/dashboard', label: 'CRM', feature: 'crm', group: 'sales', tooltip: 'Sales pipeline and leads' },
+  { href: '/crm/scoreboard', label: 'Rep Scoreboard', feature: 'crm', group: 'sales', tooltip: 'Sales rep productivity' },
   { href: '/portal/lead-timeline', label: 'Lead Status', feature: 'lead_timeline', group: 'sales' },
   { href: '/portal/rep-tasks', label: 'Tasks', feature: 'crm', group: 'sales', tooltip: 'Tasks assigned to sales reps' },
   { href: '/crm/search', label: 'KB Search', feature: 'crm', group: 'sales', tooltip: 'Knowledge base search' },
