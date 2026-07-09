@@ -64,9 +64,9 @@ export async function POST(req: Request) {
     const attendee = attendees.find((a) => !a.email?.includes("@cal.com")) ?? attendees[0] ?? {};
     const organizer = payload.organizer ?? {};
 
-    const organizerEmail = (organizer.email ?? "").toLowerCase();
-    const repKey: RepKey = organizerEmail.includes("bryan") ? "Bryan" : "Erica";
-    const repEmail = repKey === "Bryan" ? "bryan@numat.ph" : "erica@numat.ph";
+    // All bookings go to Erica for triage; she reassigns to the reps.
+    const repKey: RepKey = "Erica";
+    const repEmail = "erica@numat.ph";
 
     const startTime = payload.startTime ?? new Date().toISOString();
     const startDate = new Date(startTime);
