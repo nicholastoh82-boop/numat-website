@@ -74,14 +74,6 @@ export type InboundLeadInput = {
   notes?: string | null
 }
 
-function looksPhilippines(input: InboundLeadInput): boolean {
-  const c = (input.country || '').toLowerCase()
-  if (c.includes('philippines') || c === 'ph') return true
-  const p = (input.phone || '').replace(/[^0-9+]/g, '')
-  if (p.startsWith('+63') || p.startsWith('63') || p.startsWith('09')) return true
-  return false
-}
-
 async function logActivity(leadId: string, activityType: string, payload?: Record<string, unknown>) {
   await restPost(
     'sales_activities',
@@ -93,9 +85,9 @@ async function logActivity(leadId: string, activityType: string, payload?: Recor
 export async function upsertInboundLead(
   input: InboundLeadInput
 ): Promise<{ leadId: string | null; isNew: boolean; repEmail: string }> {
-  const isPH = looksPhilippines(input)
-  const repEmail = isPH ? 'bryan@numat.ph' : 'erica@numat.ph'
-  const repName = isPH ? 'Bryan' : 'Erica'
+  // All inbound contact goes to Erica; she evaluates and reassigns to the reps.
+  const repEmail = 'erica@numat.ph'
+  const repName = 'Erica'
 
   if (!SUPABASE_URL || !SERVICE_KEY) {
     console.error('[inbound lead] Supabase service credentials missing')
