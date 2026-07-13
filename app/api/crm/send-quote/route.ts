@@ -8,6 +8,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { sendGmail, supabaseGetRaw, supabasePatch, supabasePost, type RepKey } from "@/lib/cron/helpers";
+import { getRepToken, sendGmail as sendGmailConnected } from "@/lib/gmail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -121,11 +122,42 @@ export async function POST(req: NextRequest) {
       "</div>",
     ].join("");
 
-    const repKey = repKeyFromEmail(senderRepEmail);
-    const gmailMessageId = await sendGmail({
-      from: repKey, to: recipientEmail, subject, html,
-      attachments: [{ filename: `${quote.quote_number}.pdf`, mimeType: "application/pdf", data: pdfBase64 }],
-    });
+    // Prefer a connected mailbox (rep_gmail_tokens, the per rep OAuth flow) over the
+    // legacy env token, which can silently expire with invalid_grant and cannot be
+    // refreshed by reconnecting in the portal. Try the assigned rep first, then the
+    // person actually sending, then fall back to the env token.
+    let fromEmail: string | null = null;
+    for (const candidate of [senderRepEmail, body.sent_by].filter(
+      (e): e is string => Boolean(e && e.includes("@"))
+    )) {
+      try {
+        await getRepToken(candidate);
+        fromEmail = candidate;
+        break;
+      } catch {
+        /* not connected, try the next candidate */
+      }
+    }
+
+    let gmailMessageId: string;
+    if (fromEmail) {
+      const sent = await sendGmailConnected({
+        fromEmail,
+        to: recipientEmail,
+        subject,
+        bodyHtml: html,
+        attachments: [
+          { filename: `${quote.quote_number}.pdf`, mimeType: "application/pdf", contentBase64: pdfBase64 },
+        ],
+      });
+      gmailMessageId = sent.messageId;
+    } else {
+      const repKey = repKeyFromEmail(senderRepEmail);
+      gmailMessageId = await sendGmail({
+        from: repKey, to: recipientEmail, subject, html,
+        attachments: [{ filename: `${quote.quote_number}.pdf`, mimeType: "application/pdf", data: pdfBase64 }],
+      });
+    }
 
     const nowIso = new Date().toISOString();
     await supabasePatch(`quotes?id=eq.${encodeURIComponent(quote.id)}`, { status: "sent", sent_at: nowIso, sent_by: senderRepEmail });
