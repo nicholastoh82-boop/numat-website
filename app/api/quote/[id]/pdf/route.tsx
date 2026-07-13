@@ -55,7 +55,7 @@ function repDisplayName(email: string | null | undefined): string {
   if (REP_DIRECTORY[e]) return REP_DIRECTORY[e];
   const local = e.split("@")[0] || "";
   return local
-    .split(/[._\-]+/)
+    .split(/[._\-\s]+/)
     .filter(Boolean)
     .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
     .join(" ") || "NUMAT Sales Team";
