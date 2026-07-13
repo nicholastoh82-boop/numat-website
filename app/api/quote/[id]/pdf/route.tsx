@@ -556,6 +556,7 @@ type QuoteData = {
   payment_due_date: string | null;
   po_reference: string | null;
   payment_status: string | null;
+  amount_paid: string | number | null;
   vat_enabled: boolean | null;
   vat_rate: string | number | null;
   vat_amount: string | number | null;
@@ -624,6 +625,14 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
         : parseFloat(String(data.vat_amount || 0)))
     : 0;
   const grandTotal = vatEnabled ? totalValue + vatAmount : totalValue;
+
+  // A deposit or part payment already made reduces what the customer still owes.
+  const amountPaidBase = parseFloat(String(data.amount_paid ?? 0)) || 0;
+  const amountPaid =
+    useDisplay && parseFloat(String(data.total || 0)) > 0
+      ? amountPaidBase * (totalValue / parseFloat(String(data.total)))
+      : amountPaidBase;
+  const amountDue = Math.max(0, grandTotal - amountPaid);
 
   const paymentTerms =
     data.payment_terms ||
@@ -798,12 +807,20 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
               </View>
             </>
           ) : null}
+          {isInvoice && amountPaid > 0 ? (
+            <View style={styles.totalsRow}>
+              <Text style={{ color: COLORS.body }}>Deposit paid</Text>
+              <Text style={{ color: COLORS.ink }}>
+                ({formatCurrency(amountPaid, currencyShown)})
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.totalsFinalRow}>
             <Text style={styles.totalsFinalLabel}>
               {isInvoice ? "AMOUNT DUE" : "TOTAL"}
             </Text>
             <Text style={styles.totalsFinalValue}>
-              {formatCurrency(grandTotal, currencyShown)}
+              {formatCurrency(isInvoice && amountPaid > 0 ? amountDue : grandTotal, currencyShown)}
             </Text>
           </View>
         </View>
