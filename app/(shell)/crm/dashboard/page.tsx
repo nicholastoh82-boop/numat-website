@@ -163,6 +163,7 @@ interface Quote {
   created_at: string
   sent_at: string | null
   email: string | null
+  recipient_override?: string | null
   lead_id: string | null
   customer_name: string | null
   company: string | null
@@ -584,7 +585,7 @@ export default function CRMDashboard() {
   const loadQuotes = useCallback(async () => {
     const { data } = await supabase
       .from('quotes')
-      .select('id, quote_number, doc_type, total, subtotal, currency, created_at, sent_at, email, lead_id, customer_name, company, notes, phone, customer_tin, customer_address, payment_due_date, po_reference, vat_enabled, vat_rate, revision_of, superseded_by, revision_number, invoice_type, converted_from_proforma_id, deposit_percent, payment_status')
+      .select('id, quote_number, doc_type, total, subtotal, currency, created_at, sent_at, email, lead_id, recipient_override, customer_name, company, notes, phone, customer_tin, customer_address, payment_due_date, po_reference, vat_enabled, vat_rate, revision_of, superseded_by, revision_number, invoice_type, converted_from_proforma_id, deposit_percent, payment_status')
       .not('lead_id', 'is', null)
       .order('created_at', { ascending: false })
     if (data) {
@@ -1033,7 +1034,7 @@ export default function CRMDashboard() {
   const sendQuote = async (quote: Quote, lead: Lead) => {
     if (isViewer) return
     if (sendingQuoteId) return
-    const recipient = quote.email || lead.email
+    const recipient = quote.recipient_override || quote.email || lead.email
     const recipientName = quote.customer_name || lead.full_name || [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'Customer'
     const docLabel = quote.doc_type === 'invoice' ? 'Invoice' : 'Proforma invoice'
     const isResend = Boolean(quote.sent_at)
@@ -1195,13 +1196,13 @@ export default function CRMDashboard() {
       showToast('Invalid email address', 'error')
       return
     }
-    const { error } = await supabase.from('quotes').update({ email: email || null }).eq('id', quoteId)
-    if (error) { showToast('Failed to save email', 'error'); return }
+    const { error } = await supabase.from('quotes').update({ recipient_override: email || null }).eq('id', quoteId)
+    if (error) { showToast('Failed to save recipient', 'error'); return }
     setQuotesByLead(prev => {
-      const list = (prev[leadId] || []).map(q => q.id === quoteId ? { ...q, email: email || null } : q)
+      const list = (prev[leadId] || []).map(q => q.id === quoteId ? { ...q, recipient_override: email || null } : q)
       return { ...prev, [leadId]: list }
     })
-    showToast('Recipient email updated')
+    showToast('Send recipient updated (not shown on the invoice)')
     setEditingEmailQuoteId(null)
   }
 
@@ -2709,16 +2710,16 @@ export default function CRMDashboard() {
                                     </>
                                   ) : (
                                     <>
-                                      <span className={`truncate ${q.email && q.email !== lead.email ? 'text-amber-700 font-medium' : 'text-gray-500'}`}>
-                                        {canSeeContact ? (q.email || lead.email || '—') : '•••'}
+                                      <span className={`truncate ${q.recipient_override ? 'text-amber-700 font-medium' : 'text-gray-500'}`}>
+                                        {canSeeContact ? (q.recipient_override || q.email || lead.email || '—') : '•••'}
                                       </span>
-                                      {q.email && q.email !== lead.email && (
+                                      {q.recipient_override && (
                                         <span className="shrink-0 text-amber-600 text-xs italic">(override)</span>
                                       )}
                                       {!isViewer && (<button
-                                        onClick={e => { e.stopPropagation(); setEditingEmailQuoteId(q.id); setEditingEmailValue(q.email || lead.email || '') }}
+                                        onClick={e => { e.stopPropagation(); setEditingEmailQuoteId(q.id); setEditingEmailValue(q.recipient_override || q.email || lead.email || '') }}
                                         className="shrink-0 text-gray-400 hover:text-green-700 text-xs px-1 rounded"
-                                        title="Change recipient email for this document"
+                                        title="Change send recipient (not shown on the invoice)"
                                       >
                                         ✏️
                                       </button>)}
