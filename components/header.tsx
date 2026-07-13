@@ -7,6 +7,7 @@ import { ChevronDown, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { useCurrency } from '@/components/providers/currency-provider'
 import { COUNTRY_OPTIONS } from '@/lib/currency'
+import NewsletterTopBar from '@/components/newsletter-top-bar'
 
 const navLinks = [
   { label: 'Products', href: '/products' },
@@ -32,7 +33,9 @@ export default function Header() {
   const { selectedCountry, setSelectedCountryCode } = useCurrency()
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-stone-200 bg-[#e7e1d8]/95 backdrop-blur">
+    <>
+      <NewsletterTopBar />
+      <header className="sticky top-0 z-50 w-full border-b border-stone-200 bg-[#e7e1d8]/95 backdrop-blur">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8 xl:gap-10">
           <Link href="/" className="flex shrink-0 items-center">
@@ -167,5 +170,6 @@ export default function Header() {
         </div>
       )}
     </header>
+    </>
   )
 }
