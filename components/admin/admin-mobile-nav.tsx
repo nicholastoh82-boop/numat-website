@@ -9,6 +9,7 @@ import {
   Inbox,
   MessageSquareQuote,
   Newspaper,
+  Mail,
   Users,
   BarChart2,
 } from 'lucide-react'
@@ -35,6 +36,7 @@ const marketingNavItems = [
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/news', label: 'News', icon: Newspaper },
   { href: '/admin/testimonials', label: 'Reviews', icon: MessageSquareQuote },
+  { href: '/admin/newsletter', label: 'Newsletter', icon: Mail },
 ]
 
 export default function AdminMobileNav() {

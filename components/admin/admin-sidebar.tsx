@@ -10,6 +10,7 @@ import {
   Settings,
   MessageSquareQuote,
   Newspaper,
+  Mail,
   Bot,
   Users,
   BarChart2,
@@ -67,6 +68,10 @@ export default function AdminSidebar() {
         <Link href="/admin/testimonials" className={linkClass('/admin/testimonials')}>
           <MessageSquareQuote className="w-5 h-5" />
           Testimonials
+        </Link>
+        <Link href="/admin/newsletter" className={linkClass('/admin/newsletter')}>
+          <Mail className="w-5 h-5" />
+          Newsletter
         </Link>
       </nav>
     )
