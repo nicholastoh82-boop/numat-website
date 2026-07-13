@@ -309,6 +309,8 @@ export default function NumatBambooHomepageRevamp() {
           </div>
         </section>
 
+        <NewsletterBand />
+
         {/* Product Families */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
           <div className="mb-8 flex items-end justify-between gap-4">
@@ -600,8 +602,6 @@ export default function NumatBambooHomepageRevamp() {
         </section>
 
       </main>
-
-      <NewsletterBand />
 
       <Footer />
 
