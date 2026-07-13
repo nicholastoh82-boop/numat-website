@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
+import NewsletterBand from '@/components/newsletter-band'
 import CartDrawer from '@/components/cart-drawer'
 
 type Testimonial = {
@@ -599,6 +600,8 @@ export default function NumatBambooHomepageRevamp() {
         </section>
 
       </main>
+
+      <NewsletterBand />
 
       <Footer />
 
