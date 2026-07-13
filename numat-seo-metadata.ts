@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 
-const BASE_URL = 'https://www.numatbamboo.com'
+const BASE_URL = 'https://numatbamboo.com'
 const OG_IMAGE = `${BASE_URL}/og-social.jpg`
 
 export const globalMetadata: Metadata = {
@@ -47,9 +47,6 @@ export const globalMetadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NUMAT Bamboo | Engineered Bamboo Boards from the Philippines',
-    description:
-      'Engineered bamboo boards for furniture, cabinetry, wall panels, doors, and flooring. Export-ready supply from the Philippines.',
     images: [OG_IMAGE],
   },
   robots: {
