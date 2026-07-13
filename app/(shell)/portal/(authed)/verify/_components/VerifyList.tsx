@@ -77,22 +77,22 @@ export default function VerifyList({ rows, verifierEmail }: Props) {
     }
     setBusyId(row.id)
     setError(null)
-    const existingNotes = row.notes ? `${row.notes}\n\n` : ''
-    const flagNote = `[FLAGGED ${new Date().toISOString().slice(0, 10)} by ${verifierEmail}]: ${reason.trim()}`
-    const { error: e } = await supabase
-      .from('fin_transactions')
-      .update({
-        status: 'flagged',
-        notes: `${existingNotes}${flagNote}`,
+    try {
+      const res = await fetch('/api/finance/transactions/flag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: row.id, reason: reason.trim() }),
       })
-      .eq('id', row.id)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Flag failed')
+    } catch (err) {
+      setBusyId(null)
+      setError(err instanceof Error ? err.message : 'Flag failed')
+      return
+    }
     setBusyId(null)
     setFlaggingId(null)
     setFlagReason('')
-    if (e) {
-      setError(`Flag failed: ${e.message}`)
-      return
-    }
     router.refresh()
   }
 
