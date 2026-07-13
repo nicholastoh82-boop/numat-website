@@ -128,6 +128,16 @@ export async function sendNewsletterBroadcast(args: {
   return { broadcastId, scheduled: Boolean(args.scheduledAt) }
 }
 
+// Add an opted-in subscriber to the newsletter audience. Idempotent: if the
+// contact already exists, Resend upserts, so callers can treat it as success.
+export async function subscribeContact(email: string, firstName?: string) {
+  return resendFetch(`/audiences/${NEWSLETTER_AUDIENCE_ID}/contacts`, 'POST', {
+    email: email.toLowerCase().trim(),
+    first_name: firstName?.trim() || undefined,
+    unsubscribed: false,
+  })
+}
+
 // Current contact count on the audience, for the send confirmation.
 export async function getAudienceCount(): Promise<number | null> {
   try {
