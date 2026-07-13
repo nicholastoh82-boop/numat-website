@@ -48,6 +48,30 @@ export default function AdminSidebar() {
     )
   }
 
+  // Marketing-only nav (content + SEO)
+  if (role === 'marketing') {
+    return (
+      <nav className="p-4 space-y-1">
+        <Link href="/admin" className={linkClass('/admin')}>
+          <LayoutDashboard className="w-5 h-5" />
+          Overview
+        </Link>
+        <Link href="/admin/products" className={linkClass('/admin/products')}>
+          <Package className="w-5 h-5" />
+          Products
+        </Link>
+        <Link href="/admin/news" className={linkClass('/admin/news')}>
+          <Newspaper className="w-5 h-5" />
+          News
+        </Link>
+        <Link href="/admin/testimonials" className={linkClass('/admin/testimonials')}>
+          <MessageSquareQuote className="w-5 h-5" />
+          Testimonials
+        </Link>
+      </nav>
+    )
+  }
+
   // Admin nav (full)
   return (
     <nav className="p-4 space-y-1">
