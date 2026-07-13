@@ -1057,7 +1057,7 @@ export default function CRMDashboard() {
       })
       if (!res.ok) {
         const txt = await res.text().catch(() => '')
-        throw new Error(`n8n responded ${res.status}: ${txt || res.statusText}`)
+        throw new Error(`Send failed (${res.status}): ${txt || res.statusText}`)
       }
       const nowIso = new Date().toISOString()
       setQuotesByLead(prev => {
