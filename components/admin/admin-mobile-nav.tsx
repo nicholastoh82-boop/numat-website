@@ -30,11 +30,18 @@ const repNavItems = [
   { href: '/admin/pipeline', label: 'Pipeline', icon: BarChart2 },
 ]
 
+const marketingNavItems = [
+  { href: '/admin', label: 'Overview', icon: LayoutDashboard },
+  { href: '/admin/products', label: 'Products', icon: Package },
+  { href: '/admin/news', label: 'News', icon: Newspaper },
+  { href: '/admin/testimonials', label: 'Reviews', icon: MessageSquareQuote },
+]
+
 export default function AdminMobileNav() {
   const pathname = usePathname()
   const { role } = useAdminRole()
 
-  const navItems = role === 'rep' ? repNavItems : adminNavItems
+  const navItems = role === 'rep' ? repNavItems : role === 'marketing' ? marketingNavItems : adminNavItems
 
   return (
     <div className="bg-card border-t border-border">
