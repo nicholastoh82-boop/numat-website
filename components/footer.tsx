@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import NewsletterSignup from '@/components/newsletter-signup'
 
 const footerLinks = {
   products: [
@@ -74,6 +75,9 @@ export default function Footer() {
                   </svg>
                 facebook.com/NuMatPH
               </a>
+            </div>
+            <div className="mt-8">
+              <NewsletterSignup />
             </div>
           </div>
 
