@@ -53,7 +53,7 @@ type LeadRow = {
 };
 
 type RepConfig = {
-  key: 'erica_intl' | 'erica_ph';
+  key: string;
   email: string;
   full_name: string;
   title: string;
@@ -73,6 +73,13 @@ const REPS: RepConfig[] = [
     email: 'erica@numat.ph',
     full_name: 'Erica Lu',
     title: 'Chief Marketing Officer',
+    filter: 'philippines',
+  },
+  {
+    key: 'lionel_ph',
+    email: 'lionel@numat.ph',
+    full_name: 'Lionel Tolibas',
+    title: 'Sales Representative',
     filter: 'philippines',
   },
 ];
@@ -291,7 +298,14 @@ async function generateOneDraft(lead: LeadRow, rep: RepConfig): Promise<DraftOut
   });
   const text = extractText(data);
   if (!text) throw new Error('Gemini returned no text');
-  const parsed = JSON.parse(text) as DraftOutput;
+  // Strip markdown code fences in case the model wraps the JSON despite the
+  // application/json mime type. Without this, a wrapped response fails JSON.parse
+  // for every lead and the run produces zero drafts.
+  const cleaned = text
+    .replace(/^\s*```(?:json)?\s*/i, '')
+    .replace(/\s*```\s*$/i, '')
+    .trim();
+  const parsed = JSON.parse(cleaned) as DraftOutput;
   if (!parsed.subject || !parsed.body) throw new Error('Gemini returned incomplete draft');
   return parsed;
 }
@@ -379,6 +393,20 @@ async function handle(): Promise<Response> {
     (s, r) => s + r.results.filter((x) => x.status === 'error').length,
     0
   );
+  console.log(
+    '[generate-outreach]',
+    JSON.stringify({
+      per_rep: perRep,
+      ok_count: okCount,
+      err_count: errCount,
+      reps: repResults.map((r) => ({
+        rep: r.rep,
+        picked: r.picked,
+        first_error: r.results.find((x) => x.status === 'error')?.error ?? null,
+      })),
+    })
+  );
+
   return Response.json({
     ok: true,
     per_rep: perRep,

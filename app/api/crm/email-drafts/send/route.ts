@@ -14,6 +14,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { sendGmail, RepKey, repEmailFor, ALL_REPS } from '@/lib/cron/helpers';
+import { getRepToken, sendGmail as sendGmailConnected } from '@/lib/gmail';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -123,9 +124,21 @@ export async function POST(req: NextRequest) {
   }
 
   const rep = repKeyFor(draft.rep_email);
-  if (!rep) {
+
+  // A rep can send if they have a connected mailbox (rep_gmail_tokens, the per rep
+  // OAuth flow) or, for the older setup, a known env token (a RepKey like Bryan).
+  // This lets Erica, Janna, and Lionel send once they connect, even though they
+  // are not in the legacy env-token list.
+  let connected = false;
+  try {
+    await getRepToken(draft.rep_email);
+    connected = true;
+  } catch {
+    connected = false;
+  }
+  if (!connected && !rep) {
     return NextResponse.json(
-      { error: `no Gmail token registered for ${draft.rep_email}` },
+      { error: `No Gmail connection for ${draft.rep_email}. Connect Gmail in the portal first.` },
       { status: 400 }
     );
   }
@@ -147,15 +160,26 @@ export async function POST(req: NextRequest) {
 
   let gmailMessageId: string;
   try {
-    gmailMessageId = await sendGmail({
-      from: rep,
-      to: draft.recipient_email,
-      subject: draft.subject || '(no subject)',
-      html: fullHtml,
-      // Plain text fallback uses the raw draft body. Signature is omitted
-      // from the plaintext alternative since it's HTML markup.
-      text: draft.body || '',
-    });
+    if (connected) {
+      const sent = await sendGmailConnected({
+        fromEmail: draft.rep_email,
+        to: draft.recipient_email,
+        subject: draft.subject || '(no subject)',
+        bodyHtml: fullHtml,
+        bodyText: draft.body || '',
+      });
+      gmailMessageId = sent.messageId;
+    } else {
+      gmailMessageId = await sendGmail({
+        from: rep!,
+        to: draft.recipient_email,
+        subject: draft.subject || '(no subject)',
+        html: fullHtml,
+        // Plain text fallback uses the raw draft body. Signature is omitted
+        // from the plaintext alternative since it's HTML markup.
+        text: draft.body || '',
+      });
+    }
   } catch (e) {
     return NextResponse.json(
       { error: `Gmail send failed: ${(e as Error).message}` },
