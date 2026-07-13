@@ -18,7 +18,7 @@ export const useAdminRole = () => useContext(AdminRoleContext)
 // Marketing role: content and SEO only (products, news/blog, testimonials).
 // Everything else in /admin (settings, quotes, inquiries, leads, pipeline, nara)
 // stays off limits.
-const MARKETING_ALLOWED_PREFIXES = ['/admin/products', '/admin/news', '/admin/testimonials']
+const MARKETING_ALLOWED_PREFIXES = ['/admin/products', '/admin/news', '/admin/testimonials', '/admin/newsletter']
 function marketingCanAccess(path: string): boolean {
   if (path === '/admin') return true
   return MARKETING_ALLOWED_PREFIXES.some((p) => path === p || path.startsWith(p + '/'))
