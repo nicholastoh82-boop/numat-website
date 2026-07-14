@@ -5,7 +5,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX = 10
 const ipMap = new Map<string, { count: number; resetAt: number }>()
-
 function isRateLimited(ip: string): boolean {
   const now = Date.now()
   const entry = ipMap.get(ip)
@@ -27,13 +26,20 @@ const RATE_LIMITED_ROUTES = [
 ]
 
 const AUTH_GATED_PREFIXES = ['/admin', '/portal']
-
 // Paths under /portal that should NOT trigger an auth redirect
 // (the login page itself, and access denied which handles its own rendering).
 const PORTAL_PUBLIC_PATHS = ['/portal/login']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // CRM disabled: block all access. Code remains in the repo; delete this block to restore.
+  if (pathname === '/crm' || pathname.startsWith('/crm/')) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+  if (pathname === '/api/crm' || pathname.startsWith('/api/crm/')) {
+    return new NextResponse(null, { status: 404 })
+  }
 
   if (
     request.method === 'POST' &&
@@ -43,7 +49,6 @@ export async function middleware(request: NextRequest) {
       request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
       request.headers.get('x-real-ip') ??
       'unknown'
-
     if (isRateLimited(ip)) {
       return new NextResponse(
         JSON.stringify({
@@ -67,7 +72,6 @@ export async function middleware(request: NextRequest) {
 
   // Skip auth gate for public portal paths (login, etc.)
   const isPortalPublic = PORTAL_PUBLIC_PATHS.some((p) => pathname.startsWith(p))
-
   if (
     !isPortalPublic &&
     AUTH_GATED_PREFIXES.some((p) => pathname.startsWith(p))
@@ -92,7 +96,6 @@ export async function middleware(request: NextRequest) {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-
     if (!user) {
       // Portal users go to the dedicated portal login.
       // Admin users continue to the existing /auth/login.
