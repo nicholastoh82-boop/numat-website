@@ -18,7 +18,7 @@ const PUBLIC_PRODUCT_FIELDS =
   'id, name, slug, description, image_url, is_featured, is_active, category_id'
 
 const PUBLIC_VARIANT_FIELDS =
-  'id, product_id, sku, size_label, length_mm, width_mm, thickness_mm, core_type, ply_count, unit, moq, is_price_on_request, price_notes, is_active, is_available, in_stock, sort_order'
+  'id, product_id, sku, size_label, length_mm, width_mm, thickness_mm, core_type, ply_count, unit, moq, currency, base_price_php, is_price_on_request, price_notes, is_active, is_available, in_stock, sort_order'
 
 const PUBLIC_CACHE_HEADERS = {
   'Cache-Control': 'no-store, max-age=0, must-revalidate',
@@ -130,6 +130,9 @@ export async function GET() {
           ply_count: variant.ply_count ?? null,
           unit: variant.unit ?? 'sheet',
           moq: variant.moq ?? 1,
+          currency: variant.currency ?? 'PHP',
+          base_price_php:
+            variant.base_price_php != null ? Number(variant.base_price_php) : null,
           is_price_on_request: variant.is_price_on_request ?? false,
           price_notes: variant.price_notes ?? null,
           is_active: variant.is_active ?? true,

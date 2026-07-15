@@ -18,43 +18,36 @@ const SUPPORTED_CURRENCIES = new Set([
   'AED',
 ])
 
+/**
+ * GET /api/exchange-rate?currency=MYR&base=PHP
+ *
+ * `base` defaults to USD so every existing caller keeps its previous behaviour.
+ * NuWeave pricing is authored in PHP, so the product surfaces pass base=PHP and
+ * convert outward from the PHP list price at the rate of the day.
+ */
 export async function GET(request: NextRequest) {
   const currency = request.nextUrl.searchParams.get('currency')?.toUpperCase().trim() || 'USD'
+  const base = request.nextUrl.searchParams.get('base')?.toUpperCase().trim() || 'USD'
 
   if (!SUPPORTED_CURRENCIES.has(currency)) {
-    return NextResponse.json(
-      { error: `Unsupported currency: ${currency}` },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: `Unsupported currency: ${currency}` }, { status: 400 })
   }
 
-  if (currency === 'USD') {
+  if (!SUPPORTED_CURRENCIES.has(base)) {
+    return NextResponse.json({ error: `Unsupported base currency: ${base}` }, { status: 400 })
+  }
+
+  if (currency === base) {
     return NextResponse.json(
-      {
-        base: 'USD',
-        currency: 'USD',
-        rate: 1,
-        source: 'internal',
-      },
-      {
-        status: 200,
-        headers: {
-          'Cache-Control': 'no-store, max-age=0',
-        },
-      }
+      { base, currency, rate: 1, source: 'internal' },
+      { status: 200, headers: { 'Cache-Control': 'no-store, max-age=0' } }
     )
   }
 
   try {
     const response = await fetch(
-      `https://api.frankfurter.dev/v2/rate/USD/${encodeURIComponent(currency)}`,
-      {
-        method: 'GET',
-        cache: 'no-store',
-        headers: {
-          Accept: 'application/json',
-        },
-      }
+      `https://api.frankfurter.dev/v2/rate/${encodeURIComponent(base)}/${encodeURIComponent(currency)}`,
+      { method: 'GET', cache: 'no-store', headers: { Accept: 'application/json' } }
     )
 
     if (!response.ok) {
@@ -80,25 +73,16 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        base: 'USD',
+        base,
         currency,
         rate,
         date: data?.date ?? null,
         source: 'frankfurter',
       },
-      {
-        status: 200,
-        headers: {
-          'Cache-Control': 'no-store, max-age=0',
-        },
-      }
+      { status: 200, headers: { 'Cache-Control': 'no-store, max-age=0' } }
     )
   } catch (error) {
     console.error('Exchange rate route error:', error)
-
-    return NextResponse.json(
-      { error: 'Failed to fetch exchange rate.' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch exchange rate.' }, { status: 500 })
   }
 }

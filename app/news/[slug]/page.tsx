@@ -398,7 +398,7 @@ export default async function NewsDetailPage({
             <nav className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
               <Link href="/" className="hover:text-foreground">Home</Link>
               <span>/</span>
-              <Link href="/news" className="hover:text-foreground">News</Link>
+              <Link href="/blog" className="hover:text-foreground">Blog</Link>
               <span>/</span>
               <span className="text-foreground line-clamp-1">{newsItem.title}</span>
             </nav>
@@ -490,8 +490,8 @@ export default async function NewsDetailPage({
                   <p className="text-xs font-semibold uppercase tracking-widest text-primary">Keep Reading</p>
                   <h2 className="mt-1 text-2xl font-semibold text-stone-900">More Updates</h2>
                 </div>
-                <Link href="/news" className="text-sm font-medium text-primary hover:underline">
-                  All News →
+                <Link href="/blog" className="text-sm font-medium text-primary hover:underline">
+                  All posts →
                 </Link>
               </div>
 
@@ -499,7 +499,7 @@ export default async function NewsDetailPage({
                 {recentItems.map((recent: any) => (
                   <Link
                     key={recent.id}
-                    href={`/news/${recent.slug}`}
+                    href={`/blog/${recent.slug}`}
                     className="group overflow-hidden rounded-2xl border bg-[#f9f6f0] transition hover:-translate-y-0.5 hover:shadow-md"
                   >
                     {recent.cover_image_url && (

@@ -4,20 +4,43 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useCurrency } from '@/components/providers/currency-provider'
 import { COUNTRY_OPTIONS } from '@/lib/currency'
 
-const navLinks = [
-  { label: 'Products', href: '/products' },
+type NavChild = { label: string; href: string; description?: string }
+type NavItem = { label: string; href?: string; children?: NavChild[] }
+
+// Grouped so the bar stays at four items plus the currency control and the
+// sample call to action. NuWeave is the only product line on the site.
+const navItems: NavItem[] = [
+  {
+    label: 'NuWeave',
+    children: [
+      { label: 'Overview', href: '/products/nuweave', description: 'The board, how it is made' },
+      { label: 'Specifications', href: '/technical-resources', description: 'Sizes, build, test data' },
+      { label: 'Pricing', href: '/products', description: 'List price by market' },
+      { label: 'Compare vs Plywood', href: '/compare', description: 'Cost across reuse cycles' },
+    ],
+  },
   { label: 'Applications', href: '/applications' },
-  { label: 'Technical Resources', href: '/technical-resources' },
-  { label: 'Compare', href: '/compare' },
-  { label: 'News', href: '/news' },
-  { label: 'Certifications', href: '/testing' },
-  { label: 'Investor Relations', shortLabel: 'IR', href: '/esg' },
-  { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
+  {
+    label: 'Resources',
+    children: [
+      { label: 'Technical Resources', href: '/technical-resources' },
+      { label: 'Testing', href: '/testing' },
+      { label: 'Blog', href: '/blog' },
+      { label: 'FAQ', href: '/faq' },
+    ],
+  },
+  {
+    label: 'Company',
+    children: [
+      { label: 'About', href: '/about' },
+      { label: 'Investor Relations', href: '/esg' },
+      { label: 'Contact', href: '/contact' },
+    ],
+  },
 ]
 
 const LOGO_SRC = '/logo.png'
@@ -29,12 +52,42 @@ function cn(...classes: Array<string | false | null | undefined>) {
 export default function Header() {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
+  const [openMobileGroup, setOpenMobileGroup] = useState<string | null>(null)
   const { selectedCountry, setSelectedCountryCode } = useCurrency()
+  const navRef = useRef<HTMLDivElement>(null)
+
+  // Close the desktop dropdown on outside click and on Escape.
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
+        setOpenGroup(null)
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpenGroup(null)
+    }
+
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [])
+
+  useEffect(() => {
+    setOpenGroup(null)
+    setMobileMenuOpen(false)
+  }, [pathname])
+
+  const isChildActive = (children: NavChild[]) =>
+    children.some((child) => pathname === child.href || pathname?.startsWith(`${child.href}/`))
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-stone-200 bg-[#e7e1d8]/95 backdrop-blur">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-8 xl:gap-10">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-8 xl:gap-10" ref={navRef}>
           <Link href="/" className="flex shrink-0 items-center">
             <Image
               src={LOGO_SRC}
@@ -46,35 +99,90 @@ export default function Header() {
             />
           </Link>
 
-          <nav className="hidden items-center gap-2 lg:flex xl:gap-5">
-            {navLinks.map((link) => {
-              const isActive =
-                pathname === link.href ||
-                (link.href !== '/' && pathname?.startsWith(link.href))
+          <nav className="hidden items-center gap-1 lg:flex xl:gap-2">
+            {navItems.map((item) => {
+              if (!item.children) {
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== '/' && pathname?.startsWith(item.href ?? ''))
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href!}
+                    className={cn(
+                      'whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium tracking-[0.01em] transition-colors',
+                      isActive
+                        ? 'text-stone-900'
+                        : 'text-stone-700 hover:bg-white/60 hover:text-stone-900'
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                )
+              }
+
+              const isOpen = openGroup === item.label
+              const isActive = isChildActive(item.children)
+
               return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    'whitespace-nowrap text-sm font-medium tracking-[0.01em] transition-colors',
-                    isActive ? 'text-stone-900' : 'text-stone-700 hover:text-stone-900'
+                <div key={item.label} className="relative">
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-haspopup="true"
+                    onClick={() => setOpenGroup(isOpen ? null : item.label)}
+                    className={cn(
+                      'inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium tracking-[0.01em] transition-colors',
+                      isActive || isOpen
+                        ? 'bg-white/70 text-stone-900'
+                        : 'text-stone-700 hover:bg-white/60 hover:text-stone-900'
+                    )}
+                  >
+                    {item.label}
+                    <ChevronDown
+                      className={cn(
+                        'h-3.5 w-3.5 transition-transform duration-200',
+                        isOpen && 'rotate-180'
+                      )}
+                    />
+                  </button>
+
+                  {isOpen && (
+                    <div className="absolute left-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-stone-200 bg-white p-2 shadow-xl">
+                      {item.children.map((child) => {
+                        const childActive =
+                          pathname === child.href || pathname?.startsWith(`${child.href}/`)
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            className={cn(
+                              'block rounded-xl px-3 py-2.5 transition-colors',
+                              childActive ? 'bg-stone-100' : 'hover:bg-stone-50'
+                            )}
+                          >
+                            <span className="block text-sm font-semibold text-stone-900">
+                              {child.label}
+                            </span>
+                            {child.description && (
+                              <span className="mt-0.5 block text-xs leading-5 text-stone-500">
+                                {child.description}
+                              </span>
+                            )}
+                          </Link>
+                        )
+                      })}
+                    </div>
                   )}
-                >
-                  {'shortLabel' in link ? (
-                    <>
-                      <span className="xl:hidden">{link.shortLabel}</span>
-                      <span className="hidden xl:inline">{link.label}</span>
-                    </>
-                  ) : link.label}
-                </Link>
+                </div>
               )
             })}
           </nav>
         </div>
 
-        {/* Desktop right — currency only */}
-        <div className="hidden items-center lg:flex">
-          <div className="relative flex items-center gap-2 rounded-full border border-stone-300 bg-white px-4 py-2 shadow-sm">
+        {/* Desktop right: currency plus sample call to action */}
+        <div className="hidden items-center gap-3 lg:flex">
+          <div className="relative flex items-center gap-2 rounded-full border border-stone-300 bg-white px-3 py-2 shadow-sm">
             <Image
               src={selectedCountry.flagSrc}
               alt={`${selectedCountry.name} flag`}
@@ -86,7 +194,7 @@ export default function Header() {
               aria-label="Select country and currency"
               value={selectedCountry.code}
               onChange={(e) => setSelectedCountryCode(e.target.value)}
-              className="appearance-none bg-transparent pl-0 pr-7 text-sm font-medium text-stone-800 outline-none"
+              className="appearance-none bg-transparent pl-0 pr-6 text-sm font-medium text-stone-800 outline-none"
             >
               {COUNTRY_OPTIONS.map((country) => (
                 <option key={country.code} value={country.code}>
@@ -94,14 +202,22 @@ export default function Header() {
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-500" />
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-500" />
           </div>
+
+          <Link
+            href="/request-samples"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-emerald-800 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-emerald-900"
+          >
+            Request Sample
+          </Link>
         </div>
 
         {/* Mobile menu toggle */}
         <button
           type="button"
           aria-label="Toggle menu"
+          aria-expanded={mobileMenuOpen}
           onClick={() => setMobileMenuOpen((prev) => !prev)}
           className="inline-flex items-center justify-center rounded-md border border-stone-300 bg-white p-2 text-stone-800 shadow-sm lg:hidden"
         >
@@ -113,8 +229,6 @@ export default function Header() {
       {mobileMenuOpen && (
         <div className="border-t border-stone-200 bg-[#e7e1d8] lg:hidden">
           <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-
-            {/* Currency selector */}
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-stone-300 bg-white px-3 py-3 shadow-sm">
               <Image
                 src={selectedCountry.flagSrc}
@@ -140,29 +254,74 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Nav links */}
-            <nav className="flex flex-col">
-              {navLinks.map((link) => {
-                const isActive =
-                  pathname === link.href ||
-                  (link.href !== '/' && pathname?.startsWith(link.href))
+            <nav className="flex flex-col gap-1">
+              {navItems.map((item) => {
+                if (!item.children) {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== '/' && pathname?.startsWith(item.href ?? ''))
+                  return (
+                    <Link
+                      key={item.label}
+                      href={item.href!}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        'rounded-lg px-3 py-3 text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-white text-stone-900 shadow-sm'
+                          : 'text-stone-700 hover:bg-white/70 hover:text-stone-900'
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  )
+                }
+
+                const isOpen = openMobileGroup === item.label
+
                 return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      'rounded-lg px-3 py-3 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-white text-stone-900 shadow-sm'
-                        : 'text-stone-700 hover:bg-white/70 hover:text-stone-900'
+                  <div key={item.label}>
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      onClick={() => setOpenMobileGroup(isOpen ? null : item.label)}
+                      className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-white/70"
+                    >
+                      {item.label}
+                      <ChevronDown
+                        className={cn(
+                          'h-4 w-4 transition-transform duration-200',
+                          isOpen && 'rotate-180'
+                        )}
+                      />
+                    </button>
+
+                    {isOpen && (
+                      <div className="ml-3 flex flex-col border-l border-stone-300 pl-3">
+                        {item.children.map((child) => (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="rounded-lg px-3 py-2.5 text-sm text-stone-600 transition-colors hover:bg-white/70 hover:text-stone-900"
+                          >
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
                     )}
-                  >
-                    {link.label}
-                  </Link>
+                  </div>
                 )
               })}
             </nav>
+
+            <Link
+              href="/request-samples"
+              onClick={() => setMobileMenuOpen(false)}
+              className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-emerald-800 px-5 py-3 text-sm font-semibold text-white shadow-sm"
+            >
+              Request Sample
+            </Link>
           </div>
         </div>
       )}
