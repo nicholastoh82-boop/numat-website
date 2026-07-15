@@ -4,7 +4,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, Menu, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import useSWR from 'swr'
 import { useCurrency } from '@/components/providers/currency-provider'
 import { COUNTRY_OPTIONS } from '@/lib/currency'
 import NewsletterTopBar from '@/components/newsletter-top-bar'
@@ -12,18 +13,24 @@ import NewsletterTopBar from '@/components/newsletter-top-bar'
 type NavChild = { label: string; href: string; description?: string }
 type NavItem = { label: string; href?: string; children?: NavChild[] }
 
-// Grouped so the bar stays at four items plus the currency control and the
-// sample call to action. NuWeave is the only product line on the site.
-const navItems: NavItem[] = [
-  {
-    label: 'NuWeave',
-    children: [
-      { label: 'Overview', href: '/products/nuweave', description: 'The board, how it is made' },
-      { label: 'Specifications', href: '/technical-resources', description: 'Sizes, build, test data' },
-      { label: 'Pricing', href: '/products', description: 'List price by market' },
-      { label: 'Compare vs Plywood', href: '/compare', description: 'Cost across reuse cycles' },
-    ],
-  },
+type ApiProduct = {
+  id: string
+  name: string
+  slug: string
+  is_featured: boolean
+  starting_price_php: number | null
+}
+
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('Failed to fetch')
+  return res.json()
+}
+
+// The Products group is built from Supabase at render time, so adding or
+// retiring a board in the admin panel moves the nav with it instead of leaving
+// a hardcoded list to drift. Everything below it is fixed.
+const staticNavItems: NavItem[] = [
   { label: 'Applications', href: '/applications' },
   {
     label: 'Resources',
@@ -44,6 +51,12 @@ const navItems: NavItem[] = [
   },
 ]
 
+// Pinned to the bottom of the Products group, under the board links.
+const productTailLinks: NavChild[] = [
+  { label: 'All products and pricing', href: '/products' },
+  { label: 'Compare vs Plywood', href: '/compare', description: 'Cost across reuse cycles' },
+]
+
 const LOGO_SRC = '/logo.png'
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -55,8 +68,38 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [openGroup, setOpenGroup] = useState<string | null>(null)
   const [openMobileGroup, setOpenMobileGroup] = useState<string | null>(null)
-  const { selectedCountry, setSelectedCountryCode } = useCurrency()
+  const { selectedCountry, setSelectedCountryCode, formatConvertedFromPhp } = useCurrency()
   const navRef = useRef<HTMLDivElement>(null)
+
+  const { data: productsData } = useSWR<ApiProduct[]>('/api/products', fetcher, {
+    revalidateOnFocus: false,
+  })
+
+  // Featured first, then cheapest to dearest, matching the homepage ordering.
+  // Price shown converts from the PHP base at the same daily rate as the rest
+  // of the site.
+  const navItems: NavItem[] = useMemo(() => {
+    const list = Array.isArray(productsData) ? [...productsData] : []
+    list.sort((a, b) => {
+      if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1
+      return (a.starting_price_php ?? 0) - (b.starting_price_php ?? 0)
+    })
+
+    const productLinks: NavChild[] = list
+      .filter((product) => Boolean(product.slug))
+      .map((product) => ({
+        label: product.name,
+        href: `/products/${product.slug}`,
+        description: product.starting_price_php
+          ? `From ${formatConvertedFromPhp(product.starting_price_php)} a board`
+          : undefined,
+      }))
+
+    return [
+      { label: 'Products', children: [...productLinks, ...productTailLinks] },
+      ...staticNavItems,
+    ]
+  }, [productsData, formatConvertedFromPhp])
 
   // Close the desktop dropdown on outside click and on Escape.
   useEffect(() => {
