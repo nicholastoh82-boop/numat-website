@@ -4,12 +4,12 @@ import Link from 'next/link'
 import useSWR from 'swr'
 import {
   ArrowRight,
+  Building2,
   FileText,
   FlaskConical,
   Leaf,
   Quote,
   Recycle,
-  Ruler,
   ShieldCheck,
 } from 'lucide-react'
 import Header from '@/components/header'
@@ -17,6 +17,7 @@ import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
 import NewsletterBand from '@/components/newsletter-band'
 import PlaceholderImage from '@/components/placeholder-image'
+import VideoPlaceholder from '@/components/video-placeholder'
 import CostPerPourCalculator from '@/components/cost-per-pour-calculator'
 import { useCurrency } from '@/components/providers/currency-provider'
 
@@ -44,6 +45,7 @@ type Variant = {
   size_label: string
   thickness_mm: number | null
   ply_count: number | null
+  core_type: string | null
   unit: string
   moq: number
   currency: string
@@ -56,6 +58,9 @@ type Product = {
   name: string
   slug: string
   description: string
+  image_url: string | null
+  is_featured: boolean
+  starting_price_php: number | null
   variants: Variant[]
 }
 
@@ -65,8 +70,6 @@ const fetcher = async (url: string) => {
   return res.json()
 }
 
-// Reordered per the brief: DOST first, Philippine sourced and made second.
-// "Minimum order 10 boards" was dropped: NuWeave has no MOQ for now (moq = 1).
 const trustPoints = [
   'DOST tested',
   'Philippine sourced and made',
@@ -93,11 +96,80 @@ const benefits = [
   },
 ]
 
-// Attributed to the woven mat board as tested under ASTM D1037 by DOST-X
-// Regional Standards and Testing Laboratory. Written as tested, not certified.
-const testedFigures = [
-  { label: 'Apparent Modulus of Elasticity', value: '10,256.71 MPa' },
-  { label: 'Janka Hardness', value: 'Up to 7,377.33 N' },
+/* ---------------------------------------------------------------------------
+ * DOST test data
+ *
+ * Every figure below is transcribed from a DOST Region X Regional Standards
+ * and Testing Laboratories Report of Analysis certificate held by NUMAT.
+ * Nothing is averaged, rounded, interpolated or restated.
+ *
+ * Results are listed against the sample description printed on the
+ * certificate, not against a product name. The certificates identify each
+ * sample by sample code and dimension only, so mapping a result to NuWeave,
+ * NuComposite or NuBam CLB would be an assumption rather than a fact.
+ * ------------------------------------------------------------------------ */
+const dostReports = [
+  {
+    heading: 'Amakan Board',
+    method: 'ASTM D1037, Static Bending',
+    analysed: '16 June 2026',
+    rows: [
+      { sample: 'MTL-0431', parameter: 'Modulus of Rupture', result: '29.57 MPa', cert: '2026-0088M' },
+      { sample: 'MTL-0431', parameter: 'Apparent Modulus of Elasticity', result: '5,107.32 MPa', cert: '2026-0088M' },
+    ],
+  },
+  {
+    heading: 'Hybrid Amakan Board',
+    method: 'ASTM D1037, Static Bending',
+    analysed: '16 June 2026',
+    rows: [
+      { sample: 'MTL-0430', parameter: 'Modulus of Rupture, amakan facing up', result: '89.01 MPa', cert: '2026-0087M' },
+      { sample: 'MTL-0430', parameter: 'Modulus of Rupture, bamboo facing up', result: '85.52 MPa', cert: '2026-0087M' },
+      { sample: 'MTL-0430', parameter: 'Apparent Modulus of Elasticity, amakan facing up', result: '9,619.44 MPa', cert: '2026-0087M' },
+      { sample: 'MTL-0430', parameter: 'Apparent Modulus of Elasticity, bamboo facing up', result: '9,440.78 MPa', cert: '2026-0087M' },
+    ],
+  },
+  {
+    heading: 'Engineered bamboo, static bending',
+    method: 'ASTM D1037, Static Bending',
+    analysed: '6 November 2025',
+    rows: [
+      { sample: '12 mm x 338 mm x 75 mm', parameter: 'Modulus of Rupture, parallel section facing up', result: '32.89 MPa', cert: '2025-0053M' },
+      { sample: '12 mm x 338 mm x 75 mm', parameter: 'Modulus of Rupture, crosswise section facing up', result: '46.35 MPa', cert: '2025-0053M' },
+      { sample: '12 mm x 338 mm x 75 mm', parameter: 'Apparent Modulus of Elasticity, parallel section facing up', result: '2,466.03 MPa', cert: '2025-0053M' },
+      { sample: '12 mm x 338 mm x 75 mm', parameter: 'Apparent Modulus of Elasticity, crosswise section facing up', result: '2,581.52 MPa', cert: '2025-0053M' },
+      { sample: '20 mm x 530 mm x 75 mm', parameter: 'Modulus of Rupture', result: '22.77 MPa', cert: '2025-0054M' },
+      { sample: '20 mm x 530 mm x 75 mm', parameter: 'Apparent Modulus of Elasticity', result: '2,211.82 MPa', cert: '2025-0054M' },
+      { sample: '30 mm x 770 mm x 75 mm', parameter: 'Modulus of Rupture', result: '69.44 MPa', cert: '2025-0055M' },
+      { sample: '30 mm x 770 mm x 75 mm', parameter: 'Apparent Modulus of Elasticity', result: '10,256.71 MPa', cert: '2025-0055M' },
+    ],
+  },
+  {
+    heading: 'Engineered bamboo, compression',
+    method: 'ASTM D1037, Compression Parallel to Surface, Method C',
+    analysed: '27 October 2025',
+    rows: [
+      { sample: '12 mm x 48 mm x 25 mm', parameter: 'Compressive Strength', result: '25.19 MPa', cert: '2025-0056M' },
+      { sample: '12 mm x 48 mm x 25 mm', parameter: 'Modulus of Elasticity', result: '1,692.33 MPa', cert: '2025-0056M' },
+      { sample: '12 mm x 48 mm x 25 mm', parameter: 'Stress at Proportional Limit', result: '23.91 MPa', cert: '2025-0056M' },
+      { sample: '20 mm x 80 mm x 25 mm', parameter: 'Compressive Strength', result: '27.64 MPa', cert: '2025-0057M' },
+      { sample: '20 mm x 80 mm x 25 mm', parameter: 'Modulus of Elasticity', result: '1,828.01 MPa', cert: '2025-0057M' },
+      { sample: '20 mm x 80 mm x 25 mm', parameter: 'Stress at Proportional Limit', result: '24.82 MPa', cert: '2025-0057M' },
+      { sample: '30 mm x 120 mm x 25 mm', parameter: 'Compressive Strength', result: '30.46 MPa', cert: '2025-0058M' },
+      { sample: '30 mm x 120 mm x 25 mm', parameter: 'Modulus of Elasticity', result: '3,768.93 MPa', cert: '2025-0058M' },
+      { sample: '30 mm x 120 mm x 25 mm', parameter: 'Stress at Proportional Limit', result: '30.33 MPa', cert: '2025-0058M' },
+    ],
+  },
+  {
+    heading: 'Engineered bamboo, hardness',
+    method: 'ASTM D1037, Hardness, Modified Janka ball test method',
+    analysed: '24 October 2025',
+    rows: [
+      { sample: '20 mm x 152 mm x 76 mm', parameter: 'Hardness', result: '3,918.33 N', cert: '2025-0059M' },
+      { sample: '30 mm x 152 mm x 76 mm', parameter: 'Hardness', result: '4,252.67 N', cert: '2025-0060M' },
+      { sample: '44 mm x 152 mm x 76 mm', parameter: 'Hardness', result: '7,377.33 N', cert: '2025-0061M' },
+    ],
+  },
 ]
 
 const applications = [
@@ -121,6 +193,13 @@ const comparison = [
   { feature: 'Renewable in 3 to 5 years', nuweave: 'Yes', plywood: 'No, decades for hardwood' },
 ]
 
+/* Real completed projects only. No narrative is written here that has not been
+ * confirmed, and imagery stays a labelled placeholder until site photos land. */
+const completedProjects = [
+  { name: 'Cubo Modular', src: '/nuweave/project-cubo.jpg' },
+  { name: 'APDCC', src: '/nuweave/project-apdcc.jpg' },
+]
+
 export default function NumatHomepage() {
   const { formatConvertedFromPhp, currency, phpRateDate } = useCurrency()
 
@@ -131,9 +210,16 @@ export default function NumatHomepage() {
   const blogItems = Array.isArray(blogData) ? blogData.slice(0, 3) : []
 
   const { data: productsData } = useSWR<Product[]>('/api/products', fetcher)
-  const nuweave = Array.isArray(productsData)
-    ? productsData.find((p) => p.slug === 'nuweave') ?? null
-    : null
+
+  // Featured first, then cheapest to dearest. PHP is the authoritative base.
+  const products = Array.isArray(productsData)
+    ? [...productsData].sort((a, b) => {
+        if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1
+        return (a.starting_price_php ?? 0) - (b.starting_price_php ?? 0)
+      })
+    : []
+
+  const nuweave = products.find((p) => p.slug === 'nuweave') ?? null
   const variant = nuweave?.variants?.[0] ?? null
 
   const priceLabel = variant?.is_price_on_request
@@ -147,7 +233,7 @@ export default function NumatHomepage() {
 
       <main className="flex-1 bg-[#f6f1e8] text-stone-900">
 
-        {/* Hero */}
+        {/* 1. Hero */}
         <section className="relative overflow-hidden border-b border-stone-200 bg-[linear-gradient(to_bottom,_#f8f3ea,_#f4ede2)]">
           <div className="pointer-events-none absolute inset-0 opacity-60">
             <div className="absolute left-0 top-0 h-72 w-72 rounded-full bg-emerald-900/10 blur-3xl" />
@@ -214,7 +300,7 @@ export default function NumatHomepage() {
           </div>
         </section>
 
-        {/* Trust bar */}
+        {/* 2. Trust bar */}
         <section className="border-b border-stone-200 bg-[#f6f1e8]">
           <div className="mx-auto max-w-7xl px-6 py-4 lg:px-8">
             <div className="rounded-[2rem] bg-emerald-800 p-4 text-white">
@@ -233,7 +319,7 @@ export default function NumatHomepage() {
           </div>
         </section>
 
-        {/* Why NuWeave */}
+        {/* 3. Why NuWeave */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
             Why NuWeave
@@ -258,80 +344,115 @@ export default function NumatHomepage() {
           </div>
         </section>
 
-        {/* Hero product: spec and price */}
+        {/* 4. The range: every active product, PHP base, straight from Supabase */}
         <section className="border-y border-stone-200 bg-white">
           <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-            <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-center">
-              <div className="relative h-[300px] overflow-hidden rounded-[2rem] border border-stone-200 sm:h-[400px]">
-                <PlaceholderImage
-                  src="/nuweave/board.jpg"
-                  alt="NuWeave board face"
-                  label="Product image: NuWeave board face and edge"
-                />
-              </div>
-
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
-                  The board
+                  The range
                 </p>
                 <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-                  NuWeave
+                  Three boards, one standard sheet size
                 </h2>
-                <p className="mt-4 text-base leading-7 text-stone-600">
-                  {nuweave?.description ??
-                    'Engineered bamboo panel formed from woven bamboo mats bonded under high heat and high pressure into a 16 mm three ply board.'}
-                </p>
-
-                <dl className="mt-7 grid grid-cols-2 gap-4">
-                  {[
-                    { label: 'Board size', value: '2440 x 1220 mm (4ft x 8ft)' },
-                    { label: 'Thickness', value: '16 mm' },
-                    { label: 'Construction', value: '3 ply woven mat' },
-                    { label: 'Minimum order', value: !variant || variant.moq <= 1 ? 'None' : `${variant.moq} boards` },
-                  ].map((row) => (
-                    <div key={row.label} className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
-                        {row.label}
-                      </dt>
-                      <dd className="mt-1.5 text-sm font-semibold text-stone-950">{row.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-
-                <div className="mt-7 flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-800">
-                      List price
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold text-stone-950">
-                      {priceLabel}
-                      <span className="ml-1 text-sm font-medium text-stone-600">per board</span>
-                    </p>
-                    {currency !== 'PHP' && (
-                      <p className="mt-1 text-xs text-stone-500">
-                        Converted from the PHP list price
-                        {phpRateDate ? ` at the ${phpRateDate} rate` : ''}. Excludes shipping.
-                      </p>
-                    )}
-                  </div>
-                  <Link
-                    href="/request-quote"
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-900"
-                  >
-                    Request a quote
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
               </div>
+              <Link href="/products" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                View all products
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
+
+            <div className="grid gap-5 lg:grid-cols-3">
+              {products.map((product) => {
+                const v = product.variants?.[0] ?? null
+                const label = v?.is_price_on_request
+                  ? 'Price on request'
+                  : formatConvertedFromPhp(product.starting_price_php ?? v?.base_price_php)
+
+                return (
+                  <div
+                    key={product.id}
+                    className="flex flex-col overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <div className="relative h-56">
+                      <PlaceholderImage
+                        src={product.image_url ?? `/nuweave/product-${product.slug}.jpg`}
+                        alt={product.name}
+                        label={`Product image: ${product.name}`}
+                      />
+                      {product.is_featured && (
+                        <span className="absolute left-4 top-4 rounded-full bg-emerald-800 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
+                          Featured
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-1 flex-col p-6">
+                      <h3 className="text-xl font-semibold text-stone-950">{product.name}</h3>
+                      <p className="mt-3 line-clamp-3 text-sm leading-6 text-stone-600">
+                        {product.description}
+                      </p>
+
+                      <dl className="mt-5 space-y-2 text-sm">
+                        {v?.size_label && (
+                          <div className="flex justify-between gap-3">
+                            <dt className="text-stone-500">Sheet size</dt>
+                            <dd className="text-right font-medium text-stone-900">{v.size_label}</dd>
+                          </div>
+                        )}
+                        {v?.core_type && (
+                          <div className="flex justify-between gap-3">
+                            <dt className="text-stone-500">Core</dt>
+                            <dd className="text-right font-medium text-stone-900">{v.core_type}</dd>
+                          </div>
+                        )}
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-stone-500">Minimum order</dt>
+                          <dd className="text-right font-medium text-stone-900">
+                            {!v || v.moq <= 1 ? 'None' : `${v.moq} boards`}
+                          </dd>
+                        </div>
+                      </dl>
+
+                      <div className="mt-auto pt-6">
+                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-800">
+                            List price
+                          </p>
+                          <p className="mt-1 text-xl font-semibold text-stone-950">
+                            {label}
+                            <span className="ml-1 text-xs font-medium text-stone-600">per board</span>
+                          </p>
+                        </div>
+
+                        <Link
+                          href={`/products/${product.slug}`}
+                          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-900"
+                        >
+                          View {product.name}
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <p className="mt-6 text-xs text-stone-500">
+              Prices exclude shipping.
+              {currency !== 'PHP' && phpRateDate
+                ? ` Converted from the PHP list price at the ${phpRateDate} rate.`
+                : ''}
+            </p>
           </div>
         </section>
 
-        {/* Tested performance */}
+        {/* 5. Tested performance: DOST results exactly as certified */}
         <section className="bg-[#f6f1e8]">
           <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
             <div className="rounded-[2rem] bg-stone-950 p-6 text-white lg:p-8">
-              <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+              <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
                 <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
                     Tested performance
@@ -340,8 +461,13 @@ export default function NumatHomepage() {
                     Independently tested
                   </h2>
                   <p className="mt-4 text-base leading-7 text-white/75">
-                    Tested under ASTM D1037 at the Department of Science and Technology
-                    Regional Standards and Testing Laboratory.
+                    Samples tested under ASTM D1037 at the Regional Standards and Testing
+                    Laboratories, Department of Science and Technology Region X, Cagayan de Oro.
+                  </p>
+                  <p className="mt-4 text-sm leading-6 text-white/50">
+                    Every figure shown is transcribed from a Report of Analysis certificate.
+                    Results refer only to the particular sample submitted and are listed against
+                    the sample description printed on the certificate.
                   </p>
                   <Link
                     href="/testing"
@@ -352,41 +478,58 @@ export default function NumatHomepage() {
                   </Link>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {testedFigures.map((item) => (
+                <div className="space-y-4">
+                  {dostReports.map((report) => (
                     <div
-                      key={item.label}
-                      className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-6"
+                      key={report.heading}
+                      className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.05]"
                     >
-                      <div className="flex items-center gap-2 text-emerald-300">
-                        <FlaskConical className="h-4 w-4" />
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">
-                          {item.label}
+                      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/10 px-5 py-4">
+                        <div className="flex items-center gap-2 text-emerald-300">
+                          <FlaskConical className="h-4 w-4 shrink-0" />
+                          <p className="text-sm font-semibold text-white">{report.heading}</p>
+                        </div>
+                        <p className="text-[11px] text-white/45">
+                          {report.method} · Analysed {report.analysed}
                         </p>
                       </div>
-                      <p className="mt-3 text-2xl font-semibold leading-tight">{item.value}</p>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead className="text-white/40">
+                            <tr>
+                              <th className="px-5 py-2.5 font-medium">Sample</th>
+                              <th className="px-5 py-2.5 font-medium">Parameter</th>
+                              <th className="px-5 py-2.5 text-right font-medium">Result</th>
+                              <th className="px-5 py-2.5 text-right font-medium">Certificate</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {report.rows.map((row) => (
+                              <tr
+                                key={`${row.cert}-${row.parameter}-${row.sample}`}
+                                className="border-t border-white/[0.07]"
+                              >
+                                <td className="whitespace-nowrap px-5 py-2.5 text-white/60">{row.sample}</td>
+                                <td className="px-5 py-2.5 text-white/80">{row.parameter}</td>
+                                <td className="whitespace-nowrap px-5 py-2.5 text-right font-semibold text-white">
+                                  {row.result}
+                                </td>
+                                <td className="whitespace-nowrap px-5 py-2.5 text-right text-white/40">{row.cert}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   ))}
-
-                  <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-6 sm:col-span-2">
-                    <div className="flex items-center gap-2 text-emerald-300">
-                      <Ruler className="h-4 w-4" />
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">
-                        Test method
-                      </p>
-                    </div>
-                    <p className="mt-3 text-lg font-semibold leading-tight">
-                      ASTM D1037, Standard Test Methods for Evaluating Properties of Wood Base Fiber
-                      and Particle Panel Materials
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Applications */}
+        {/* 6. Applications */}
         <section className="border-y border-stone-200 bg-white">
           <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
             <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
@@ -412,7 +555,7 @@ export default function NumatHomepage() {
           </div>
         </section>
 
-        {/* NuWeave vs plywood */}
+        {/* 7. NuWeave vs plywood */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
           <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
             NuWeave vs traditional plywood
@@ -453,12 +596,12 @@ export default function NumatHomepage() {
           </div>
         </section>
 
-        {/* Cost per pour calculator */}
+        {/* 8. Cost per pour calculator */}
         <section className="mx-auto max-w-7xl px-6 pb-14 lg:px-8">
           <CostPerPourCalculator />
         </section>
 
-        {/* Manufacturing */}
+        {/* 9. Manufacturing */}
         <section className="border-y border-stone-200 bg-stone-950">
           <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
             <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
@@ -468,52 +611,93 @@ export default function NumatHomepage() {
               Manufactured at our factory in Manolo Fortich, Bukidnon.
             </p>
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {manufacturing.map((item) => (
-                <div key={item.title} className="overflow-hidden rounded-[1.5rem] border border-white/10">
-                  <div className="relative h-44">
-                    <PlaceholderImage src={item.src} alt={item.title} label={item.title} />
-                  </div>
-                  <p className="bg-white/[0.05] px-4 py-3 text-sm font-semibold text-white">
-                    {item.title}
-                  </p>
+            <div className="mt-8 grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+              <div className="overflow-hidden rounded-[1.75rem] border border-white/10">
+                <div className="relative aspect-video">
+                  <VideoPlaceholder label="Factory walkthrough: Manolo Fortich, Bukidnon" />
                 </div>
-              ))}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {manufacturing.map((item) => (
+                  <div key={item.title} className="overflow-hidden rounded-[1.5rem] border border-white/10">
+                    <div className="relative h-32">
+                      <PlaceholderImage src={item.src} alt={item.title} label={item.title} />
+                    </div>
+                    <p className="bg-white/[0.05] px-4 py-3 text-xs font-semibold text-white">
+                      {item.title}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Testimonials */}
-        {testimonials.length > 0 && (
-          <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
-              Customer feedback
-            </p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-              What customers say
-            </h2>
+        {/* 10. Completed projects and customer feedback */}
+        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+            Proof
+          </p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+            Delivered projects and customer feedback
+          </h2>
 
-            <div className="mt-8 grid gap-4 lg:grid-cols-3">
-              {testimonials.slice(0, 3).map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
-                >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
-                    <Quote className="h-5 w-5" />
-                  </div>
-                  <p className="mt-5 text-base leading-7 text-stone-700">{item.testimonial}</p>
-                  <div className="mt-6 border-t border-stone-200 pt-4">
-                    <p className="text-base font-semibold text-stone-950">{item.name}</p>
-                    <p className="mt-1 text-sm text-stone-500">{item.location}</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            {completedProjects.map((project) => (
+              <div
+                key={project.name}
+                className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div className="relative h-56">
+                  <PlaceholderImage
+                    src={project.src}
+                    alt={project.name}
+                    label={`Project photo: ${project.name}`}
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="pointer-events-none absolute bottom-4 left-4 right-4 flex items-center gap-2">
+                    <Building2 className="h-4 w-4 shrink-0 text-white/80" />
+                    <p className="text-lg font-semibold text-white">{project.name}</p>
+                    <span className="ml-auto rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
+                      Completed
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
+              </div>
+            ))}
+          </div>
 
-        {/* Blog */}
+          {testimonials.length > 0 && (
+            <div className="mt-10">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-stone-500">
+                What customers say
+              </h3>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                {testimonials.slice(0, 3).map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
+                      <Quote className="h-5 w-5" />
+                    </div>
+                    <p className="mt-5 whitespace-pre-line text-base leading-7 text-stone-700">
+                      {item.testimonial}
+                    </p>
+                    <div className="mt-6 border-t border-stone-200 pt-4">
+                      <p className="text-base font-semibold text-stone-950">{item.name}</p>
+                      <p className="mt-1 text-sm text-stone-500">{item.location}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* 11. Blog */}
         <section className="border-y border-stone-200 bg-white">
           <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
             <div className="mb-8 flex items-end justify-between gap-4">
@@ -580,7 +764,7 @@ export default function NumatHomepage() {
 
         <NewsletterBand />
 
-        {/* Final CTA */}
+        {/* 12. Final CTA */}
         <section className="mx-auto max-w-7xl px-6 pb-14 lg:px-8">
           <div className="relative overflow-hidden rounded-[2rem] bg-stone-950 px-8 py-12 text-white shadow-xl lg:px-12 lg:py-16">
             <div className="absolute inset-0 opacity-30">
