@@ -29,6 +29,18 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // News became Blog. Redirects run before filesystem routes, so these
+      // shadow app/news until that directory is deleted.
+      //
+      // The negative lookahead keeps /news/archive and everything under it out
+      // of the article redirect. The archive tree is orphaned (nothing links to
+      // it) and still needs its own move.
+      { source: '/news', destination: '/blog', permanent: true },
+      { source: '/news/:slug((?!archive$).*)', destination: '/blog/:slug', permanent: true },
+    ];
+  },
 }
 
 export default nextConfig

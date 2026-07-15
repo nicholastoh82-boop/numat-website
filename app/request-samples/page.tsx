@@ -6,6 +6,7 @@ declare const gtag: (...args: unknown[]) => void
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   PackageCheck,
   ArrowRight,
@@ -18,22 +19,17 @@ import {
   ChevronDown,
 } from 'lucide-react'
 
-const THICKNESS_OPTIONS = ['7mm', '12mm', '18mm', '20mm', '25mm', 'Not sure yet']
+const THICKNESS_OPTIONS = ['16mm']
 const APPLICATION_OPTIONS = [
-  'Interior fit-out',
-  'Furniture & cabinetry',
-  'Doors & joinery',
-  'Flooring',
-  'Wall panels & slats',
-  'Commercial / hospitality',
+  'Wall forming',
+  'Column forming',
+  'Slab forming',
+  'Beam forming',
+  'General construction',
   'Other',
 ]
 const PRODUCT_OPTIONS = [
-  { id: 'nubam', label: 'NuBam Board', sub: 'Horizontal & vertical core' },
-  { id: 'nuwall', label: 'NuWall Panel', sub: 'Feature wall systems' },
-  { id: 'nuslat', label: 'NuSlat', sub: 'Decorative slat panels' },
-  { id: 'nudoor', label: 'NuDoor', sub: 'Door components' },
-  { id: 'notsure', label: 'Not Sure', sub: 'Help me choose' },
+  { id: 'nuweave', label: 'NuWeave', sub: '2440 x 1220 x 16 mm, 3 ply' },
 ]
 const DIAL_CODES = [
   { code: '+63', flag: '🇵🇭', country: 'Philippines' },
@@ -168,6 +164,47 @@ export default function RequestSamplesPage() {
       <Header />
       <main className="flex-1 bg-[#f6f1e8]">
 
+        {/* Hero image band. Placeholder until the final asset lands at
+            /public/request-sample-hero.jpg */}
+        <section className="relative border-b border-stone-200 bg-stone-900">
+          <div className="relative h-[280px] w-full sm:h-[360px] lg:h-[440px]">
+            <Image
+              src="/request-sample-hero.jpg"
+              alt="NUMAT engineered bamboo formwork panels on a construction site"
+              fill
+              priority
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-transparent" />
+
+            <div className="absolute inset-0 flex items-center">
+              <div className="mx-auto w-full max-w-7xl px-6 lg:px-8">
+                <div className="max-w-xl">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">
+                    Limited time introductory offer
+                  </p>
+                  <h2 className="mt-3 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
+                    The greener and smarter way to build starts today
+                  </h2>
+                  <ul className="mt-5 space-y-2">
+                    {[
+                      'DOST tested',
+                      'Philippine sourced and made',
+                      'Proven 10+ concrete pours',
+                      'More cost effective than repeated plywood purchases',
+                    ].map((point) => (
+                      <li key={point} className="flex items-center gap-2 text-sm text-white/90">
+                        <CheckCircle className="h-4 w-4 shrink-0 text-emerald-300" />
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Hero */}
         <section className="border-b border-stone-200 bg-white">
           <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8 lg:py-16">
@@ -181,8 +218,8 @@ export default function RequestSamplesPage() {
                   Evaluate Before You Commit.
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-stone-600">
-                  Request physical bamboo board samples to assess finish, grain,
-                  thickness, and suitability — before placing a commercial order.
+                  Request a physical NuWeave board sample to assess the surface, the weave, and
+                  suitability for your pours before placing a commercial order.
                 </p>
 
                 <div className="mt-8 space-y-3">
