@@ -1,15 +1,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import NewsletterSignup from '@/components/newsletter-signup'
+import FooterProductLinks from '@/components/footer-product-links'
 
+// The Products column is no longer listed here. It reads from Supabase via
+// FooterProductLinks so it cannot drift from the actual product line.
 const footerLinks = {
-  products: [
-    { name: 'NuWeave', href: '/products/nuweave' },
-    { name: 'Specifications', href: '/technical-resources' },
-    { name: 'Compare vs Plywood', href: '/compare' },
-    { name: 'Request a Sample', href: '/request-samples' },
-    { name: 'Request a Quote', href: '/request-quote' },
-  ],
   resources: [
     { name: 'Technical Resources', href: '/technical-resources' },
     { name: 'Request Samples', href: '/request-samples' },
@@ -85,18 +81,7 @@ export default function Footer() {
             <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/88">
               Products
             </h3>
-            <ul className="mt-5 space-y-3">
-              {footerLinks.products.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-white/68 transition-colors hover:text-white"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <FooterProductLinks />
           </div>
 
           <div>
