@@ -1428,7 +1428,7 @@ export default function ProductDetailPage() {
                             : resolved.stockMessage || 'Request Quote'}
                         </p>
                         <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-                          Prices pegged to USD, updated daily
+                          Prices set in PHP, converted daily
                         </p>
                       </div>
                     </div>
@@ -1543,7 +1543,7 @@ export default function ProductDetailPage() {
                         : resolved.stockMessage || 'Request Quote'}
                     </p>
                     <p className="mt-1 text-[11px] leading-snug text-white/55">
-                      Prices pegged to USD, updated daily
+                      Prices set in PHP, converted daily
                     </p>
                   </div>
 

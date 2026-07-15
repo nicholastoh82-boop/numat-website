@@ -270,7 +270,7 @@ export function CartContent() {
                 </div>
 
                 <p className="mt-3 text-center text-xs text-stone-400">
-                  Prices pegged to USD, updated daily
+                  Prices set in PHP, converted daily
                 </p>
 
                 {!showQuoteForm && (
