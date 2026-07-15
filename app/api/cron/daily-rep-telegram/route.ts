@@ -30,8 +30,7 @@ const CHAT_ID = process.env.TELEGRAM_CHAT_ID!;
 
 // Reps to report on, in display order.
 const REPS: Array<{ email: string; name: string }> = [
-  { email: "mohan@numat.ph", name: "Mohan" },
-  { email: "eugene@numat.ph", name: "Eugene" },
+  { email: "erica@numat.ph", name: "Erica" },
 ];
 const REP_EMAILS = REPS.map((r) => r.email);
 const NAME_BY_EMAIL: Record<string, string> = Object.fromEntries(

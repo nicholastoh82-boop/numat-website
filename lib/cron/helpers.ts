@@ -6,13 +6,14 @@
 //   - supabaseGet / supabasePost / supabasePatch / supabaseRpc: typed REST helpers
 //   - sendGmail: send plain-text email via Gmail API using a rep's OAuth refresh token
 
-export type RepKey = "Nick" | "Mohan" | "Bryan" | "Eugene";
+export type RepKey = "Nick" | "Mohan" | "Bryan" | "Eugene" | "Erica";
 
 const REP_REFRESH_TOKEN_ENV: Record<RepKey, string> = {
   Nick: "GOOGLE_REFRESH_TOKEN_NICK",
   Mohan: "GOOGLE_REFRESH_TOKEN_MOHAN",
   Bryan: "GOOGLE_REFRESH_TOKEN_BRYAN",
   Eugene: "GOOGLE_REFRESH_TOKEN_EUGENE",
+  Erica: "GOOGLE_REFRESH_TOKEN_ERICA",
 };
 
 const REP_EMAIL: Record<RepKey, string> = {
@@ -20,6 +21,7 @@ const REP_EMAIL: Record<RepKey, string> = {
   Mohan: "mohan@numat.ph",
   Bryan: "bryan@numat.ph",
   Eugene: "eugene@numat.ph",
+  Erica: "erica@numat.ph",
 };
 
 export function required(name: string): string {
@@ -152,10 +154,17 @@ type SendGmailOpts = {
   }>;
 };
 
+// Resolve a rep's Gmail refresh token from their per rep env var. Portal
+// connected tokens live in rep_gmail_tokens and are used by the canonical Gmail
+// send and sync paths, not here.
+async function resolveRefreshToken(rep: RepKey): Promise<string> {
+  const envName = REP_REFRESH_TOKEN_ENV[rep];
+  if (!envName) throw new Error(`Unknown rep: ${rep}`);
+  return required(envName);
+}
+
 export async function sendGmail(opts: SendGmailOpts): Promise<string> {
-  const envName = REP_REFRESH_TOKEN_ENV[opts.from];
-  if (!envName) throw new Error(`Unknown rep: ${opts.from}`);
-  const refreshToken = required(envName);
+  const refreshToken = await resolveRefreshToken(opts.from);
   const fromEmail = REP_EMAIL[opts.from];
   const accessToken = await getAccessToken(refreshToken);
 
@@ -233,9 +242,7 @@ export async function gmailCreateReplyDraft(opts: {
   threadId: string;
   inReplyToMessageIdHeader?: string; // the RFC822 Message-ID of the message being replied to
 }): Promise<string> {
-  const envName = REP_REFRESH_TOKEN_ENV[opts.rep];
-  if (!envName) throw new Error(`Unknown rep: ${opts.rep}`);
-  const refreshToken = required(envName);
+  const refreshToken = await resolveRefreshToken(opts.rep);
   const fromEmail = REP_EMAIL[opts.rep];
   const accessToken = await getAccessToken(refreshToken);
 
@@ -293,9 +300,7 @@ export type GmailMessageSummary = {
 };
 
 async function repAccessToken(rep: RepKey): Promise<string> {
-  const envName = REP_REFRESH_TOKEN_ENV[rep];
-  if (!envName) throw new Error(`Unknown rep: ${rep}`);
-  return getAccessToken(required(envName));
+  return getAccessToken(await resolveRefreshToken(rep));
 }
 
 function decodeBase64Url(s: string): string {
@@ -502,7 +507,7 @@ export async function gmailAddLabel(rep: RepKey, messageId: string, labelId: str
   }
 }
 
-export const ALL_REPS: RepKey[] = ["Nick", "Mohan", "Bryan", "Eugene"];
+export const ALL_REPS: RepKey[] = ["Nick", "Bryan", "Erica"];
 
 export function repEmailFor(rep: RepKey): string {
   return REP_EMAIL[rep];

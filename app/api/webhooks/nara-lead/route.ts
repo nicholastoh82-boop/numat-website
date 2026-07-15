@@ -47,11 +47,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    const country = (body.country ?? "").toUpperCase().trim();
-    const location = (body.location ?? "").toUpperCase();
-    const isPH = country === "PHILIPPINES" || country === "PH" || location.includes("PHILIPPINES");
-    const repEmail = isPH ? "bryan@numat.ph" : "mohan@numat.ph";
-    const repName = isPH ? "Bryan" : "Mohan";
+    // All inbound goes to Erica; she evaluates and reassigns to the reps.
+    const repEmail = "erica@numat.ph";
+    const repName = "Erica";
 
     const nameParts = (body.contact_name ?? "").trim().split(" ");
     const firstName = nameParts[0] || "there";
@@ -73,6 +71,7 @@ export async function POST(req: Request) {
       notes: notesPreview,
       lead_source: "NARA Website Chat",
       source: "nara_chat",
+      source_type: "inbound_chat",
       pipeline_stage: "new",
       status: "active",
       rep_email: repEmail,

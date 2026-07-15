@@ -6,7 +6,7 @@ import { PackageCheck } from 'lucide-react'
 
 declare const gtag: (...args: unknown[]) => void
 
-const whatsappUrl = `https://wa.me/60162958983?text=${encodeURIComponent(
+const whatsappUrl = `https://wa.me/639613076458?text=${encodeURIComponent(
   'Hello NUMAT, I would like to request product information and a quotation.'
 )}`
 

@@ -30,9 +30,8 @@ const DRAFTABLE_CLASSES = new Set([
 ]);
 
 const REP_TITLES: Record<string, string> = {
-  'mohan@numat.ph': 'Head of Growth',
   'bryan@numat.ph': 'Chief Operating Officer',
-  'eugene@numat.ph': 'Business Development',
+  'erica@numat.ph': 'Chief Marketing Officer',
   'nick@numat.ph': 'Business Administrator',
 };
 

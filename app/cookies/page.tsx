@@ -128,7 +128,7 @@ export default function CookiesPage() {
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-foreground font-medium">NUMAT</p>
                 <p className="text-muted-foreground">Email: sales@numat.ph</p>
-                <p className="text-muted-foreground">Phone: +60 16-295 8983</p>
+                <p className="text-muted-foreground">Phone: +63 961 307 6458</p>
                 <p className="text-muted-foreground">Address: Cagayan de Oro City, Philippines</p>
               </div>
             </section>

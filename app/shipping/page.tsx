@@ -146,7 +146,7 @@ export default function ShippingPage() {
                 <a href="mailto:sales@numat.ph" className="text-primary hover:underline">
                   sales@numat.ph
                 </a>{" "}
-                or call us at +60 16-295 8983.
+                or call us at +63 961 307 6458.
               </p>
             </section>
           </div>

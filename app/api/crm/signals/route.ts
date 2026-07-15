@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
 
   // Route by rep unless admin: PH reps see PH leads, intl reps see non-PH.
   if (user.role !== 'admin') {
-    const ph = ['bryan@numat.ph', 'eugene@numat.ph'].includes(user.email.toLowerCase());
+    const ph = ['bryan@numat.ph'].includes(user.email.toLowerCase());
     if (ph) {
       query = query.eq('country', 'Philippines');
     } else {

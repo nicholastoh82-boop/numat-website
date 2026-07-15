@@ -27,11 +27,16 @@ const adminClient = createClient(
 // Roles that may view every rep. Everyone else is scoped to their own email.
 const SEE_ALL_ROLES = ['admin', 'ceo'];
 
+// Non admin, non ceo people who still see every rep's email activity, for
+// example the Head of Marketing who oversees the sales reps.
+const SEE_ALL_EMAILS = ['erica@numat.ph'];
+
 const REP_DISPLAY_NAME: Record<string, string> = {
   'nick@numat.ph': 'Nick',
   'bryan@numat.ph': 'Bryan',
   'mohan@numat.ph': 'Mohan',
   'eugene@numat.ph': 'Eugene',
+  'erica@numat.ph': 'Erica',
 };
 
 type StatRow = { rep_email: string; bucket: string; sent: number; replies: number };
@@ -102,7 +107,8 @@ export async function GET(req: NextRequest) {
     replies: Number(r.replies) || 0,
   }));
 
-  const seeAll = user.roles.some((r) => SEE_ALL_ROLES.includes(r));
+  const seeAll =
+    user.roles.some((r) => SEE_ALL_ROLES.includes(r)) || SEE_ALL_EMAILS.includes(user.email);
   if (!seeAll) {
     rows = rows.filter((r) => r.rep_email === user.email);
   }

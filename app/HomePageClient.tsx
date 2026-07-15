@@ -15,7 +15,7 @@ import {
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
-import NewsletterSignup from '@/components/newsletter-signup'
+import NewsletterBand from '@/components/newsletter-band'
 import PlaceholderImage from '@/components/placeholder-image'
 import { useCurrency } from '@/components/providers/currency-provider'
 
@@ -568,21 +568,7 @@ export default function NumatHomepage() {
           </div>
         </section>
 
-        {/* Newsletter */}
-        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-          <div className="grid gap-8 rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm lg:grid-cols-[1fr_1fr] lg:items-center lg:p-10">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-stone-950 sm:text-3xl">
-                Stay on the list
-              </h2>
-              <p className="mt-3 text-sm leading-7 text-stone-600">
-                Product updates, test results, and field notes from the factory floor. No more than
-                once a month.
-              </p>
-            </div>
-            <NewsletterSignup source="homepage" />
-          </div>
-        </section>
+        <NewsletterBand />
 
         {/* Final CTA */}
         <section className="mx-auto max-w-7xl px-6 pb-14 lg:px-8">

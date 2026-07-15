@@ -468,7 +468,7 @@ export default function VEReportClient() {
             <h2 className="syne">Ready to spec this for {resort}?</h2>
             <p>Mohan Louis, our Head of Growth, can walk you through product options, sample availability, and a tailored lead time for your next renovation phase.</p>
             <a href="https://cal.com/mohanlouis/discovery" target="_blank" rel="noopener noreferrer" className="cta-btn syne">Book a 15-Minute Call →</a>
-            <p className="cta-note">Or email: mohan@numat.ph &nbsp;·&nbsp; numatbamboo.com</p>
+            <p className="cta-note">Or email: erica@numat.ph &nbsp;·&nbsp; numatbamboo.com</p>
           </div>
 
           <div className="footnote">

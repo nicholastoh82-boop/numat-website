@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, createContext, useContext } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2 } from 'lucide-react'
 import AdminSidebar from '@/components/admin/admin-sidebar'
@@ -15,8 +15,18 @@ export const AdminRoleContext = createContext<{ role: string | null; name: strin
 })
 export const useAdminRole = () => useContext(AdminRoleContext)
 
+// Marketing role: content and SEO only (products, news/blog, testimonials).
+// Everything else in /admin (settings, quotes, inquiries, leads, pipeline, nara)
+// stays off limits.
+const MARKETING_ALLOWED_PREFIXES = ['/admin/products', '/admin/news', '/admin/testimonials', '/admin/newsletter']
+function marketingCanAccess(path: string): boolean {
+  if (path === '/admin') return true
+  return MARKETING_ALLOWED_PREFIXES.some((p) => path === p || path.startsWith(p + '/'))
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [authState, setAuthState] = useState<{
     ready: boolean
     role: string | null
@@ -61,6 +71,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     checkAuth()
   }, [router])
+
+  // Marketing role is limited to content and SEO pages; bounce it off anything else.
+  useEffect(() => {
+    if (authState.ready && authState.role === 'marketing' && !marketingCanAccess(pathname)) {
+      router.replace('/admin')
+    }
+  }, [authState, pathname, router])
 
   if (!authState.ready) {
     return (

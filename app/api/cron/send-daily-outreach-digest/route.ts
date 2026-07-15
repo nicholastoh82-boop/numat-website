@@ -33,10 +33,11 @@ type DraftRow = {
   buying_signal_strength: string | null;
 };
 
-const REP_KEY_BY_EMAIL: Record<string, 'Nick' | 'Mohan' | 'Bryan' | 'Eugene'> = {
+const REP_KEY_BY_EMAIL: Record<string, 'Nick' | 'Mohan' | 'Bryan' | 'Eugene' | 'Erica'> = {
   'nick@numat.ph': 'Nick',
   'mohan@numat.ph': 'Mohan',
   'bryan@numat.ph': 'Bryan',
+  'erica@numat.ph': 'Erica',
   'eugene@numat.ph': 'Eugene',
 };
 
@@ -105,7 +106,7 @@ async function handle(): Promise<Response> {
     'email_drafts' +
       '?select=id,recipient_email,recipient_name,company,rep_email,rep_name,subject,body,status,buying_signal_strength' +
       '&status=eq.pending_review' +
-      '&rep_email=in.(mohan@numat.ph,eugene@numat.ph)' +
+      '&rep_email=in.(erica@numat.ph)' +
       '&order=rep_email.asc,company.asc'
   );
 

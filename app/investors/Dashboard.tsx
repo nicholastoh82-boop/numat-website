@@ -460,7 +460,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
       <div className="border-b" style={{ background: "var(--ink)", color: "var(--paper)" }}>
         <div className="max-w-[1400px] mx-auto px-10 py-2 flex items-center justify-between text-[11px]" style={{ letterSpacing: "0.1em" }}>
           <span className="uppercase font-medium">Strictly Confidential · For Investor Eyes Only</span>
-          <span className="num opacity-80">Prepared for: Paul Lam · Marie · Wavemaker Impact</span>
+          <span className="num opacity-80">Prepared for: Paul Lam · Marie · 100x100</span>
         </div>
       </div>
 
@@ -544,8 +544,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
           </div>
           <div className="p-6 border-r" style={{ borderColor: "var(--line)" }}>
             <div className="stat_label">Gross Margin</div>
-            <div className="num display text-[36px] mt-3 font-[400]">{fmtPct(derived.grossMarginPct)}</div>
-            <div className="mt-2"><span className="pill pill_neg num">vs 45% target</span></div>
+            <div className="num display text-[36px] mt-3 font-[400]">{fmtPct(derived.grossMarginPct)}</div><div className="mt-2"><span className="pill pill_neg num">vs 45% target</span></div>
           </div>
           <div className="p-6">
             <div className="stat_label">Active Customers</div>
@@ -1011,7 +1010,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
             <div className="section_number">CHAPTER VI</div>
             <h2 className="display text-[32px] font-[400] leading-tight">Impact &amp; Material Risks</h2>
             <p className="text-[13px] mt-2 max-w-xl" style={{ color: "var(--ink_soft)" }}>
-              Climate impact metrics aligned with the Wavemaker Impact thesis, alongside a candid view of the risks the board is actively managing.
+              Climate impact metrics aligned with the 100x100 thesis, alongside a candid view of the risks the board is actively managing.
             </p>
           </div>
         </div>
@@ -1103,7 +1102,7 @@ export default function Dashboard({ data }: { data: DashboardData }) {
             <div className="grid grid-cols-3 gap-6 text-[12px]">
               <div><div className="stat_label">Prepared by</div><div className="mt-2">{snapshot.prepared_by}<br /><span style={{ color: "var(--ink_soft)" }}>Business Administrator</span></div></div>
               <div><div className="stat_label">Reviewed by</div><div className="mt-2">{snapshot.reviewed_by}<br /><span style={{ color: "var(--ink_soft)" }}>Chief Executive Officer</span></div></div>
-              <div><div className="stat_label">Distribution</div><div className="mt-2">Paul Lam, Marie<br /><span style={{ color: "var(--ink_soft)" }}>Wavemaker Impact</span></div></div>
+              <div><div className="stat_label">Distribution</div><div className="mt-2">Paul Lam, Marie<br /><span style={{ color: "var(--ink_soft)" }}>100x100</span></div></div>
             </div>
           </div>
         </div>
