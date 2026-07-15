@@ -59,10 +59,15 @@ export async function GET(
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
+  // Accept either a UUID or a slug. The header links to /products/nuweave, and
+  // readable URLs are worth more than forcing a UUID into the address bar.
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+
   const { data: product, error: productError } = await supabase
     .from('products')
     .select('*')
-    .eq('id', id)
+    .eq(isUuid ? 'id' : 'slug', id)
     .eq('is_active', true)
     .single()
 
@@ -109,7 +114,7 @@ export async function GET(
       applications,
       image_url
     `)
-    .eq('product_id', id)
+    .eq('product_id', product.id)
     .eq('is_active', true)
     .order('sort_order', { ascending: true, nullsFirst: false })
 
@@ -120,7 +125,7 @@ export async function GET(
   const { data: allImages } = await supabase
     .from('product_images')
     .select('id, image_url, alt_text, is_primary, display_order, variant_id')
-    .eq('product_id', id)
+    .eq('product_id', product.id)
     .order('display_order', { ascending: true })
 
   const productImages = (allImages ?? []).filter((img: any) => !img.variant_id)
