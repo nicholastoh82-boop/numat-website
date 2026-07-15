@@ -86,9 +86,13 @@ export default function Header() {
     children.some((child) => pathname === child.href || pathname?.startsWith(`${child.href}/`))
 
   return (
-    <>
+    // The newsletter bar and the nav travel together as one sticky unit, so the
+    // bar follows the scroll instead of being left behind at the top of the
+    // page. Once the visitor subscribes or dismisses it, NewsletterTopBar
+    // unmounts itself and the nav alone keeps sticking to the top.
+    <div className="sticky top-0 z-50">
       <NewsletterTopBar />
-      <header className="sticky top-0 z-50 w-full border-b border-stone-200 bg-[#e7e1d8]/95 backdrop-blur">
+      <header className="w-full border-b border-stone-200 bg-[#e7e1d8]/95 backdrop-blur">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8 xl:gap-10" ref={navRef}>
           <Link href="/" className="flex shrink-0 items-center">
@@ -329,6 +333,6 @@ export default function Header() {
         </div>
       )}
     </header>
-    </>
+    </div>
   )
 }
