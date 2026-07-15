@@ -144,7 +144,7 @@ export async function POST(req: Request) {
     if (variantIds.length > 0) {
       const { data: variants } = await supabase
         .from("product_variants")
-        .select("id, product_id, sku, size_label, unit, moq, base_price_usd")
+        .select("id, product_id, sku, size_label, unit, moq, base_price_php")
         .in("id", variantIds)
       variantMap = new Map(variants?.map((v: any) => [v.id, v]))
     }
@@ -190,8 +190,8 @@ export async function POST(req: Request) {
         category: i.category || null,
         unit: variant.unit,
         quantity: qty,
-        unit_price: unitPrice || Number(variant.base_price_usd),
-        total_price: qty * (unitPrice || Number(variant.base_price_usd)),
+        unit_price: unitPrice || Number(variant.base_price_php),
+        total_price: qty * (unitPrice || Number(variant.base_price_php)),
       }
     })
 

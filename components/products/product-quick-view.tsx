@@ -20,8 +20,8 @@ interface ProductQuickViewProps {
     length?: string | number | null
     color?: string | null
     finish?: string | null
-    base_price_usd?: number | null
-    starting_price_usd?: number | null
+    base_price_php?: number | null
+    starting_price_php?: number | null
     min_order_qty?: number | null
     unit?: string | null
   }
@@ -29,8 +29,8 @@ interface ProductQuickViewProps {
 }
 
 export function ProductQuickView({ product, onClose }: ProductQuickViewProps) {
-  const { formatConvertedFromUsd } = useCurrency()
-  const displayUsdPrice = product.starting_price_usd ?? product.base_price_usd ?? null
+  const { formatConvertedFromPhp } = useCurrency()
+  const displayPhpPrice = product.starting_price_php ?? product.base_price_php ?? null
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -125,9 +125,9 @@ export function ProductQuickView({ product, onClose }: ProductQuickViewProps) {
             <div className="mt-6 rounded-2xl bg-muted/50 p-4">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Pricing</span>
-                {displayUsdPrice ? (
+                {displayPhpPrice ? (
                   <span className="text-lg font-semibold text-primary">
-                    From {formatConvertedFromUsd(displayUsdPrice)}
+                    From {formatConvertedFromPhp(displayPhpPrice)}
                   </span>
                 ) : (
                   <span className="text-lg font-semibold text-primary">Available on request</span>

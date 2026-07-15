@@ -38,8 +38,8 @@ interface ProductCardProps {
     length?: string | number | null
     min_order_qty?: number | null
     unit?: string | null
-    base_price_usd?: number | null
-    starting_price_usd?: number | null
+    base_price_php?: number | null
+    starting_price_php?: number | null
     variants?: Array<{
       id: string
       sku?: string
@@ -51,7 +51,7 @@ interface ProductCardProps {
       ply_count?: number | null
       unit?: string | null
       moq?: number | null
-      base_price_usd?: number | null
+      base_price_php?: number | null
       is_price_on_request?: boolean
       is_active?: boolean
       sort_order?: number | null
@@ -67,7 +67,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const { addItem, openCart } = useCartStore()
   const { toast } = useToast()
-  const { formatConvertedFromUsd } = useCurrency()
+  const { formatConvertedFromPhp } = useCurrency()
 
   const categoryName = getCategoryName(product)
   const categoryFallbackImage = getFallbackImageByCategory(categoryName)
@@ -97,12 +97,12 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
   const currentImage = productImages[currentImageIndex]
   const hasMultipleImages = productImages.length > 1
 
-  const displayUsdPrice = useMemo(() => {
-    const candidatePrices = [product.starting_price_usd, product.base_price_usd].filter(
+  const displayPhpPrice = useMemo(() => {
+    const candidatePrices = [product.starting_price_php, product.base_price_php].filter(
       (value): value is number => typeof value === 'number' && !Number.isNaN(value) && value > 0
     )
     return candidatePrices.length > 0 ? candidatePrices[0] : null
-  }, [product.starting_price_usd, product.base_price_usd])
+  }, [product.starting_price_php, product.base_price_php])
 
   const hasConfigurableVariants = useMemo(() => {
     const variants = product.variants ?? []
@@ -147,14 +147,14 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
       return
     }
 
-    const isPriceOnRequest = displayUsdPrice === null
+    const isPriceOnRequest = displayPhpPrice === null
 
     addItem({
       id: product.id,
       name: product.name,
       specs: `${product.thickness || ''} ${product.width || ''} ${product.length || ''} ${product.color || ''} ${product.finish || ''}`.trim(),
       quantity,
-      unitPrice: displayUsdPrice,
+      unitPrice: displayPhpPrice,
       minOrderQty: minQty,
       unit: product.unit || 'pcs',
       imageUrl: imageSrc || categoryFallbackImage,
@@ -288,11 +288,11 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
         <div className="flex-grow" />
 
         <div className="border-t border-border pt-2">
-          {displayUsdPrice !== null ? (
+          {displayPhpPrice !== null ? (
             <div>
               <p className="mb-0.5 text-xs text-muted-foreground">Starting at</p>
               <p className="text-2xl font-bold text-primary">
-                {formatConvertedFromUsd(displayUsdPrice)}
+                {formatConvertedFromPhp(displayPhpPrice)}
               </p>
               <p className="text-xs text-muted-foreground">per {product.unit || 'sheet'}</p>
             </div>

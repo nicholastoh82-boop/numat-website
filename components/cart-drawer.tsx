@@ -19,7 +19,7 @@ export default function CartDrawer() {
     getTotalItems,
   } = useCartStore()
 
-  const { unitPhp, lineTotalPhpFromUsd, formatPhpAmount } = useCurrency()
+  const { convertFromPhp, lineTotalFromPhp, formatPhpAmount } = useCurrency()
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -44,7 +44,7 @@ export default function CartDrawer() {
 
   // Compute totals in PHP from rounded display units so the on-screen math reconciles.
   const subtotalPhp = items.reduce((sum, item) => {
-    const line = lineTotalPhpFromUsd(item.unitPrice, item.quantity)
+    const line = lineTotalFromPhp(item.unitPrice, item.quantity)
     return sum + (line ?? 0)
   }, 0)
   const totalPhp = subtotalPhp
@@ -119,7 +119,7 @@ export default function CartDrawer() {
                         </p>
                         <p className="mt-1 text-sm font-medium text-primary">
                           {hasPrice
-                            ? `${formatPhpAmount(unitPhp(item.unitPrice!))} / ${item.unit}`
+                            ? `${formatPhpAmount(convertFromPhp(item.unitPrice!))} / ${item.unit}`
                             : 'Price on request'}
                         </p>
                       </div>
@@ -160,7 +160,7 @@ export default function CartDrawer() {
                         </Button>
                       </div>
                       <p className="font-semibold text-foreground">
-                        {hasPrice ? formatPhpAmount(lineTotalPhpFromUsd(item.unitPrice!, item.quantity)) : '—'}
+                        {hasPrice ? formatPhpAmount(lineTotalFromPhp(item.unitPrice!, item.quantity)) : '—'}
                       </p>
                     </div>
                   </div>

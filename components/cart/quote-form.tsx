@@ -52,8 +52,8 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
   const router = useRouter()
   const { items, clearCart } = useCartStore()
   const {
-    unitPhp,
-    lineTotalPhpFromUsd,
+    convertFromPhp,
+    lineTotalFromPhp,
     formatPhpAmount,
     selectedCountry,
   } = useCurrency()
@@ -80,7 +80,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
   // Email body uses rounded display units so the visible math reconciles (matches the website cart).
   const subtotalPhp = items.reduce((sum, item) => {
     if (item.isPriceOnRequest) return sum
-    const line = lineTotalPhpFromUsd(item.unitPrice, item.quantity)
+    const line = lineTotalFromPhp(item.unitPrice, item.quantity)
     return sum + (line ?? 0)
   }, 0)
   const totalPhp = subtotalPhp
@@ -101,8 +101,8 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
       lines.push(`${index + 1}. ${item.name}`)
       lines.push(`   ${item.specs}`)
       lines.push(`   Quantity: ${item.quantity} ${item.unit}`)
-      lines.push(`   Unit Price: ${item.isPriceOnRequest ? 'Price on request' : formatPhpAmount(unitPhp(item.unitPrice))}`)
-      lines.push(`   Line Total: ${item.isPriceOnRequest ? 'Price on request' : formatPhpAmount(lineTotalPhpFromUsd(item.unitPrice, item.quantity))}`)
+      lines.push(`   Unit Price: ${item.isPriceOnRequest ? 'Price on request' : formatPhpAmount(convertFromPhp(item.unitPrice))}`)
+      lines.push(`   Line Total: ${item.isPriceOnRequest ? 'Price on request' : formatPhpAmount(lineTotalFromPhp(item.unitPrice, item.quantity))}`)
       lines.push('')
     })
     lines.push(`Total (excl. VAT): ${formatPhpAmount(totalPhp)}`)
@@ -112,7 +112,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
       lines.push(formData.notes.trim())
     }
     return lines.join('\n')
-  }, [formData, phoneNumber, items, totalPhp, unitPhp, lineTotalPhpFromUsd, formatPhpAmount, selectedCountry.currency])
+  }, [formData, phoneNumber, items, totalPhp, convertFromPhp, lineTotalFromPhp, formatPhpAmount, selectedCountry.currency])
 
   function validateForm() {
     const nextErrors: Record<string, string> = {}

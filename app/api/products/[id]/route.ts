@@ -102,7 +102,7 @@ export async function GET(
       ply_count,
       unit,
       moq,
-      base_price_usd,
+      base_price_php,
       is_price_on_request,
       price_notes,
       is_active,
@@ -162,7 +162,7 @@ export async function GET(
           : null,
       length_mm: variant.length_mm ?? null,
       width_mm: variant.width_mm ?? null,
-      base_price_usd: parsePrice(variant.base_price_usd),
+      base_price_php: parsePrice(variant.base_price_php),
       unit: variant.unit ?? 'piece',
       min_order_qty: variant.moq ?? 1,
       core_type: variant.core_type ?? null,
@@ -183,14 +183,14 @@ export async function GET(
     mappedVariants.find(
       (variant) =>
         !variant.is_price_on_request &&
-        typeof variant.base_price_usd === 'number' &&
-        Number.isFinite(variant.base_price_usd) &&
-        variant.base_price_usd > 0,
+        typeof variant.base_price_php === 'number' &&
+        Number.isFinite(variant.base_price_php) &&
+        variant.base_price_php > 0,
     ) ?? null
 
-  const canonicalProductPrice = parsePrice(product.base_price_usd)
-  const resolvedBasePriceUsd =
-    canonicalProductPrice ?? firstPricedVariant?.base_price_usd ?? null
+  const canonicalProductPrice = parsePrice(product.base_price_php)
+  const resolvedBasePricePhp =
+    canonicalProductPrice ?? firstPricedVariant?.base_price_php ?? null
 
   return jsonNoStore({
     id: product.id,
@@ -199,7 +199,7 @@ export async function GET(
     description: product.description ?? '',
     image_url: product.image_url ?? '/placeholder-product.jpg',
     category: categoryName,
-    base_price_usd: product.is_price_on_request ? null : resolvedBasePriceUsd,
+    base_price_php: product.is_price_on_request ? null : resolvedBasePricePhp,
     is_price_on_request: product.is_price_on_request ?? false,
     sku: mappedVariants[0]?.sku ?? '',
     thickness_mm: mappedVariants[0]?.thickness_mm ?? null,

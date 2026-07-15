@@ -37,7 +37,7 @@ type Product = {
   image_url: string | null
   category: string | null
   unit?: string | null
-  base_price_usd?: number | null
+  base_price_php?: number | null
   is_price_on_request?: boolean
   sku?: string | null
   thickness_mm?: number | null
@@ -50,7 +50,7 @@ type Product = {
     thickness_mm: number | null
     ply_count: number | null
     dimensions: string | null
-    base_price_usd: number | null
+    base_price_php: number | null
     unit: string
     min_order_qty: number
     core_type: string | null
@@ -82,7 +82,7 @@ type ProductListItem = {
   category?: string | { id?: string; name?: string } | null
   categories?: { id: string; name: string } | null
   created_at?: string | null
-  base_price_usd?: number | null
+  base_price_php?: number | null
 }
 
 type Category = {
@@ -110,7 +110,7 @@ type ResolvedQuoteState = {
   dimensions: string
   moq: number
   unit: string
-  priceUsd: number | null
+  pricePhp: number | null
   inStock: boolean
   stockMessage: string
   sku: string
@@ -437,7 +437,7 @@ export default function ProductDetailPage() {
   const router = useRouter()
   const productId = params?.id
 
-  const { unitPhp, lineTotalPhpFromUsd, formatPhpAmount } = useCurrency()
+  const { convertFromPhp, lineTotalFromPhp, formatPhpAmount } = useCurrency()
   const { addItem } = useCartStore()
 
   const [loading, setLoading] = useState(true)
@@ -531,9 +531,9 @@ export default function ProductDetailPage() {
       (product?.variants ?? []).filter(
         (variant) =>
           !variant.is_price_on_request &&
-          typeof variant.base_price_usd === 'number' &&
-          Number.isFinite(variant.base_price_usd) &&
-          variant.base_price_usd > 0
+          typeof variant.base_price_php === 'number' &&
+          Number.isFinite(variant.base_price_php) &&
+          variant.base_price_php > 0
       ),
     [product?.variants]
   )
@@ -909,12 +909,12 @@ export default function ProductDetailPage() {
       dimensions: product?.dimensions || '2440mm x 1220mm',
       moq: product?.min_order_qty || 1,
       unit: product?.unit || 'piece',
-      priceUsd: product?.base_price_usd ?? null,
+      pricePhp: product?.base_price_php ?? null,
       inStock: true,
-      stockMessage: product?.base_price_usd != null ? '' : 'Request Quote',
+      stockMessage: product?.base_price_php != null ? '' : 'Request Quote',
       sku: product?.sku || '',
       variantId: null,
-      isPriceOnRequest: product?.base_price_usd == null,
+      isPriceOnRequest: product?.base_price_php == null,
     }
   }, [product, displayProductName, family, selectedModel, selectedCoreType, selectedThickness, selectedPly, selectedLength])
 
@@ -933,7 +933,7 @@ export default function ProductDetailPage() {
             : selectedVariant.dimensions || product?.dimensions || '—',
         moq: selectedVariant.min_order_qty || product?.min_order_qty || 1,
         unit: selectedVariant.unit || product?.unit || 'piece',
-        priceUsd: selectedVariant.base_price_usd,
+        pricePhp: selectedVariant.base_price_php,
         inStock: true,
         stockMessage: '',
         sku: selectedVariant.sku || product?.sku || '',
@@ -946,8 +946,8 @@ export default function ProductDetailPage() {
   }, [useVariantDrivenConfig, selectedVariant, product, family, selectedLength, displayProductName, fallbackResolved])
 
   // Display values rounded once at unit so estimated total reconciles with unit × qty.
-  const unitPriceDisplayPhp = unitPhp(resolved.priceUsd)
-  const estimatedTotalPhp = lineTotalPhpFromUsd(resolved.priceUsd, quantity)
+  const unitPriceDisplayPhp = convertFromPhp(resolved.pricePhp)
+  const estimatedTotalPhp = lineTotalFromPhp(resolved.pricePhp, quantity)
   const familyQuantityError = validateConfiguredQuantity(family, quantity)
   const quantityError =
     quantity < resolved.moq
@@ -1044,11 +1044,11 @@ export default function ProductDetailPage() {
       name: resolved.productLabel,
       specs: buildSpecs(),
       quantity,
-      unitPrice: resolved.priceUsd,
+      unitPrice: resolved.pricePhp,
       minOrderQty: resolved.moq,
       unit: resolved.unit,
       imageUrl: product.image_url || '/Bamboo-Board.png',
-      isPriceOnRequest: resolved.isPriceOnRequest || resolved.priceUsd == null,
+      isPriceOnRequest: resolved.isPriceOnRequest || resolved.pricePhp == null,
       family,
       dimensions: resolved.dimensions,
       thickness: resolved.thickness,

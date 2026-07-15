@@ -21,7 +21,7 @@ type ProductVariant = {
   ply_count: number | null
   unit: string | null
   moq: number | null
-  base_price_usd: number | null
+  base_price_php: number | null
   is_price_on_request?: boolean
   price_notes?: string | null
   is_active?: boolean
@@ -37,8 +37,8 @@ type ProductApiItem = {
   image_url?: string | null
   category: string | { id?: string; name?: string } | null
   categories?: { id: string; name: string } | null
-  base_price_usd: number | null
-  starting_price_usd: number | null
+  base_price_php: number | null
+  starting_price_php: number | null
   min_order_qty?: number | null
   unit?: string | null
   sku?: string
@@ -238,10 +238,10 @@ export function ProductsContent() {
         )
         break
       case 'price-asc':
-        filtered.sort((a, b) => (a.starting_price_usd || 0) - (b.starting_price_usd || 0))
+        filtered.sort((a, b) => (a.starting_price_php || 0) - (b.starting_price_php || 0))
         break
       case 'price-desc':
-        filtered.sort((a, b) => (b.starting_price_usd || 0) - (a.starting_price_usd || 0))
+        filtered.sort((a, b) => (b.starting_price_php || 0) - (a.starting_price_php || 0))
         break
       case 'name':
         filtered.sort((a, b) =>
