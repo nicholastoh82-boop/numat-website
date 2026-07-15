@@ -1,20 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import useSWR from 'swr'
 import {
   ArrowRight,
   FileText,
+  FlaskConical,
   Leaf,
-  PackageCheck,
-  ShieldCheck,
-  Sparkles,
   Quote,
+  Recycle,
+  Ruler,
+  ShieldCheck,
 } from 'lucide-react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
+import NewsletterSignup from '@/components/newsletter-signup'
+import PlaceholderImage from '@/components/placeholder-image'
+import { useCurrency } from '@/components/providers/currency-provider'
 
 type Testimonial = {
   id: string
@@ -24,7 +27,7 @@ type Testimonial = {
   sort_order?: number
 }
 
-type NewsItem = {
+type BlogItem = {
   id: string
   title: string
   slug: string
@@ -34,92 +37,110 @@ type NewsItem = {
   featured: boolean
 }
 
+type Variant = {
+  id: string
+  sku: string
+  size_label: string
+  thickness_mm: number | null
+  ply_count: number | null
+  unit: string
+  moq: number
+  currency: string
+  base_price_php: number | null
+  is_price_on_request: boolean
+}
+
+type Product = {
+  id: string
+  name: string
+  slug: string
+  description: string
+  variants: Variant[]
+}
+
 const fetcher = async (url: string) => {
   const res = await fetch(url)
   if (!res.ok) throw new Error('Failed to fetch')
   return res.json()
 }
 
-export default function NumatBambooHomepageRevamp() {
+// Reordered per the brief: DOST first, Philippine sourced and made second.
+// "Minimum order 10 boards" was dropped: NuWeave has no MOQ for now (moq = 1).
+const trustPoints = [
+  'DOST tested',
+  'Philippine sourced and made',
+  'Sustainably harvested',
+  'No minimum order',
+  'Fast quote turnaround',
+]
+
+const benefits = [
+  {
+    icon: ShieldCheck,
+    title: 'Built for repeated pours',
+    body: 'Woven mats pressed under high heat and pressure spread load across the whole sheet, so the board holds its line where conventional substrates start to bulge.',
+  },
+  {
+    icon: Recycle,
+    title: 'Lower cost across its life',
+    body: 'The lowest purchase price is not the lowest project cost. A board that survives more reuse cycles brings the cost per pour down.',
+  },
+  {
+    icon: Leaf,
+    title: 'Philippine bamboo, Philippine made',
+    body: 'Bamboo matures in three to five years against decades for hardwood. Sourced and manufactured locally in Bukidnon.',
+  },
+]
+
+// Attributed to the woven mat board as tested under ASTM D1037 by DOST-X
+// Regional Standards and Testing Laboratory. Written as tested, not certified.
+const testedFigures = [
+  { label: 'Apparent Modulus of Elasticity', value: '10,256.71 MPa' },
+  { label: 'Janka Hardness', value: 'Up to 7,377.33 N' },
+]
+
+const applications = [
+  { title: 'Wall forming', src: '/nuweave/application-wall.jpg' },
+  { title: 'Column forming', src: '/nuweave/application-column.jpg' },
+  { title: 'Slab forming', src: '/nuweave/application-slab.jpg' },
+  { title: 'Beam forming', src: '/nuweave/application-beam.jpg' },
+]
+
+const manufacturing = [
+  { title: 'Raw material selection', src: '/nuweave/mfg-raw-material.jpg' },
+  { title: 'Weaving and lay up', src: '/nuweave/mfg-weaving.jpg' },
+  { title: 'Hot pressing', src: '/nuweave/mfg-pressing.jpg' },
+  { title: 'Testing', src: '/nuweave/mfg-testing.jpg' },
+]
+
+const comparison = [
+  { feature: 'Reuse cycles before failure', nuweave: 'Designed for repeated pours', plywood: 'Bulges after a few pours' },
+  { feature: 'Load spread', nuweave: 'Interwoven mats across the sheet', plywood: 'Layered veneer' },
+  { feature: 'Philippine made', nuweave: 'Yes', plywood: 'Usually imported' },
+  { feature: 'Renewable in 3 to 5 years', nuweave: 'Yes', plywood: 'No, decades for hardwood' },
+]
+
+export default function NumatHomepage() {
+  const { formatConvertedFromPhp, currency, phpRateDate } = useCurrency()
+
   const { data: testimonialsData } = useSWR<Testimonial[]>('/api/testimonials', fetcher)
   const testimonials = Array.isArray(testimonialsData) ? testimonialsData : []
 
-  const { data: newsData } = useSWR<NewsItem[]>('/api/news', fetcher)
-  const newsItems = Array.isArray(newsData) ? newsData.slice(0, 3) : []
+  const { data: blogData } = useSWR<BlogItem[]>('/api/news', fetcher)
+  const blogItems = Array.isArray(blogData) ? blogData.slice(0, 3) : []
 
-  const trustPoints = [
-    'Sustainably Harvested',
-    'MOQ from 10 boards',
-    'Export-ready supply',
-    'Fast quote turnaround',
-    'DOST / ASTM D1037 tested',
-  ]
+  const { data: productsData } = useSWR<Product[]>('/api/products', fetcher)
+  const nuweave = Array.isArray(productsData)
+    ? productsData.find((p) => p.slug === 'nuweave') ?? null
+    : null
+  const variant = nuweave?.variants?.[0] ?? null
 
-  const productFamilies = [
-    {
-      title: 'NuWall',
-      subtitle: 'Engineered bamboo panels for interior surfaces and feature walls',
-      image: '/Bamboo-Wall.png',
-      href: '/products?category=nuwall',
-    },
-    {
-      title: 'NuDoor',
-      subtitle: 'Bamboo door panels and joinery components',
-      image: '/Bamboo-Door.png',
-      href: '/products?category=nudoor',
-    },
-    {
-      title: 'NuFloor',
-      subtitle: 'Premium bamboo flooring for interior surfaces',
-      image: '/Bamboo-Flooring.png',
-      href: '/products?category=nufloor',
-    },
-    {
-      title: 'NuBam Boards',
-      subtitle: 'Versatile bamboo boards for furniture, cabinetry, and fit-outs',
-      image: '/Bamboo-Board.png',
-      href: '/products?category=nubam-boards',
-    },
-    {
-      title: 'NuSlat',
-      subtitle: 'Decorative bamboo slats for feature walls and design applications',
-      image: '/bamboo-slats.png',
-      href: '/products?category=nuslat',
-    },
-  ]
-
-  const applicationGallery = [
-    { title: 'Interior Fit-Outs', image: '/Bamboo-Wall.png' },
-    { title: 'Furniture Manufacturing', image: '/Bamboo-Furniture.png' },
-    { title: 'Doors & Panels', image: '/Bamboo-Door.png' },
-    { title: 'Cabinetry & Joinery', image: '/Bamboo-DIY.png' },
-    { title: 'Flooring Surfaces', image: '/Bamboo-Flooring.png' },
-    { title: 'Project Boards', image: '/Bamboo-Board.png' },
-  ]
-
-  const testingCards = [
-    { label: 'MOR', value: '22.77–69.44 MPa' },
-    { label: 'MOE', value: '2211.82–10256.71 MPa' },
-    { label: 'Compression', value: '25.19–30.46 MPa' },
-    { label: 'Hardness', value: '3918.33–7377.33 N' },
-  ]
-
-  const resourceCards = [
-    { title: 'Data Sheets', href: '/technical-resources', icon: FileText },
-    { title: 'Dimensions', href: '/technical-resources', icon: PackageCheck },
-    { title: 'Certifications', href: '/testing', icon: ShieldCheck },
-    { title: 'Applications', href: '/technical-resources', icon: Leaf },
-  ]
-
-  const visualTrust = [
-    { title: 'Sustainable Harvesting', image: '/harvest.jpg' },
-    { title: 'Project-Ready Boards', image: '/board stack.jpg' },
-    { title: 'Commercial Support', image: '/DSCF1689.JPG' },
-    { title: 'Interior-Focused Finish', image: '/bm-132.jpg' },
-  ]
+  const priceLabel = variant?.is_price_on_request
+    ? 'Price on request'
+    : formatConvertedFromPhp(variant?.base_price_php)
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col">
       <Header />
       <CartDrawer />
 
@@ -132,88 +153,57 @@ export default function NumatBambooHomepageRevamp() {
             <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-amber-700/10 blur-3xl" />
           </div>
 
-          <div className="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-[0.88fr_1.12fr] lg:px-8 lg:py-14">
-            <div className="flex flex-col justify-center animate-[fadeUp_.7s_ease-out]">
+          <div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 lg:grid-cols-[0.95fr_1.05fr] lg:px-8 lg:py-16">
+            <div className="flex flex-col justify-center">
               <div className="mb-4 inline-flex w-fit rounded-full border border-emerald-900/10 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-900 shadow-sm">
-                Engineered bamboo boards
+                Engineered bamboo panels
               </div>
 
               <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-stone-950 sm:text-5xl lg:text-6xl">
-                Premium Bamboo Boards for Interiors, Furniture, and Projects
+                The next generation of bamboo construction panels
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-7 text-stone-700 sm:text-lg">
-                Built for buyers sourcing boards for cabinetry, fit-outs, doors,
-                wall finishes, flooring, and commercial applications.
+                NuWeave is woven bamboo mat pressed under high heat and high pressure into a
+                16 mm three ply board. Proudly made in the Philippines.
               </p>
 
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <Link
-                  href="/request-quote"
+                  href="/request-samples"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-stone-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-stone-900"
                 >
-                  Request Quote
+                  Request a sample
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <p className="text-sm font-semibold text-emerald-700 animate-[subtlePulse_2.5s_ease-in-out_infinite]">
-                  ✦ Get a quote in 24 hours — no commitment needed.
-                </p>
+                <Link
+                  href="/request-quote"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-300 bg-white px-6 py-3.5 text-sm font-semibold text-stone-900 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-50"
+                >
+                  Request a quote
+                </Link>
               </div>
 
+              {variant && (
+                <p className="mt-5 text-sm text-stone-600">
+                  <span className="font-semibold text-stone-900">{priceLabel}</span> per board,
+                  {' '}{variant.size_label}
+                  {currency !== 'PHP' && phpRateDate && (
+                    <span className="text-stone-500">
+                      {' '}(converted from PHP at the {phpRateDate} rate)
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2 lg:grid-rows-[1.15fr_0.85fr] animate-[fadeUp_.8s_ease-out]">
-              <div className="group relative overflow-hidden rounded-[2rem] border border-stone-200 bg-white p-3 shadow-lg lg:col-span-2">
-                <div className="relative h-[320px] overflow-hidden rounded-[1.5rem] sm:h-[430px]">
-                  <Image
-                    src="/Bamboo-DIY.png"
-                    alt="Engineered bamboo boards for commercial interiors and projects"
-                    fill
-                    priority
-                    className="object-cover transition duration-700 group-hover:scale-[1.05]"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                  <div className="absolute bottom-5 left-5 right-5 rounded-[1.5rem] border border-white/20 bg-white/88 p-5 shadow-xl backdrop-blur">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-600">
-                      Procurement-ready support
-                    </p>
-                    <p className="mt-1 text-xl font-semibold leading-tight text-stone-950 sm:text-2xl">
-                      Specs, sampling, and commercial guidance for serious buyers
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="group relative h-full overflow-hidden rounded-[1.75rem] border border-stone-200 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-                <div className="relative h-full min-h-[208px]">
-                  <Image
-                    src="/Bamboo-Furniture.png"
-                    alt="Furniture and cabinetry applications"
-                    fill
-                    className="object-cover transition duration-700 group-hover:scale-[1.06]"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <p className="text-sm font-medium text-white/80">Application</p>
-                    <p className="mt-1 text-lg font-semibold text-white">Furniture & cabinetry</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="group relative h-full overflow-hidden rounded-[1.75rem] border border-stone-200 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-                <div className="relative h-full min-h-[208px]">
-                  <Image
-                    src="/Bamboo-Board.png"
-                    alt="Export-ready bamboo board supply"
-                    fill
-                    className="object-cover transition duration-700 group-hover:scale-[1.06]"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <p className="text-sm font-medium text-white/80">Commercial</p>
-                    <p className="mt-1 text-lg font-semibold text-white">Export-ready supply</p>
-                  </div>
-                </div>
+            <div className="relative overflow-hidden rounded-[2rem] border border-stone-200 bg-white p-3 shadow-lg">
+              <div className="relative h-[320px] overflow-hidden rounded-[1.5rem] sm:h-[440px]">
+                <PlaceholderImage
+                  src="/nuweave/hero.jpg"
+                  alt="NuWeave engineered bamboo panel"
+                  label="Hero image: NuWeave board on site"
+                />
               </div>
             </div>
           </div>
@@ -238,265 +228,271 @@ export default function NumatBambooHomepageRevamp() {
           </div>
         </section>
 
-        {/* News & Activities */}
-        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-          <div className="mb-8 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
-                Latest updates
-              </p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-                News & Activities
-              </h2>
-            </div>
-            <Link href="/news" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
-              View all
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+        {/* Why NuWeave */}
+        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+            Why NuWeave
+          </p>
+          <h2 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+            Stronger boards, straighter concrete, lower cost per pour
+          </h2>
 
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {newsItems.map((item) => (
-              <Link
-                key={item.id}
-                href={`/news/${item.slug}`}
-                className="group block overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-xl"
+          <div className="mt-8 grid gap-4 lg:grid-cols-3">
+            {benefits.map(({ icon: Icon, title, body }) => (
+              <div
+                key={title}
+                className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
               >
-                {item.cover_image_url ? (
-                  <div className="relative h-52 overflow-hidden">
-                    <img
-                      src={item.cover_image_url}
-                      alt={item.title}
-                      className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    {item.featured && (
-                      <span className="absolute left-4 top-4 rounded-full bg-emerald-700 px-3 py-1 text-xs font-semibold text-white">
-                        Featured
-                      </span>
+                <div className="w-fit rounded-2xl bg-emerald-50 p-3">
+                  <Icon className="h-5 w-5 text-emerald-800" />
+                </div>
+                <h3 className="mt-5 text-lg font-semibold text-stone-950">{title}</h3>
+                <p className="mt-3 text-sm leading-7 text-stone-600">{body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Hero product: spec and price */}
+        <section className="border-y border-stone-200 bg-white">
+          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+            <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-center">
+              <div className="relative h-[300px] overflow-hidden rounded-[2rem] border border-stone-200 sm:h-[400px]">
+                <PlaceholderImage
+                  src="/nuweave/board.jpg"
+                  alt="NuWeave board face"
+                  label="Product image: NuWeave board face and edge"
+                />
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+                  The board
+                </p>
+                <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+                  NuWeave
+                </h2>
+                <p className="mt-4 text-base leading-7 text-stone-600">
+                  {nuweave?.description ??
+                    'Engineered bamboo panel formed from woven bamboo mats bonded under high heat and high pressure into a 16 mm three ply board.'}
+                </p>
+
+                <dl className="mt-7 grid grid-cols-2 gap-4">
+                  {[
+                    { label: 'Board size', value: '2440 x 1220 mm (4ft x 8ft)' },
+                    { label: 'Thickness', value: '16 mm' },
+                    { label: 'Construction', value: '3 ply woven mat' },
+                    { label: 'Minimum order', value: !variant || variant.moq <= 1 ? 'None' : `${variant.moq} boards` },
+                  ].map((row) => (
+                    <div key={row.label} className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
+                        {row.label}
+                      </dt>
+                      <dd className="mt-1.5 text-sm font-semibold text-stone-950">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                <div className="mt-7 flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-800">
+                      List price
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold text-stone-950">
+                      {priceLabel}
+                      <span className="ml-1 text-sm font-medium text-stone-600">per board</span>
+                    </p>
+                    {currency !== 'PHP' && (
+                      <p className="mt-1 text-xs text-stone-500">
+                        Converted from the PHP list price
+                        {phpRateDate ? ` at the ${phpRateDate} rate` : ''}. Excludes shipping.
+                      </p>
                     )}
                   </div>
-                ) : (
-                  <div className="flex h-52 items-center justify-center bg-stone-100">
-                    <FileText className="h-10 w-10 text-stone-300" />
-                  </div>
-                )}
-
-                <div className="p-6">
-                  {item.published_at && (
-                    <p className="text-xs font-medium text-stone-400">
-                      {new Date(item.published_at).toLocaleDateString('en-PH', {
-                        year: 'numeric', month: 'long', day: 'numeric',
-                      })}
-                    </p>
-                  )}
-                  <h3 className="mt-2 text-lg font-semibold leading-snug text-stone-950">
-                    {item.title}
-                  </h3>
-                  {item.excerpt && (
-                    <p className="mt-2 text-sm leading-6 text-stone-500 line-clamp-2">
-                      {item.excerpt}
-                    </p>
-                  )}
-                  <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
-                    Read more
-                    <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* Product Families */}
-        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-          <div className="mb-8 flex items-end justify-between gap-4">
-            <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-              Product Families
-            </h2>
-            <Link href="/products" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
-              View all
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {productFamilies.map((item) => (
-              <Link
-                key={item.title}
-                href={item.href}
-                className="group block overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-xl"
-              >
-                <div className="relative h-72 overflow-hidden">
-                  <Image src={item.image} alt={item.title} fill className="object-cover transition duration-700 group-hover:scale-[1.07]" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                  <div className="absolute bottom-5 left-5 right-5">
-                    <h3 className="text-2xl font-semibold text-white">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-white/85">{item.subtitle}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* Visual Applications */}
-        <section className="border-y border-stone-200 bg-white">
-          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-            <div className="mb-8">
-              <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-                Visual Applications
-              </h2>
-            </div>
-
-            <div className="grid items-start gap-4 xl:grid-cols-12">
-              <div className="group relative self-start overflow-hidden rounded-[2rem] border border-stone-200 shadow-sm xl:col-span-5">
-                <div className="relative h-[652px]">
-                  <Image src="/Bamboo-Wall.png" alt="Premium bamboo wall and interior surfaces" fill className="object-cover transition duration-700 group-hover:scale-[1.05]" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                  <div className="absolute bottom-5 left-5 right-5">
-                    <p className="text-2xl font-semibold text-white">Interior Fit-Outs</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4 xl:col-span-7 xl:grid-cols-2">
-                {applicationGallery.slice(1, 5).map((item) => (
-                  <div key={item.title} className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-                    <div className="relative h-[200px]">
-                      <Image src={item.image} alt={item.title} fill className="object-cover transition duration-700 group-hover:scale-[1.06]" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-                      <div className="absolute bottom-4 left-4 right-4">
-                        <p className="text-lg font-semibold text-white">{item.title}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                <div className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg xl:col-span-2">
-                  <div className="relative h-[220px]">
-                    <Image src={applicationGallery[5].image} alt={applicationGallery[5].title} fill className="object-cover transition duration-700 group-hover:scale-[1.06]" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <p className="text-lg font-semibold text-white">{applicationGallery[5].title}</p>
-                    </div>
-                  </div>
+                  <Link
+                    href="/request-quote"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-900"
+                  >
+                    Request a quote
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Testing */}
+        {/* Tested performance */}
         <section className="bg-[#f6f1e8]">
-          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
             <div className="rounded-[2rem] bg-stone-950 p-6 text-white lg:p-8">
               <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
                 <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-8">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
-                    Testing highlights
+                    Tested performance
                   </p>
-                  <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                    Performance at a Glance
+                  <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+                    Independently tested
                   </h2>
                   <p className="mt-4 text-base leading-7 text-white/75">
-                    DOST / ASTM D1037 mechanical testing supports commercial evaluation.
+                    Tested under ASTM D1037 at the Department of Science and Technology
+                    Regional Standards and Testing Laboratory.
                   </p>
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <Link href="/testing" className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-stone-950 transition duration-300 hover:bg-stone-100">
-                      View Testing
-                    </Link>
-                    <Link href="/contact" className="inline-flex items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-white/10">
-                      Contact Sales
-                    </Link>
-                  </div>
+                  <Link
+                    href="/testing"
+                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-stone-950 transition hover:bg-stone-100"
+                  >
+                    View test data
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {testingCards.map((item) => (
-                    <div key={item.label} className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:bg-white/[0.07]">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">{item.label}</p>
+                  {testedFigures.map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-6"
+                    >
+                      <div className="flex items-center gap-2 text-emerald-300">
+                        <FlaskConical className="h-4 w-4" />
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                          {item.label}
+                        </p>
+                      </div>
                       <p className="mt-3 text-2xl font-semibold leading-tight">{item.value}</p>
                     </div>
                   ))}
+
+                  <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-6 sm:col-span-2">
+                    <div className="flex items-center gap-2 text-emerald-300">
+                      <Ruler className="h-4 w-4" />
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                        Test method
+                      </p>
+                    </div>
+                    <p className="mt-3 text-lg font-semibold leading-tight">
+                      ASTM D1037, Standard Test Methods for Evaluating Properties of Wood Base Fiber
+                      and Particle Panel Materials
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Technical Resources */}
+        {/* Applications */}
         <section className="border-y border-stone-200 bg-white">
-          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-            <div className="mb-8 flex items-end justify-between gap-4">
-              <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-                Technical Resources
-              </h2>
-              <Link href="/technical-resources" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
-                View all
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
+          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+            <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+              Built for every application
+            </h2>
 
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {resourceCards.map((resource) => {
-                const Icon = resource.icon
-                return (
-                  <Link key={resource.title} href={resource.href} className="group block rounded-[1.75rem] border border-stone-200 bg-stone-50 p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-md">
-                    <div className="w-fit rounded-2xl bg-white p-3 shadow-sm">
-                      <Icon className="h-5 w-5 text-emerald-800" />
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {applications.map((item) => (
+                <div
+                  key={item.title}
+                  className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                >
+                  <div className="relative h-56">
+                    <PlaceholderImage src={item.src} alt={item.title} label={item.title} />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="pointer-events-none absolute bottom-4 left-4 right-4">
+                      <p className="text-lg font-semibold text-white">{item.title}</p>
                     </div>
-                    <p className="mt-4 text-lg font-semibold text-stone-950">{resource.title}</p>
-                    <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-800">
-                      View
-                      <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-                    </div>
-                  </Link>
-                )
-              })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="mt-8 rounded-[2rem] border border-emerald-200 bg-emerald-50 px-6 py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-bold text-emerald-900">Not sure which material is right for your project?</p>
-              <p className="mt-1 text-sm text-emerald-700">See how NuBam stacks up against plywood, MDF, and solid wood across strength, sustainability, and cost.</p>
-            </div>
+        </section>
+
+        {/* NuWeave vs plywood */}
+        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+          <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+            NuWeave vs traditional plywood
+          </h2>
+
+          <div className="mt-8 overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-stone-50">
+                <tr>
+                  <th className="px-6 py-4 font-semibold text-stone-500">Feature</th>
+                  <th className="px-6 py-4 font-semibold text-stone-950">NuWeave</th>
+                  <th className="px-6 py-4 font-semibold text-stone-500">Traditional plywood</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparison.map((row) => (
+                  <tr key={row.feature} className="border-t border-stone-200">
+                    <td className="px-6 py-4 font-medium text-stone-700">{row.feature}</td>
+                    <td className="px-6 py-4 font-semibold text-emerald-800">{row.nuweave}</td>
+                    <td className="px-6 py-4 text-stone-500">{row.plywood}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-4 rounded-[2rem] border border-emerald-200 bg-emerald-50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold text-emerald-900">
+              Want the full cost per pour breakdown?
+            </p>
             <Link
               href="/compare"
-              className="shrink-0 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-emerald-900"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-emerald-900"
             >
-              Compare Materials
+              Compare materials
               <ArrowRight className="h-4 w-4" />
             </Link>
+          </div>
+        </section>
+
+        {/* Manufacturing */}
+        <section className="border-y border-stone-200 bg-stone-950">
+          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+            <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              World class manufacturing, local expertise
+            </h2>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-white/70">
+              Manufactured at our factory in Manolo Fortich, Bukidnon.
+            </p>
+
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {manufacturing.map((item) => (
+                <div key={item.title} className="overflow-hidden rounded-[1.5rem] border border-white/10">
+                  <div className="relative h-44">
+                    <PlaceholderImage src={item.src} alt={item.title} label={item.title} />
+                  </div>
+                  <p className="bg-white/[0.05] px-4 py-3 text-sm font-semibold text-white">
+                    {item.title}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
         {/* Testimonials */}
         {testimonials.length > 0 && (
-          <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-            <div className="mb-8 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
-                  Customer feedback
-                </p>
-                <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-                  What Customers Say
-                </h2>
-              </div>
-            </div>
+          <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+              Customer feedback
+            </p>
+            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+              What customers say
+            </h2>
 
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="mt-8 grid gap-4 lg:grid-cols-3">
               {testimonials.slice(0, 3).map((item) => (
-                <div key={item.id} className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
-                      <Quote className="h-5 w-5" />
-                    </div>
-                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-400">
-                      Verified feedback
-                    </span>
+                <div
+                  key={item.id}
+                  className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
+                    <Quote className="h-5 w-5" />
                   </div>
-                  <p className="mt-5 text-base leading-7 text-stone-700">"{item.testimonial}"</p>
+                  <p className="mt-5 text-base leading-7 text-stone-700">{item.testimonial}</p>
                   <div className="mt-6 border-t border-stone-200 pt-4">
                     <p className="text-base font-semibold text-stone-950">{item.name}</p>
                     <p className="mt-1 text-sm text-stone-500">{item.location}</p>
@@ -507,92 +503,116 @@ export default function NumatBambooHomepageRevamp() {
           </section>
         )}
 
-        {/* Trust & Credibility */}
-        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-          <div className="mb-8">
-            <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-              Trust & Credibility
-            </h2>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {visualTrust.map((item) => (
-              <div key={item.title} className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-                <div className="relative h-64">
-                  <Image src={item.image} alt={item.title} fill className="object-cover transition duration-700 group-hover:scale-[1.06]" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <p className="text-xl font-semibold text-white">{item.title}</p>
-                  </div>
-                </div>
+        {/* Blog */}
+        <section className="border-y border-stone-200 bg-white">
+          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+            <div className="mb-8 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+                  Latest
+                </p>
+                <h2 className="mt-2 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+                  From the blog
+                </h2>
               </div>
-            ))}
-          </div>
-        </section>
+              <Link href="/blog" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
+                View all
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
 
-        {/* Material gallery */}
-        <section className="border-y border-stone-200 bg-[#efe7d9]">
-          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-            <div className="grid gap-4 lg:grid-cols-3">
-              <div className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm lg:col-span-2">
-                <div className="relative h-[320px]">
-                  <Image src="/Bamboo-Furniture.png" alt="Premium bamboo furniture board visual" fill className="object-cover transition duration-700 group-hover:scale-[1.05]" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/25 to-transparent" />
-                  <div className="absolute bottom-5 left-5 max-w-lg">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">Material appeal</p>
-                    <p className="mt-2 text-3xl font-semibold text-white">Premium natural finish for design-led interiors</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4">
-                <div className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm">
-                  <div className="relative h-[152px]">
-                    <Image src="/Bamboo-DIY.png" alt="Decorative use" fill className="object-cover transition duration-700 group-hover:scale-[1.06]" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <p className="text-lg font-semibold text-white">Decorative use</p>
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {blogItems.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/blog/${item.slug}`}
+                  className="group block overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1.5 hover:shadow-xl"
+                >
+                  {item.cover_image_url ? (
+                    <div className="relative h-52 overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.cover_image_url}
+                        alt={item.title}
+                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]"
+                      />
                     </div>
-                  </div>
-                </div>
-
-                <div className="group relative overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm">
-                  <div className="relative h-[152px]">
-                    <Image src="/Bamboo-Board.png" alt="Project board supply" fill className="object-cover transition duration-700 group-hover:scale-[1.06]" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <p className="text-lg font-semibold text-white">Project board supply</p>
+                  ) : (
+                    <div className="flex h-52 items-center justify-center bg-stone-100">
+                      <FileText className="h-10 w-10 text-stone-300" />
                     </div>
+                  )}
+
+                  <div className="p-6">
+                    {item.published_at && (
+                      <p className="text-xs font-medium text-stone-400">
+                        {new Date(item.published_at).toLocaleDateString('en-PH', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    )}
+                    <h3 className="mt-2 text-lg font-semibold leading-snug text-stone-950">
+                      {item.title}
+                    </h3>
+                    {item.excerpt && (
+                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-500">
+                        {item.excerpt}
+                      </p>
+                    )}
                   </div>
-                </div>
-              </div>
+                </Link>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* Bottom CTA */}
-        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-          <div className="relative overflow-hidden rounded-[2rem] border border-stone-900/10 bg-stone-950 px-8 py-12 text-white shadow-xl lg:px-12 lg:py-16">
-            <div className="absolute inset-0 opacity-35">
-              <Image src="/Bamboo-Board.png" alt="Premium engineered bamboo board" fill className="object-cover" />
+        {/* Newsletter */}
+        <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+          <div className="grid gap-8 rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm lg:grid-cols-[1fr_1fr] lg:items-center lg:p-10">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight text-stone-950 sm:text-3xl">
+                Stay on the list
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-stone-600">
+                Product updates, test results, and field notes from the factory floor. No more than
+                once a month.
+              </p>
+            </div>
+            <NewsletterSignup source="homepage" />
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <section className="mx-auto max-w-7xl px-6 pb-14 lg:px-8">
+          <div className="relative overflow-hidden rounded-[2rem] bg-stone-950 px-8 py-12 text-white shadow-xl lg:px-12 lg:py-16">
+            <div className="absolute inset-0 opacity-30">
+              <PlaceholderImage src="/nuweave/cta.jpg" alt="NuWeave board" label="" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-black/70" />
 
             <div className="relative max-w-3xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">Next step</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
+                Next step
+              </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Ready to Source Bamboo Boards for Your Next Project?
+                Ready to build with NuWeave?
               </h2>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <Link
-                  href="/request-quote"
+                  href="/request-samples"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-stone-950 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-100"
                 >
-                  Request Quote
+                  Request a sample
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <p className="text-sm font-semibold text-emerald-300 animate-[subtlePulse_2.5s_ease-in-out_infinite]">
-                  ✦ Get a quote in 24 hours — no commitment needed.
-                </p>
+                <Link
+                  href="/request-quote"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition duration-300 hover:bg-white/10"
+                >
+                  Request a quote
+                </Link>
               </div>
             </div>
           </div>
@@ -601,17 +621,6 @@ export default function NumatBambooHomepageRevamp() {
       </main>
 
       <Footer />
-
-      <style jsx global>{`
-        @keyframes subtlePulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(22px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   )
 }
