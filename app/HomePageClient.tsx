@@ -17,6 +17,7 @@ import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
 import NewsletterBand from '@/components/newsletter-band'
 import PlaceholderImage from '@/components/placeholder-image'
+import CostPerPourCalculator from '@/components/cost-per-pour-calculator'
 import { useCurrency } from '@/components/providers/currency-provider'
 
 type Testimonial = {
@@ -168,7 +169,14 @@ export default function NumatHomepage() {
                 16 mm three ply board. Proudly made in the Philippines.
               </p>
 
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <span className="text-lg font-semibold text-stone-950">{priceLabel}</span>
+                <span className="text-sm text-stone-600">a board.</span>
+                <span className="text-sm font-semibold text-emerald-900">No minimum order.</span>
+                <span className="text-sm text-stone-600">Buy one and try it on site.</span>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <Link
                   href="/request-samples"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-stone-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-stone-900"
@@ -185,13 +193,10 @@ export default function NumatHomepage() {
               </div>
 
               {variant && (
-                <p className="mt-5 text-sm text-stone-600">
-                  <span className="font-semibold text-stone-900">{priceLabel}</span> per board,
-                  {' '}{variant.size_label}
+                <p className="mt-4 text-sm text-stone-500">
+                  {variant.size_label}, three ply.
                   {currency !== 'PHP' && phpRateDate && (
-                    <span className="text-stone-500">
-                      {' '}(converted from PHP at the {phpRateDate} rate)
-                    </span>
+                    <span> Converted from PHP at the {phpRateDate} rate.</span>
                   )}
                 </p>
               )}
@@ -446,6 +451,11 @@ export default function NumatHomepage() {
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
+        </section>
+
+        {/* Cost per pour calculator */}
+        <section className="mx-auto max-w-7xl px-6 pb-14 lg:px-8">
+          <CostPerPourCalculator />
         </section>
 
         {/* Manufacturing */}
