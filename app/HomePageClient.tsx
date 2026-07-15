@@ -103,14 +103,28 @@ const benefits = [
  * and Testing Laboratories Report of Analysis certificate held by NUMAT.
  * Nothing is averaged, rounded, interpolated or restated.
  *
- * Results are listed against the sample description printed on the
- * certificate, not against a product name. The certificates identify each
- * sample by sample code and dimension only, so mapping a result to NuWeave,
- * NuComposite or NuBam CLB would be an assumption rather than a fact.
+ * The certificates name each sample by its own coding, not by product name.
+ * Nick confirmed two of those codings: the Amakan Board sample is NuWeave and
+ * the Hybrid Amakan Board sample is NuComposite. Those two carry the product
+ * name as the heading with the certificate coding shown beside it, so a buyer
+ * or auditor can still tie the figure back to the paper.
+ *
+ * The October 2025 engineered bamboo samples are not mapped to a product and
+ * stay under their certificate description until that call is made.
  * ------------------------------------------------------------------------ */
-const dostReports = [
+type DostReport = {
+  heading: string
+  /** Sample name printed on the certificate, when it differs from the product. */
+  certifiedAs?: string
+  method: string
+  analysed: string
+  rows: { sample: string; parameter: string; result: string; cert: string }[]
+}
+
+const dostReports: DostReport[] = [
   {
-    heading: 'Amakan Board',
+    heading: 'NuWeave',
+    certifiedAs: 'Amakan Board',
     method: 'ASTM D1037, Static Bending',
     analysed: '16 June 2026',
     rows: [
@@ -119,7 +133,8 @@ const dostReports = [
     ],
   },
   {
-    heading: 'Hybrid Amakan Board',
+    heading: 'NuComposite',
+    certifiedAs: 'Hybrid Amakan Board',
     method: 'ASTM D1037, Static Bending',
     analysed: '16 June 2026',
     rows: [
@@ -485,9 +500,14 @@ export default function NumatHomepage() {
                       className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.05]"
                     >
                       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/10 px-5 py-4">
-                        <div className="flex items-center gap-2 text-emerald-300">
+                        <div className="flex flex-wrap items-center gap-2 text-emerald-300">
                           <FlaskConical className="h-4 w-4 shrink-0" />
                           <p className="text-sm font-semibold text-white">{report.heading}</p>
+                          {report.certifiedAs && (
+                            <span className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] font-medium text-white/50">
+                              Tested as {report.certifiedAs}
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] text-white/45">
                           {report.method} · Analysed {report.analysed}
