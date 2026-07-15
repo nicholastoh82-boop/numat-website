@@ -118,6 +118,15 @@ export async function GET() {
         is_featured: product.is_featured ?? false,
         is_active: product.is_active ?? true,
         categories: category,
+        // Cheapest priced variant drives the "starting at" figure. PHP is the
+        // authoritative base; other currencies convert at the daily rate.
+        starting_price_php: (() => {
+          const prices = productVariants
+            .filter((v: any) => !v.is_price_on_request && v.base_price_php != null)
+            .map((v: any) => Number(v.base_price_php))
+            .filter((n: number) => Number.isFinite(n) && n > 0)
+          return prices.length ? Math.min(...prices) : null
+        })(),
         variants: productVariants.map((variant) => ({
           id: variant.id,
           product_id: variant.product_id,

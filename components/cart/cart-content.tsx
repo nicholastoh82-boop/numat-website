@@ -38,7 +38,7 @@ export function CartContent() {
     getTotalItems,
   } = useCartStore()
 
-  const { unitPhp, lineTotalPhpFromUsd, formatPhpAmount } = useCurrency()
+  const { convertFromPhp, lineTotalFromPhp, formatPhpAmount } = useCurrency()
   const searchParams = useSearchParams()
   const prefillProduct = searchParams.get('product') ?? undefined
   const [showQuoteForm, setShowQuoteForm] = useState(() => !!searchParams.get('product'))
@@ -48,7 +48,7 @@ export function CartContent() {
 
   // Compute order math in PHP from rounded display units so the visible line/subtotal/total reconcile.
   const subtotalPhp = items.reduce((sum, item) => {
-    const line = lineTotalPhpFromUsd(item.unitPrice, item.quantity)
+    const line = lineTotalFromPhp(item.unitPrice, item.quantity)
     return sum + (line ?? 0)
   }, 0)
   const totalPhp = subtotalPhp
@@ -162,7 +162,7 @@ export function CartContent() {
                         <h3 className="font-bold text-stone-950">{item.name}</h3>
                         <p className="mt-1 text-sm text-stone-500">{item.specs}</p>
                         <p className="mt-2 text-sm font-semibold text-emerald-700">
-                          {formatPhpAmount(unitPhp(item.unitPrice))} / {item.unit}
+                          {formatPhpAmount(convertFromPhp(item.unitPrice))} / {item.unit}
                         </p>
                       </div>
                     </div>
@@ -200,7 +200,7 @@ export function CartContent() {
 
                       <div className="flex items-center gap-4">
                         <p className="font-bold text-stone-950">
-                          {formatPhpAmount(lineTotalPhpFromUsd(item.unitPrice, item.quantity))}
+                          {formatPhpAmount(lineTotalFromPhp(item.unitPrice, item.quantity))}
                         </p>
                         <button
                           className="flex h-10 w-10 items-center justify-center rounded-xl text-stone-400 transition hover:bg-red-50 hover:text-red-500"

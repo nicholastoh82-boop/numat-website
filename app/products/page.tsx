@@ -47,12 +47,12 @@ async function getInitialData() {
     const mergedProducts = (products ?? []).map((p: any) => {
       const category = p.category_id ? categoryMap.get(p.category_id) ?? null : null
       const productVariants = variantsMap.get(p.id) ?? []
-      const variantPrices = productVariants.map((v: any) => v.base_price_usd).filter((x: any) => typeof x === 'number' && x > 0)
-      const startingPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : p.base_price_usd
+      const variantPrices = productVariants.map((v: any) => v.base_price_php).filter((x: any) => typeof x === 'number' && x > 0)
+      const startingPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : p.base_price_php
       return {
         id: p.id, name: p.name, slug: p.slug ?? '', description: p.description ?? '',
         image_url: p.image_url ?? p.image ?? null, is_featured: p.is_featured ?? false,
-        base_price_usd: p.base_price_usd, starting_price_usd: startingPrice,
+        base_price_php: p.base_price_php, starting_price_php: startingPrice,
         min_order_qty: p.min_order_qty ?? 1, unit: p.unit ?? 'sheet',
         sku: p.sku ?? '', category: category?.name ?? '', categories: category,
         variants: productVariants, created_at: p.created_at ?? null,
