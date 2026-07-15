@@ -4,11 +4,11 @@ import NewsletterSignup from '@/components/newsletter-signup'
 
 const footerLinks = {
   products: [
-    { name: 'NuBam Boards', href: '/products?category=nubam-boards' },
-    { name: 'NuDoor', href: '/products?category=nudoor' },
-    { name: 'NuFloor', href: '/products?category=nufloor' },
-    { name: 'NuWall', href: '/products?category=nuwall' },
-    { name: 'NuSlat', href: '/products?category=nuslat' },
+    { name: 'NuWeave', href: '/products/nuweave' },
+    { name: 'Specifications', href: '/technical-resources' },
+    { name: 'Compare vs Plywood', href: '/compare' },
+    { name: 'Request a Sample', href: '/request-samples' },
+    { name: 'Request a Quote', href: '/request-quote' },
   ],
   resources: [
     { name: 'Technical Resources', href: '/technical-resources' },

@@ -46,7 +46,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { anthropicMessagesUrl, anthropicHeaders } from '@/lib/anthropic'
 
-const N8N_WEBHOOK = 'https://nicholastoh.app.n8n.cloud/webhook/numat-lead'
+// n8n is out of the stack and this endpoint returns 404, so every completed lead
+// was being dropped. /api/webhooks/nara-lead is the replacement that already
+// exists and already emails Erica; it was built for this and never wired up.
+const LEAD_WEBHOOK =
+  (process.env.NEXT_PUBLIC_SITE_URL || 'https://numatbamboo.com') +
+  '/api/webhooks/nara-lead'
 const STOP_WORDS = new Set(['a','an','the','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','could','should','may','might','shall','can','need','dare','ought','used','i','me','my','we','our','you','your','he','she','it','they','them','his','her','its','their','what','which','who','whom','this','that','these','those','am','at','by','for','in','of','on','or','to','up','and','but','if','or','nor','so','yet','both','either','neither','not','only','own','same','than','too','very','just','how','when','where','why','all','any','each','few','more','most','other','some','such','no','as'])
 
 // Short greetings, acknowledgements, and yes/no answers never need knowledge base lookup.
@@ -448,21 +453,39 @@ export async function POST(request: NextRequest) {
         .map(m => `${m.role.toUpperCase()}: ${m.content}`)
         .join('\n\n')
 
-      fetch(N8N_WEBHOOK, {
+      const isVeReport = Boolean(ve_report_context?.token)
+      const sourceLabel = isVeReport ? 'VE Report' : 'Website chat'
+
+      fetch(LEAD_WEBHOOK, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(process.env.NARA_LEAD_WEBHOOK_SECRET
+            ? { 'x-webhook-secret': process.env.NARA_LEAD_WEBHOOK_SECRET }
+            : {}),
+        },
         body: JSON.stringify({
-          source: 'NARA',
-          lead_source: 'VE Report',  // tag these leads as coming from a VE report
-          ve_report_company: ve_report_context?.company || null,
-          ve_report_token: ve_report_context?.token || null,
-          session_id,
-          ...leadData,
-          email: leadData.email ||
-            fullConvo.match(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/)?.[0] || null,
-          notes: `NARA conversation (from VE Report):\n\n${fullConvo}`,
+          contact_name: leadData.name || leadData.contact_name || null,
+          company: leadData.company || ve_report_context?.company || null,
+          email:
+            leadData.email ||
+            fullConvo.match(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/)?.[0] ||
+            null,
+          phone: leadData.phone || null,
+          location: leadData.location || null,
+          country: leadData.country || null,
+          industry: leadData.project_type || leadData.industry || null,
+          notes:
+            `Source: NARA (${sourceLabel})\n` +
+            `Session: ${session_id}\n` +
+            (tier ? `Tier: ${tier}\n` : '') +
+            (score != null ? `Score: ${score}\n` : '') +
+            (isVeReport && ve_report_context?.token
+              ? `VE report token: ${ve_report_context.token}\n`
+              : '') +
+            `\nTranscript:\n\n${fullConvo}`,
         }),
-      }).catch(e => console.error('[NARA Webhook] Failed:', e))
+      }).catch(e => console.error('[NARA lead webhook] failed:', e))
     }
 
     return NextResponse.json({ text, isComplete, tier, score })
