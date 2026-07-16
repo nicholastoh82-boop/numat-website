@@ -1,3 +1,4 @@
+import { notifyQuoteIssued } from "@/lib/quotes/notify"
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
       notes,
       items,
       lead_id,
-      currency = "USD",
+      currency = "PHP",
       // Invoice-specific (ignored for proforma)
       customer_tin,
       customer_address,
@@ -107,6 +108,10 @@ export async function POST(req: Request) {
           currency,
           subtotal,
           total,
+          // Locked at creation. Quotes are issued in PHP and shown in PHP, so
+          // display always equals base and the PDF has nothing to convert.
+          display_currency: currency,
+          display_total: total,
           valid_until: effectiveValidUntil,
           customer_tin: doc_type === "invoice" ? customer_tin : null,
           customer_address: doc_type === "invoice" ? customer_address : null,
@@ -199,6 +204,20 @@ export async function POST(req: Request) {
     if (itemsError) {
       return NextResponse.json({ error: itemsError.message }, { status: 500 })
     }
+
+    // Route it to Erica. Fire and forget on purpose: the quote is committed and
+    // a mail outage must not surface to the rep as a failed quote.
+    void notifyQuoteIssued({
+      quoteNumber: quote.quote_number,
+      docType: doc_type,
+      totalPhp: total,
+      issuedBy: generated_by ?? null,
+      notes: notes ?? null,
+      customerName: customer_name ?? null,
+      company: company ?? null,
+      email: email ?? null,
+      items: rows,
+    })
 
     return NextResponse.json({
       success: true,
