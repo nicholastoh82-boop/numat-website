@@ -30,7 +30,9 @@ export async function POST(req: Request) {
       const interestLabel = interest === 'sample' ? 'Free sample' : 'Quote request'
       await resend.emails.send({
         from: 'noreply@numat.ph',
-        to: ['sales@numat.ph', 'nick@numat.ph'],
+        // Same as the contact form: upsertInboundLead assigns this to Erica, so
+      // Erica is who needs to hear about it.
+      to: ['erica@numat.ph', 'sales@numat.ph'],
         subject: `New lead: ${name} (${interestLabel})`,
         html: `
         <h2 style="color:#0d1b2a">New lead captured</h2>

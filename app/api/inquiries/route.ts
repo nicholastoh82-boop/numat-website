@@ -197,7 +197,10 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           from: process.env.RESEND_FROM_EMAIL,
-          to: ['sales@numat.ph', 'nick@numat.ph'],
+          // Erica owns every inbound lead (see upsertInboundLead), so she gets
+          // the alert. This used to go to sales@ and nick@, which meant the
+          // person the lead was assigned to was not told it had arrived.
+          to: ['erica@numat.ph', 'sales@numat.ph'],
           reply_to: email.trim().toLowerCase(),
           subject: `New Inquiry: ${subject} — ${name}`,
           html: generateInquiryNotificationHTML({
