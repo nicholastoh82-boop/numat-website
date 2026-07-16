@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
         discount_amount: 0,
         discount_percent: 0,
         total,
-        display_currency: contact.display_currency ?? 'USD',
+        display_currency: contact.display_currency ?? 'PHP',
         display_total: contact.display_total ?? total,
         valid_until: validUntil.toISOString(),
       } as any)
@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
           channel: contact.channel ?? null,
           application: contact.application ?? null,
           item_count: items.length,
-          display_currency: contact.display_currency ?? 'USD',
+          display_currency: contact.display_currency ?? 'PHP',
           display_total: contact.display_total ?? total,
         },
         notes: contact.notes || null,
@@ -315,6 +315,10 @@ export async function POST(request: NextRequest) {
           quoteNumber: createdQuoteNumber,
           quoteDate,
           validUntil: validUntilFormatted,
+          // Every amount handed to the template below is already multiplied by
+          // conversionRatio, so it must be labelled with the currency that
+          // ratio converted into, not the PHP base.
+          currency: contact.display_currency ?? 'PHP',
           subtotal: Math.round(subtotal * conversionRatio),
           total: Math.round(displayTotal),
           recipientEmail: contact.email,

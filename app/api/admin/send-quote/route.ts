@@ -111,6 +111,9 @@ export async function POST(request: NextRequest) {
       discountAmount: typedQuote.discount_amount || 0,
       discountPercent: typedQuote.discount_percent || 0,
       total: typedQuote.total || 0,
+      // This route sends the stored base amounts, not display amounts, so the
+      // label is the base currency. PHP unless an older USD quote says otherwise.
+      currency: (typedQuote.currency || 'PHP').toUpperCase(),
       recipientEmail: customerEmail,
       items: (typedQuote.quote_items || []).map((item: any) => ({
         productName: item.product_name,
