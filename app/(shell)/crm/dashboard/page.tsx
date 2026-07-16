@@ -248,67 +248,64 @@ const STATUS_COLORS: Record<string, string> = {
 
 const REPLY_CLASSIFICATIONS = ['interested','not_interested','out_of_office','wrong_person','request_info','unsubscribed']
 
-// Product catalogue (available SKUs only, sourced from Supabase Apr 2026)
-const FX_FLOOR_PHP_PER_USD = 55 // floor rate used for ex-factory guardrail
-
+// Sellable variants come from Supabase via /api/crm/variants.
+//
+// This used to be a hardcoded array of 34 SKUs across NuBam Boards, NuWall,
+// NuDoor, NuFloor and NuSlat. Every one of those lines has been retired, and
+// none of the three boards actually on sale were in it, so the builder could
+// not quote anything NUMAT sells. Reading it live is the only thing that stops
+// that happening again.
 interface ProductVariant {
   id: string
   sku: string
   productName: string
+  description: string
   category: string
   sizeLabel: string
   unit: string
   moq: number
-  basePriceUsd: number
+  basePricePhp: number
+  /** Ex factory cost in PHP. Null on every current variant. */
   exFactoryPhp: number | null
 }
 
-const PRODUCT_VARIANTS: ProductVariant[] = [
-  { id:'936e18a9-fae3-48e2-b4a4-689e67cd1bcc', sku:'NUBAM-012-2PLY-HC', productName:'NuBam Boards', category:'NuBam Boards', sizeLabel:'2440x1220x12mm 2PLY HC', unit:'piece', moq:10, basePriceUsd:68, exFactoryPhp:3722.98 },
-  { id:'2c735f1e-20ba-428d-b030-4d1a4e494cda', sku:'NUBAM-016-3PLY-HC', productName:'NuBam Boards', category:'NuBam Boards', sizeLabel:'2440x1220x16mm 3PLY HC', unit:'piece', moq:10, basePriceUsd:86, exFactoryPhp:4723.70 },
-  { id:'810a7d4b-4b53-4333-bcb2-72098d1c38b6', sku:'NUBAM-020-3PLY-HC', productName:'NuBam Boards', category:'NuBam Boards', sizeLabel:'2440x1220x20mm 3PLY HC', unit:'piece', moq:10, basePriceUsd:123, exFactoryPhp:6725.14 },
-  { id:'f47a5021-7854-4a10-8511-d9e46a043d97', sku:'NUBAM-025-5PLY-HC', productName:'NuBam Boards', category:'NuBam Boards', sizeLabel:'2440x1220x25mm 5PLY HC', unit:'piece', moq:10, basePriceUsd:159, exFactoryPhp:8726.58 },
-  { id:'c4e3f752-1bcb-4efe-be3e-9c618ccc5f3a', sku:'NUBAM-030-5PLY-HC', productName:'NuBam Boards', category:'NuBam Boards', sizeLabel:'2440x1220x30mm 5PLY HC', unit:'piece', moq:10, basePriceUsd:196, exFactoryPhp:10728.02 },
-  { id:'3bc52f65-76d9-418a-90ab-f3d63bc29862', sku:'NUBAM-030-3PLY-VC', productName:'NuBam Boards', category:'NuBam Boards', sizeLabel:'2440x1220x30mm 3PLY VC', unit:'piece', moq:10, basePriceUsd:198, exFactoryPhp:10889.04 },
-  { id:'0696d712-de40-467b-8686-016cde3a3aba', sku:'NUBAM-040-5PLY-VC', productName:'NuBam Boards', category:'NuBam Boards', sizeLabel:'2440x1220x40mm 5PLY VC', unit:'piece', moq:10, basePriceUsd:235, exFactoryPhp:12890.48 },
-  { id:'7d9dc48e-d48a-442b-90c9-8d1a3fd5cab8', sku:'NUBAM-050-5PLY-VC', productName:'NuBam Boards', category:'NuBam Boards', sizeLabel:'2440x1220x50mm 5PLY VC', unit:'piece', moq:10, basePriceUsd:308, exFactoryPhp:16893.36 },
-  { id:'05e04977-5119-46cb-a91f-520e5b5e6065', sku:'NUWALL-012-2PLY-HC', productName:'NuWall', category:'NuWall', sizeLabel:'2440x1220x12mm 2PLY HC', unit:'piece', moq:10, basePriceUsd:68, exFactoryPhp:3722.98 },
-  { id:'e1ccd43c-fb30-4cbc-a20e-15ad09ff7373', sku:'NUWALL-016-3PLY-HC', productName:'NuWall', category:'NuWall', sizeLabel:'2440x1220x16mm 3PLY HC', unit:'piece', moq:10, basePriceUsd:86, exFactoryPhp:4723.70 },
-  { id:'88ffae79-3599-46b6-8d5e-871eab9beba7', sku:'NUWALL-020-3PLY-HC', productName:'NuWall', category:'NuWall', sizeLabel:'2440x1220x20mm 3PLY HC', unit:'piece', moq:10, basePriceUsd:123, exFactoryPhp:6725.14 },
-  { id:'a7d17d35-ce5c-46e5-af3e-4933814708f9', sku:'NUWALL-025-5PLY-HC', productName:'NuWall', category:'NuWall', sizeLabel:'2440x1220x25mm 5PLY HC', unit:'piece', moq:10, basePriceUsd:159, exFactoryPhp:8726.58 },
-  { id:'d18586e3-2a7f-4079-8f48-5fda5b34877e', sku:'NUWALL-030-5PLY-HC', productName:'NuWall', category:'NuWall', sizeLabel:'2440x1220x30mm 5PLY HC', unit:'piece', moq:10, basePriceUsd:196, exFactoryPhp:10728.02 },
-  { id:'546304d5-09ef-4ba7-a27d-5fd10f691222', sku:'NUWALL-030-3PLY-VC', productName:'NuWall', category:'NuWall', sizeLabel:'2440x1220x30mm 3PLY VC', unit:'piece', moq:10, basePriceUsd:198, exFactoryPhp:10889.04 },
-  { id:'b073beb3-1707-4d79-83d7-7cc8f70fb48f', sku:'NUWALL-040-5PLY-VC', productName:'NuWall', category:'NuWall', sizeLabel:'2440x1220x40mm 5PLY VC', unit:'piece', moq:10, basePriceUsd:235, exFactoryPhp:12890.48 },
-  { id:'e6b0ce70-fe53-490d-97c5-8eef60202e7d', sku:'NUWALL-050-5PLY-VC', productName:'NuWall', category:'NuWall', sizeLabel:'2440x1220x50mm 5PLY VC', unit:'piece', moq:10, basePriceUsd:308, exFactoryPhp:16893.36 },
-  { id:'7be2be7b-abc9-469e-b20e-caf37370c3a2', sku:'NUDOOR-LIGHT', productName:'NuDoor', category:'NuDoor', sizeLabel:'2100x800x40mm Light', unit:'piece', moq:5, basePriceUsd:250, exFactoryPhp:null },
-  { id:'44b2a331-8bcf-4696-ab3d-8150ab691c31', sku:'NUDOOR-COMPOSITE', productName:'NuDoor', category:'NuDoor', sizeLabel:'2100x800x40mm Composite', unit:'piece', moq:5, basePriceUsd:300, exFactoryPhp:null },
-  { id:'a4b38f1a-e617-42fd-af1b-fc680566e382', sku:'NUDOOR-PREMIUM', productName:'NuDoor', category:'NuDoor', sizeLabel:'2100x800x40mm Premium', unit:'piece', moq:5, basePriceUsd:350, exFactoryPhp:null },
-  { id:'276784a7-390b-4ba1-b4b5-ee1fb23be34b', sku:'NUFLOOR-020-3PLY', productName:'NuFloor', category:'NuFloor', sizeLabel:'1220x153x20mm 3PLY', unit:'piece', moq:20, basePriceUsd:15, exFactoryPhp:null },
-  { id:'d1ea85f3-75cf-4c41-913d-17806742d677', sku:'NUFLOOR-020-3PLY-1220x305', productName:'NuFloor', category:'NuFloor', sizeLabel:'1220x305x20mm 3PLY', unit:'piece', moq:20, basePriceUsd:15, exFactoryPhp:null },
-  { id:'d9f740ae-e234-4d8e-9991-c6cb7a390dab', sku:'NUFLOOR-016-3PLY-300x1200', productName:'NuFloor', category:'NuFloor', sizeLabel:'300x1200x16mm 3PLY', unit:'piece', moq:10, basePriceUsd:14.53, exFactoryPhp:null },
-  { id:'c80f8a43-6552-4aef-b399-c6af9adac3c9', sku:'NUSLAT-3MM-2400L-27W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x27x3mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-  { id:'77feccc2-506a-4702-be57-784b8717d4d0', sku:'NUSLAT-3MM-2400L-25W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x25x3mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-  { id:'7e940a43-6b59-4212-a43f-33b6ab663e91', sku:'NUSLAT-3MM-2400L-26W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x26x3mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-  { id:'5fec6030-7ab6-4e2b-9e52-86cb5a7e2a28', sku:'NUSLAT-3MM-1000L-25W', productName:'NuSlat', category:'NuSlat', sizeLabel:'1000x25x3mm', unit:'slat', moq:500, basePriceUsd:0.17, exFactoryPhp:null },
-  { id:'b4e52d75-31a1-461e-8ae8-2d83e01fa98d', sku:'NUSLAT-3MM-1000L-26W', productName:'NuSlat', category:'NuSlat', sizeLabel:'1000x26x3mm', unit:'slat', moq:500, basePriceUsd:0.17, exFactoryPhp:null },
-  { id:'5de1b537-13b9-4ca8-ab31-e34dde38a6a8', sku:'NUSLAT-3MM-1000L-27W', productName:'NuSlat', category:'NuSlat', sizeLabel:'1000x27x3mm', unit:'slat', moq:500, basePriceUsd:0.17, exFactoryPhp:null },
-  { id:'af0714ea-74cb-40c2-be93-67a344e27709', sku:'NUSLAT-3MM-1200L-25W', productName:'NuSlat', category:'NuSlat', sizeLabel:'1200x25x3mm', unit:'slat', moq:500, basePriceUsd:0.20, exFactoryPhp:null },
-  { id:'8135bff5-d59d-4830-807d-0dec00274887', sku:'NUSLAT-3MM-1200L-26W', productName:'NuSlat', category:'NuSlat', sizeLabel:'1200x26x3mm', unit:'slat', moq:500, basePriceUsd:0.20, exFactoryPhp:null },
-  { id:'93efdf10-8650-4bd3-bd95-6cc1350a8be5', sku:'NUSLAT-3MM-1200L-27W', productName:'NuSlat', category:'NuSlat', sizeLabel:'1200x27x3mm', unit:'slat', moq:500, basePriceUsd:0.20, exFactoryPhp:null },
-  { id:'bb3c5eeb-d5c4-42d1-bc1d-b5750361e6f7', sku:'NUSLAT-4MM-1000L-25W', productName:'NuSlat', category:'NuSlat', sizeLabel:'1000x25x4mm', unit:'slat', moq:500, basePriceUsd:0.17, exFactoryPhp:null },
-  { id:'7a9bcbf3-8236-449b-a7ec-8108d0f38a57', sku:'NUSLAT-4MM-2400L-27W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x27x4mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-  { id:'1a614a89-190f-4e6c-90ae-7c74334436aa', sku:'NUSLAT-4MM-2400L-26W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x26x4mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-  { id:'a9529e73-28aa-4cb1-acd0-d81589e0a5ba', sku:'NUSLAT-4MM-2400L-25W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x25x4mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-  { id:'9ba003af-f41c-44b5-81af-3e40f2c4447d', sku:'NUSLAT-4MM-1200L-25W', productName:'NuSlat', category:'NuSlat', sizeLabel:'1200x25x4mm', unit:'slat', moq:500, basePriceUsd:0.20, exFactoryPhp:null },
-  { id:'1b7663f1-addb-4faf-af20-dabf7f266807', sku:'NUSLAT-4MM-1200L-26W', productName:'NuSlat', category:'NuSlat', sizeLabel:'1200x26x4mm', unit:'slat', moq:500, basePriceUsd:0.20, exFactoryPhp:null },
-  { id:'8d6dfcab-eecc-4dc7-83cc-7c4347df7b28', sku:'NUSLAT-4MM-1200L-27W', productName:'NuSlat', category:'NuSlat', sizeLabel:'1200x27x4mm', unit:'slat', moq:500, basePriceUsd:0.20, exFactoryPhp:null },
-  { id:'1c38ceb5-718e-4136-af49-240a69f6a313', sku:'NUSLAT-6MM-2400L-27W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x27x6mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-  { id:'1715cec8-30cb-4f0a-b542-129e7ceda61a', sku:'NUSLAT-6MM-2400L-26W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x26x6mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-  { id:'b85847df-b33b-4e58-ade6-e4a784aa5a4e', sku:'NUSLAT-6MM-2400L-25W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x25x6mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-  { id:'6c6f17c3-03dc-4a9a-b6d3-2e93227e711e', sku:'NUSLAT-9MM-2400L-26W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x26x9mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-  { id:'c06e7793-9894-4092-a98f-4f9eb081aade', sku:'NUSLAT-9MM-2400L-27W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x27x9mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-  { id:'30361c05-6d96-44fc-8fbd-05131a1bfef0', sku:'NUSLAT-9MM-2400L-25W', productName:'NuSlat', category:'NuSlat', sizeLabel:'2400x25x9mm', unit:'slat', moq:500, basePriceUsd:0.40, exFactoryPhp:null },
-]
+/**
+ * A fresh quote line. Takes the variant rather than reaching for a global, so
+ * it stays a pure function while the list loads asynchronously.
+ *
+ * With no variant (still loading, or Supabase returned none) the rep starts on
+ * a custom line instead of a SKU invented out of a stale constant.
+ */
+function newLineFromVariant(v: ProductVariant | undefined): QuoteLineItem {
+  if (!v) {
+    return {
+      lineId: Math.random().toString(36).slice(2),
+      variantId: CUSTOM_VARIANT_ID,
+      isCustom: true,
+      sku: 'CUSTOM',
+      productName: 'Custom Order',
+      sizeLabel: '',
+      unit: 'piece',
+      moq: 1,
+      qty: 1,
+      unitPricePhp: 0,
+      exFactoryPhp: null,
+      productSpecs: '',
+    }
+  }
+  return {
+    lineId: Math.random().toString(36).slice(2),
+    variantId: v.id,
+    sku: v.sku,
+    productName: v.productName,
+    sizeLabel: v.sizeLabel,
+    unit: v.unit,
+    moq: v.moq,
+    qty: v.moq,
+    unitPricePhp: v.basePricePhp,
+    exFactoryPhp: v.exFactoryPhp,
+  }
+}
 
 interface QuoteLineItem {
   lineId: string
@@ -319,7 +316,7 @@ interface QuoteLineItem {
   unit: string
   moq: number
   qty: number
-  unitPriceUsd: number
+  unitPricePhp: number
   exFactoryPhp: number | null
   isCustom?: boolean
   productSpecs?: string
@@ -329,9 +326,12 @@ interface QuoteLineItem {
 
 const CUSTOM_VARIANT_ID = '__custom__'
 
-function floorPriceUsd(exPhp: number | null): number | null {
+// ex_factory_php is already PHP and quotes are PHP, so the floor is the cost
+// itself. Null on every current variant, so this stays inert until those are
+// populated in Supabase.
+function floorPricePhp(exPhp: number | null): number | null {
   if (!exPhp) return null
-  return parseFloat((exPhp / FX_FLOOR_PHP_PER_USD).toFixed(2))
+  return parseFloat(exPhp.toFixed(2))
 }
 
 const formatStatusLabel = (s: string) => s.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())
@@ -353,7 +353,6 @@ function mostRecent(...isos: (string | null | undefined)[]): string | null {
   return valid.reduce((a, b) => (new Date(a) > new Date(b) ? a : b))
 }
 
-const PHP_TO_USD = 56 // ₱/USD rate
 
 // Currency options for invoice/proforma issuance. The 'amount' on the quote
 // is treated as the value entered in the selected currency. Floor checks and
@@ -414,7 +413,10 @@ export default function CRMDashboard() {
   const [invoicePoRef, setInvoicePoRef] = useState('')
   const [invoiceVatEnabled, setInvoiceVatEnabled] = useState(false)
   // Currency selected for the quote/invoice being issued (defaults to USD).
-  const [quoteCurrency, setQuoteCurrency] = useState<QuoteCurrency>('USD')
+  // PHP is the base and the only currency a quote is issued in. The selector is
+  // gone from the modal, so this no longer changes.
+  const [quoteCurrency] = useState<QuoteCurrency>('PHP')
+  const [productVariants, setProductVariants] = useState<ProductVariant[]>([])
   // Add Lead modal
   const [addLeadOpen, setAddLeadOpen] = useState(false)
   const [addLeadSubmitting, setAddLeadSubmitting] = useState(false)
@@ -702,6 +704,20 @@ export default function CRMDashboard() {
     return () => { cancelled = true }
   }, [])
 
+  // Load the sellable variants once on mount for the quote builder. Featured
+  // ordering and PHP pricing both come from Supabase, so a board added or
+  // retired in the admin panel moves this list without a deploy.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/crm/variants', { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : { variants: [] })
+      .then((json: { variants?: ProductVariant[] }) => {
+        if (!cancelled) setProductVariants(json.variants || [])
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
   useEffect(() => {
     let result = [...leads]
     if (search.trim()) {
@@ -860,32 +876,20 @@ export default function CRMDashboard() {
     setInvoiceDueDate(due.toISOString().slice(0, 10))
     setInvoicePoRef('')
     setInvoiceVatEnabled(false)
-    setQuoteCurrency('USD')
     // Pre-populate with one blank line item to prompt the rep
-    setQuoteLineItems([{
-      lineId: Math.random().toString(36).slice(2),
-      variantId: PRODUCT_VARIANTS[0].id,
-      sku: PRODUCT_VARIANTS[0].sku,
-      productName: PRODUCT_VARIANTS[0].productName,
-      sizeLabel: PRODUCT_VARIANTS[0].sizeLabel,
-      unit: PRODUCT_VARIANTS[0].unit,
-      moq: PRODUCT_VARIANTS[0].moq,
-      qty: PRODUCT_VARIANTS[0].moq,
-      unitPriceUsd: PRODUCT_VARIANTS[0].basePriceUsd,
-      exFactoryPhp: PRODUCT_VARIANTS[0].exFactoryPhp,
-    }])
+    setQuoteLineItems([newLineFromVariant(productVariants[0])])
   }
 
   // Hydrate a quote_items row into a QuoteLineItem suitable for the modal state.
-  // Looks up variant metadata from PRODUCT_VARIANTS when the row is a catalog item;
+  // Looks up variant metadata from the loaded variants when the row is a catalog item;
   // falls back to the row's stored fields for custom/unknown items.
   function hydrateLineItem(row: any): QuoteLineItem {
     const variant = row.variant_id
-      ? PRODUCT_VARIANTS.find(v => v.id === row.variant_id)
+      ? productVariants.find(v => v.id === row.variant_id)
       : null
     const isCustom = !row.variant_id
     const qty = Number(row.quantity || 0)
-    const unitPriceUsd = Number(row.unit_price || 0)
+    const unitPricePhp = Number(row.unit_price || 0)
     if (isCustom) {
       return {
         lineId: Math.random().toString(36).slice(2),
@@ -897,7 +901,7 @@ export default function CRMDashboard() {
         unit: row.unit || 'piece',
         moq: 1,
         qty: Math.max(qty, 1),
-        unitPriceUsd,
+        unitPricePhp,
         exFactoryPhp: null,
         productSpecs: row.product_specs || '',
       }
@@ -911,7 +915,7 @@ export default function CRMDashboard() {
       unit: variant?.unit || row.unit || 'piece',
       moq: variant?.moq || 1,
       qty,
-      unitPriceUsd,
+      unitPricePhp,
       exFactoryPhp: variant?.exFactoryPhp ?? null,
     }
   }
@@ -948,26 +952,11 @@ export default function CRMDashboard() {
     setInvoiceDueDate(quote.payment_due_date ? quote.payment_due_date.slice(0, 10) : '')
     setInvoicePoRef(quote.po_reference || '')
     setInvoiceVatEnabled(Boolean(quote.vat_enabled))
-    const existingCurrency = (quote.currency || 'USD').toUpperCase() as QuoteCurrency
-    setQuoteCurrency(
-      (CURRENCY_OPTIONS as readonly string[]).includes(existingCurrency) ? existingCurrency : 'USD'
-    )
     const hydrated: QuoteLineItem[] = (items || []).map(hydrateLineItem)
     setQuoteLineItems(
       hydrated.length > 0
         ? hydrated
-        : [{
-            lineId: Math.random().toString(36).slice(2),
-            variantId: PRODUCT_VARIANTS[0].id,
-            sku: PRODUCT_VARIANTS[0].sku,
-            productName: PRODUCT_VARIANTS[0].productName,
-            sizeLabel: PRODUCT_VARIANTS[0].sizeLabel,
-            unit: PRODUCT_VARIANTS[0].unit,
-            moq: PRODUCT_VARIANTS[0].moq,
-            qty: PRODUCT_VARIANTS[0].moq,
-            unitPriceUsd: PRODUCT_VARIANTS[0].basePriceUsd,
-            exFactoryPhp: PRODUCT_VARIANTS[0].exFactoryPhp,
-          }]
+        : [newLineFromVariant(productVariants[0])]
     )
   }
 
@@ -977,19 +966,19 @@ export default function CRMDashboard() {
         l.lineId === lineId
           ? { ...l, variantId: CUSTOM_VARIANT_ID, isCustom: true, sku: 'CUSTOM',
               productName: 'Custom Order', sizeLabel: '', unit: 'piece',
-              moq: 1, qty: Math.max(l.qty, 1), unitPriceUsd: l.unitPriceUsd || 0,
+              moq: 1, qty: Math.max(l.qty, 1), unitPricePhp: l.unitPricePhp || 0,
               exFactoryPhp: null, productSpecs: l.productSpecs || '' }
           : l
       ))
       return
     }
-    const v = PRODUCT_VARIANTS.find(p => p.id === variantId)
+    const v = productVariants.find(p => p.id === variantId)
     if (!v) return
     setQuoteLineItems(prev => prev.map(l =>
       l.lineId === lineId
         ? { ...l, variantId: v.id, isCustom: false, sku: v.sku, productName: v.productName,
             sizeLabel: v.sizeLabel, unit: v.unit, moq: v.moq, qty: Math.max(l.qty, v.moq),
-            unitPriceUsd: v.basePriceUsd, exFactoryPhp: v.exFactoryPhp, productSpecs: '' }
+            unitPricePhp: v.basePricePhp, exFactoryPhp: v.exFactoryPhp, productSpecs: '' }
         : l
     ))
   }
@@ -999,7 +988,7 @@ export default function CRMDashboard() {
   }
 
   function updateLineItemPrice(lineId: string, price: number) {
-    setQuoteLineItems(prev => prev.map(l => l.lineId === lineId ? { ...l, unitPriceUsd: price } : l))
+    setQuoteLineItems(prev => prev.map(l => l.lineId === lineId ? { ...l, unitPricePhp: price } : l))
   }
 
   function updateCustomLineField(lineId: string, field: 'productName'|'productSpecs'|'unit', value: string) {
@@ -1007,12 +996,7 @@ export default function CRMDashboard() {
   }
 
   function addLineItem() {
-    const v = PRODUCT_VARIANTS[0]
-    setQuoteLineItems(prev => [...prev, {
-      lineId: Math.random().toString(36).slice(2),
-      variantId: v.id, sku: v.sku, productName: v.productName, sizeLabel: v.sizeLabel,
-      unit: v.unit, moq: v.moq, qty: v.moq, unitPriceUsd: v.basePriceUsd, exFactoryPhp: v.exFactoryPhp,
-    }])
+    setQuoteLineItems(prev => [...prev, newLineFromVariant(productVariants[0])])
   }
 
   function addCustomLineItem() {
@@ -1020,7 +1004,7 @@ export default function CRMDashboard() {
       lineId: Math.random().toString(36).slice(2),
       variantId: CUSTOM_VARIANT_ID, isCustom: true, sku: 'CUSTOM',
       productName: 'Custom Order', sizeLabel: '', unit: 'piece', moq: 1, qty: 1,
-      unitPriceUsd: 0, exFactoryPhp: null, productSpecs: '',
+      unitPricePhp: 0, exFactoryPhp: null, productSpecs: '',
     }])
   }
 
@@ -1467,12 +1451,12 @@ export default function CRMDashboard() {
     const { lead, docType, mode, sourceQuoteId, sourceQuoteNumber } = quoteModal
     const isInvoice = docType === 'invoice'
 
-    // Skip floor check for custom items, and skip entirely when currency is not USD
-    // (the floor table is USD-denominated; non-USD prices cannot be compared meaningfully).
-    const hasFloorViolation = quoteCurrency === 'USD' && quoteLineItems.some(l => {
+    // Skip floor check for custom items only. The floor is PHP and so is the
+    // quote, so it applies to every catalog line.
+    const hasFloorViolation = quoteLineItems.some(l => {
       if (l.isCustom) return false
-      const floor = floorPriceUsd(l.exFactoryPhp)
-      return floor !== null && l.unitPriceUsd < floor
+      const floor = floorPricePhp(l.exFactoryPhp)
+      return floor !== null && l.unitPricePhp < floor
     })
     if (hasFloorViolation) {
       showToast('One or more items are below the ex-factory floor price. Please adjust before submitting.', 'error')
@@ -1491,10 +1475,9 @@ export default function CRMDashboard() {
     }
 
     setQuoteSubmitting(true)
-    const subtotalUsdCalc = quoteLineItems.reduce((sum, l) => sum + l.qty * l.unitPriceUsd, 0)
-    const vatAmountCalc = (isInvoice && invoiceVatEnabled) ? subtotalUsdCalc * 0.12 : 0
-    const totalUsd = subtotalUsdCalc + vatAmountCalc
-    const totalPhp = Math.round(totalUsd * PHP_TO_USD)
+    const subtotalPhpCalc = quoteLineItems.reduce((sum, l) => sum + l.qty * l.unitPricePhp, 0)
+    const vatAmountCalc = (isInvoice && invoiceVatEnabled) ? subtotalPhpCalc * 0.12 : 0
+    const totalPhp = subtotalPhpCalc + vatAmountCalc
 
     // Build line item rows for /api/quote/create (also used for insert on edit)
     const apiItems = quoteLineItems.map(l => ({
@@ -1506,7 +1489,7 @@ export default function CRMDashboard() {
       category: l.isCustom ? 'Custom' : undefined,
       unit: l.unit,
       quantity: l.qty,
-      unit_price: l.unitPriceUsd,
+      unit_price: l.unitPricePhp,
       moq_override: l.isCustom || l.moqOverride || false,
     }))
 
@@ -1616,8 +1599,8 @@ export default function CRMDashboard() {
           id: result.quote_id,
           quote_number: result.quote_number,
           doc_type: docType,
-          total: totalUsd,
-          subtotal: subtotalUsdCalc,
+          total: totalPhp,
+          subtotal: subtotalPhpCalc,
           currency: quoteCurrency,
           created_at: new Date().toISOString(),
           sent_at: null,
@@ -1679,12 +1662,12 @@ export default function CRMDashboard() {
       if (!res.ok || result.error) throw new Error(result.error || `HTTP ${res.status}`)
 
       const linesSummary = quoteLineItems
-        .map(l => `${l.sku} x${l.qty} ${l.unit} @ ${l.unitPriceUsd.toFixed(2)}`)
+        .map(l => `${l.sku} x${l.qty} ${l.unit} @ ${l.unitPricePhp.toFixed(2)}`)
         .join(', ')
       const updates = {
         pipeline_stage: 'proposal_sent', status: 'active',
         deal_value_php: totalPhp,
-        deal_value_usd: parseFloat(totalUsd.toFixed(2)),
+        deal_value_usd: parseFloat(totalPhp.toFixed(2)),
         quoted_at: new Date().toISOString(), quote_currency: quoteCurrency,
         quote_notes: [`${docLabel} ${result.quote_number}`, linesSummary, quoteNotes].filter(Boolean).join(' | '),
         quote_issued_by: user.email,
@@ -1697,8 +1680,8 @@ export default function CRMDashboard() {
         id: result.quote_id,
         quote_number: result.quote_number,
         doc_type: docType,
-        total: totalUsd,
-        subtotal: subtotalUsdCalc,
+        total: totalPhp,
+        subtotal: subtotalPhpCalc,
         currency: quoteCurrency,
         created_at: new Date().toISOString(),
         sent_at: null,
@@ -2881,23 +2864,16 @@ export default function CRMDashboard() {
                 </div>
               )}
 
-              {/* Currency selector */}
+              {/* Currency is not a choice: quotes are issued in PHP, the base
+                  every product is priced in. */}
               <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
                 <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-1.5">Currency</label>
-                <div className="flex items-center gap-3">
-                  <select value={quoteCurrency}
-                    onChange={e => setQuoteCurrency(e.target.value as QuoteCurrency)}
-                    className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
-                    {CURRENCY_OPTIONS.map(c => (
-                      <option key={c} value={c}>{c} ({CURRENCY_SYMBOLS[c]})</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500">
-                    {quoteCurrency === 'USD'
-                      ? 'Default. Floor price checks and PHP equivalent will be shown.'
-                      : `Enter all line item prices in ${quoteCurrency}. Floor checks are skipped.`}
-                  </p>
-                </div>
+                <p className="text-sm text-gray-700">
+                  <span className="font-semibold">PHP (₱)</span>
+                  <span className="text-xs text-gray-500 ml-2">
+                    All line prices are in PHP. The customer PDF shows PHP.
+                  </span>
+                </p>
               </div>
 
               {/* Line Items */}
@@ -2905,10 +2881,10 @@ export default function CRMDashboard() {
                 <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Line Items</div>
                 <div className="space-y-3">
                   {quoteLineItems.map((line, idx) => {
-                    const floor = line.isCustom ? null : floorPriceUsd(line.exFactoryPhp)
-                    const isBelowFloor = floor !== null && line.unitPriceUsd < floor
+                    const floor = line.isCustom ? null : floorPricePhp(line.exFactoryPhp)
+                    const isBelowFloor = floor !== null && line.unitPricePhp < floor
                     const isBelowMoq = !line.isCustom && !line.moqOverride && line.qty < line.moq
-                    const lineTotal = line.qty * line.unitPriceUsd
+                    const lineTotal = line.qty * line.unitPricePhp
                     return (
                       <div key={line.lineId} className={`rounded-xl border p-3 space-y-2 ${isBelowFloor ? 'border-red-300 bg-red-50' : line.isCustom ? 'border-purple-200 bg-purple-50/40' : 'border-gray-200 bg-gray-50'}`}>
                         <div className="flex items-center gap-2">
@@ -2921,9 +2897,9 @@ export default function CRMDashboard() {
                             <optgroup label="Custom">
                               <option value={CUSTOM_VARIANT_ID}>— Custom Order —</option>
                             </optgroup>
-                            {['NuBam Boards','NuWall','NuDoor','NuFloor','NuSlat'].map(cat => (
+                            {Array.from(new Set(productVariants.map(v => v.category))).map(cat => (
                               <optgroup key={cat} label={cat}>
-                                {PRODUCT_VARIANTS.filter(v => v.category === cat).map(v => (
+                                {productVariants.filter(v => v.category === cat).map(v => (
                                   <option key={v.id} value={v.id}>{v.sku} — {v.sizeLabel}</option>
                                 ))}
                               </optgroup>
@@ -2980,7 +2956,7 @@ export default function CRMDashboard() {
                             <label className="text-xs text-gray-400">Unit Price ({quoteCurrency})</label>
                             <div className="relative mt-0.5">
                               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{CURRENCY_SYMBOLS[quoteCurrency]}</span>
-                              <input type="number" step="0.01" value={line.unitPriceUsd}
+                              <input type="number" step="0.01" value={line.unitPricePhp}
                                 onChange={e => updateLineItemPrice(line.lineId, parseFloat(e.target.value) || 0)}
                                 className={`w-full border rounded-lg pl-6 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${isBelowFloor ? 'border-red-400 bg-white' : 'border-gray-200'}`}
                               />
@@ -3008,9 +2984,6 @@ export default function CRMDashboard() {
                           <div>
                             <label className="text-xs text-gray-400">Line Total</label>
                             <p className="mt-1 text-sm font-semibold text-gray-800">{CURRENCY_SYMBOLS[quoteCurrency]}{lineTotal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</p>
-                            {quoteCurrency === 'USD' && (
-                              <p className="text-xs text-gray-400">≈ ₱{Math.round(lineTotal * PHP_TO_USD).toLocaleString()}</p>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -3031,28 +3004,27 @@ export default function CRMDashboard() {
 
               {/* Totals */}
               {quoteLineItems.length > 0 && (() => {
-                const subtotalUsd = quoteLineItems.reduce((s, l) => s + l.qty * l.unitPriceUsd, 0)
-                const vatUsd = (isInvoice && invoiceVatEnabled) ? subtotalUsd * 0.12 : 0
-                const totalUsd = subtotalUsd + vatUsd
-                const totalPhp = Math.round(totalUsd * PHP_TO_USD)
+                const subtotalPhp = quoteLineItems.reduce((s, l) => s + l.qty * l.unitPricePhp, 0)
+                const vatPhp = (isInvoice && invoiceVatEnabled) ? subtotalPhp * 0.12 : 0
+                const totalPhp = subtotalPhp + vatPhp
                 return (
                   <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 space-y-1">
                     {isInvoice && invoiceVatEnabled && (
                       <>
                         <div className="flex justify-between text-xs text-green-700">
                           <span>Subtotal (net)</span>
-                          <span>{CURRENCY_SYMBOLS[quoteCurrency]}{subtotalUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                          <span>{CURRENCY_SYMBOLS[quoteCurrency]}{subtotalPhp.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                         </div>
                         <div className="flex justify-between text-xs text-green-700">
                           <span>VAT (12%)</span>
-                          <span>{CURRENCY_SYMBOLS[quoteCurrency]}{vatUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                          <span>{CURRENCY_SYMBOLS[quoteCurrency]}{vatPhp.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                         </div>
                       </>
                     )}
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="text-xs text-green-700 font-medium">{isInvoice ? `Amount Due (${quoteCurrency})` : `Total (${quoteCurrency})`}</p>
-                        <p className="text-xl font-bold text-green-800">{CURRENCY_SYMBOLS[quoteCurrency]}{totalUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</p>
+                        <p className="text-xl font-bold text-green-800">{CURRENCY_SYMBOLS[quoteCurrency]}{totalPhp.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</p>
                       </div>
                       {quoteCurrency === 'USD' && (
                         <div className="text-right">
@@ -3090,7 +3062,7 @@ export default function CRMDashboard() {
               </button>
               <button onClick={submitQuote}
                 disabled={quoteLineItems.length === 0 || quoteSubmitting ||
-                  (quoteCurrency === 'USD' && quoteLineItems.some(l => { if (l.isCustom) return false; const f = floorPriceUsd(l.exFactoryPhp); return f !== null && l.unitPriceUsd < f; })) ||
+                  (quoteLineItems.some(l => { if (l.isCustom) return false; const f = floorPricePhp(l.exFactoryPhp); return f !== null && l.unitPricePhp < f; })) ||
                   quoteLineItems.some(l => !l.isCustom && !l.moqOverride && l.qty < l.moq) ||
                   (isInvoice && !invoiceDueDate)}
                 className={`flex-1 py-2.5 text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${mode === 'revise' ? 'bg-purple-700 hover:bg-purple-800' : isInvoice ? 'bg-blue-700 hover:bg-blue-800' : 'bg-green-700 hover:bg-green-800'}`}>

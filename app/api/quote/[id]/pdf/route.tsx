@@ -1082,14 +1082,20 @@ export async function GET(
     // Override fx.currency so downstream logic is consistent with stored values
     fx.currency = effectiveDisplayCurrency;
   } else {
-    // DRAFT path: fetch live rate, recompute on every render
-    effectiveDisplayCurrency = fx.currency;
-    const { rate: liveRate } =
-      fx.currency === baseCurrency
-        ? { rate: 1 }
-        : await fetchLiveRate(fx.currency, fx.ratePerUsd);
-    computedDisplayTotal =
-      fx.currency === baseCurrency ? baseTotal : baseTotal * liveRate;
+    // DRAFT path: quotes are issued in PHP and shown in PHP. No country lookup,
+    // no live rate, no conversion.
+    //
+    // This used to read the lead's country, pick a currency from it, and convert
+    // the stored total. That was built when the base was USD. Now that quotes
+    // are PHP, converting a PHP number as though it were USD would print a
+    // ₱3,500 board to a Philippine customer as ₱196,000.
+    //
+    // Sent quotes are untouched: they take the locked branch above and still
+    // render exactly the currency and numbers they were locked with, which is
+    // what keeps the two historical USD quotes correct.
+    effectiveDisplayCurrency = 'PHP';
+    fx.currency = 'PHP';
+    computedDisplayTotal = baseTotal;
   }
 
   // Rep attribution for "Issued by"
