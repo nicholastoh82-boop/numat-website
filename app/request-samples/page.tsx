@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import useSWR from 'swr'
 
 declare const gtag: (...args: unknown[]) => void
 import Header from '@/components/header'
@@ -29,9 +30,31 @@ const APPLICATION_OPTIONS = [
   'General construction',
   'Other',
 ]
-const PRODUCT_OPTIONS = [
+type ProductOption = { id: string; label: string; sub: string }
+
+/**
+ * Shown until /api/products responds, so step 1 is never an empty list on a
+ * cold open. NuWeave is the featured board, so it is the safe thing to show
+ * for the fraction of a second before the real list lands.
+ */
+const FALLBACK_PRODUCT_OPTIONS: ProductOption[] = [
   { id: 'nuweave', label: 'NuWeave', sub: '2440 x 1220 x 16 mm, 3 ply' },
 ]
+
+type ApiProduct = {
+  id: string
+  name: string
+  slug: string
+  is_featured: boolean
+  starting_price_php: number | null
+  variants?: { size_label?: string | null; ply_count?: number | null }[]
+}
+
+const productsFetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('Failed to fetch')
+  return res.json()
+}
 const DIAL_CODES = [
   { code: '+63', flag: '🇵🇭', country: 'Philippines' },
   { code: '+65', flag: '🇸🇬', country: 'Singapore' },
@@ -58,6 +81,30 @@ type Step = 1 | 2 | 'success'
 
 export default function RequestSamplesPage() {
   const [step, setStep] = useState<Step>(1)
+
+  // Sample options come from Supabase, not a hardcoded array. This page offered
+  // NuWeave only, so a customer could not request a NuComposite or NuBam CLB
+  // sample at all. The nav, the footer and the CRM quote builder all had the
+  // same hardcoded-list problem; this was the last one.
+  const { data: productsData } = useSWR<ApiProduct[]>('/api/products', productsFetcher, {
+    revalidateOnFocus: false,
+  })
+  const productOptions: ProductOption[] = useMemo(() => {
+    const list = Array.isArray(productsData) ? [...productsData] : []
+    if (list.length === 0) return FALLBACK_PRODUCT_OPTIONS
+    list.sort((a, b) => {
+      if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1
+      return (a.starting_price_php ?? 0) - (b.starting_price_php ?? 0)
+    })
+    return list
+      .filter((p) => Boolean(p.slug))
+      .map((p) => {
+        const v = p.variants?.[0]
+        const size = v?.size_label ?? ''
+        const ply = v?.ply_count ? `${v.ply_count} ply` : ''
+        return { id: p.slug, label: p.name, sub: [size, ply].filter(Boolean).join(', ') }
+      })
+  }, [productsData])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const searchParams = typeof window !== 'undefined'
@@ -124,7 +171,7 @@ export default function RequestSamplesPage() {
       const message = [
         `Sample Request`,
         `Application: ${form.application || 'Not specified'}`,
-        `Products: ${form.products.map(p => PRODUCT_OPTIONS.find(o => o.id === p)?.label || p).join(', ')}`,
+        `Products: ${form.products.map(p => productOptions.find(o => o.id === p)?.label || p).join(', ')}`,
         `Thicknesses: ${form.thicknesses.join(', ') || 'Not specified'}`,
         `Delivery Address: ${fullAddress}`,
         form.notes ? `Notes: ${form.notes}` : '',
@@ -324,7 +371,7 @@ export default function RequestSamplesPage() {
               <div>
                 <p className="mb-3 text-sm font-bold text-stone-700">Product</p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {PRODUCT_OPTIONS.map((p) => (
+                  {productOptions.map((p) => (
                     <button
                       key={p.id}
                       onClick={() => toggleArray('products', p.id)}
@@ -426,7 +473,7 @@ export default function RequestSamplesPage() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {form.products.map((p) => (
                     <span key={p} className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
-                      {PRODUCT_OPTIONS.find((o) => o.id === p)?.label}
+                      {productOptions.find((o) => o.id === p)?.label}
                     </span>
                   ))}
                   {form.thicknesses.map((t) => (
