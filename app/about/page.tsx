@@ -71,7 +71,7 @@ export default function AboutPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
                   <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-white/20 bg-white/90 p-5 backdrop-blur">
                     <p className="text-xs font-semibold uppercase tracking-widest text-stone-500">Headquartered in Singapore</p>
-                    <p className="mt-1 text-lg font-bold text-stone-950">Manufacturing in Cagayan de Oro, Philippines</p>
+                    <p className="mt-1 text-lg font-bold text-stone-950">Manufacturing in Manolo Fortich, Philippines</p>
                   </div>
                 </div>
               </div>
@@ -116,7 +116,7 @@ export default function AboutPage() {
                 </h2>
                 <div className="mt-6 space-y-5 text-base leading-7 text-stone-600">
                   <p>
-                    Founded in Singapore with manufacturing facilities in Cagayan de Oro, Philippines,
+                    Founded in Singapore with manufacturing facilities in Manolo Fortich, Bukidnon, Philippines,
                     NUMAT emerged from a simple observation — the construction and design industry
                     needed better, more sustainable materials.
                   </p>
@@ -138,7 +138,7 @@ export default function AboutPage() {
                   {
                     icon: MapPin,
                     title: 'Global Presence',
-                    body: 'Headquartered in Singapore with manufacturing in Cagayan de Oro, Philippines — positioned for export across Asia and beyond.',
+                    body: 'Headquartered in Singapore with manufacturing in Manolo Fortich, Bukidnon, Philippines, positioned for export across Asia and beyond.',
                   },
                   {
                     icon: Users,

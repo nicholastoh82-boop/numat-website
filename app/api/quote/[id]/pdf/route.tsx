@@ -639,7 +639,10 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
     (isInvoice
       ? "Net 30 days from invoice date."
       : "50 percent deposit on purchase order. 50 percent balance before shipment.");
-  const incoterms = data.incoterms || "EXW Cagayan de Oro, Philippines.";
+  // EXW names the place the buyer takes delivery, so this has to be the factory
+  // and not the nearest city. The factory is Alae, Manolo Fortich, Bukidnon.
+  // Cagayan de Oro is a different city in a different province.
+  const incoterms = data.incoterms || "EXW Manolo Fortich, Bukidnon, Philippines.";
 
   const repName = data.issued_by_name || "NUMAT Sales Team";
   const repEmail = data.issued_by_email || data.generated_by || "sales@numat.ph";
@@ -702,7 +705,7 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
             <Text style={styles.repEmail}>{repEmail}</Text>
             <Text style={styles.bodyBold}>NUMAT Sustainable</Text>
             <Text style={styles.bodyBold}>Manufacturing Inc.</Text>
-            <Text style={styles.bodyText}>Cagayan de Oro, Philippines</Text>
+            <Text style={styles.bodyText}>Manolo Fortich, Bukidnon, Philippines</Text>
             <Text style={styles.bodyText}>numatbamboo.com</Text>
           </View>
           <View style={styles.colSpacer} />

@@ -56,8 +56,8 @@ export default function ContactPage() {
                     <div>
                       <h3 className="font-semibold text-foreground">Manufacturing Facility</h3>
                       <p className="text-muted-foreground mt-1">
-                        Cagayan de Oro City<br />
-                        Misamis Oriental, Philippines
+                        Manolo Fortich<br />
+                        Bukidnon, Philippines
                       </p>
                     </div>
                   </div>

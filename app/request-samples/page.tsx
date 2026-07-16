@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Loader2,
   ChevronDown,
+  Gift,
 } from 'lucide-react'
 
 const THICKNESS_OPTIONS = ['16mm']
@@ -154,8 +155,8 @@ export default function RequestSamplesPage() {
   const howItWorks = [
     { n: '1', title: 'Tell us what you need', body: 'Select your product, thickness, and application.' },
     { n: '2', title: 'Add your contact details', body: 'Name, email, phone and delivery address.' },
-    { n: '3', title: 'We prepare your pack', body: 'Samples cut, labelled, and shipped with data sheets. Sample size: 200mm × 200mm.' },
-    { n: '4', title: 'Delivery cost confirmation', body: 'Delivery charges are borne by the customer. We will notify you of the exact amount within 3 business days once we have a quotation from our delivery providers.' },
+    { n: '3', title: 'We prepare your pack', body: 'Samples cut, labelled, and shipped with data sheets. One piece per request at 100mm × 100mm × 16mm, shipped ex factory from Manolo Fortich, Bukidnon.' },
+    { n: '4', title: 'Delivery cost confirmation', body: 'The sample is free. Delivery is borne by the customer, and we will quote you the exact amount within 3 business days once we have a rate from our delivery providers.' },
     { n: '5', title: 'Evaluate and order', body: 'Approve the sample and request a formal quote.' },
   ]
 
@@ -224,9 +225,10 @@ export default function RequestSamplesPage() {
 
                 <div className="mt-8 space-y-3">
                   {[
-                    { icon: PackageCheck, text: 'Physical samples — standard size 200mm × 200mm' },
+                    { icon: PackageCheck, text: 'Physical samples, one piece per request at 100mm × 100mm × 16mm' },
+                    { icon: Gift, text: 'Samples are free. You only pay delivery' },
                     { icon: Clock, text: 'Sample lead time typically 5–10 working days' },
-                    { icon: Truck, text: 'Shipped to your location — delivery charges quoted within 3 business days' },
+                    { icon: Truck, text: 'Ships ex factory from Manolo Fortich, Bukidnon. Delivery quoted within 3 business days' },
                     { icon: Star, text: 'Technical data sheet included with every sample pack' },
                   ].map((item) => (
                     <div key={item.text} className="flex items-center gap-3">
@@ -288,7 +290,7 @@ export default function RequestSamplesPage() {
               <div className="mx-auto mt-4 max-w-md rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-left">
                 <p className="text-sm font-semibold text-amber-800">Delivery charges notice</p>
                 <p className="mt-1 text-sm text-amber-700">
-                  Delivery charges are borne by the customer. We will notify you of the exact amount within 3 business days once we have a quotation from our delivery providers.
+                  The sample itself is free. Delivery charges are borne by the customer, and we will quote you the exact amount within 3 business days once we have a rate from our delivery providers.
                 </p>
               </div>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
@@ -573,7 +575,7 @@ export default function RequestSamplesPage() {
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
                 <p className="text-sm font-semibold text-amber-800">Delivery charges notice</p>
                 <p className="mt-1 text-sm text-amber-700">
-                  All delivery charges are borne by the customer. We will notify you of the exact delivery cost within 3 business days of receiving your request, once we have a quotation from our delivery service providers.
+                  The sample itself is free. All delivery charges are borne by the customer, and we will quote you the exact delivery cost directly within 3 business days of receiving your request, once we have a rate from our delivery service providers.
                 </p>
               </div>
 

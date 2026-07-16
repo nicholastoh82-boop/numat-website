@@ -2,6 +2,13 @@ interface QuoteEmailData {
   customerName: string
   quoteNumber: string
   quoteDate?: string
+  /**
+   * Currency of every amount below, as an ISO code. Required, not optional:
+   * this template used to print bare numbers, so a NuWeave board quoted to a
+   * Malaysian lead read as "231" with nothing to say it meant MYR 231.25 and
+   * not PHP 231.
+   */
+  currency: string
   subtotal: number
   discountAmount?: number
   discountPercent?: number
@@ -27,6 +34,12 @@ export function generateQuoteEmailHTML(data: QuoteEmailData): string {
   const discountAmount = data.discountAmount || 0
   const discountPercent = data.discountPercent || 0
 
+  // Code rather than symbol. RM, ₱ and $ are all ambiguous across the markets
+  // NUMAT quotes into, and a customer deciding on a purchase should not have to
+  // guess which dollar or which peso.
+  const cur = (data.currency || 'PHP').toUpperCase()
+  const money = (n: number) => `${cur} ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
   const itemsHTML = data.items.map((item) => `
     <tr>
       <td style="padding:12px 8px;border-bottom:1px solid #f0f0f0;text-align:left;font-size:14px;color:#333;">
@@ -34,8 +47,8 @@ export function generateQuoteEmailHTML(data: QuoteEmailData): string {
   ${item.productSpecs ? `<br><span style="font-size:11px;color:#888;">${item.productSpecs}</span>` : ''}
 </td>
       <td style="padding:12px 8px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:14px;color:#333;">${item.quantity}</td>
-      <td style="padding:12px 8px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:14px;color:#333;">${item.unitPrice.toLocaleString()}</td>
-      <td style="padding:12px 8px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:14px;font-weight:600;color:#1a237e;">${item.totalPrice.toLocaleString()}</td>
+      <td style="padding:12px 8px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:14px;color:#333;white-space:nowrap;">${money(item.unitPrice)}</td>
+      <td style="padding:12px 8px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:14px;font-weight:600;color:#1a237e;white-space:nowrap;">${money(item.totalPrice)}</td>
     </tr>
   `).join('')
 
@@ -117,6 +130,7 @@ export function generateQuoteEmailHTML(data: QuoteEmailData): string {
                     <p style="margin:0;font-size:13px;color:#333;"><strong>Quote Number:</strong> <span style="color:#1a237e;">${data.quoteNumber}</span></p>
                     <p style="margin:6px 0 0;font-size:13px;color:#333;"><strong>Date Issued:</strong> ${displayDate}</p>
                     <p style="margin:6px 0 0;font-size:13px;color:#333;"><strong>Valid Until:</strong> <span style="color:#c62828;">${displayExpiry}</span></p>
+                    <p style="margin:6px 0 0;font-size:13px;color:#333;"><strong>Currency:</strong> <span style="color:#1a237e;font-weight:600;">${cur}</span>. All amounts below are in ${cur}.</p>
                   </td>
                 </tr>
               </table>
@@ -152,16 +166,16 @@ export function generateQuoteEmailHTML(data: QuoteEmailData): string {
                     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e0e0e0;border-radius:4px;">
                       <tr>
                         <td style="padding:10px 14px;font-size:13px;color:#555;border-bottom:1px solid #f0f0f0;">Subtotal</td>
-                        <td style="padding:10px 14px;font-size:13px;color:#333;text-align:right;border-bottom:1px solid #f0f0f0;">${data.subtotal.toLocaleString()}</td>
+                        <td style="padding:10px 14px;font-size:13px;color:#333;text-align:right;border-bottom:1px solid #f0f0f0;white-space:nowrap;">${money(data.subtotal)}</td>
                       </tr>
                       ${discountAmount > 0 ? `
                       <tr>
                         <td style="padding:10px 14px;font-size:13px;color:#4caf50;border-bottom:1px solid #f0f0f0;">Discount (${discountPercent}%)</td>
-                        <td style="padding:10px 14px;font-size:13px;color:#4caf50;text-align:right;border-bottom:1px solid #f0f0f0;">-${discountAmount.toLocaleString()}</td>
+                        <td style="padding:10px 14px;font-size:13px;color:#4caf50;text-align:right;border-bottom:1px solid #f0f0f0;white-space:nowrap;">-${money(discountAmount)}</td>
                       </tr>` : ''}
                       <tr style="background-color:#1a237e;">
                         <td style="padding:12px 14px;font-size:14px;color:#ffffff;font-weight:700;">TOTAL</td>
-                        <td style="padding:12px 14px;font-size:14px;color:#ffffff;font-weight:700;text-align:right;">${data.total.toLocaleString()}</td>
+                        <td style="padding:12px 14px;font-size:14px;color:#ffffff;font-weight:700;text-align:right;white-space:nowrap;">${money(data.total)}</td>
                       </tr>
                     </table>
                     <p style="margin:8px 0 0;font-size:11px;color:#999;text-align:right;">Exclusive of VAT & delivery</p>
@@ -236,6 +250,7 @@ export function generateQuoteEmailHTML(data: QuoteEmailData): string {
 
 export function generateReminderEmailHTML(data: QuoteEmailData): string {
   const displayExpiry = data.validUntil || 'Soon'
+  const cur = (data.currency || 'PHP').toUpperCase()
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -267,7 +282,7 @@ export function generateReminderEmailHTML(data: QuoteEmailData): string {
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;background:#f0f4ff;border-left:4px solid #1a237e;border-radius:4px;">
                 <tr>
                   <td style="padding:14px 16px;">
-                    <p style="margin:0;font-size:14px;color:#1a237e;font-weight:700;">Total: ${data.total.toLocaleString()}</p>
+                    <p style="margin:0;font-size:14px;color:#1a237e;font-weight:700;">Total: ${cur} ${data.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     <p style="margin:4px 0 0;font-size:13px;color:#666;">${data.items.length} product(s)</p>
                   </td>
                 </tr>
