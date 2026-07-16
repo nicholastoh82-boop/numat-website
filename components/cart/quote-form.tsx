@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCartStore } from '@/lib/cart-store'
+import QuoteProductPicker from '@/components/cart/quote-product-picker'
 import { useCurrency } from '@/components/providers/currency-provider'
 import { cn } from '@/lib/utils'
 import PhoneInput, { type Value } from 'react-phone-number-input'
@@ -130,7 +131,11 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
   async function handleSubmit(channel: DeliveryChannel) {
     if (!validateForm()) return
     if (items.length === 0) {
-      toast({ title: 'Cart is empty', description: 'Add products first.', variant: 'destructive' })
+      toast({
+        title: 'Nothing to quote yet',
+        description: 'Pick at least one board above, then submit.',
+        variant: 'destructive',
+      })
       return
     }
 
@@ -197,6 +202,12 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
         <h1 className="text-2xl font-bold text-stone-950">Your Details</h1>
         <p className="mt-1 text-sm text-stone-500">Fill in your contact info and we'll prepare your formal quotation.</p>
       </div>
+
+      {/* Nothing to quote yet. On /request-quote that is always the case on
+          arrival, since the page renders this form standalone with an empty
+          cart. Without a picker here the visitor fills in every field, submits,
+          and is told the cart is empty with no way to fix it. */}
+      {items.length === 0 && <QuoteProductPicker />}
 
       {/* Reassurance bar */}
       <div className="grid gap-3 sm:grid-cols-3">
