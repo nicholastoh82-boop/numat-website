@@ -705,7 +705,7 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
             <Text style={styles.repEmail}>{repEmail}</Text>
             <Text style={styles.bodyBold}>NUMAT Sustainable</Text>
             <Text style={styles.bodyBold}>Manufacturing Inc.</Text>
-            <Text style={styles.bodyText}>Cagayan de Oro, Philippines</Text>
+            <Text style={styles.bodyText}>Manolo Fortich, Bukidnon, Philippines</Text>
             <Text style={styles.bodyText}>numatbamboo.com</Text>
           </View>
           <View style={styles.colSpacer} />

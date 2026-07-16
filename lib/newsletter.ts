@@ -137,7 +137,7 @@ ${previewText ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0
 <tr><td style="background:#16361f;padding:22px 28px;"><img src="https://numatbamboo.com/numat-logo.png" alt="NUMAT" width="150" style="display:block;" /></td></tr>
 <tr><td style="padding:28px;color:#1f2937;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;">${clean}</td></tr>
 <tr><td style="padding:20px 28px;background:#f0f4f0;color:#6b7280;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;">
-NUMAT Sustainable Manufacturing Inc.<br />Cagayan de Oro, Philippines &middot; <a href="https://numatbamboo.com" style="color:#16361f;">numatbamboo.com</a><br /><br />
+NUMAT Sustainable Manufacturing Inc.<br />Manolo Fortich, Bukidnon, Philippines &middot; <a href="https://numatbamboo.com" style="color:#16361f;">numatbamboo.com</a><br /><br />
 You are receiving this because you subscribed to NUMAT updates. <a href="${unsubUrl}" style="color:#16361f;">Unsubscribe</a>.<br />&copy; ${year} NUMAT Sustainable Manufacturing Inc.
 </td></tr></table></td></tr></table></body></html>`
 }

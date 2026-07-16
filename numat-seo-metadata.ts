@@ -207,8 +207,8 @@ export const organizationSchema = {
   },
   address: {
     '@type': 'PostalAddress',
-    addressLocality: 'Cagayan de Oro',
-    addressRegion: 'Mindanao',
+    addressLocality: 'Manolo Fortich',
+    addressRegion: 'Bukidnon',
     addressCountry: 'PH',
   },
   contactPoint: [
@@ -236,8 +236,8 @@ export const localBusinessSchema = {
     'Engineered bamboo board manufacturer and supplier. Export-ready supply from Mindanao, Philippines.',
   address: {
     '@type': 'PostalAddress',
-    addressLocality: 'Cagayan de Oro',
-    addressRegion: 'Bukidnon, Mindanao',
+    addressLocality: 'Manolo Fortich',
+    addressRegion: 'Bukidnon',
     addressCountry: 'PH',
   },
   email: 'sales@numat.ph',

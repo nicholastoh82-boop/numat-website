@@ -589,7 +589,7 @@ const ReceiptPDF: React.FC<{ data: ReceiptData }> = ({ data }) => {
             <Text style={styles.sectionLabel}>Received by</Text>
             <Text style={styles.bodyBold}>NUMAT Sustainable</Text>
             <Text style={styles.bodyBold}>Manufacturing Inc.</Text>
-            <Text style={styles.bodyText}>Cagayan de Oro, Philippines</Text>
+            <Text style={styles.bodyText}>Manolo Fortich, Bukidnon, Philippines</Text>
             <Text style={styles.bodyText}>numatbamboo.com</Text>
             <Text style={{ ...styles.bodyText, marginTop: 6 }}>
               Acknowledged by: {issuedByName}
