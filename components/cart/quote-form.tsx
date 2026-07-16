@@ -24,7 +24,8 @@ import 'react-phone-number-input/style.css'
 import { toast } from '@/hooks/use-toast'
 
 interface QuoteFormProps {
-  onBack: () => void
+  /** Optional: the cart drawer passes this, /request-quote renders standalone. */
+  onBack?: () => void
   prefillProduct?: string
 }
 

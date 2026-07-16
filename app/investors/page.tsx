@@ -301,9 +301,11 @@ export default async function InvestorPage() {
 
   // Live COGS and S&M from categorized transactions (3 month trailing avg PHP / 60)
   const COGS_FX = 60;
-  const plRows = (((await admin().rpc("exec_sql_select", {q: "select 1"}).then(()=>null).catch(()=>null)) || null) as null);
   const cogsRes = await admin().from("fin_transactions").select("transaction_date, amount, category:fin_categories(pl_section, name)").gte("transaction_date","2026-03-01").lte("transaction_date","2026-05-31").eq("currency","PHP");
-  const cogsRows = (cogsRes.data || []) as Array<{transaction_date:string;amount:number;category:{pl_section:string;name:string}|null}>;
+  // fin_transactions.category is a to-one FK, so Supabase returns an object
+  // here, but without generated DB types it infers an array. Cast through
+  // unknown rather than reshape code that is already correct at runtime.
+  const cogsRows = (cogsRes.data || []) as unknown as Array<{transaction_date:string;amount:number;category:{pl_section:string;name:string}|null}>;
   let cogsTotalPhp = 0, smTotalPhp = 0, opexTotalPhp = 0;
   for (const r of cogsRows) {
     const sec = r.category?.pl_section || "";

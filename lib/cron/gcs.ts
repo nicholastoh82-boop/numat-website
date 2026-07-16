@@ -25,7 +25,7 @@ export async function uploadToGcs(args: {
       Authorization: `Bearer ${token}`,
       'Content-Type': args.contentType || 'application/octet-stream',
     },
-    body: args.body,
+    body: args.body as BodyInit,
   });
   if (!res.ok) {
     throw new Error(`GCS upload failed: ${res.status} ${await res.text()}`);

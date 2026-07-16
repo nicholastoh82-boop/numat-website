@@ -268,7 +268,10 @@ export default function ChatClient() {
         .from('team_channel_members')
         .select('team_channels(id, name, description, is_private, created_at, created_by)')
         .eq('user_id', uid)
-      const rows = (data || []) as Array<{ team_channels: Channel | null }>
+      // team_channels is a to-one FK. Without generated DB types Supabase infers
+      // an array, but it returns a single object at runtime, which is what the
+      // map below reads. Cast through unknown rather than reshape working code.
+      const rows = (data || []) as unknown as Array<{ team_channels: Channel | null }>
       const list = rows
         .map((r) => r.team_channels)
         .filter((c): c is Channel => !!c)

@@ -45,7 +45,11 @@ export default async function PartnerBoardPage() {
     const collectedPhp = php?.cash_collected || 0
     const cashOutPhp = (php?.cash_out || 0) + ((usd?.cash_out || 0) + (sgd?.cash_out || 0)) * FX_RATE
     const netPhp = collectedPhp - cashOutPhp
-    return { month: ym, bookedPhp, bookedUsd: bookedPhp / FX_RATE, earnedPhp, earnedUsd: earnedPhp / FX_RATE, collectedPhp, collectedUsd: collectedPhp / FX_RATE, cashOutPhp, cashOutUsd: cashOutPhp / FX_RATE, netPhp, netUsd: netPhp / FX_RATE }
+    // Signed but not yet delivered, matching the column tooltip in
+    // BoardDashboard. This was never computed, so the dashboard was reading
+    // undefined and printing $NaN in the unrealised column.
+    const unrealisedPhp = bookedPhp - earnedPhp
+    return { month: ym, bookedPhp, bookedUsd: bookedPhp / FX_RATE, earnedPhp, earnedUsd: earnedPhp / FX_RATE, collectedPhp, collectedUsd: collectedPhp / FX_RATE, cashOutPhp, cashOutUsd: cashOutPhp / FX_RATE, unrealisedPhp, unrealisedUsd: unrealisedPhp / FX_RATE, netPhp, netUsd: netPhp / FX_RATE }
   })
   return <BoardDashboard months={rows} pipeline={(pipeRes.data || []) as { stage: string; leads: number }[]} deals={(dealsRes.data || []) as Record<string, unknown>[]} fxRate={FX_RATE} />
 }

@@ -64,10 +64,10 @@ export async function GET(req: NextRequest) {
   let query = adminClient
     .from('master_leads')
     .select(
-      'id,email,full_name,first_name,company,country,city,segment,' +
-        'business_description,icp_fit_score,buying_signal_strength,' +
-        'buying_signal_summary,buying_signal_evidence,buying_signal_detected_at,' +
-        'rep_email,rep_assigned',
+      // Single string literal on purpose. Supabase parses this at the type
+      // level to infer the row shape, and concatenation degrades it to
+      // GenericStringError.
+      `id,email,full_name,first_name,company,country,city,segment,business_description,icp_fit_score,buying_signal_strength,buying_signal_summary,buying_signal_evidence,buying_signal_detected_at,rep_email,rep_assigned`,
     )
     .not('buying_signal_detected_at', 'is', null)
     .order('buying_signal_detected_at', { ascending: false })

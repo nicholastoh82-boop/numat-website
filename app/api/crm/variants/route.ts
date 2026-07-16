@@ -18,7 +18,7 @@ export async function GET() {
     const [variantsResult, productsResult] = await Promise.all([
       supabase
         .from('product_variants')
-        .select('id, sku, product_id, base_price_usd, ex_factory_php, thickness_mm, ply_count, core_type, grade, size_label, unit, moq')
+        .select('id, sku, product_id, base_price_usd, ex_factory_php, thickness_mm, ply_count, core_type, grade, size_label, unit, moq, in_stock')
         .eq('is_available', true)
         .not('base_price_usd', 'is', null)
         .order('sku'),

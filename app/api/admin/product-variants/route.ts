@@ -178,7 +178,9 @@ export async function PATCH(request: NextRequest) {
       ? await supabase.from('product_variants').select('length_mm,width_mm,thickness_mm').eq('id', id).maybeSingle()
       : await supabase.from('product_variants').select('length_mm,width_mm,thickness_mm').eq('sku', sku).maybeSingle()
 
-    const existing = currentRes.data || {}
+    // Keep the row shape when the lookup misses. `|| {}` widened the union and
+    // took length_mm, width_mm and thickness_mm off the type with it.
+    const existing = currentRes.data ?? { length_mm: null, width_mm: null, thickness_mm: null }
     const length = updateData.length_mm ?? existing.length_mm ?? null
     const width = updateData.width_mm ?? existing.width_mm ?? null
     const thickness = updateData.thickness_mm ?? existing.thickness_mm ?? null

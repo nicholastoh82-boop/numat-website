@@ -324,6 +324,7 @@ interface QuoteLineItem {
   isCustom?: boolean
   productSpecs?: string
   moqOverride?: boolean
+  priceOverride?: boolean
 }
 
 const CUSTOM_VARIANT_ID = '__custom__'

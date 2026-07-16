@@ -152,7 +152,7 @@ export async function notifyUsers(opts: {
             'Content-Encoding': 'aes128gcm',
             'Content-Type': 'application/octet-stream',
           },
-          body: payload,
+          body: payload as BodyInit,
         })
         if (res.status === 404 || res.status === 410) {
           await a.from('push_subscriptions').delete().eq('id', s.id)

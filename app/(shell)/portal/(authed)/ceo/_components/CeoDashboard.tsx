@@ -633,7 +633,7 @@ function CashoutTable({ items }: { items: any[] }) {
   for (const r of items) {
     const key = r.category || 'Other'
     const factor = r.currency === 'PHP' ? 1 : RATE
-    const g = map.get(key) || { category: key, count: 0, total: 0, rows: [] }
+    const g = map.get(key) || { category: key, count: 0, total: 0, rows: [] as typeof r[] }
     g.count += 1
     g.total += Number(r.amount || 0) * factor
     g.rows.push(r)
