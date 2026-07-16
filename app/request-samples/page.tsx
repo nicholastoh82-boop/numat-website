@@ -6,7 +6,7 @@ declare const gtag: (...args: unknown[]) => void
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import Link from 'next/link'
-import Image from 'next/image'
+import PlaceholderImage from '@/components/placeholder-image'
 import {
   PackageCheck,
   ArrowRight,
@@ -165,16 +165,17 @@ export default function RequestSamplesPage() {
       <Header />
       <main className="flex-1 bg-[#f6f1e8]">
 
-        {/* Hero image band. Placeholder until the final asset lands at
-            /public/request-sample-hero.jpg */}
+        {/* Hero image band. PlaceholderImage rather than next/image: the asset
+            has not landed yet, and next/image on a missing file renders a broken
+            image icon on a lead capture page. This falls back to a labelled
+            panel and picks the real photo up the moment it is added at
+            /public/request-sample-hero.jpg. */}
         <section className="relative border-b border-stone-200 bg-stone-900">
           <div className="relative h-[280px] w-full sm:h-[360px] lg:h-[440px]">
-            <Image
+            <PlaceholderImage
               src="/request-sample-hero.jpg"
               alt="NUMAT engineered bamboo formwork panels on a construction site"
-              fill
-              priority
-              className="object-cover"
+              label="Hero image: samples on site"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-transparent" />
 
