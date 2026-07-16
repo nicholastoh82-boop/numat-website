@@ -216,7 +216,7 @@ const completedProjects = [
 ]
 
 export default function NumatHomepage() {
-  const { formatConvertedFromPhp, currency, phpRateDate } = useCurrency()
+  const { formatConvertedFromPhp, currency } = useCurrency()
 
   const { data: testimonialsData } = useSWR<Testimonial[]>('/api/testimonials', fetcher)
   const testimonials = Array.isArray(testimonialsData) ? testimonialsData : []
@@ -296,8 +296,8 @@ export default function NumatHomepage() {
               {variant && (
                 <p className="mt-4 text-sm text-stone-500">
                   {variant.size_label}, three ply.
-                  {currency !== 'PHP' && phpRateDate && (
-                    <span> Converted from PHP at the {phpRateDate} rate.</span>
+                  {currency !== 'PHP' && (
+                    <span> Converted from PHP at the rate of the day.</span>
                   )}
                 </p>
               )}
@@ -456,8 +456,8 @@ export default function NumatHomepage() {
 
             <p className="mt-6 text-xs text-stone-500">
               Prices exclude shipping.
-              {currency !== 'PHP' && phpRateDate
-                ? ` Converted from the PHP list price at the ${phpRateDate} rate.`
+              {currency !== 'PHP'
+                ? ' Converted from the PHP list price at the rate of the day.'
                 : ''}
             </p>
           </div>

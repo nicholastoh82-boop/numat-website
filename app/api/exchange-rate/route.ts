@@ -71,12 +71,25 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Frankfurter v2 reports a date per currency pair, and those dates are not
+    // consistent: on 16 July 2026 PHP/MYR came back dated 17 July while PHP/USD
+    // came back dated 16 July, and v1/latest reported the true ECB publish date
+    // of 15 July. The page renders this as "Converted from PHP at the {date}
+    // rate", so a future date tells a customer their price was converted at a
+    // rate that does not exist yet.
+    //
+    // Clamp it. A date we cannot vouch for is dropped rather than shown, and the
+    // page already handles a null date by omitting the line.
+    const todayUtc = new Date().toISOString().slice(0, 10)
+    const upstreamDate = typeof data?.date === 'string' ? data.date : null
+    const rateDate = upstreamDate && upstreamDate <= todayUtc ? upstreamDate : null
+
     return NextResponse.json(
       {
         base,
         currency,
         rate,
-        date: data?.date ?? null,
+        date: rateDate,
         source: 'frankfurter',
       },
       { status: 200, headers: { 'Cache-Control': 'no-store, max-age=0' } }
