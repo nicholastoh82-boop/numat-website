@@ -9,8 +9,13 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  // Type errors fail the build again. This was true, and it hid 21 real errors,
+  // three of which were live bugs: the CRM served out of stock variants because
+  // in_stock was filtered but never selected, the partner board printed $NaN for
+  // unrealised revenue because the field was never computed, and quote line
+  // price overrides were read off a property that was never declared.
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     unoptimized: true,

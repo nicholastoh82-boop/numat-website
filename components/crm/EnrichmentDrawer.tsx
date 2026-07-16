@@ -12,19 +12,22 @@ type EnrichmentLead = {
   company: string | null;
   email: string;
   country: string | null;
-  business_description: string | null;
-  products_offered: any;
-  employee_size_band: string | null;
-  icp_fit_score: number | null;
-  icp_fit_reason: string | null;
-  pain_hooks: any;
-  product_recommendations: any;
-  buying_signal_strength: string | null;
-  buying_signal_summary: string | null;
-  buying_signal_evidence: any;
-  buying_signal_detected_at: string | null;
-  buying_signal_scanned_at: string | null;
-  last_enriched_at: string | null;
+  business_description?: string | null;
+  // All optional: these are enrichment output, and a lead that has not been
+  // enriched yet carries none of them. The drawer already renders every one of
+  // these as empty when absent.
+  products_offered?: any;
+  employee_size_band?: string | null;
+  icp_fit_score?: number | null;
+  icp_fit_reason?: string | null;
+  pain_hooks?: any;
+  product_recommendations?: any;
+  buying_signal_strength?: string | null;
+  buying_signal_summary?: string | null;
+  buying_signal_evidence?: any;
+  buying_signal_detected_at?: string | null;
+  buying_signal_scanned_at?: string | null;
+  last_enriched_at?: string | null;
 };
 
 type Props = {
@@ -122,8 +125,8 @@ export default function EnrichmentDrawer({ lead, open, onClose }: Props) {
 
   if (!open || !lead) return null;
 
-  const fit = fitColours(lead.icp_fit_score);
-  const sig = signalColours(lead.buying_signal_strength);
+  const fit = fitColours(lead.icp_fit_score ?? null);
+  const sig = signalColours(lead.buying_signal_strength ?? null);
   const products = toArray(lead.products_offered);
   const painHooks = toArray(lead.pain_hooks);
   const recs = toArray(lead.product_recommendations);
@@ -365,8 +368,8 @@ export default function EnrichmentDrawer({ lead, open, onClose }: Props) {
 
           {/* Metadata */}
           <div style={{ marginTop: 18, fontSize: 11, color: '#6b7280', lineHeight: 1.6 }}>
-            <div>Last enriched: {formatTimestamp(lead.last_enriched_at)}</div>
-            <div>Last signal scan: {formatTimestamp(lead.buying_signal_scanned_at)}</div>
+            <div>Last enriched: {formatTimestamp(lead.last_enriched_at ?? null)}</div>
+            <div>Last signal scan: {formatTimestamp(lead.buying_signal_scanned_at ?? null)}</div>
             {lead.buying_signal_detected_at && (
               <div>Signal detected: {formatTimestamp(lead.buying_signal_detected_at)}</div>
             )}
