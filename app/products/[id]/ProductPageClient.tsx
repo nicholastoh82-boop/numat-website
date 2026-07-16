@@ -452,11 +452,19 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
   const [error, setError] = useState('')
   const [product, setProduct] = useState<Product | null>(initialProduct)
 
-  const [selectedCoreType, setSelectedCoreType] = useState('Horizontal')
+  // These three start empty on purpose. They used to default to 'Horizontal',
+  // 'premium' and '8ft', which are NuBam era values, and every current product
+  // falls through to the fallback config rather than the variant driven one. The
+  // result was that a NuWeave quote line read
+  // "Model: premium | Core Type: Horizontal | Length: 8ft" when NuWeave has no
+  // model tiers, no core, and is a 2440 x 1220 sheet rather than a length.
+  // Empty means the spec builder omits the line and the core filter does not
+  // exclude variants that correctly have no core.
+  const [selectedCoreType, setSelectedCoreType] = useState('')
   const [selectedThickness, setSelectedThickness] = useState('')
   const [selectedPly, setSelectedPly] = useState('')
-  const [selectedModel, setSelectedModel] = useState('premium')
-  const [selectedLength, setSelectedLength] = useState('8ft')
+  const [selectedModel, setSelectedModel] = useState('')
+  const [selectedLength, setSelectedLength] = useState('')
   const [quantity, setQuantity] = useState(1)
 
   const { data: categories } = useSWR<Category[]>('/api/categories', fetcher, {

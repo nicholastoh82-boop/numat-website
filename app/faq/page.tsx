@@ -37,7 +37,7 @@ const faqs = [
   {
     question: 'Do you offer product samples?',
     answer:
-      'Yes. Sample panels are 100 × 100 × 16 mm and the sample itself is free. You only pay delivery, and we will quote you the exact delivery cost directly once we have a rate from our delivery providers. Request samples through our website.',
+      'Yes. Sample panels are 100 × 100 × 16 mm, one piece per request, and the sample itself is free. You only pay delivery, and we will quote you the exact delivery cost directly once we have a rate from our delivery providers. Samples ship ex factory from Manolo Fortich, Bukidnon. Request samples through our website.',
   },
   {
     question: 'What are the production and lead times?',
