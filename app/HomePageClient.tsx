@@ -17,7 +17,7 @@ import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
 import NewsletterBand from '@/components/newsletter-band'
 import PlaceholderImage from '@/components/placeholder-image'
-import VideoPlaceholder from '@/components/video-placeholder'
+import FactoryVideo from '@/components/factory-video'
 import CostPerPourCalculator from '@/components/cost-per-pour-calculator'
 import { useCurrency } from '@/components/providers/currency-provider'
 
@@ -634,7 +634,11 @@ export default function NumatHomepage() {
             <div className="mt-8 grid gap-4 lg:grid-cols-[1.35fr_1fr]">
               <div className="overflow-hidden rounded-[1.75rem] border border-white/10">
                 <div className="relative aspect-video">
-                  <VideoPlaceholder label="Factory walkthrough: Manolo Fortich, Bukidnon" />
+                  <FactoryVideo
+                    src="/nuweave/factory-walkthrough.mp4"
+                    poster="/nuweave/factory-walkthrough-poster.jpg"
+                    label="Factory walkthrough: Manolo Fortich, Bukidnon"
+                  />
                 </div>
               </div>
 
