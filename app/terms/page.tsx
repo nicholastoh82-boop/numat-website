@@ -34,7 +34,7 @@ export default function TermsPage() {
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                 <li>Quotes are valid for 30 days from the date of issuance unless otherwise stated</li>
                 <li>Prices are subject to change based on market conditions</li>
-                <li>Minimum order quantities may apply for certain products</li>
+                <li>There is no minimum order quantity; products can be ordered as a single piece</li>
                 <li>Custom specifications may require additional lead time</li>
               </ul>
             </section>

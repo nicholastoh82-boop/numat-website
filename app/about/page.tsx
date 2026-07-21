@@ -213,8 +213,8 @@ export default function AboutPage() {
               },
               {
                 icon: Target,
-                title: 'Low MOQ, Export-Ready',
-                body: 'MOQ from 10 boards. Export documentation and commercial support available for buyers across Asia and internationally.',
+                title: 'No Minimum Order, Export Ready',
+                body: 'Order a single board. The minimum order quantity is 1 piece. Export documentation and commercial support available for buyers across Asia and internationally.',
               },
             ].map((item) => (
               <div key={item.title} className="rounded-[2rem] border border-stone-200 bg-white p-7 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
