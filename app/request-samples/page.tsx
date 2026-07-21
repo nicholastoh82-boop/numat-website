@@ -216,11 +216,11 @@ export default function RequestSamplesPage() {
             has not landed yet, and next/image on a missing file renders a broken
             image icon on a lead capture page. This falls back to a labelled
             panel and picks the real photo up the moment it is added at
-            /public/request-sample-hero.jpg. */}
+            /public/numat-bamboo-board-sample-request.jpg. */}
         <section className="relative border-b border-stone-200 bg-stone-900">
           <div className="relative h-[280px] w-full sm:h-[360px] lg:h-[440px]">
             <PlaceholderImage
-              src="/request-sample-hero.jpg"
+              src="/numat-bamboo-board-sample-request.jpg"
               alt="NUMAT engineered bamboo formwork panels on a construction site"
               label="Hero image: samples on site"
             />
