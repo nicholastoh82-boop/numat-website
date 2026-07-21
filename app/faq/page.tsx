@@ -4,11 +4,12 @@ import CartDrawer from '@/components/cart-drawer'
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'FAQ — Frequently Asked Questions | NUMAT Bamboo',
+  title: 'FAQ: Frequently Asked Questions | NUMAT Bamboo',
   description: 'Answers to common questions about NUMAT engineered bamboo products, ordering, lead times, samples, and technical specifications.',
+  alternates: { canonical: 'https://numatbamboo.com/faq' },
   openGraph: {
     title: 'FAQ | NUMAT Bamboo',
-    description: 'Common questions about NUMAT engineered bamboo — products, MOQ, lead times, samples, and more.',
+    description: 'Common questions about NUMAT engineered bamboo: products, MOQ, lead times, samples, and more.',
     url: 'https://numatbamboo.com/faq',
   },
 }

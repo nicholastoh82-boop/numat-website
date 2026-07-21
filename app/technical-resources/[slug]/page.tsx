@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
@@ -10,6 +11,34 @@ type PageProps = {
   params: Promise<{
     slug: string
   }>
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params
+  const item = technicalResourceDetails.find((entry) => entry.slug === slug)
+
+  if (!item) {
+    return {
+      title: 'Technical Resource Not Found | NUMAT Bamboo',
+      robots: { index: false, follow: true },
+    }
+  }
+
+  const url = `https://numatbamboo.com/technical-resources/${item.slug}`
+  const title = `${item.title} | Technical Resources | NUMAT Bamboo`
+  const description = item.cardDescription
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      url,
+      title,
+      description,
+      siteName: 'NUMAT Bamboo',
+    },
+  }
 }
 
 export default async function TechnicalResourceDetailPage({ params }: PageProps) {

@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { getProductSlugs } from '@/lib/products/get-product'
+import { technicalResourceDetails } from '@/lib/technical-resources-content'
 
 export const revalidate = 3600
 
@@ -46,6 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/contact`, priority: 0.6, changeFrequency: 'yearly' as const },
     { url: `${BASE}/request-quote`, priority: 0.9, changeFrequency: 'monthly' as const },
     { url: `${BASE}/request-samples`, priority: 0.8, changeFrequency: 'monthly' as const },
+    { url: `${BASE}/shipping`, priority: 0.5, changeFrequency: 'yearly' as const },
   ]
 
   // Product and blog pages were missing entirely, so the only board Google was
@@ -71,6 +73,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...blogPosts.map((post) => ({
       url: `${BASE}/blog/${post.slug}`,
       lastModified: post.updated,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
+    ...technicalResourceDetails.map((item) => ({
+      url: `${BASE}/technical-resources/${item.slug}`,
+      lastModified: now,
       changeFrequency: 'monthly' as const,
       priority: 0.6,
     })),

@@ -30,7 +30,11 @@ function formatDate(dateStr: string | null): string {
   })
 }
 
-export const metadata = newsMetadata
+export const metadata = {
+  ...newsMetadata,
+  alternates: { canonical: 'https://numatbamboo.com/blog' },
+  openGraph: { ...newsMetadata.openGraph, url: 'https://numatbamboo.com/blog' },
+}
 
 export default async function BlogPage() {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
