@@ -198,7 +198,7 @@ const manufacturing = [
   { title: 'Raw material selection', src: '/nuweave/mfg-raw-material.jpg' },
   { title: 'Weaving and lay up', src: '/nuweave/mfg-weaving.jpg' },
   { title: 'Hot pressing', src: '/nuweave/mfg-pressing.jpg' },
-  { title: 'Testing', src: '/nuweave/mfg-testing.jpg' },
+  { title: 'Finished board', src: '/nuweave/mfg-finished-board.jpg' },
 ]
 
 const comparison = [
