@@ -10,7 +10,7 @@ export const globalMetadata: Metadata = {
     template: '%s | NUMAT Bamboo',
   },
   description:
-    'Engineered bamboo boards for furniture, cabinetry, wall panels, doors, and flooring. Export-ready supply from the Philippines with DOST and ASTM D1037 mechanical testing. Get a quote in 24 hours.',
+    'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards for construction, furniture, and interior finishing. Export ready from Manolo Fortich, Bukidnon, with DOST and ASTM D1037 mechanical testing. Get a quote in 24 hours.',
   keywords: [
     'engineered bamboo boards',
     'bamboo boards Philippines',
@@ -35,7 +35,7 @@ export const globalMetadata: Metadata = {
     siteName: 'NUMAT Bamboo',
     title: 'NUMAT Bamboo | Engineered Bamboo Boards from the Philippines',
     description:
-      'Engineered bamboo boards for furniture, cabinetry, wall panels, doors, and flooring. Export-ready supply from the Philippines.',
+      'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards. Export ready from Manolo Fortich, Bukidnon, Philippines.',
     images: [
       {
         url: OG_IMAGE,
@@ -68,13 +68,13 @@ export const globalMetadata: Metadata = {
 export const homeMetadata: Metadata = {
   title: 'NUMAT Bamboo | Engineered Bamboo Boards from the Philippines',
   description:
-    'Engineered bamboo boards for furniture, cabinetry, wall panels, doors, and flooring. Backed by DOST and ASTM D1037 mechanical testing. Export-ready supply from Mindanao, Philippines. Request a quote in 24 hours.',
+    'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards. Backed by DOST and ASTM D1037 mechanical testing. Export ready from Manolo Fortich, Bukidnon, Philippines. Request a quote in 24 hours.',
   alternates: { canonical: `${BASE_URL}/` },
   openGraph: {
     url: `${BASE_URL}/`,
     title: 'NUMAT Bamboo | Engineered Bamboo Boards from the Philippines',
     description:
-      'Engineered bamboo boards for furniture, cabinetry, wall panels, doors, and flooring. Export-ready supply from the Philippines.',
+      'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards. Export ready from Manolo Fortich, Bukidnon, Philippines.',
   },
 }
 
@@ -133,13 +133,13 @@ export const technicalResourcesMetadata: Metadata = {
 export const aboutMetadata: Metadata = {
   title: 'About NUMAT | Sustainable Bamboo Manufacturing from the Philippines',
   description:
-    'NUMAT is a Singapore-founded bamboo manufacturing company producing engineered bamboo boards in Mindanao, Philippines. Backed by Wavemaker Impact. From nature, for nature.',
+    'NUMAT is a Singapore founded bamboo manufacturing company producing engineered bamboo boards in Manolo Fortich, Bukidnon, in Northern Mindanao, Philippines. Backed by Wavemaker Impact. From nature, for nature.',
   alternates: { canonical: `${BASE_URL}/about` },
   openGraph: {
     url: `${BASE_URL}/about`,
     title: 'About NUMAT | Sustainable Bamboo Manufacturing',
     description:
-      'NUMAT is a Singapore-founded bamboo manufacturing company producing engineered bamboo boards in Mindanao, Philippines. Backed by Wavemaker Impact.',
+      'NUMAT is a Singapore founded bamboo manufacturing company producing engineered bamboo boards in Manolo Fortich, Bukidnon, Northern Mindanao. Backed by Wavemaker Impact.',
   },
 }
 
@@ -172,7 +172,7 @@ export const esgMetadata: Metadata = {
 export const requestQuoteMetadata: Metadata = {
   title: 'Request a Quote | Engineered Bamboo Boards',
   description:
-    'Submit your project details and receive a quote within 24 hours. Engineered bamboo boards for furniture, cabinetry, wall panels, doors, and flooring. Export-ready from the Philippines.',
+    'Submit your project details and receive a quote within 24 hours. Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards. Export ready from Manolo Fortich, Bukidnon, Philippines.',
   alternates: { canonical: `${BASE_URL}/request-quote` },
   robots: { index: false, follow: false },
 }
@@ -199,16 +199,24 @@ export const organizationSchema = {
   logo: `${BASE_URL}/logo.png`,
   image: OG_IMAGE,
   description:
-    'Engineered bamboo boards for furniture, cabinetry, wall panels, doors, and flooring. Export-ready supply from Mindanao, Philippines.',
+    'Engineered bamboo board manufacturer producing woven bamboo formwork boards, bamboo composite panels, and cross laminated bamboo boards for construction, furniture, cabinetry, and interior finishing. Manufactured in Manolo Fortich, Bukidnon, Philippines.',
   foundingLocation: {
     '@type': 'Place',
-    addressCountry: 'SG',
     name: 'Singapore',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: '2 Havelock Road, Havelock 2, #07-13',
+      addressLocality: 'Singapore',
+      postalCode: '059763',
+      addressCountry: 'SG',
+    },
   },
   address: {
     '@type': 'PostalAddress',
+    streetAddress: 'Global Agro Milling Corp., Warehouse B22, Barangay Alae',
     addressLocality: 'Manolo Fortich',
     addressRegion: 'Bukidnon',
+    postalCode: '8703',
     addressCountry: 'PH',
   },
   contactPoint: [
@@ -233,11 +241,13 @@ export const localBusinessSchema = {
   url: BASE_URL,
   image: OG_IMAGE,
   description:
-    'Engineered bamboo board manufacturer and supplier. Export-ready supply from Mindanao, Philippines.',
+    'Engineered bamboo board manufacturer and supplier. Woven bamboo formwork boards, bamboo composite panels, and cross laminated bamboo boards, manufactured in Manolo Fortich, Bukidnon, Philippines.',
   address: {
     '@type': 'PostalAddress',
+    streetAddress: 'Global Agro Milling Corp., Warehouse B22, Barangay Alae',
     addressLocality: 'Manolo Fortich',
     addressRegion: 'Bukidnon',
+    postalCode: '8703',
     addressCountry: 'PH',
   },
   email: 'sales@numat.ph',
