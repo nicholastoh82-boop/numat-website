@@ -46,10 +46,14 @@ export async function generateMetadata({
   const title = data.seo_title || `${data.title} | NUMAT News`
   const description = data.seo_description || data.excerpt || 'NUMAT Bamboo news and activity updates.'
 
+  const canonicalUrl = `https://numatbamboo.com/blog/${slug}`
+
   return {
     title,
     description,
+    alternates: { canonical: canonicalUrl },
     openGraph: {
+      url: canonicalUrl,
       title,
       description,
       type: 'article',

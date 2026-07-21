@@ -60,9 +60,6 @@ export const globalMetadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  alternates: {
-    canonical: BASE_URL,
-  },
 }
 
 export const homeMetadata: Metadata = {
@@ -81,13 +78,13 @@ export const homeMetadata: Metadata = {
 export const productsMetadata: Metadata = {
   title: 'Bamboo Boards and Panels | Product Catalog',
   description:
-    'Browse NuBam Boards, NuWall panels, NuDoor, NuFloor, and NuSlat. Engineered bamboo boards in multiple thicknesses and finishes. Export-ready from the Philippines. Download specs and request samples.',
+    'Browse NUMAT engineered bamboo boards: woven bamboo formwork boards, bamboo composite panels, and cross laminated boards in multiple thicknesses and finishes. Export ready from the Philippines. Download specs and request samples.',
   alternates: { canonical: `${BASE_URL}/products` },
   openGraph: {
     url: `${BASE_URL}/products`,
     title: 'Bamboo Boards and Panels | Product Catalog | NUMAT Bamboo',
     description:
-      'NuBam Boards, NuWall panels, NuDoor, NuFloor, and NuSlat. Engineered bamboo boards in multiple configurations. Export-ready from the Philippines.',
+      'Woven bamboo formwork boards, bamboo composite panels, and cross laminated boards in multiple configurations. Export ready from the Philippines.',
   },
 }
 
