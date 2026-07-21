@@ -188,17 +188,17 @@ const dostReports: DostReport[] = [
 ]
 
 const applications = [
-  { title: 'Wall forming', src: '/nuweave/application-wall.jpg' },
-  { title: 'Column forming', src: '/nuweave/application-column.jpg' },
-  { title: 'Slab forming', src: '/nuweave/application-slab.jpg' },
-  { title: 'Beam forming', src: '/nuweave/application-beam.jpg' },
+  { title: 'Wall forming', src: '/nuweave/numat-bamboo-formwork-wall-forming.jpg' },
+  { title: 'Column forming', src: '/nuweave/numat-bamboo-formwork-column-forming.jpg' },
+  { title: 'Slab forming', src: '/nuweave/numat-bamboo-formwork-slab-forming.jpg' },
+  { title: 'Beam forming', src: '/nuweave/numat-bamboo-formwork-beam-forming.jpg' },
 ]
 
 const manufacturing = [
-  { title: 'Raw material selection', src: '/nuweave/mfg-raw-material.jpg' },
-  { title: 'Weaving and lay up', src: '/nuweave/mfg-weaving.jpg' },
-  { title: 'Hot pressing', src: '/nuweave/mfg-pressing.jpg' },
-  { title: 'Finished board', src: '/nuweave/mfg-finished-board.jpg' },
+  { title: 'Raw material selection', src: '/nuweave/numat-bamboo-raw-material-selection.jpg' },
+  { title: 'Weaving and lay up', src: '/nuweave/numat-bamboo-mat-weaving.jpg' },
+  { title: 'Hot pressing', src: '/nuweave/numat-bamboo-hot-pressing.jpg' },
+  { title: 'Finished board', src: '/nuweave/numat-finished-woven-bamboo-board.jpg' },
 ]
 
 const comparison = [
@@ -211,8 +211,8 @@ const comparison = [
 /* Real completed projects only. No narrative is written here that has not been
  * confirmed, and imagery stays a labelled placeholder until site photos land. */
 const completedProjects = [
-  { name: 'Cubo Modular', src: '/nuweave/project-cubo.jpg' },
-  { name: 'APDCC', src: '/nuweave/project-apdcc.jpg' },
+  { name: 'Cubo Modular', src: '/nuweave/numat-bamboo-delivery-cubo-modular.jpg' },
+  { name: 'APDCC', src: '/nuweave/numat-bamboo-tables-flooring-apdcc.jpg' },
 ]
 
 export default function NumatHomepage() {
@@ -306,7 +306,7 @@ export default function NumatHomepage() {
             <div className="relative overflow-hidden rounded-[2rem] border border-stone-200 bg-white p-3 shadow-lg">
               <div className="relative h-[320px] overflow-hidden rounded-[1.5rem] sm:h-[440px]">
                 <PlaceholderImage
-                  src="/nuweave/hero.jpg"
+                  src="/nuweave/numat-bamboo-formwork-construction-site.jpg"
                   alt="NuWeave engineered bamboo panel"
                   label="Hero image: NuWeave board on site"
                 />
@@ -635,8 +635,8 @@ export default function NumatHomepage() {
               <div className="overflow-hidden rounded-[1.75rem] border border-white/10">
                 <div className="relative aspect-video">
                   <FactoryVideo
-                    src="/nuweave/factory-walkthrough.mp4"
-                    poster="/nuweave/factory-walkthrough-poster.jpg"
+                    src="/nuweave/numat-bamboo-factory-walkthrough.mp4"
+                    poster="/nuweave/numat-bamboo-factory-walkthrough-poster.jpg"
                     label="Factory walkthrough: Manolo Fortich, Bukidnon"
                   />
                 </div>
@@ -792,7 +792,7 @@ export default function NumatHomepage() {
         <section className="mx-auto max-w-7xl px-6 pb-14 lg:px-8">
           <div className="relative overflow-hidden rounded-[2rem] bg-stone-950 px-8 py-12 text-white shadow-xl lg:px-12 lg:py-16">
             <div className="absolute inset-0 opacity-30">
-              <PlaceholderImage src="/nuweave/cta.jpg" alt="NuWeave board" label="" />
+              <PlaceholderImage src="/nuweave/numat-engineered-bamboo-formwork-panels.jpg" alt="NuWeave board" label="" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-black/70" />
 
