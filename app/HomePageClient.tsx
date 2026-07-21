@@ -198,7 +198,8 @@ const manufacturing = [
   { title: 'Raw material selection', src: '/nuweave/mfg-raw-material.jpg' },
   { title: 'Weaving and lay up', src: '/nuweave/mfg-weaving.jpg' },
   { title: 'Hot pressing', src: '/nuweave/mfg-pressing.jpg' },
-  { title: 'Testing', src: '/nuweave/mfg-testing.jpg' },
+  // Testing tile is held until its photo lands, so the grid does not show a
+  // placeholder panel on the live site. Add it back here when the image exists.
 ]
 
 const comparison = [
@@ -642,7 +643,7 @@ export default function NumatHomepage() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-1">
                 {manufacturing.map((item) => (
                   <div key={item.title} className="overflow-hidden rounded-[1.5rem] border border-white/10">
                     <div className="relative h-32">
