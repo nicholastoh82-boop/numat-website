@@ -82,7 +82,7 @@ export function ApplicationsSection() {
               Six product families, structured for faster decision-making.
             </h2>
             <p className="mt-5 text-lg leading-8 text-foreground/65">
-              Instead of burying everything in one catalogue, NUMAT helps buyers
+              Instead of burying everything in one catalogue, NuMat Bamboo helps buyers
               enter the right material family first, then move into products,
               configuration, and quoting with more clarity.
             </p>

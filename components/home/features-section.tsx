@@ -65,14 +65,14 @@ export function FeaturesSection() {
 
           <div className="max-w-xl">
             <p className="text-sm font-medium uppercase tracking-[0.22em] text-primary">
-              The NUMAT experience
+              The NuMat Bamboo experience
             </p>
             <h2 className="mt-3 font-serif text-3xl text-foreground sm:text-4xl lg:text-5xl">
               Better structure, better confidence, better project conversations.
             </h2>
             <p className="mt-5 text-lg leading-8 text-foreground/65">
               Premium material brands feel stronger when the experience is calm,
-              clear, and commercially useful. NUMAT should help buyers understand
+              clear, and commercially useful. NuMat Bamboo should help buyers understand
               the range faster and continue the quote with less friction.
             </p>
 

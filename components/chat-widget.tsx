@@ -183,8 +183,8 @@ export default function ChatWidget() {
         {
           role: "assistant",
           content: ctx
-            ? `Hi${firstName ? ` ${firstName}` : ""}! Thanks for reviewing the NUMAT report for ${ctx.company}. I'm NARA — what questions do you have about the bamboo products or your project?`
-            : "Hi! I'm NARA, NUMAT's bamboo specialist. What project can I help you with today?",
+            ? `Hi${firstName ? ` ${firstName}` : ""}! Thanks for reviewing the NuMat Bamboo report for ${ctx.company}. I'm NARA — what questions do you have about the bamboo products or your project?`
+            : "Hi! I'm NARA, NuMat Bamboo's bamboo specialist. What project can I help you with today?",
         },
       ]);
     }
@@ -454,7 +454,7 @@ export default function ChatWidget() {
                     flexShrink: 0,
                   }}
                 >
-                  ✓ Your details have been received. A NUMAT specialist will
+                  ✓ Your details have been received. A NuMat Bamboo specialist will
                   reach out within 24 hours.
                   <br />
                   <span style={{ fontWeight: 600 }}>
@@ -610,7 +610,7 @@ export default function ChatWidget() {
               flexShrink: 0,
             }}
           >
-            Powered by NARA · NUMAT AI
+            Powered by NARA · NuMat Bamboo AI
           </div>
         </div>
       )}

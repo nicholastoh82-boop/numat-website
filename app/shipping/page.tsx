@@ -5,8 +5,8 @@ import { Truck, Package, Clock, MapPin, AlertCircle, CheckCircle } from "lucide-
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Shipping & Delivery | NUMAT",
-  description: "Learn about NUMAT's shipping options, delivery times, and policies worldwide.",
+  title: "Shipping & Delivery | NuMat Bamboo",
+  description: "Learn about NuMat Bamboo's shipping options, delivery times, and policies worldwide.",
   alternates: { canonical: "https://numatbamboo.com/shipping" },
 }
 

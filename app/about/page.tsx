@@ -39,7 +39,7 @@ export default function AboutPage() {
                   Building a Sustainable Future with Bamboo
                 </h1>
                 <p className="mt-6 text-lg leading-8 text-stone-600">
-                  NUMAT is a Singapore-founded, Philippines-manufactured engineered bamboo company.
+                  NuMat Bamboo is a Singapore-founded, Philippines-manufactured engineered bamboo company.
                   We supply commercial-grade boards to furniture makers, architects, contractors,
                   and sourcing teams across Southeast Asia and beyond.
                 </p>
@@ -64,7 +64,7 @@ export default function AboutPage() {
                 <div className="relative h-[420px]">
                   <Image
                     src="/about-us.JPG"
-                    alt="Numat sustainable harvesting"
+                    alt="NuMat Bamboo sustainable harvesting"
                     fill
                     className="object-cover transition duration-700 group-hover:scale-[1.04]"
                   />
@@ -117,7 +117,7 @@ export default function AboutPage() {
                 <div className="mt-6 space-y-5 text-base leading-7 text-stone-600">
                   <p>
                     Founded in Singapore with manufacturing facilities in Manolo Fortich, Bukidnon, Philippines,
-                    NUMAT emerged from a simple observation — the construction and design industry
+                    NuMat Bamboo emerged from a simple observation — the construction and design industry
                     needed better, more sustainable materials.
                   </p>
                   <p>
@@ -174,7 +174,7 @@ export default function AboutPage() {
         {/* Why buyers trust us */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
           <div className="mb-10 text-center">
-            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-800">Why Buyers Choose NUMAT</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-800">Why Buyers Choose NuMat Bamboo</p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight text-stone-950 sm:text-4xl">
               Built for Commercial Confidence
             </h2>

@@ -67,13 +67,13 @@ export default async function BlogPage() {
         <section className="border-b bg-white">
           <div className="mx-auto max-w-5xl px-5 py-14 md:px-8 md:py-20">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              NUMAT Blog
+              NuMat Bamboo Blog
             </p>
             <h1 className="font-serif text-4xl font-semibold tracking-tight text-stone-900 md:text-5xl">
               Blog
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-stone-600 md:text-lg">
-              Field notes, product updates, and construction perspectives from NUMAT, an engineered
+              Field notes, product updates, and construction perspectives from NuMat Bamboo, an engineered
               bamboo manufacturer in the Philippines.
             </p>
           </div>

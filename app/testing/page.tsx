@@ -7,9 +7,9 @@ import { ShieldCheck, MessageSquare, Download, ArrowRight } from 'lucide-react'
 import TestingCharts from '@/components/testing-charts'
 
 export const metadata = {
-  title: 'Testing & Certifications | NUMAT',
+  title: 'Testing & Certifications | NuMat Bamboo',
   description:
-    'Review DOST-supported testing results and performance comparisons for NUMAT engineered bamboo boards.',
+    'Review DOST-supported testing results and performance comparisons for NuMat engineered bamboo boards.',
 }
 
 const statCards = [
@@ -25,7 +25,7 @@ const tableRows = [
     full: 'Modulus of Rupture',
     numat: '22.77–69.44 MPa',
     plywood: '~30–60 MPa',
-    reading: 'NUMAT can compete with or exceed typical plywood depending on configuration.',
+    reading: 'NuMat Bamboo can compete with or exceed typical plywood depending on configuration.',
   },
   {
     metric: 'MOE',
@@ -71,7 +71,7 @@ export default function TestingPage() {
                 <span className="text-emerald-400">Speaks for Itself</span>
               </h1>
               <p className="mt-6 text-lg leading-8 text-stone-400">
-                Independent mechanical testing shows NUMAT engineered bamboo matches or exceeds
+                Independent mechanical testing shows NuMat engineered bamboo matches or exceeds
                 plywood and hardwood across every key structural metric. Every number below
                 is third-party verified.
               </p>
@@ -113,10 +113,10 @@ export default function TestingPage() {
           <div className="mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-emerald-800">Interactive Comparison</p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-stone-950">
-              How Does NUMAT Stack Up?
+              How Does NuMat Bamboo Stack Up?
             </h2>
             <p className="mt-3 text-base text-stone-500">
-              Select a metric below to compare NUMAT bamboo against plywood and hardwood with plain-English context.
+              Select a metric below to compare NuMat bamboo against plywood and hardwood with plain-English context.
             </p>
           </div>
           <TestingCharts />
@@ -135,7 +135,7 @@ export default function TestingPage() {
 
             <div className="overflow-hidden rounded-[2rem] border border-stone-200 shadow-sm">
               <div className="border-b border-stone-200 bg-stone-950 px-6 py-5 text-white">
-                <h3 className="text-lg font-bold">NUMAT Bamboo vs Typical Plywood</h3>
+                <h3 className="text-lg font-bold">NuMat Bamboo vs Typical Plywood</h3>
                 <p className="mt-1 text-sm text-stone-400">
                   DOST / ASTM D1037 test results versus common plywood reference ranges.
                 </p>
@@ -145,7 +145,7 @@ export default function TestingPage() {
                   <thead className="bg-stone-50">
                     <tr>
                       <th className="border-b border-stone-200 px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">Metric</th>
-                      <th className="border-b border-stone-200 px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-emerald-700">NUMAT Bamboo</th>
+                      <th className="border-b border-stone-200 px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-emerald-700">NuMat Bamboo</th>
                       <th className="border-b border-stone-200 px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">Typical Plywood</th>
                       <th className="border-b border-stone-200 px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">What It Means</th>
                     </tr>

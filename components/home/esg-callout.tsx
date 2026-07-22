@@ -40,7 +40,7 @@ export function ESGCallout() {
             </h2>
 
             <p className="mt-6 text-lg leading-8 text-foreground/65">
-              NUMAT works best when bamboo is presented not only as a sustainable
+              NuMat Bamboo works best when bamboo is presented not only as a sustainable
               option, but as a refined, design-ready material for better interiors,
               cleaner specification conversations, and more thoughtful project choices.
             </p>
@@ -112,7 +112,7 @@ export function ESGCallout() {
                 Brand context
               </p>
               <p className="mt-3 text-sm leading-7 text-foreground/68">
-                A stronger sustainability message helps frame NUMAT as a more considered alternative to conventional material suppliers.
+                A stronger sustainability message helps frame NuMat Bamboo as a more considered alternative to conventional material suppliers.
               </p>
             </div>
           </div>

@@ -20,7 +20,7 @@ const SITE = 'https://numatbamboo.com'
 function metaDescription(raw: string, name: string): string {
   const flat = raw.replace(/\s+/g, ' ').trim()
   if (!flat) {
-    return `${name}, an engineered bamboo panel made in the Philippines by NUMAT.`
+    return `${name}, an engineered bamboo panel made in the Philippines by NuMat Bamboo.`
   }
   if (flat.length <= 155) return flat
   const cut = flat.slice(0, 155)
@@ -38,13 +38,13 @@ export async function generateMetadata({
 
   if (!product) {
     return {
-      title: 'Product not found | NUMAT Bamboo',
+      title: 'Product not found | NuMat Bamboo',
       robots: { index: false, follow: true },
     }
   }
 
   const url = `${SITE}/products/${product.slug || id}`
-  const title = `${product.name} | Engineered Bamboo Panel | NUMAT`
+  const title = `${product.name} | Engineered Bamboo Panel | NuMat Bamboo`
   const description = metaDescription(product.description, product.name)
   const image = product.image_url?.startsWith('http')
     ? product.image_url
@@ -62,7 +62,7 @@ export async function generateMetadata({
       url,
       title,
       description,
-      siteName: 'NUMAT Bamboo',
+      siteName: 'NuMat Bamboo',
       images: [{ url: image, alt: product.name }],
     },
     twitter: {

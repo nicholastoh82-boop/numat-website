@@ -102,7 +102,7 @@ export default async function NewsArchivePage() {
                 News Library
               </h1>
               <p className="text-base text-muted-foreground md:text-lg">
-                Browse past NUMAT news, activities, announcements, and company updates by month and year.
+                Browse past NuMat Bamboo news, activities, announcements, and company updates by month and year.
               </p>
             </div>
           </div>

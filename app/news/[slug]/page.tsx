@@ -43,8 +43,8 @@ export async function generateMetadata({
 
   if (!data) return {}
 
-  const title = data.seo_title || `${data.title} | NUMAT News`
-  const description = data.seo_description || data.excerpt || 'NUMAT Bamboo news and activity updates.'
+  const title = data.seo_title || `${data.title} | NuMat Bamboo News`
+  const description = data.seo_description || data.excerpt || 'NuMat Bamboo news and activity updates.'
 
   const canonicalUrl = `https://numatbamboo.com/blog/${slug}`
 
@@ -257,8 +257,8 @@ function renderLegacyBlock(block: any, i: number): React.ReactNode {
 // article body width.
 
 function GalleryImage({ src, title, index }: { src: string; title: string; index: number }) {
-  // Build a descriptive alt string: "Engineered bamboo application — NUMAT (image 2)"
-  const altText = `${title} — engineered bamboo by NUMAT (image ${index + 2})`
+  // Build a descriptive alt string: "Engineered bamboo application — NuMat Bamboo (image 2)"
+  const altText = `${title} — engineered bamboo by NuMat Bamboo (image ${index + 2})`
   return (
     <figure className="my-10">
       <div className="overflow-hidden rounded-2xl shadow-sm">
@@ -376,12 +376,12 @@ export default async function NewsDetailPage({
     datePublished: newsItem.published_at || '',
     author: {
       '@type': 'Organization',
-      name: 'NUMAT Bamboo',
+      name: 'NuMat Bamboo',
       url: 'https://numatbamboo.com',
     },
     publisher: {
       '@type': 'Organization',
-      name: 'NUMAT Bamboo',
+      name: 'NuMat Bamboo',
       url: 'https://numatbamboo.com',
     },
   }
@@ -409,7 +409,7 @@ export default async function NewsDetailPage({
 
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
-                NUMAT News
+                NuMat Bamboo News
               </span>
               {formattedDate && (
                 <span className="text-sm text-muted-foreground">{formattedDate}</span>
@@ -436,7 +436,7 @@ export default async function NewsDetailPage({
             <div className="overflow-hidden rounded-3xl bg-stone-100 shadow-sm">
               <img
                 src={newsItem.cover_image_url}
-                alt={`${newsItem.title} — engineered bamboo by NUMAT`}
+                alt={`${newsItem.title} — engineered bamboo by NuMat Bamboo`}
                 className="w-full object-cover"
                 style={{ maxHeight: '520px' }}
               />
@@ -463,7 +463,7 @@ export default async function NewsDetailPage({
           {/* ── Share / CTA ── */}
           <div className="mt-14 rounded-2xl border border-primary/20 bg-white p-7 shadow-sm">
             <p className="text-sm font-semibold uppercase tracking-widest text-primary">
-              Interested in NUMAT products?
+              Interested in NuMat Bamboo products?
             </p>
             <p className="mt-2 text-base text-stone-700">
               Explore our full range of engineered bamboo materials — boards, flooring, slat systems, and more.
@@ -510,7 +510,7 @@ export default async function NewsDetailPage({
                       <div className="aspect-[16/9] overflow-hidden bg-stone-100">
                         <img
                           src={recent.cover_image_url}
-                          alt={`${recent.title} — NUMAT Bamboo`}
+                          alt={`${recent.title} — NuMat Bamboo`}
                           className="h-full w-full object-cover transition group-hover:scale-[1.02]"
                         />
                       </div>

@@ -278,7 +278,7 @@ export default function ComparePage() {
           <p className="mt-8 text-xs text-stone-400">
             All data based on published literature, DOST / ASTM D1037 testing (NuBam), and industry references.
             Values are indicative ranges. Actual performance may vary by grade, species, and configuration.
-            Contact NUMAT for product-specific technical data.
+            Contact NuMat Bamboo for product-specific technical data.
           </p>
         </section>
 

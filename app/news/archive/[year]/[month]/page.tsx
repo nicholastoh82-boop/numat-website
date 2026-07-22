@@ -79,7 +79,7 @@ export default async function NewsArchiveMonthPage({
                 {monthLabel} {year}
               </h1>
               <p className="text-base text-muted-foreground md:text-lg">
-                Published NUMAT news, announcements, and activity updates for this period.
+                Published NuMat Bamboo news, announcements, and activity updates for this period.
               </p>
 
               <div className="flex flex-wrap gap-3 pt-2">

@@ -19,13 +19,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!item) {
     return {
-      title: 'Technical Resource Not Found | NUMAT Bamboo',
+      title: 'Technical Resource Not Found | NuMat Bamboo',
       robots: { index: false, follow: true },
     }
   }
 
   const url = `https://numatbamboo.com/technical-resources/${item.slug}`
-  const title = `${item.title} | Technical Resources | NUMAT Bamboo`
+  const title = `${item.title} | Technical Resources | NuMat Bamboo`
   const description = item.cardDescription
 
   return {
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url,
       title,
       description,
-      siteName: 'NUMAT Bamboo',
+      siteName: 'NuMat Bamboo',
     },
   }
 }
@@ -134,7 +134,7 @@ export default async function TechnicalResourceDetailPage({ params }: PageProps)
                     Need project-specific support?
                   </h2>
                   <p className="mt-3 text-base leading-7 text-stone-300">
-                    Contact the NUMAT team for buyer documentation, application
+                    Contact the NuMat Bamboo team for buyer documentation, application
                     guidance, and commercial support.
                   </p>
 

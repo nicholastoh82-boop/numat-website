@@ -61,7 +61,7 @@ export default function NewsletterTopBar() {
           <>
             <p className="text-sm font-medium">
               <span aria-hidden="true">✦ </span>
-              Get NUMAT product news and updates in your inbox
+              Get NuMat Bamboo product news and updates in your inbox
             </p>
             <div className="flex items-center gap-2">
               <input

@@ -45,7 +45,7 @@ const lifecycleData = [
 
 const comparisonData = [
   {
-    label: 'NUMAT Bamboo Board',
+    label: 'NuMat Bamboo Board',
     value: 2.5,
     max: 2.5,
     color: 'bg-emerald-500',
@@ -207,7 +207,7 @@ export default function ESGPage() {
                 <span className="text-emerald-700">Carbon-Negative</span> Future
               </h1>
               <p className="mt-6 text-lg leading-8 text-stone-600">
-                At NUMAT, sustainability is measurable and verified. Our engineered bamboo
+                At NuMat Bamboo, sustainability is measurable and verified. Our engineered bamboo
                 products are sustainably harvested and verified carbon-negative by Wavemaker Impact.
               </p>
             </div>
@@ -455,7 +455,7 @@ export default function ESGPage() {
             <div className="mb-8 flex flex-wrap gap-6 text-sm">
               <span className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-sm bg-emerald-600" />
-                <span className="font-semibold text-stone-900">D. asper — Giant Asper (NUMAT)</span>
+                <span className="font-semibold text-stone-900">D. asper — Giant Asper (NuMat Bamboo)</span>
               </span>
               <span className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-sm bg-sky-500" />
@@ -520,7 +520,7 @@ export default function ESGPage() {
                 <thead>
                   <tr className="border-b border-stone-100 bg-stone-50">
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">Metric</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-emerald-700">D. asper (NUMAT)</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-emerald-700">D. asper (NuMat Bamboo)</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-sky-700">Moso bamboo</th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-stone-500">Advantage</th>
                   </tr>
@@ -554,7 +554,7 @@ export default function ESGPage() {
               <p className="text-xs text-stone-400">
                 * Moso's upper range (40 tCO₂/ha/yr) reflects intensively managed Chinese plantations after 60+ years.
                 Early-stage Moso plantations (0–5 years) sequester as little as 1.86 tCO₂/ha/yr.
-                D. asper figures are from Philippine plantation studies — the same climate conditions as NUMAT's supply chain.
+                D. asper figures are from Philippine plantation studies — the same climate conditions as NuMat Bamboo's supply chain.
               </p>
             </div>
           </div>
@@ -572,7 +572,7 @@ export default function ESGPage() {
                   Wavemaker Impact Partnership
                 </h2>
                 <p className="mt-4 text-base leading-7 text-stone-600">
-                  NUMAT is a portfolio company of Wavemaker Impact, Southeast Asia's leading
+                  NuMat Bamboo is a portfolio company of Wavemaker Impact, Southeast Asia's leading
                   climate-tech investor. All carbon claims are independently verified.{' '}
                   <a href="https://www.wavemakerimpact.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-700 hover:underline">
                     Learn more →
@@ -674,7 +674,7 @@ export default function ESGPage() {
             <div className="pointer-events-none absolute -bottom-16 -right-16 h-64 w-64 rounded-full bg-emerald-900/20 blur-3xl" />
             <div className="relative">
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                Choose Sustainable. Choose NUMAT.
+                Choose Sustainable. Choose NuMat Bamboo.
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-base text-white/70">
                 Every board you order contributes to carbon reduction and supports

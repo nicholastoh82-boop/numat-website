@@ -32,7 +32,7 @@ export default function Footer() {
               <div className="relative h-12 w-[220px]">
                 <Image
                   src="/logo.png"
-                  alt="NUMAT logo"
+                  alt="NuMat Bamboo logo"
                   fill
                   sizes="220px"
                   className="object-contain object-left"
@@ -123,7 +123,7 @@ export default function Footer() {
 
         <div className="mt-12 border-t border-white/10 pt-6">
           <div className="flex flex-col gap-3 text-sm text-white/55 md:flex-row md:items-center md:justify-between">
-            <p>{new Date().getFullYear()} NUMAT. All rights reserved.</p>
+            <p>{new Date().getFullYear()} NuMat Bamboo. All rights reserved.</p>
             <p>
               Prices shown in local currency are converted from USD. Final quotation values,
               availability, and freight are subject to confirmation.

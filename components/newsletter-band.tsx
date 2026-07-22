@@ -41,7 +41,7 @@ export default function NewsletterBand() {
               Stay updated
             </h2>
             <p className="mt-3 text-base leading-7 text-stone-600">
-              Product news, new engineered bamboo materials, and updates from NUMAT,
+              Product news, new engineered bamboo materials, and updates from NuMat Bamboo,
               straight to your inbox. No spam, and you can unsubscribe anytime.
             </p>
           </div>
