@@ -141,7 +141,7 @@ export default function Header() {
           <Link href="/" className="flex shrink-0 items-center">
             <Image
               src={LOGO_SRC}
-              alt="Numat Bamboo"
+              alt="NuMat Bamboo"
               width={170}
               height={52}
               priority

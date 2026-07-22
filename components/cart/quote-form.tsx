@@ -89,7 +89,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
 
   const quoteMessage = useMemo(() => {
     const lines: string[] = []
-    lines.push('Hello NUMAT, I would like to request a quote.')
+    lines.push('Hello NuMat Bamboo, I would like to request a quote.')
     lines.push('')
     lines.push(`Name: ${formData.name}`)
     lines.push(`Phone: ${phoneNumber || ''}`)
@@ -179,7 +179,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
       const confirmationUrl = `/quote/confirmation?id=${encodeURIComponent(quoteId)}&number=${encodeURIComponent(quoteNumber)}`
 
       if (channel === 'whatsapp') {
-        const confirmMsg = `Hello NUMAT, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`
+        const confirmMsg = `Hello NuMat Bamboo, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`
         window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(confirmMsg)}`, '_blank')
       }
 

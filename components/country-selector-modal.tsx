@@ -21,7 +21,7 @@ export default function CountrySelectorModal() {
       <div className="relative w-full max-w-lg rounded-3xl border border-white/20 bg-background p-6 shadow-2xl">
         <div className="mb-4">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-            Welcome to NUMAT
+            Welcome to NuMat Bamboo
           </p>
           <h2 className="mt-2 text-3xl font-semibold text-foreground">
             Select your country

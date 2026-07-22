@@ -7,7 +7,7 @@ import { PackageCheck } from 'lucide-react'
 declare const gtag: (...args: unknown[]) => void
 
 const whatsappUrl = `https://wa.me/639613076458?text=${encodeURIComponent(
-  'Hello NUMAT, I would like to request product information and a quotation.'
+  'Hello NuMat Bamboo, I would like to request product information and a quotation.'
 )}`
 
 const btnStyle: React.CSSProperties = {

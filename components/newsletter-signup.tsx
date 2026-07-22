@@ -32,7 +32,7 @@ export default function NewsletterSignup() {
     <div className="w-full max-w-sm">
       <p className="text-sm font-semibold mb-1">Stay updated</p>
       <p className="text-xs opacity-80 mb-3">
-        Product news and updates from NUMAT. No spam, unsubscribe anytime.
+        Product news and updates from NuMat Bamboo. No spam, unsubscribe anytime.
       </p>
       {state === 'done' ? (
         <p className="text-sm text-green-300">{message}</p>

@@ -11,11 +11,11 @@ const metrics = [
       'MOR measures how much load a board can take before breaking. Higher = stronger floors, shelves, and structural panels. The metric most specifiers use to qualify structural materials.',
     winner: 'numat',
     bars: [
-      { name: 'NUMAT', pct: 100, label: '69.44 MPa peak', range: '22–69 MPa', color: 'bg-emerald-600' },
+      { name: 'NuMat Bamboo', pct: 100, label: '69.44 MPa peak', range: '22–69 MPa', color: 'bg-emerald-600' },
       { name: 'Plywood', pct: 87, label: '~60 MPa', range: '30–60 MPa', color: 'bg-stone-400' },
       { name: 'Hardwood', pct: 72, label: '~50 MPa', range: '40–80 MPa', color: 'bg-amber-500' },
     ],
-    note: 'Upper-end NUMAT boards exceed typical plywood bending strength. Mid-range configurations are fully competitive with commercial plywood grades.',
+    note: 'Upper-end NuMat Bamboo boards exceed typical plywood bending strength. Mid-range configurations are fully competitive with commercial plywood grades.',
   },
   {
     id: 'moe',
@@ -25,11 +25,11 @@ const metrics = [
       'MOE measures how much a board flexes under load without breaking. Higher MOE means less sag and bounce underfoot — critical for flooring, shelving, and long spans.',
     winner: 'numat',
     bars: [
-      { name: 'NUMAT', pct: 100, label: '10,256 MPa peak', range: '2,211–10,256 MPa', color: 'bg-emerald-600' },
+      { name: 'NuMat Bamboo', pct: 100, label: '10,256 MPa peak', range: '2,211–10,256 MPa', color: 'bg-emerald-600' },
       { name: 'Plywood', pct: 88, label: '~9,000 MPa', range: '4,000–9,000 MPa', color: 'bg-stone-400' },
       { name: 'Hardwood', pct: 90, label: '~9,500 MPa', range: '7,000–12,000 MPa', color: 'bg-amber-500' },
     ],
-    note: 'Upper-end NUMAT results outperform typical plywood references. Stiffness varies by ply configuration and board thickness.',
+    note: 'Upper-end NuMat Bamboo results outperform typical plywood references. Stiffness varies by ply configuration and board thickness.',
   },
   {
     id: 'comp',
@@ -39,11 +39,11 @@ const metrics = [
       'How much vertical load a board can bear before crushing. Critical for load-bearing walls, columns, and structural flooring applications.',
     winner: 'comparable',
     bars: [
-      { name: 'NUMAT', pct: 87, label: '30.46 MPa peak', range: '25–30 MPa', color: 'bg-emerald-600' },
+      { name: 'NuMat Bamboo', pct: 87, label: '30.46 MPa peak', range: '25–30 MPa', color: 'bg-emerald-600' },
       { name: 'Plywood', pct: 100, label: '~35 MPa', range: '20–35 MPa', color: 'bg-stone-400' },
       { name: 'Hardwood', pct: 80, label: '~28 MPa', range: '20–50 MPa', color: 'bg-amber-500' },
     ],
-    note: 'NUMAT compressive performance sits within the range expected for commercial plywood — fully qualified for structural applications.',
+    note: 'NuMat Bamboo compressive performance sits within the range expected for commercial plywood — fully qualified for structural applications.',
   },
   {
     id: 'hard',
@@ -53,11 +53,11 @@ const metrics = [
       'Resistance to surface denting and scratching, measured in Newtons. Higher = more durable surfaces for flooring, worktops, and high-traffic areas.',
     winner: 'numat',
     bars: [
-      { name: 'NUMAT', pct: 100, label: '7,377 N peak', range: '3,918–7,377 N', color: 'bg-emerald-600' },
+      { name: 'NuMat Bamboo', pct: 100, label: '7,377 N peak', range: '3,918–7,377 N', color: 'bg-emerald-600' },
       { name: 'Plywood', pct: 43, label: '~3,200 N', range: 'Typically lower', color: 'bg-stone-400' },
       { name: 'Hardwood', pct: 67, label: '~5,000 N', range: '3,000–6,000 N', color: 'bg-amber-500' },
     ],
-    note: 'NUMAT surface hardness significantly exceeds typical plywood and is competitive with hardwood — making it ideal for flooring and exposed surfaces.',
+    note: 'NuMat Bamboo surface hardness significantly exceeds typical plywood and is competitive with hardwood — making it ideal for flooring and exposed surfaces.',
   },
 ]
 
@@ -89,7 +89,7 @@ export default function TestingCharts() {
       <div className="mb-6 flex flex-wrap gap-5 text-sm text-stone-500">
         <span className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-sm bg-emerald-600" />
-          NUMAT Bamboo
+          NuMat Bamboo
         </span>
         <span className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-sm bg-stone-400" />
@@ -112,7 +112,7 @@ export default function TestingCharts() {
         <p className="text-sm font-semibold text-stone-800">Performance comparison</p>
         {active.winner === 'numat' ? (
           <span className="rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-800">
-            NUMAT leads
+            NuMat Bamboo leads
           </span>
         ) : (
           <span className="rounded-full bg-stone-100 px-3 py-0.5 text-xs font-semibold text-stone-600">

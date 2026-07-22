@@ -93,7 +93,7 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
                     Need application-specific support?
                   </h2>
                   <p className="mt-3 text-base leading-7 text-stone-300">
-                    Contact the NUMAT team for product guidance, sampling, and
+                    Contact the NuMat Bamboo team for product guidance, sampling, and
                     commercial support for your project or buyer evaluation.
                   </p>
 

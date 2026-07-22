@@ -65,14 +65,14 @@ export default async function NewsPage() {
         <section className="bg-white border-b">
           <div className="mx-auto max-w-5xl px-5 py-14 md:px-8 md:py-20">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              NUMAT News
+              NuMat Bamboo News
             </p>
             <h1 className="font-serif text-4xl font-semibold tracking-tight text-stone-900 md:text-5xl">
               News &amp; Updates
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-stone-600 md:text-lg">
               Industry insights, product launches, project updates and company announcements from
-              NUMAT Bamboo — the Philippines&apos; engineered bamboo manufacturer.
+              NuMat Bamboo — the Philippines&apos; engineered bamboo manufacturer.
             </p>
           </div>
         </section>
@@ -136,7 +136,7 @@ export default async function NewsPage() {
                   <div className="mb-6">
                     <h2 className="text-xl font-semibold text-stone-900">More Updates</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Recent announcements and industry perspectives from NUMAT.
+                      Recent announcements and industry perspectives from NuMat Bamboo.
                     </p>
                   </div>
 

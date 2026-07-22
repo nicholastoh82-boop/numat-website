@@ -6,8 +6,8 @@ const OG_IMAGE = `${BASE_URL}/og-social.jpg`
 export const globalMetadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: 'NUMAT Bamboo | Engineered Bamboo Boards from the Philippines',
-    template: '%s | NUMAT Bamboo',
+    default: 'NuMat Bamboo | Engineered Bamboo Boards from the Philippines',
+    template: '%s | NuMat Bamboo',
   },
   description:
     'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards for construction, furniture, and interior finishing. Export ready from Manolo Fortich, Bukidnon, with DOST and ASTM D1037 mechanical testing. Get a quote in 24 hours.',
@@ -32,8 +32,8 @@ export const globalMetadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: BASE_URL,
-    siteName: 'NUMAT Bamboo',
-    title: 'NUMAT Bamboo | Engineered Bamboo Boards from the Philippines',
+    siteName: 'NuMat Bamboo',
+    title: 'NuMat Bamboo | Engineered Bamboo Boards from the Philippines',
     description:
       'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards. Export ready from Manolo Fortich, Bukidnon, Philippines.',
     images: [
@@ -41,7 +41,7 @@ export const globalMetadata: Metadata = {
         url: OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: 'NUMAT engineered bamboo boards for commercial and interior applications',
+        alt: 'NuMat engineered bamboo boards for commercial and interior applications',
       },
     ],
   },
@@ -63,13 +63,13 @@ export const globalMetadata: Metadata = {
 }
 
 export const homeMetadata: Metadata = {
-  title: 'NUMAT Bamboo | Engineered Bamboo Boards from the Philippines',
+  title: 'NuMat Bamboo | Engineered Bamboo Boards from the Philippines',
   description:
     'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards. Backed by DOST and ASTM D1037 mechanical testing. Export ready from Manolo Fortich, Bukidnon, Philippines. Request a quote in 24 hours.',
   alternates: { canonical: `${BASE_URL}/` },
   openGraph: {
     url: `${BASE_URL}/`,
-    title: 'NUMAT Bamboo | Engineered Bamboo Boards from the Philippines',
+    title: 'NuMat Bamboo | Engineered Bamboo Boards from the Philippines',
     description:
       'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards. Export ready from Manolo Fortich, Bukidnon, Philippines.',
   },
@@ -78,11 +78,11 @@ export const homeMetadata: Metadata = {
 export const productsMetadata: Metadata = {
   title: 'Bamboo Boards and Panels | Product Catalog',
   description:
-    'Browse NUMAT engineered bamboo boards: woven bamboo formwork boards, bamboo composite panels, and cross laminated boards in multiple thicknesses and finishes. Export ready from the Philippines. Download specs and request samples.',
+    'Browse NuMat engineered bamboo boards: woven bamboo formwork boards, bamboo composite panels, and cross laminated boards in multiple thicknesses and finishes. Export ready from the Philippines. Download specs and request samples.',
   alternates: { canonical: `${BASE_URL}/products` },
   openGraph: {
     url: `${BASE_URL}/products`,
-    title: 'Bamboo Boards and Panels | Product Catalog | NUMAT Bamboo',
+    title: 'Bamboo Boards and Panels | Product Catalog | NuMat Bamboo',
     description:
       'Woven bamboo formwork boards, bamboo composite panels, and cross laminated boards in multiple configurations. Export ready from the Philippines.',
   },
@@ -91,13 +91,13 @@ export const productsMetadata: Metadata = {
 export const applicationsMetadata: Metadata = {
   title: 'Bamboo Board Applications | Furniture, Interiors, and Construction',
   description:
-    'How architects, interior designers, furniture manufacturers, and developers specify NUMAT engineered bamboo boards across residential and commercial projects in Southeast Asia.',
+    'How architects, interior designers, furniture manufacturers, and developers specify NuMat engineered bamboo boards across residential and commercial projects in Southeast Asia.',
   alternates: { canonical: `${BASE_URL}/applications` },
   openGraph: {
     url: `${BASE_URL}/applications`,
-    title: 'Bamboo Board Applications | NUMAT Bamboo',
+    title: 'Bamboo Board Applications | NuMat Bamboo',
     description:
-      'How architects, interior designers, and furniture manufacturers use NUMAT engineered bamboo boards across commercial and residential projects.',
+      'How architects, interior designers, and furniture manufacturers use NuMat engineered bamboo boards across commercial and residential projects.',
   },
 }
 
@@ -108,7 +108,7 @@ export const compareMetadata: Metadata = {
   alternates: { canonical: `${BASE_URL}/compare` },
   openGraph: {
     url: `${BASE_URL}/compare`,
-    title: 'Bamboo vs Plywood vs MDF | Material Comparison | NUMAT Bamboo',
+    title: 'Bamboo vs Plywood vs MDF | Material Comparison | NuMat Bamboo',
     description:
       'How engineered bamboo boards compare against plywood, MDF, and solid wood across strength, sustainability, weight, and cost.',
   },
@@ -117,52 +117,52 @@ export const compareMetadata: Metadata = {
 export const technicalResourcesMetadata: Metadata = {
   title: 'Technical Resources | Data Sheets and Mechanical Testing',
   description:
-    'Download data sheets, dimensional specifications, and mechanical testing results for NUMAT engineered bamboo boards. DOST and ASTM D1037 tested. Available for commercial evaluation.',
+    'Download data sheets, dimensional specifications, and mechanical testing results for NuMat engineered bamboo boards. DOST and ASTM D1037 tested. Available for commercial evaluation.',
   alternates: { canonical: `${BASE_URL}/technical-resources` },
   openGraph: {
     url: `${BASE_URL}/technical-resources`,
-    title: 'Technical Resources | NUMAT Bamboo',
+    title: 'Technical Resources | NuMat Bamboo',
     description:
-      'Data sheets, dimensional specs, and DOST and ASTM D1037 mechanical testing results for NUMAT engineered bamboo boards.',
+      'Data sheets, dimensional specs, and DOST and ASTM D1037 mechanical testing results for NuMat engineered bamboo boards.',
   },
 }
 
 export const aboutMetadata: Metadata = {
-  title: 'About NUMAT | Sustainable Bamboo Manufacturing from the Philippines',
+  title: 'About NuMat Bamboo | Sustainable Bamboo Manufacturing from the Philippines',
   description:
-    'NUMAT is a Singapore founded bamboo manufacturing company producing engineered bamboo boards in Manolo Fortich, Bukidnon, in Northern Mindanao, Philippines. Backed by Wavemaker Impact. From nature, for nature.',
+    'NuMat Bamboo is a Singapore founded bamboo manufacturing company producing engineered bamboo boards in Manolo Fortich, Bukidnon, in Northern Mindanao, Philippines. Backed by Wavemaker Impact. From nature, for nature.',
   alternates: { canonical: `${BASE_URL}/about` },
   openGraph: {
     url: `${BASE_URL}/about`,
-    title: 'About NUMAT | Sustainable Bamboo Manufacturing',
+    title: 'About NuMat Bamboo | Sustainable Bamboo Manufacturing',
     description:
-      'NUMAT is a Singapore founded bamboo manufacturing company producing engineered bamboo boards in Manolo Fortich, Bukidnon, Northern Mindanao. Backed by Wavemaker Impact.',
+      'NuMat Bamboo is a Singapore founded bamboo manufacturing company producing engineered bamboo boards in Manolo Fortich, Bukidnon, Northern Mindanao. Backed by Wavemaker Impact.',
   },
 }
 
 export const contactMetadata: Metadata = {
-  title: 'Contact NUMAT | Request a Quote or Sample',
+  title: 'Contact NuMat Bamboo | Request a Quote or Sample',
   description:
-    'Get in touch with the NUMAT sales team for quotes, samples, and technical support. We respond within 24 hours. Export-ready engineered bamboo boards from the Philippines.',
+    'Get in touch with the NuMat Bamboo sales team for quotes, samples, and technical support. We respond within 24 hours. Export-ready engineered bamboo boards from the Philippines.',
   alternates: { canonical: `${BASE_URL}/contact` },
   openGraph: {
     url: `${BASE_URL}/contact`,
-    title: 'Contact NUMAT | Request a Quote or Sample',
+    title: 'Contact NuMat Bamboo | Request a Quote or Sample',
     description:
-      'Get quotes, samples, and technical support from NUMAT. We respond within 24 hours.',
+      'Get quotes, samples, and technical support from NuMat Bamboo. We respond within 24 hours.',
   },
 }
 
 export const esgMetadata: Metadata = {
-  title: 'ESG and Sustainability | NUMAT Bamboo',
+  title: 'ESG and Sustainability | NuMat Bamboo',
   description:
-    'NUMAT engineered bamboo boards are sustainably harvested from Dendrocalamus asper bamboo sequestering 66.3 tonnes of CO2 per hectare per year. Our commitment to responsible manufacturing and community development in Mindanao.',
+    'NuMat engineered bamboo boards are sustainably harvested from Dendrocalamus asper bamboo sequestering 66.3 tonnes of CO2 per hectare per year. Our commitment to responsible manufacturing and community development in Mindanao.',
   alternates: { canonical: `${BASE_URL}/esg` },
   openGraph: {
     url: `${BASE_URL}/esg`,
-    title: 'ESG and Sustainability | NUMAT Bamboo',
+    title: 'ESG and Sustainability | NuMat Bamboo',
     description:
-      'Sustainably harvested bamboo sequestering 66.3 tonnes of CO2 per hectare per year. NUMAT commitment to responsible manufacturing and community development.',
+      'Sustainably harvested bamboo sequestering 66.3 tonnes of CO2 per hectare per year. NuMat Bamboo commitment to responsible manufacturing and community development.',
   },
 }
 
@@ -175,15 +175,15 @@ export const requestQuoteMetadata: Metadata = {
 }
 
 export const newsMetadata: Metadata = {
-  title: 'News and Updates | NUMAT Bamboo',
+  title: 'News and Updates | NuMat Bamboo',
   description:
-    'The latest news, project features, and updates from NUMAT. Engineered bamboo boards for furniture, interiors, and commercial applications from the Philippines.',
+    'The latest news, project features, and updates from NuMat Bamboo. Engineered bamboo boards for furniture, interiors, and commercial applications from the Philippines.',
   alternates: { canonical: `${BASE_URL}/news` },
   openGraph: {
     url: `${BASE_URL}/news`,
-    title: 'News and Updates | NUMAT Bamboo',
+    title: 'News and Updates | NuMat Bamboo',
     description:
-      'Latest news, project features, and updates from NUMAT engineered bamboo boards.',
+      'Latest news, project features, and updates from NuMat engineered bamboo boards.',
   },
 }
 
@@ -191,7 +191,7 @@ export const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'NUMAT Sustainable Manufacturing Inc.',
-  alternateName: 'NUMAT Bamboo',
+  alternateName: 'NuMat Bamboo',
   url: BASE_URL,
   logo: `${BASE_URL}/logo.png`,
   image: OG_IMAGE,
@@ -234,7 +234,7 @@ export const organizationSchema = {
 export const localBusinessSchema = {
   '@context': 'https://schema.org',
   '@type': 'LocalBusiness',
-  name: 'NUMAT Bamboo',
+  name: 'NuMat Bamboo',
   url: BASE_URL,
   image: OG_IMAGE,
   description:

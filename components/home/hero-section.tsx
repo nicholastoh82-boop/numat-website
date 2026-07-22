@@ -46,7 +46,7 @@ export function HeroSection() {
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-8 text-foreground/68">
-              NUMAT brings together boards, doors, flooring, wall finishes, slats,
+              NuMat Bamboo brings together boards, doors, flooring, wall finishes, slats,
               and furniture applications in a cleaner, more considered buying
               experience for serious trade and project clients.
             </p>
@@ -95,7 +95,7 @@ export function HeroSection() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-6 text-white lg:p-8">
                 <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/78">
-                  NUMAT collection
+                  NuMat Bamboo collection
                 </p>
                 <h2 className="mt-3 max-w-md font-serif text-2xl leading-tight sm:text-3xl">
                   Warm materiality, cleaner detailing, and a more premium architectural feel.

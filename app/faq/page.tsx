@@ -4,26 +4,26 @@ import CartDrawer from '@/components/cart-drawer'
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'FAQ: Frequently Asked Questions | NUMAT Bamboo',
-  description: 'Answers to common questions about NUMAT engineered bamboo products, ordering, lead times, samples, and technical specifications.',
+  title: 'FAQ: Frequently Asked Questions | NuMat Bamboo',
+  description: 'Answers to common questions about NuMat engineered bamboo products, ordering, lead times, samples, and technical specifications.',
   alternates: { canonical: 'https://numatbamboo.com/faq' },
   openGraph: {
-    title: 'FAQ | NUMAT Bamboo',
-    description: 'Common questions about NUMAT engineered bamboo: products, MOQ, lead times, samples, and more.',
+    title: 'FAQ | NuMat Bamboo',
+    description: 'Common questions about NuMat engineered bamboo: products, MOQ, lead times, samples, and more.',
     url: 'https://numatbamboo.com/faq',
   },
 }
 
 const faqs = [
   {
-    question: 'What is NUMAT engineered bamboo?',
+    question: 'What is NuMat engineered bamboo?',
     answer:
-      'NUMAT engineered bamboo is a high performance board made from bamboo bonded under high heat and high pressure. It delivers strength, dimensional stability, and a consistent finish next to traditional timber, while being sourced from fast growing, renewable bamboo grown in the Philippines and manufactured at our factory in Manolo Fortich, Bukidnon.',
+      'NuMat engineered bamboo is a high performance board made from bamboo bonded under high heat and high pressure. It delivers strength, dimensional stability, and a consistent finish next to traditional timber, while being sourced from fast growing, renewable bamboo grown in the Philippines and manufactured at our factory in Manolo Fortich, Bukidnon.',
   },
   {
-    question: 'What products does NUMAT offer?',
+    question: 'What products does NuMat Bamboo offer?',
     answer:
-      'NUMAT currently supplies three engineered bamboo boards, all 2440 mm x 1220 mm x 16 mm, three ply. NuWeave, a woven bamboo board for concrete formwork and interior finishing, at PHP 3,500. NuComposite, a bamboo composite panel and MDF substitute for furniture and cabinetry, at PHP 5,500. NuBam CLB, a cross laminated bamboo board for structural and architectural use, at PHP 7,500. Prices exclude shipping.',
+      'NuMat Bamboo currently supplies three engineered bamboo boards, all 2440 mm x 1220 mm x 16 mm, three ply. NuWeave, a woven bamboo board for concrete formwork and interior finishing, at PHP 3,500. NuComposite, a bamboo composite panel and MDF substitute for furniture and cabinetry, at PHP 5,500. NuBam CLB, a cross laminated bamboo board for structural and architectural use, at PHP 7,500. Prices exclude shipping.',
   },
   {
     question: 'What is the difference between NuWeave, NuComposite, and NuBam CLB?',
@@ -58,12 +58,12 @@ const faqs = [
   {
     question: 'What countries do you export to?',
     answer:
-      'NUMAT supplies commercial buyers across Southeast Asia, East Asia, the Middle East, and internationally. We are export ready with established experience coordinating sea freight. Contact our team for freight, customs documentation, and logistics support for your region.',
+      'NuMat Bamboo supplies commercial buyers across Southeast Asia, East Asia, the Middle East, and internationally. We are export ready with established experience coordinating sea freight. Contact our team for freight, customs documentation, and logistics support for your region.',
   },
   {
     question: 'What testing have your products undergone?',
     answer:
-      'NUMAT engineered bamboo has been independently tested by DOST RSTL Region X under ASTM D1037 for static bending, covering modulus of rupture and modulus of elasticity, along with compression parallel to face and hardness. Results cover the actual value ranges across samples rather than best case figures. Full results are available on our Certifications page and as a downloadable PDF.',
+      'NuMat engineered bamboo has been independently tested by DOST RSTL Region X under ASTM D1037 for static bending, covering modulus of rupture and modulus of elasticity, along with compression parallel to face and hardness. Results cover the actual value ranges across samples rather than best case figures. Full results are available on our Certifications page and as a downloadable PDF.',
   },
   {
     question: 'What are the payment terms?',
@@ -100,7 +100,7 @@ export default function FaqPage() {
           <div className="mx-auto max-w-7xl px-4 lg:px-8 text-center">
             <h1 className="font-serif text-4xl text-foreground">Frequently Asked Questions</h1>
             <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-              Common questions about NUMAT products, ordering, and technical specifications.
+              Common questions about NuMat Bamboo products, ordering, and technical specifications.
             </p>
           </div>
         </section>

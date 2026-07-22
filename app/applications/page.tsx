@@ -46,7 +46,7 @@ export default function ApplicationsPage() {
                 Built for Real-World Applications
               </h1>
               <p className="mt-4 text-lg leading-8 text-stone-600">
-                Explore where NUMAT engineered bamboo boards fit best across
+                Explore where NuMat engineered bamboo boards fit best across
                 furniture, interiors, hospitality, and commercial buyer use cases.
               </p>
             </div>
