@@ -34,11 +34,11 @@ type ProductOption = { id: string; label: string; sub: string }
 
 /**
  * Shown until /api/products responds, so step 1 is never an empty list on a
- * cold open. NuWeave is the featured board, so it is the safe thing to show
+ * cold open. NuWev is the featured board, so it is the safe thing to show
  * for the fraction of a second before the real list lands.
  */
 const FALLBACK_PRODUCT_OPTIONS: ProductOption[] = [
-  { id: 'nuweave', label: 'NuWeave', sub: '2440 x 1220 x 16 mm, 3 ply' },
+  { id: 'nuweave', label: 'NuWev', sub: '2440 x 1220 x 16 mm, 3 ply' },
 ]
 
 type ApiProduct = {
@@ -83,7 +83,7 @@ export default function RequestSamplesPage() {
   const [step, setStep] = useState<Step>(1)
 
   // Sample options come from Supabase, not a hardcoded array. This page offered
-  // NuWeave only, so a customer could not request a NuComposite or NuBam CLB
+  // NuWev only, so a customer could not request a NuComposite or NuBam CLB
   // sample at all. The nav, the footer and the CRM quote builder all had the
   // same hardcoded-list problem; this was the last one.
   const { data: productsData } = useSWR<ApiProduct[]>('/api/products', productsFetcher, {
@@ -267,7 +267,7 @@ export default function RequestSamplesPage() {
                   Evaluate Before You Commit.
                 </h1>
                 <p className="mt-5 text-lg leading-8 text-stone-600">
-                  Request a physical NuWeave board sample to assess the surface, the weave, and
+                  Request a physical NuWev board sample to assess the surface, the weave, and
                   suitability for your pours before placing a commercial order.
                 </p>
 
