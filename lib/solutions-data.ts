@@ -17,11 +17,13 @@ export type SolutionItem = {
   specs: { label: string; value: string }[]
   boardSlug: string
   boardName: string
+  sheetPdf?: string
 }
 
 export const solutions: SolutionItem[] = [
   {
     slug: 'wall-panels',
+    sheetPdf: '/docs/CLB-Wall-Panel-Sheet.pdf',
     title: 'CLB Wall Panels',
     category: 'Interior wall systems',
     tagline: 'Easier installation, stronger walls, better aesthetics',
@@ -107,6 +109,7 @@ export const solutions: SolutionItem[] = [
   },
   {
     slug: 'columns-and-beams',
+    sheetPdf: '/docs/CLB-Columns-and-Beams-Sheet.pdf',
     title: 'CLB Columns and Beams',
     category: 'Structural cladding',
     tagline: 'Easier installation, stronger structure, better aesthetics',
@@ -198,6 +201,7 @@ export const solutions: SolutionItem[] = [
   },
   {
     slug: 'furniture',
+    sheetPdf: '/docs/CLB-Round-Table-Sheet.pdf',
     title: 'CLB Furniture',
     category: 'Furniture',
     tagline: 'Stronger structure, better durability, beautiful aesthetics',
