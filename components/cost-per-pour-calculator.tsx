@@ -13,7 +13,7 @@ import { ArrowRight, RotateCcw } from 'lucide-react'
  * and the NuForm pilot (2500+500)/10 = 300 = "PHP 300". It reconciles.
  *
  * Every assumption below is a user input rather than a baked in constant,
- * because NuWeave's reuse cycle count has not been established by test. The
+ * because NuWev's reuse cycle count has not been established by test. The
  * defaults are conservative and labelled as assumptions in the UI.
  */
 
@@ -90,7 +90,7 @@ export default function CostPerPourCalculator() {
     const diffPerPour = convPerPour - nuPerPour
     const diffTotal = convTotal - nuTotal
 
-    // Reuse cycles NuWeave must reach to match the conventional cost per pour.
+    // Reuse cycles NuWev must reach to match the conventional cost per pour.
     const breakeven =
       convPerPour > 0 ? (safe(nuPrice) + safe(nuProp)) / convPerPour : 0
 
@@ -147,7 +147,7 @@ export default function CostPerPourCalculator() {
 
           <fieldset className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4">
             <legend className="px-1.5 text-xs font-bold uppercase tracking-[0.12em] text-emerald-800">
-              NuWeave
+              NuWev
             </legend>
             <div className="grid gap-3 sm:grid-cols-3">
               <NumField label="Board price" value={nuPrice} onChange={setNuPrice} suffix="PHP" />
@@ -172,7 +172,7 @@ export default function CostPerPourCalculator() {
             </div>
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-800">
-                NuWeave
+                NuWev
               </p>
               <p className="mt-2 text-2xl font-semibold text-stone-900">{PHP(r.nuPerPour)}</p>
               <p className="text-xs text-stone-500">per pour, per board</p>
@@ -185,7 +185,7 @@ export default function CostPerPourCalculator() {
             }`}
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-600">
-              {nuWins ? 'Saving across this job' : 'On these numbers, NuWeave costs more'}
+              {nuWins ? 'Saving across this job' : 'On these numbers, NuWev costs more'}
             </p>
             <p className="mt-2 text-3xl font-semibold text-stone-950">
               {PHP(Math.abs(r.diffTotal))}
@@ -193,13 +193,13 @@ export default function CostPerPourCalculator() {
             <p className="mt-1 text-xs leading-5 text-stone-600">
               {nuWins
                 ? `Across ${r.boards} boards at ${PHP(Math.abs(r.diffPerPour))} saved per pour.`
-                : `NuWeave needs ${r.breakeven.toFixed(1)} pours to match your current cost per pour. You have assumed ${nuReuse}.`}
+                : `NuWev needs ${r.breakeven.toFixed(1)} pours to match your current cost per pour. You have assumed ${nuReuse}.`}
             </p>
           </div>
 
           <div className="rounded-2xl border border-stone-200 p-5">
             <p className="text-sm leading-6 text-stone-600">
-              The honest way to settle this is a board on your own site. NuWeave is{' '}
+              The honest way to settle this is a board on your own site. NuWev is{' '}
               <span className="font-semibold text-stone-900">PHP 3,500 with no minimum order</span>,
               so you can buy one and count the pours yourself.
             </p>
