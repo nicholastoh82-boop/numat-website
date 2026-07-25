@@ -162,6 +162,105 @@ export const applicationDetails: ApplicationItem[] = [
     ],
   },
   {
+    slug: 'columns-beams-and-cladding',
+    title: 'Columns, Beams and Cladding',
+    cardDescription:
+      'Cross laminated bamboo that wraps steel columns and beams for a warm architectural finish.',
+    intro:
+      'Engineered bamboo CLB panels wrap steel columns and beams to give a structure a warm, natural finish without carrying load. It is a fast, clean way to lift the look of pavilions, atriums and architectural features while protecting the steel underneath.',
+    sections: [
+      {
+        title: 'Best Fit',
+        body: [
+          'Steel column and beam cladding',
+          'Open air pavilions',
+          'Interior architectural features',
+          'Commercial lobbies and atriums',
+          'Hospitality and resort structures',
+          'Exposed frames and feature ceilings',
+        ],
+      },
+      {
+        title: 'Recommended Product',
+        body: [
+          'NuBam CLB at 16 mm for wrapping column and beam members',
+          'Tongue and groove joints for a concealed, seamless surface',
+          'Sized to wrap 8 by 8 inch members, columns up to 6 m and beams up to 3 m',
+        ],
+      },
+      {
+        title: 'Why It Works',
+        body: [
+          'Installs directly onto the steel member',
+          'Lightweight yet strong and quick to fit on site',
+          'UV and moisture resistant finish for covered exterior use',
+          'Turns plain structure into a design feature',
+        ],
+      },
+      {
+        title: 'Buyer Considerations',
+        body: [
+          'Confirm member sizes and lengths at quote stage',
+          'This is a non load bearing finish, not a structural replacement',
+          'Request samples to approve the grain and finish',
+        ],
+      },
+    ],
+    ctas: [
+      { label: 'View the CLB Columns and Beams solution', href: '/solutions/columns-and-beams' },
+      { label: 'Request Quote', href: '/request-quote' },
+    ],
+  },
+  {
+    slug: 'concrete-formwork',
+    title: 'Concrete Formwork',
+    cardDescription:
+      'NuWev woven bamboo board built for concrete forming, with a phenolic surface and strong reuse.',
+    intro:
+      'NuWev woven bamboo mat board is built for concrete formwork. The phenolic surface strips clean and stands up to repeated pours, giving a strong, moisture resistant panel that competes with film faced plywood on reuse and cost.',
+    sections: [
+      {
+        title: 'Best Fit',
+        body: [
+          'Wall and column forming',
+          'Slab and beam soffit forming',
+          'Repeated pour formwork on site',
+          'Precast and cast in place concrete',
+          'Industrial and infrastructure projects',
+        ],
+      },
+      {
+        title: 'Recommended Product',
+        body: [
+          'NuWev woven bamboo mat board with a phenolic film on both sides',
+          'Available from 10 to 20 mm thick',
+          'Standard sheet size 1220 by 2440 mm',
+        ],
+      },
+      {
+        title: 'Why It Works',
+        body: [
+          'Phenolic surface releases cleanly and resists moisture',
+          'Designed for 30 or more reuses',
+          'DOST tested to ASTM D1037 for strength and stability',
+          'Made from rapidly renewable bamboo',
+        ],
+      },
+      {
+        title: 'Buyer Considerations',
+        body: [
+          'Seal cut edges for the longest service life',
+          'Keep the surface clean between pours',
+          'Request samples to evaluate the surface and release',
+        ],
+      },
+    ],
+    ctas: [
+      { label: 'View NuWev', href: '/products/nuweave' },
+      { label: 'Request Quote', href: '/request-quote' },
+    ],
+  },
+  {
     slug: 'project-and-procurement-use',
     title: 'Project and Procurement Use',
     cardDescription:

@@ -97,6 +97,17 @@ export default async function SolutionDetailPage({ params }: PageProps) {
                   </Link>{' '}
                   engineered bamboo board.
                 </p>
+
+                {item.sheetPdf && (
+                  <a
+                    href={item.sheetPdf}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-900 hover:underline underline-offset-4"
+                  >
+                    Download product sheet (PDF)
+                  </a>
+                )}
               </div>
 
               <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] border border-stone-200 shadow-sm">
