@@ -45,7 +45,7 @@ export default function PartnersSection() {
           {PARTNERS.map((partner) => (
             <div
               key={partner.name}
-              className="flex flex-col items-center justify-end gap-3 text-center"
+              className="flex flex-col items-center gap-3 text-center"
             >
               <div className="flex h-24 w-full items-center justify-center rounded-2xl border border-stone-200 bg-white px-5 py-4">
                 <img
@@ -55,7 +55,7 @@ export default function PartnersSection() {
                   className="max-h-14 w-auto max-w-[150px] object-contain"
                 />
               </div>
-              <span className="text-xs font-medium leading-snug text-stone-600">
+              <span className="mt-1 block min-h-[2.25rem] text-xs font-medium leading-snug text-stone-600">
                 {partner.name}
               </span>
             </div>
