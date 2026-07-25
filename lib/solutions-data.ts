@@ -31,7 +31,7 @@ export const solutions: SolutionItem[] = [
       'Tongue and groove wall panels in Cross Laminated Bamboo, 14 mm thick, for a seamless interior finish.',
     intro:
       'An improved design for easier installation, stronger walls and better aesthetics. All boards are 14 mm thick with a tongue and groove joint for a seamless finish. The core is Cross Laminated Bamboo for strength and stability.',
-    heroImage: '/Bamboo-Wall.png',
+    heroImage: '/nuweave/numat-clb-wall-panel-interior.jpg',
     keyFacts: [
       { label: 'Thickness', value: '14 mm' },
       { label: 'Joint', value: 'Tongue and groove' },
@@ -117,7 +117,7 @@ export const solutions: SolutionItem[] = [
       'Cross Laminated Bamboo panels that wrap steel columns and beams, 16 mm thick, for non load bearing architectural cladding.',
     intro:
       'Engineered Bamboo CLB panels provide a durable, beautiful and easy to install solution for wrapping steel columns and beams. Designed for non load bearing applications that enhance natural aesthetics and protect the structure.',
-    heroImage: '/nuweave/numat-nubam-clb-bamboo-cladding.jpg',
+    heroImage: '/nuweave/numat-clb-columns-beams-pavilion.jpg',
     keyFacts: [
       { label: 'Thickness', value: '16 mm' },
       { label: 'Column size', value: '8 by 8 inch, up to 6 m' },
