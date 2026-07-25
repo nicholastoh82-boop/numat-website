@@ -31,6 +31,7 @@ const fetcher = async (url: string) => {
 // retiring a board in the admin panel moves the nav with it instead of leaving
 // a hardcoded list to drift. Everything below it is fixed.
 const staticNavItems: NavItem[] = [
+  { label: 'Solutions', href: '/solutions' },
   { label: 'Applications', href: '/applications' },
   {
     label: 'Resources',

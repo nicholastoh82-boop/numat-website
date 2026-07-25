@@ -2,6 +2,7 @@ import { MetadataRoute } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { getProductSlugs } from '@/lib/products/get-product'
 import { technicalResourceDetails } from '@/lib/technical-resources-content'
+import { solutions } from '@/lib/solutions-data'
 
 export const revalidate = 3600
 
@@ -37,6 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: BASE, priority: 1.0, changeFrequency: 'weekly' as const },
     { url: `${BASE}/products`, priority: 0.9, changeFrequency: 'weekly' as const },
     { url: `${BASE}/applications`, priority: 0.8, changeFrequency: 'monthly' as const },
+    { url: `${BASE}/solutions`, priority: 0.8, changeFrequency: 'monthly' as const },
     { url: `${BASE}/technical-resources`, priority: 0.8, changeFrequency: 'monthly' as const },
     { url: `${BASE}/testing`, priority: 0.8, changeFrequency: 'monthly' as const },
     { url: `${BASE}/esg`, priority: 0.7, changeFrequency: 'monthly' as const },
@@ -81,6 +83,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: 'monthly' as const,
       priority: 0.6,
+    })),
+    ...solutions.map((item) => ({
+      url: `${BASE}/solutions/${item.slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
     })),
   ]
 }

@@ -7,6 +7,7 @@ import FooterProductLinks from '@/components/footer-product-links'
 // FooterProductLinks so it cannot drift from the actual product line.
 const footerLinks = {
   resources: [
+    { name: 'Solutions', href: '/solutions' },
     { name: 'Technical Resources', href: '/technical-resources' },
     { name: 'Request Samples', href: '/request-samples' },
     { name: 'FAQ', href: '/faq' },
