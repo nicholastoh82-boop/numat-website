@@ -6,16 +6,18 @@
  * - adb.svg, gcash.svg, dti.svg, da.svg: official marks from Wikimedia
  *   Commons originals.
  * - dost.png: official DOST seal, Wikimedia Commons original.
- * - bq.png, pbidc.png, wavemaker-impact.png: high resolution cuts from
- *   Brochure Rev 1, auto cropped to the mark and flattened to white. No clean
- *   official web source exists for these three (the Wavemaker sites serve a
- *   JS shell, PBIDC has no standalone site, BQ has no findable web presence),
- *   so swap in official files when the partners supply them.
+ * - pbidc.png: high resolution cut from Brochure Rev 1, cropped to the mark
+ *   and flattened to white (PBIDC has no standalone site).
+ * Dignity Through Identity and Wavemaker Impact are intentionally not shown as
+ * logo images: the brochure is a flattened export so a clean cut is not
+ * possible, and neither has a usable web source (the Wavemaker sites serve a
+ * JS shell, BQ has no findable web presence). Wavemaker appears as a wordmark
+ * below; add a Dignity Through Identity file to PARTNERS when the partner
+ * supplies one.
  */
 
 const PARTNERS = [
   { src: '/partners/adb.svg', name: 'Asian Development Bank' },
-  { src: '/partners/bq.png', name: 'Dignity Through Identity' },
   { src: '/partners/gcash.svg', name: 'GCash' },
   { src: '/partners/dti.svg', name: 'Department of Trade and Industry' },
   { src: '/partners/dost.png', name: 'Department of Science and Technology' },
@@ -39,7 +41,7 @@ export default function PartnersSection() {
           to industrial standards.
         </p>
 
-        <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-6">
           {PARTNERS.map((partner) => (
             <div
               key={partner.name}
@@ -61,13 +63,10 @@ export default function PartnersSection() {
         </div>
 
         <div className="mt-12 flex flex-col items-start gap-5 rounded-2xl border border-stone-200 bg-stone-50 p-6 sm:flex-row sm:items-center sm:gap-8">
-          <div className="flex shrink-0 items-center justify-center rounded-2xl border border-stone-200 bg-white px-5 py-3">
-            <img
-              src="/partners/wavemaker-impact.png"
-              alt="Wavemaker Impact"
-              loading="lazy"
-              className="h-9 w-auto object-contain"
-            />
+          <div className="flex shrink-0 items-center justify-center rounded-2xl border border-stone-200 bg-white px-6 py-4">
+            <span className="text-lg font-bold tracking-tight text-stone-900">
+              Wavemaker <span className="text-emerald-700">Impact</span>
+            </span>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-emerald-800">

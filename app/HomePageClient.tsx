@@ -335,6 +335,9 @@ export default function NumatHomepage() {
           </div>
         </section>
 
+        {/* 2b. Partnerships and investor: high on the page for credibility */}
+        <PartnersSection />
+
         {/* 3. Why NuWev */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
@@ -788,9 +791,6 @@ export default function NumatHomepage() {
         </section>
 
         <NewsletterBand />
-
-        {/* Partnerships and investor */}
-        <PartnersSection />
 
         {/* 12. Final CTA */}
         <section className="mx-auto max-w-7xl px-6 pb-14 lg:px-8">
