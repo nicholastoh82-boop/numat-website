@@ -18,146 +18,145 @@ export const applicationDetails: ApplicationItem[] = [
     slug: 'furniture-manufacturing',
     title: 'Furniture Manufacturing',
     cardDescription:
-      'Boards suited for tables, shelving, cabinetry, and custom furniture production.',
+      'Boards for tables, cabinetry and custom furniture, from a smooth MDF substitute to premium cross laminated panels.',
     intro:
-      'NUMAT engineered bamboo boards are well suited for furniture manufacturing where buyers need a stable, premium-looking panel for visible and semi-visible joinery applications.',
+      'NUMAT engineered bamboo is well suited to furniture, from cabinet bodies and panels to premium tables and worktops. NuComposite gives a smooth, machinable surface in place of MDF, while NuBam CLB brings the strength and finish for visible, higher load pieces.',
     sections: [
       {
         title: 'Best Fit',
         body: [
-          'Tables and desktops',
-          'Shelving',
+          'Tables and worktops',
           'Cabinet bodies and fronts',
-          'Furniture backing panels',
-          'Built-in furniture and custom joinery',
+          'Shelving',
+          'Furniture panels and backing',
+          'Built in furniture and custom joinery',
         ],
       },
       {
-        title: 'Recommended Board Logic',
+        title: 'Recommended Products',
         body: [
-          '7mm boards for lightweight furniture backing and secondary panels',
-          '12mm boards for cabinetry, shelving, and light furniture structures',
-          '18–20mm boards for heavier-duty furniture elements, worktops, and higher-load components',
+          'NuComposite for cabinetry, furniture bodies and panels that need a smooth, machinable surface in place of MDF',
+          'NuBam CLB for premium tables, worktops and structural furniture elements',
+          'The CLB Furniture solution for round tables on a solid cross base',
         ],
       },
       {
         title: 'Why It Works',
         body: [
-          'Stable engineered panel format',
-          'Premium natural bamboo appearance',
-          'Suitable for visible and semi-structural furniture uses',
+          'A stable engineered panel format',
+          'A premium, natural bamboo appearance',
+          'Suitable for both visible and structural furniture use',
           'A stronger sustainability story with commercially practical positioning',
         ],
       },
       {
         title: 'Buyer Considerations',
         body: [
-          'Confirm required thickness and ply combination at quote stage',
-          'Review finishing system depending on final furniture application',
-          'Request samples for color, grain, and fabrication evaluation',
+          'Confirm the product and thickness at quote stage',
+          'Review the finishing system for the final furniture use',
+          'Request samples for color, grain and fabrication evaluation',
         ],
       },
     ],
     ctas: [
-      { label: 'Request Furniture Samples', href: '/request-samples' },
+      { label: 'View the CLB Furniture solution', href: '/solutions/furniture' },
       { label: 'Request Quote', href: '/request-quote' },
     ],
   },
   {
     slug: 'interior-fit-outs',
-    title: 'Interior Fit-Outs',
+    title: 'Interior Fit Outs',
     cardDescription:
-      'For joinery, wall systems, feature panels, and premium interior surfacing.',
+      'For wall panels, partitions, feature panels and premium interior surfacing.',
     intro:
-      'Interior fit-outs are one of the clearest current use cases for NUMAT, including office interiors, wall cladding, partitions, and premium surfacing.',
+      'Interior fit outs are one of the clearest use cases for NUMAT, from office interiors and wall paneling to partitions and premium surfacing. The CLB Wall Panels solution adds a tongue and groove system for a fast, seamless wall.',
     sections: [
       {
         title: 'Best Fit',
         body: [
-          'Office fit-outs',
-          'Wall cladding',
+          'Wall paneling and cladding',
+          'Feature walls',
           'Partition systems',
-          'Feature panels',
-          'Interior surfacing',
-          'Premium design-led joinery',
+          'Ceilings and joinery',
+          'Premium interior surfacing',
         ],
       },
       {
-        title: 'Recommended Board Logic',
+        title: 'Recommended Products',
         body: [
-          '7mm boards for lightweight interior paneling',
-          '12mm boards for wall linings, cabinetry doors, and interior joinery',
-          '18–20mm boards for structural partition panels and heavier interior panel requirements',
+          'The CLB Wall Panels solution, tongue and groove at 14 mm, for interior walls and feature walls',
+          'NuBam CLB for architectural panels and premium joinery',
+          'NuComposite for interior cabinetry and panel work',
         ],
       },
       {
         title: 'Why It Works',
         body: [
-          'Natural material finish suited to premium interiors',
-          'Already aligned with NUMAT’s current use-case materials',
-          'Supports projects balancing material performance and lower-impact sourcing',
+          'A natural material finish suited to premium interiors',
+          'A tongue and groove wall system that installs fast with minimal visible gaps',
+          'Supports projects balancing performance and lower impact sourcing',
         ],
       },
       {
         title: 'Buyer Considerations',
         body: [
-          'Match board selection to decorative, joinery, or partition requirements',
+          'Match the product to decorative, joinery or partition needs',
           'Confirm finishing and edge treatment before quotation',
-          'Contact sales for technical and project-document support',
+          'Contact sales for technical and project document support',
         ],
       },
     ],
     ctas: [
-      { label: 'Request Interior Samples', href: '/request-samples' },
-      { label: 'Contact Sales', href: '/contact' },
+      { label: 'View the CLB Wall Panels solution', href: '/solutions/wall-panels' },
+      { label: 'Request Quote', href: '/request-quote' },
     ],
   },
   {
     slug: 'hospitality-and-commercial-spaces',
     title: 'Hospitality and Commercial Spaces',
     cardDescription:
-      'A strong fit for hotels, retail environments, offices, and branded interiors.',
+      'A strong fit for hotels, retail, offices and branded interiors.',
     intro:
-      'NUMAT boards are suitable for hospitality and commercial interiors where buyers need a panel that supports design value, practical fabrication, and a stronger sustainability narrative.',
+      'NUMAT is suited to hospitality and commercial interiors where buyers need panels that carry design value, practical fabrication and a stronger sustainability story, from feature walls to cabinetry and clad columns.',
     sections: [
       {
         title: 'Best Fit',
         body: [
-          'Hotel interiors',
-          'Retail displays and branded environments',
+          'Hotel and resort interiors',
+          'Retail and branded environments',
           'Office interiors',
           'Feature walls and paneling',
-          'Reception and back-of-house joinery',
-          'Commercial cabinetry and shelving',
+          'Reception and back of house joinery',
+          'Clad columns, beams and pavilions',
         ],
       },
       {
-        title: 'Recommended Board Logic',
+        title: 'Recommended Products',
         body: [
-          '7mm boards for retail displays and lightweight commercial panel use',
-          '12mm boards for cabinetry, shelving, signage, and door-facing interior components',
-          '18–20mm boards for structural partition panels, countertop substrates, and higher-load interior substrates',
+          'The CLB Wall Panels solution for feature walls and paneling',
+          'The CLB Columns and Beams solution for clad structure and pavilions',
+          'NuBam CLB and NuComposite for cabinetry, shelving and joinery',
         ],
       },
       {
         title: 'Why It Works',
         body: [
-          'Suitable for high-visibility interior applications',
-          'Strong enough for practical joinery and panel use',
-          'Supports a premium sustainable material story without sounding purely eco-first',
+          'Suited to high visibility interior applications',
+          'Strong enough for practical joinery and panel work',
+          'A premium, sustainable material story without sounding purely eco first',
         ],
       },
       {
         title: 'Buyer Considerations',
         body: [
           'Hospitality and retail buyers usually need visual consistency and durability',
-          'Samples are important for finish approval',
-          'Sales should handle commercial documentation and performance-reference questions',
+          'Samples matter for finish approval',
+          'Sales can handle commercial documentation and performance questions',
         ],
       },
     ],
     ctas: [
-      { label: 'Request Commercial Samples', href: '/request-samples' },
+      { label: 'View Solutions', href: '/solutions' },
       { label: 'Request Quote', href: '/request-quote' },
     ],
   },
@@ -264,9 +263,9 @@ export const applicationDetails: ApplicationItem[] = [
     slug: 'project-and-procurement-use',
     title: 'Project and Procurement Use',
     cardDescription:
-      'Supported with quotation assistance, sample coordination, and commercial documentation.',
+      'Supported with quotations, sample coordination and commercial documentation.',
     intro:
-      'This page is designed for buyers evaluating NUMAT for project use, pilot deployments, or recurring procurement conversations.',
+      'This page is for buyers evaluating NUMAT for project use, pilot deployments or recurring procurement. It brings together the products, the solutions and the documentation a specifier or buyer needs.',
     sections: [
       {
         title: 'Best Fit',
@@ -274,7 +273,7 @@ export const applicationDetails: ApplicationItem[] = [
           'Pilot projects',
           'Specification review',
           'Commercial buyer evaluation',
-          'Sample-based qualification',
+          'Sample based qualification',
           'Procurement and sourcing discussions',
           'Distributor and trade conversations',
         ],
@@ -284,17 +283,16 @@ export const applicationDetails: ApplicationItem[] = [
         body: [
           'Product quotations',
           'Sample coordination',
-          'Technical references',
-          'Testing-page review',
+          'Technical data sheets',
+          'Testing page review',
           'Commercial documentation',
-          'Clarification on current certification and export-support materials',
         ],
       },
       {
         title: 'Commercial Positioning',
         body: [
-          'NUMAT should not compete as a lowest-price commodity material',
-          'It should position itself as a credible engineered panel alternative to plywood',
+          'NUMAT does not compete as a lowest price commodity material',
+          'It positions as a credible engineered panel alternative to plywood',
           'Credibility and documentation are central to commercial adoption',
         ],
       },
@@ -302,14 +300,14 @@ export const applicationDetails: ApplicationItem[] = [
         title: 'Buyer Considerations',
         body: [
           'Best for buyers evaluating on application fit, not only price',
-          'Best used where performance, differentiation, and sustainability all matter',
+          'Best where performance, differentiation and sustainability all matter',
           'Best supported through sample review and direct commercial discussion',
         ],
       },
     ],
     ctas: [
-      { label: 'Contact Sales for Buyer Support', href: '/contact' },
-      { label: 'Request Quote', href: '/request-quote' },
+      { label: 'Browse all products', href: '/products' },
+      { label: 'Contact Sales', href: '/contact' },
     ],
   },
 ]
