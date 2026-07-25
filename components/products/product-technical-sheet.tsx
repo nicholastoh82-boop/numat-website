@@ -13,6 +13,7 @@ type Sheet = {
   construction: string[]
   dost: Row[]
   dostNote: string
+  dataSheet?: string
   applications: string[]
   comparison: {
     columns: string[]
@@ -52,6 +53,7 @@ const SHEETS: Record<string, Sheet> = {
     ],
     dostNote:
       'Independently tested to ASTM D1037 by the DOST Regional Standards and Testing Laboratory. Results apply to the samples submitted and may vary by configuration, thickness, moisture content and manufacturing lot.',
+    dataSheet: '/docs/NuWev-Technical-Data-Sheet.pdf',
     applications: [
       'Interior wall panels',
       'Cabinets and furniture',
@@ -160,6 +162,16 @@ export default function ProductTechnicalSheet({ slug }: { slug: string | null | 
           ))}
         </div>
         <p className="mt-4 text-xs leading-6 text-muted-foreground">{sheet.dostNote}</p>
+        {sheet.dataSheet && (
+          <a
+            href={sheet.dataSheet}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline underline-offset-4"
+          >
+            Download technical data sheet (PDF)
+          </a>
+        )}
       </div>
 
       {/* Applications */}

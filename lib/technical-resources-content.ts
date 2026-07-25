@@ -56,6 +56,7 @@ export const technicalResourceDetails: TechnicalResourceItem[] = [
       },
     ],
     ctas: [
+      { label: 'Download NuWev data sheet (PDF)', href: '/docs/NuWev-Technical-Data-Sheet.pdf' },
       { label: 'Contact Sales for Full Data Sheets', href: '/contact' },
       { label: 'Request Quote', href: '/request-quote' },
     ],
