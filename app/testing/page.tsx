@@ -14,7 +14,7 @@ export const metadata = {
 
 const statCards = [
   { value: '2.3×', label: 'Harder', sub: 'vs typical plywood' },
-  { value: '69 MPa', label: 'Peak MOR', sub: 'bending strength' },
+  { value: '89 MPa', label: 'Peak MOR', sub: 'bending strength' },
   { value: '10,256', label: 'Peak MOE (MPa)', sub: 'stiffness rating' },
   { value: 'ASTM D1037', label: 'Test Standard', sub: 'DOST verified' },
 ]
@@ -23,30 +23,30 @@ const tableRows = [
   {
     metric: 'MOR',
     full: 'Modulus of Rupture',
-    numat: '22.77–69.44 MPa',
-    plywood: '~30–60 MPa',
+    numat: '22.77 to 89.01 MPa',
+    plywood: '~30 to 60 MPa',
     reading: 'NuMat Bamboo can compete with or exceed typical plywood depending on configuration.',
   },
   {
     metric: 'MOE',
     full: 'Modulus of Elasticity',
-    numat: '2,211.82–10,256.71 MPa',
-    plywood: '~4,000–9,000 MPa',
+    numat: '2,211.82 to 10,256.71 MPa',
+    plywood: '~4,000 to 9,000 MPa',
     reading: 'Upper-end results outperform typical plywood stiffness references.',
   },
   {
     metric: 'Compression',
     full: 'Compression Strength',
-    numat: '25.19–30.46 MPa',
-    plywood: '~20–35 MPa',
+    numat: '25.19 to 30.46 MPa',
+    plywood: '~20 to 35 MPa',
     reading: 'Performance within the range expected for commercial plywood boards.',
   },
   {
     metric: 'Hardness',
     full: 'Surface Hardness',
-    numat: '3,918.33–7,377.33 N',
+    numat: '3,918.33 to 7,377.33 N',
     plywood: 'Typically lower and variable',
-    reading: 'Significantly exceeds plywood — ideal for flooring and exposed surfaces.',
+    reading: 'Significantly exceeds plywood, ideal for flooring and exposed surfaces.',
   },
 ]
 
@@ -186,7 +186,7 @@ export default function TestingPage() {
             </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
-              {['MOR: 22.77–69.44 MPa', 'MOE: 2,211.82–10,256.71 MPa', 'Compression: 25.19–30.46 MPa', 'Hardness: 3,918.33–7,377.33 N'].map((tag) => (
+              {['MOR: 22.77 to 89.01 MPa', 'MOE: 2,211.82 to 10,256.71 MPa', 'Compression: 25.19 to 30.46 MPa', 'Hardness: 3,918.33 to 7,377.33 N'].map((tag) => (
                 <span key={tag} className="rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs text-stone-600">
                   {tag}
                 </span>

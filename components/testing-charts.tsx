@@ -6,28 +6,28 @@ const metrics = [
   {
     id: 'mor',
     label: 'Bending Strength (MOR)',
-    title: 'Modulus of Rupture — Bending Strength',
+    title: 'Modulus of Rupture, Bending Strength',
     explainer:
       'MOR measures how much load a board can take before breaking. Higher = stronger floors, shelves, and structural panels. The metric most specifiers use to qualify structural materials.',
     winner: 'numat',
     bars: [
-      { name: 'NuMat Bamboo', pct: 100, label: '69.44 MPa peak', range: '22–69 MPa', color: 'bg-emerald-600' },
-      { name: 'Plywood', pct: 87, label: '~60 MPa', range: '30–60 MPa', color: 'bg-stone-400' },
-      { name: 'Hardwood', pct: 72, label: '~50 MPa', range: '40–80 MPa', color: 'bg-amber-500' },
+      { name: 'NuMat Bamboo', pct: 100, label: '89.01 MPa peak', range: '22 to 89 MPa', color: 'bg-emerald-600' },
+      { name: 'Plywood', pct: 67, label: '~60 MPa', range: '30 to 60 MPa', color: 'bg-stone-400' },
+      { name: 'Hardwood', pct: 56, label: '~50 MPa', range: '40 to 80 MPa', color: 'bg-amber-500' },
     ],
     note: 'Upper-end NuMat Bamboo boards exceed typical plywood bending strength. Mid-range configurations are fully competitive with commercial plywood grades.',
   },
   {
     id: 'moe',
     label: 'Stiffness (MOE)',
-    title: 'Modulus of Elasticity — Stiffness',
+    title: 'Modulus of Elasticity, Stiffness',
     explainer:
-      'MOE measures how much a board flexes under load without breaking. Higher MOE means less sag and bounce underfoot — critical for flooring, shelving, and long spans.',
+      'MOE measures how much a board flexes under load without breaking. Higher MOE means less sag and bounce underfoot, critical for flooring, shelving, and long spans.',
     winner: 'numat',
     bars: [
-      { name: 'NuMat Bamboo', pct: 100, label: '10,256 MPa peak', range: '2,211–10,256 MPa', color: 'bg-emerald-600' },
-      { name: 'Plywood', pct: 88, label: '~9,000 MPa', range: '4,000–9,000 MPa', color: 'bg-stone-400' },
-      { name: 'Hardwood', pct: 90, label: '~9,500 MPa', range: '7,000–12,000 MPa', color: 'bg-amber-500' },
+      { name: 'NuMat Bamboo', pct: 100, label: '10,256 MPa peak', range: '2,211 to 10,256 MPa', color: 'bg-emerald-600' },
+      { name: 'Plywood', pct: 88, label: '~9,000 MPa', range: '4,000 to 9,000 MPa', color: 'bg-stone-400' },
+      { name: 'Hardwood', pct: 90, label: '~9,500 MPa', range: '7,000 to 12,000 MPa', color: 'bg-amber-500' },
     ],
     note: 'Upper-end NuMat Bamboo results outperform typical plywood references. Stiffness varies by ply configuration and board thickness.',
   },
@@ -39,11 +39,11 @@ const metrics = [
       'How much vertical load a board can bear before crushing. Critical for load-bearing walls, columns, and structural flooring applications.',
     winner: 'comparable',
     bars: [
-      { name: 'NuMat Bamboo', pct: 87, label: '30.46 MPa peak', range: '25–30 MPa', color: 'bg-emerald-600' },
-      { name: 'Plywood', pct: 100, label: '~35 MPa', range: '20–35 MPa', color: 'bg-stone-400' },
-      { name: 'Hardwood', pct: 80, label: '~28 MPa', range: '20–50 MPa', color: 'bg-amber-500' },
+      { name: 'NuMat Bamboo', pct: 87, label: '30.46 MPa peak', range: '25 to 30 MPa', color: 'bg-emerald-600' },
+      { name: 'Plywood', pct: 100, label: '~35 MPa', range: '20 to 35 MPa', color: 'bg-stone-400' },
+      { name: 'Hardwood', pct: 80, label: '~28 MPa', range: '20 to 50 MPa', color: 'bg-amber-500' },
     ],
-    note: 'NuMat Bamboo compressive performance sits within the range expected for commercial plywood — fully qualified for structural applications.',
+    note: 'NuMat Bamboo compressive performance sits within the range expected for commercial plywood, fully qualified for structural applications.',
   },
   {
     id: 'hard',
@@ -53,11 +53,11 @@ const metrics = [
       'Resistance to surface denting and scratching, measured in Newtons. Higher = more durable surfaces for flooring, worktops, and high-traffic areas.',
     winner: 'numat',
     bars: [
-      { name: 'NuMat Bamboo', pct: 100, label: '7,377 N peak', range: '3,918–7,377 N', color: 'bg-emerald-600' },
+      { name: 'NuMat Bamboo', pct: 100, label: '7,377 N peak', range: '3,918 to 7,377 N', color: 'bg-emerald-600' },
       { name: 'Plywood', pct: 43, label: '~3,200 N', range: 'Typically lower', color: 'bg-stone-400' },
-      { name: 'Hardwood', pct: 67, label: '~5,000 N', range: '3,000–6,000 N', color: 'bg-amber-500' },
+      { name: 'Hardwood', pct: 67, label: '~5,000 N', range: '3,000 to 6,000 N', color: 'bg-amber-500' },
     ],
-    note: 'NuMat Bamboo surface hardness significantly exceeds typical plywood and is competitive with hardwood — making it ideal for flooring and exposed surfaces.',
+    note: 'NuMat Bamboo surface hardness significantly exceeds typical plywood and is competitive with hardwood, making it ideal for flooring and exposed surfaces.',
   },
 ]
 

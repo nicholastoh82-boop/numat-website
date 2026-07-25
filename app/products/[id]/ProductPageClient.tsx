@@ -17,6 +17,7 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
 import ProductDetailImage from '@/components/products/product-detail-image'
+import ProductTechnicalSheet from '@/components/products/product-technical-sheet'
 import { useCurrency } from '@/components/providers/currency-provider'
 import { toast } from '@/hooks/use-toast'
 import { useCartStore } from '@/lib/cart-store'
@@ -1456,6 +1457,9 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
                 </div>
               </div>
 
+              <ProductTechnicalSheet slug={product?.slug} />
+
+              {product?.slug !== 'nuweave' && (
               <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm lg:p-8">
                 <div className="mb-5">
                   <h2 className="text-2xl font-semibold text-foreground">Third-party testing</h2>
@@ -1502,6 +1506,7 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
                   </a>
                 </div>
               </div>
+              )}
             </section>
 
             <aside className="hidden xl:block">
