@@ -23,12 +23,12 @@ const faqs = [
   {
     question: 'What products does NuMat Bamboo offer?',
     answer:
-      'NuMat Bamboo currently supplies three engineered bamboo boards, all 2440 mm x 1220 mm x 16 mm, three ply. NuWev, a woven bamboo board for concrete formwork and interior finishing, at PHP 3,500. NuComposite, a bamboo composite panel and MDF substitute for furniture and cabinetry, at PHP 5,500. NuBam CLB, a cross laminated bamboo board for structural and architectural use, at PHP 7,500. Prices exclude shipping.',
+      'NuMat Bamboo currently supplies three engineered bamboo boards, all 2440 mm x 1220 mm x 16 mm, three ply. NuWeave, a woven bamboo board for concrete formwork and interior finishing, at PHP 3,500. NuComposite, a bamboo composite panel and MDF substitute for furniture and cabinetry, at PHP 5,500. NuBam CLB, a cross laminated bamboo board for structural and architectural use, at PHP 7,500. Prices exclude shipping.',
   },
   {
-    question: 'What is the difference between NuWev, NuComposite, and NuBam CLB?',
+    question: 'What is the difference between NuWeave, NuComposite, and NuBam CLB?',
     answer:
-      'All three share the same 2440 mm x 1220 mm x 16 mm, three ply sheet size. The difference is construction and use. NuWev is woven bamboo mats pressed under heat and pressure, and does two jobs: concrete formwork across repeated pours, and interior finishing where you want the weave visible in the face. NuComposite has a bamboo composite core with a woven surface, a smooth and machinable MDF substitute for furniture and cabinetry. NuBam CLB is cross laminated for structural integrity and architectural surfaces such as wall cladding.',
+      'All three share the same 2440 mm x 1220 mm x 16 mm, three ply sheet size. The difference is construction and use. NuWeave is woven bamboo mats pressed under heat and pressure, and does two jobs: concrete formwork across repeated pours, and interior finishing where you want the weave visible in the face. NuComposite has a bamboo composite core with a woven surface, a smooth and machinable MDF substitute for furniture and cabinetry. NuBam CLB is cross laminated for structural integrity and architectural surfaces such as wall cladding.',
   },
   {
     question: 'What is the minimum order quantity (MOQ)?',
@@ -46,9 +46,9 @@ const faqs = [
       'Yes. Sample panels are 100 mm x 100 mm x 16 mm, one piece per request, and the sample itself is free. You only pay delivery, and we will quote the exact delivery cost once we have a rate from our delivery providers. Samples ship ex factory from Manolo Fortich, Bukidnon. Request samples through our website.',
   },
   {
-    question: 'Can NuWev be used for concrete formwork and wet conditions?',
+    question: 'Can NuWeave be used for concrete formwork and wet conditions?',
     answer:
-      'Yes. NuWev is built for concrete formwork. The interwoven mats spread load across the whole sheet, so the board holds its line across repeated pours where conventional substrates start to bulge. It is used for wall, column, slab, and beam forming. For NuComposite and NuBam CLB, which are intended for furniture, cabinetry, and interior or architectural surfaces, please consult our technical team to confirm suitability for high humidity or exposed conditions.',
+      'Yes. NuWeave is built for concrete formwork. The interwoven mats spread load across the whole sheet, so the board holds its line across repeated pours where conventional substrates start to bulge. It is used for wall, column, slab, and beam forming. For NuComposite and NuBam CLB, which are intended for furniture, cabinetry, and interior or architectural surfaces, please consult our technical team to confirm suitability for high humidity or exposed conditions.',
   },
   {
     question: 'What are the production and lead times?',

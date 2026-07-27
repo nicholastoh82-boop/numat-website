@@ -214,9 +214,9 @@ export const applicationDetails: ApplicationItem[] = [
     slug: 'concrete-formwork',
     title: 'Concrete Formwork',
     cardDescription:
-      'NuWev woven bamboo board built for concrete forming, with a phenolic surface and strong reuse.',
+      'NuWeave woven bamboo board built for concrete forming, with a phenolic surface and strong reuse.',
     intro:
-      'NuWev woven bamboo mat board is built for concrete formwork. The phenolic surface strips clean and stands up to repeated pours, giving a strong, moisture resistant panel that competes with film faced plywood on reuse and cost.',
+      'NuWeave woven bamboo mat board is built for concrete formwork. The phenolic surface strips clean and stands up to repeated pours, giving a strong, moisture resistant panel that competes with film faced plywood on reuse and cost.',
     sections: [
       {
         title: 'Best Fit',
@@ -231,7 +231,7 @@ export const applicationDetails: ApplicationItem[] = [
       {
         title: 'Recommended Product',
         body: [
-          'NuWev woven bamboo mat board with a phenolic film on both sides',
+          'NuWeave woven bamboo mat board with a phenolic film on both sides',
           'Available from 10 to 20 mm thick',
           'Standard sheet size 1220 by 2440 mm',
         ],
@@ -255,7 +255,7 @@ export const applicationDetails: ApplicationItem[] = [
       },
     ],
     ctas: [
-      { label: 'View NuWev', href: '/products/nuweave' },
+      { label: 'View NuWeave', href: '/products/nuweave' },
       { label: 'Request Quote', href: '/request-quote' },
     ],
   },
