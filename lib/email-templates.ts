@@ -297,7 +297,7 @@ export function generateReminderEmailHTML(data: QuoteEmailData): string {
           </tr>
           <tr>
             <td style="background-color:#1a237e;padding:16px 32px;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#9fa8da;">NUMAT — sales@numat.ph | +639453444575</p>
+              <p style="margin:0;font-size:12px;color:#9fa8da;">NUMAT — sales@numat.ph | +639613076458</p>
             </td>
           </tr>
         </table>
