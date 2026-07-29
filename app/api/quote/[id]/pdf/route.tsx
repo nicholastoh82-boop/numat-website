@@ -587,13 +587,16 @@ type QuoteData = {
 
 const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
   const isInvoice = data.doc_type === "invoice";
+  const isQuotation = data.doc_type === "quotation";
   // Commit B: branch the title by invoice_type
   //   deposit  -> "DEPOSIT INVOICE"   (partial payment against a proforma)
   //   balance  -> "FINAL INVOICE"     (remaining balance after deposit)
   //   full     -> "INVOICE"           (one-shot invoice converted from proforma)
   //   null     -> "INVOICE"           (standalone invoice, not converted)
   let docTitle = "PROFORMA INVOICE";
-  if (isInvoice) {
+  if (isQuotation) {
+    docTitle = "QUOTATION";
+  } else if (isInvoice) {
     if (data.invoice_type === "deposit") docTitle = "DEPOSIT INVOICE";
     else if (data.invoice_type === "balance") docTitle = "FINAL INVOICE";
     else docTitle = "INVOICE";
@@ -863,7 +866,7 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
           ) : (
             <>
               <Text style={styles.bodyText}>
-                Validity: This proforma invoice is valid until{" "}
+                Validity: This {isQuotation ? "quotation" : "proforma invoice"} is valid until{" "}
                 {formatDate(data.valid_until)}.
               </Text>
               <Text style={styles.bodyText}>
@@ -871,12 +874,15 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
                 confirmed specifications.
               </Text>
               <Text style={styles.bodyText}>
-                This is a proforma invoice issued for proposal purposes. It is
-                not a tax invoice and does not constitute a demand for payment.
+                {isQuotation
+                  ? "This is a quotation issued for evaluation purposes. It is not a proforma invoice, tax invoice, or demand for payment."
+                  : "This is a proforma invoice issued for proposal purposes. It is not a tax invoice and does not constitute a demand for payment."}
               </Text>
+              {!isQuotation ? (
               <Text style={{ ...styles.bodyText, marginTop: 6, color: COLORS.green, fontFamily: "Helvetica-Bold" }}>
                 Full Terms and Conditions and signature page follow on page 2.
               </Text>
+              ) : null}
             </>
           )}
           {data.notes ? (
@@ -899,7 +905,7 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
       {/* ================================================================ */}
       {/* Page 2: Terms and Conditions + Signature block (proforma only)   */}
       {/* ================================================================ */}
-      {!isInvoice ? (
+      {(!isInvoice && !isQuotation) ? (
         <Page size="A4" style={styles.termsPage}>
           <View style={styles.termsHeaderRow}>
             <Text style={styles.termsPageHeader}>
