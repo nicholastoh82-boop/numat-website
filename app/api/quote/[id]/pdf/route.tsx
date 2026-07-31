@@ -879,9 +879,29 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
                   : "This is a proforma invoice issued for proposal purposes. It is not a tax invoice and does not constitute a demand for payment."}
               </Text>
               {!isQuotation ? (
+              <>
+              <Text style={{ ...styles.bodyText, marginTop: 8, color: COLORS.green, fontFamily: "Helvetica-Bold" }}>
+                Payment details
+              </Text>
+              <Text style={styles.bodyText}>
+                Bank: Rizal Commercial Banking Corporation (RCBC)
+              </Text>
+              <Text style={styles.bodyText}>
+                Account Name: NUMAT Sustainable Manufacturing Inc.
+              </Text>
+              <Text style={styles.bodyText}>
+                Account Type: Current Account (PHP)
+              </Text>
+              <Text style={styles.bodyText}>
+                Account Number: 7591406069
+              </Text>
+              <Text style={styles.bodyText}>
+                Please reference {data.quote_number} on all payments.
+              </Text>
               <Text style={{ ...styles.bodyText, marginTop: 6, color: COLORS.green, fontFamily: "Helvetica-Bold" }}>
                 Full Terms and Conditions and signature page follow on page 2.
               </Text>
+              </>
               ) : null}
             </>
           )}
