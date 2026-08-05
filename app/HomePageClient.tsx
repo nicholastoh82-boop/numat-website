@@ -214,6 +214,7 @@ const comparison = [
 const completedProjects = [
   { name: 'Cubo Modular', src: '/nuweave/numat-bamboo-delivery-cubo-modular.jpg' },
   { name: 'APDCC', src: '/nuweave/numat-bamboo-tables-flooring-apdcc.jpg' },
+  { name: 'Alina Resort', src: '/nuweave/numat-bamboo-delivery-alina-resort.jpg' },
 ]
 
 export default function NumatHomepage() {
