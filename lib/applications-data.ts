@@ -20,7 +20,7 @@ export const applicationDetails: ApplicationItem[] = [
     cardDescription:
       'Boards for tables, cabinetry and custom furniture, from a smooth MDF substitute to premium cross laminated panels.',
     intro:
-      'NUMAT engineered bamboo is well suited to furniture, from cabinet bodies and panels to premium tables and worktops. NuComposite gives a smooth, machinable surface in place of MDF, while NuBam CLB brings the strength and finish for visible, higher load pieces.',
+      'NUMAT engineered bamboo is well suited to furniture, from cabinet bodies and panels to premium tables and worktops. NuHybrid gives a smooth, machinable surface in place of MDF, while NuBam CLB brings the strength and finish for visible, higher load pieces.',
     sections: [
       {
         title: 'Best Fit',
@@ -35,7 +35,7 @@ export const applicationDetails: ApplicationItem[] = [
       {
         title: 'Recommended Products',
         body: [
-          'NuComposite for cabinetry, furniture bodies and panels that need a smooth, machinable surface in place of MDF',
+          'NuHybrid for cabinetry, furniture bodies and panels that need a smooth, machinable surface in place of MDF',
           'NuBam CLB for premium tables, worktops and structural furniture elements',
           'The CLB Furniture solution for round tables on a solid cross base',
         ],
@@ -86,7 +86,7 @@ export const applicationDetails: ApplicationItem[] = [
         body: [
           'The CLB Wall Panels solution, tongue and groove at 14 mm, for interior walls and feature walls',
           'NuBam CLB for architectural panels and premium joinery',
-          'NuComposite for interior cabinetry and panel work',
+          'NuHybrid for interior cabinetry and panel work',
         ],
       },
       {
@@ -135,7 +135,7 @@ export const applicationDetails: ApplicationItem[] = [
         body: [
           'The CLB Wall Panels solution for feature walls and paneling',
           'The CLB Columns and Beams solution for clad structure and pavilions',
-          'NuBam CLB and NuComposite for cabinetry, shelving and joinery',
+          'NuBam CLB and NuHybrid for cabinetry, shelving and joinery',
         ],
       },
       {

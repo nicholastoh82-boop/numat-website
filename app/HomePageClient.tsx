@@ -106,7 +106,7 @@ const benefits = [
  *
  * The certificates name each sample by its own coding, not by product name.
  * Nick confirmed two of those codings: the Amakan Board sample is NuWeave and
- * the Hybrid Amakan Board sample is NuComposite. Those two carry the product
+ * the Hybrid Amakan Board sample is NuHybrid. Those two carry the product
  * name as the heading with the certificate coding shown beside it, so a buyer
  * or auditor can still tie the figure back to the paper.
  *
@@ -134,7 +134,7 @@ const dostReports: DostReport[] = [
     ],
   },
   {
-    heading: 'NuComposite',
+    heading: 'NuHybrid',
     certifiedAs: 'Hybrid Amakan Board',
     method: 'ASTM D1037, Static Bending',
     analysed: '16 June 2026',
