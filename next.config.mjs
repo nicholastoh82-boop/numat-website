@@ -44,6 +44,8 @@ const nextConfig = {
       // it) and still needs its own move.
       { source: '/news', destination: '/blog', permanent: true },
       { source: '/news/:slug((?!archive$).*)', destination: '/blog/:slug', permanent: true },
+      // NuComposite was renamed to NuHybrid; keep the old product URL working.
+      { source: '/products/nucomposite', destination: '/products/nuhybrid', permanent: true },
     ];
   },
 }

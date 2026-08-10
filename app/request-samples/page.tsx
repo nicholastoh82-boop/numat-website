@@ -83,7 +83,7 @@ export default function RequestSamplesPage() {
   const [step, setStep] = useState<Step>(1)
 
   // Sample options come from Supabase, not a hardcoded array. This page offered
-  // NuWeave only, so a customer could not request a NuComposite or NuBam CLB
+  // NuWeave only, so a customer could not request a NuHybrid or NuBam CLB
   // sample at all. The nav, the footer and the CRM quote builder all had the
   // same hardcoded-list problem; this was the last one.
   const { data: productsData } = useSWR<ApiProduct[]>('/api/products', productsFetcher, {
