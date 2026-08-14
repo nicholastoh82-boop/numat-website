@@ -24,7 +24,7 @@ type Sheet = {
 const SHEETS: Record<string, Sheet> = {
   nuweave: {
     specs: [
-      { label: 'Thickness options', value: '10, 12, 15, 16, 18 and 20 mm' },
+      { label: 'Thickness options', value: '4, 8, 12, 16 and 20 mm' },
       { label: 'Standard width', value: '1220 mm (4 ft)' },
       { label: 'Standard length', value: '2440 mm (8 ft)' },
       { label: 'Density (typical)', value: '800 to 1,000 kg/m3' },
@@ -32,16 +32,16 @@ const SHEETS: Record<string, Sheet> = {
       { label: 'Surface', value: 'Phenolic film, both sides' },
       { label: 'Edge finish', value: 'Sealed edges' },
       { label: 'Adhesive', value: 'Exterior grade phenol formaldehyde (PF)' },
-      { label: 'Core material', value: 'Bamboo sawdust with PF resin (1 mm or less)' },
-      { label: 'Reinforcement', value: 'Woven bamboo mat (2 or more plies)' },
+      { label: 'Body', value: 'Woven bamboo mat, 1 to 5 plies (by thickness)' },
+      { label: 'Filler', value: 'Bamboo sawdust filling the weave crevices' },
     ],
     construction: [
       'Phenolic film (top)',
       'PF resin layer',
-      'Woven bamboo mat (top ply)',
-      'Bamboo sawdust core (1 mm or less, compressed)',
+      'Woven bamboo mat (top ply), with bamboo sawdust filling the weave',
       'PF resin layer',
-      'Woven bamboo mat (bottom)',
+      'Woven bamboo mat (bottom ply), with bamboo sawdust filling the weave',
+      'PF resin layer',
       'Phenolic film (bottom)',
     ],
     dost: [
