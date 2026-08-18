@@ -466,7 +466,7 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
   const [selectedPly, setSelectedPly] = useState('')
   const [selectedModel, setSelectedModel] = useState('')
   const [selectedLength, setSelectedLength] = useState('')
-  const [quantity, setQuantity] = useState(1)
+  const [quantity, setQuantity] = useState(50)
 
   const { data: categories } = useSWR<Category[]>('/api/categories', fetcher, {
     fallbackData: [],
@@ -847,7 +847,7 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
   }, [useVariantDrivenConfig, family, plyOptionsForBoards, selectedPly])
 
   useEffect(() => {
-    if (family === 'nubam-boards' || family === 'nuwall') setQuantity(10)
+    if (family === 'nubam-boards' || family === 'nuwall') setQuantity(50)
     if (family === 'nudoor') setQuantity(5)
     if (family === 'nufloor') setQuantity(20)
     if (family === 'nuslat') setQuantity(2000)
@@ -928,7 +928,7 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
       ply: family === 'nufloor' ? '3 Ply' : selectedPly || '',
       length: family === 'nudoor' ? '8ft' : selectedLength || '',
       dimensions: product?.dimensions || '2440mm x 1220mm',
-      moq: product?.min_order_qty || 1,
+      moq: product?.min_order_qty || 50,
       unit: product?.unit || 'piece',
       pricePhp: product?.base_price_php ?? null,
       inStock: true,
@@ -952,7 +952,7 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
           family === 'nufloor' && selectedVariant.thickness_mm
             ? (selectedVariant.dimensions || product?.dimensions || '—')
             : selectedVariant.dimensions || product?.dimensions || '—',
-        moq: selectedVariant.min_order_qty || product?.min_order_qty || 1,
+        moq: selectedVariant.min_order_qty || product?.min_order_qty || 50,
         unit: selectedVariant.unit || product?.unit || 'piece',
         pricePhp: selectedVariant.base_price_php,
         inStock: true,
