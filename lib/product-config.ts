@@ -350,7 +350,7 @@ export function validateConfiguredQuantity(family: ProductFamily, quantity: numb
   }
 
   if (family === 'nubam-boards' || family === 'nuwall') {
-    if (quantity < 10) return 'Minimum order quantity is 10.'
+    if (quantity < 50) return 'Minimum order quantity is 50.'
   }
 
   if (family === 'nudoor') {
