@@ -290,10 +290,10 @@ export default function ComparePage() {
                 Ready to specify?
               </p>
               <h2 className="mt-3 text-2xl font-bold sm:text-3xl">
-                Get samples and a formal quote for your project.
+                Get a formal quote for your project.
               </h2>
               <p className="mt-3 max-w-xl text-base text-white/70">
-                Our team can support your evaluation with samples, technical data,
+                Our team can support your evaluation with technical data
                 and a commercial quotation within 24 hours.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -305,10 +305,10 @@ export default function ComparePage() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
-                  href="/request-samples"
+                  href="/request-quote"
                   className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/10"
                 >
-                  Order Samples
+                  Request Quote
                 </Link>
               </div>
             </div>

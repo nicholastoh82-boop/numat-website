@@ -153,12 +153,12 @@ export function ProductQuickView({ product, onClose }: ProductQuickViewProps) {
                 </Button>
               </Link>
 
-              <Link href="/request-samples" onClick={onClose}>
+              <Link href="/request-quote" onClick={onClose}>
                 <Button
                   variant="ghost"
                   className="w-full border border-border bg-transparent hover:bg-muted"
                 >
-                  Request Samples
+                  Request Quote
                 </Button>
               </Link>
             </div>

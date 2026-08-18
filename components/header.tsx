@@ -231,7 +231,7 @@ export default function Header() {
           </nav>
         </div>
 
-        {/* Desktop right: currency plus sample call to action */}
+        {/* Desktop right: currency plus quote call to action */}
         <div className="hidden items-center gap-3 lg:flex">
           <div className="relative flex items-center gap-2 rounded-full border border-stone-300 bg-white px-3 py-2 shadow-sm">
             <Image
@@ -257,10 +257,10 @@ export default function Header() {
           </div>
 
           <Link
-            href="/request-samples"
+            href="/request-quote"
             className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-emerald-800 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-emerald-900"
           >
-            Request Sample
+            Request Quote
           </Link>
         </div>
 
@@ -367,11 +367,11 @@ export default function Header() {
             </nav>
 
             <Link
-              href="/request-samples"
+              href="/request-quote"
               onClick={() => setMobileMenuOpen(false)}
               className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-emerald-800 px-5 py-3 text-sm font-semibold text-white shadow-sm"
             >
-              Request Sample
+              Request Quote
             </Link>
           </div>
         </div>

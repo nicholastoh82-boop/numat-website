@@ -204,7 +204,7 @@ export default function CostPerPourCalculator() {
               so you can buy one and count the pours yourself.
             </p>
             <Link
-              href="/request-samples"
+              href="/request-quote"
               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-900"
             >
               Request a sample board

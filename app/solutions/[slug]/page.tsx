@@ -80,10 +80,10 @@ export default async function SolutionDetailPage({ params }: PageProps) {
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
-                    href="/request-samples"
+                    href="/request-quote"
                     className="inline-flex items-center justify-center rounded-2xl border border-stone-300 bg-white px-6 py-3 text-sm font-semibold text-stone-900 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-50"
                   >
-                    Request samples
+                    Request a quote
                   </Link>
                 </div>
 
@@ -288,8 +288,8 @@ export default async function SolutionDetailPage({ params }: PageProps) {
                 Planning a project with {item.title}?
               </h2>
               <p className="mt-3 max-w-xl text-base text-white/70">
-                Tell us the scope and we will price it and confirm lead time. You can also request
-                samples to evaluate the grain, finish and build quality first.
+                Tell us the scope and we will price it and confirm lead time. You can also order
+                a board to evaluate the grain, finish and build quality first.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link

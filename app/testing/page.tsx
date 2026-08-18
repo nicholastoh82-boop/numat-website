@@ -200,9 +200,9 @@ export default function TestingPage() {
                   Request Full Test Report
                 </Button>
               </Link>
-              <Link href="/request-samples">
+              <Link href="/request-quote">
                 <Button variant="outline" className="gap-2">
-                  Request Samples
+                  Request Quote
                 </Button>
               </Link>
             </div>
