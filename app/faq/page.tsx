@@ -5,11 +5,11 @@ import Link from 'next/link'
 
 export const metadata = {
   title: 'FAQ: Frequently Asked Questions | NuMat Bamboo',
-  description: 'Answers to common questions about NuMat engineered bamboo products, ordering, lead times, samples, and technical specifications.',
+  description: 'Answers to common questions about NuMat engineered bamboo products, ordering, lead times, pricing, and technical specifications.',
   alternates: { canonical: 'https://numatbamboo.com/faq' },
   openGraph: {
     title: 'FAQ | NuMat Bamboo',
-    description: 'Common questions about NuMat engineered bamboo: products, MOQ, lead times, samples, and more.',
+    description: 'Common questions about NuMat engineered bamboo: products, MOQ, lead times, pricing, and more.',
     url: 'https://numatbamboo.com/faq',
   },
 }
@@ -41,9 +41,9 @@ const faqs = [
       'Add your required products to your quote list directly on our website, then complete the quote form with your contact details. You can choose to receive your formal quotation by email as a PDF or over WhatsApp. Our team responds within 24 hours on business days.',
   },
   {
-    question: 'Do you offer product samples?',
+    question: 'Do you offer free product samples?',
     answer:
-      'Yes. Sample panels are 100 mm x 100 mm x 16 mm, one piece per request, and the sample itself is free. You only pay delivery, and we will quote the exact delivery cost once we have a rate from our delivery providers. Samples ship ex factory from Manolo Fortich, Bukidnon. Request samples through our website.',
+      'We no longer provide free samples. To evaluate the boards, place a minimum order of the product you want to test and request a quote through our website. The minimum order is 10 panels. That way you assess the actual board you would buy, at full size and finish, rather than a small offcut.',
   },
   {
     question: 'Can NuWeave be used for concrete formwork and wet conditions?',

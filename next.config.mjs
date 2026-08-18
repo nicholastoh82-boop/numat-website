@@ -46,6 +46,8 @@ const nextConfig = {
       { source: '/news/:slug((?!archive$).*)', destination: '/blog/:slug', permanent: true },
       // NuComposite was renamed to NuHybrid; keep the old product URL working.
       { source: '/products/nucomposite', destination: '/products/nuhybrid', permanent: true },
+      // Free samples were removed; testers place a minimum order instead.
+      { source: '/request-samples', destination: '/request-quote', permanent: true },
     ];
   },
 }

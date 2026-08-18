@@ -236,7 +236,7 @@ Your greeting MUST:
 2. Thank them sincerely for taking the time to review the report
 3. Reference their company by name (${veContext.company})
 4. Acknowledge the project scale so they know you have their details (${veContext.sqm.toLocaleString()} sqm)
-5. Invite them to ask anything — specifications, pricing, samples, or timelines
+5. Invite them to ask anything about specifications, pricing, or timelines
 6. Keep it to 3 sentences maximum. Sound genuinely human, not scripted.
 
 Do NOT ask for their name or company. You already have it.

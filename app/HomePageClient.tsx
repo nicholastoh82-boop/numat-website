@@ -281,7 +281,7 @@ export default function NumatHomepage() {
 
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <Link
-                  href="/request-samples"
+                  href="/request-quote"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-stone-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-stone-900"
                 >
                   Request a sample
@@ -810,7 +810,7 @@ export default function NumatHomepage() {
               </h2>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <Link
-                  href="/request-samples"
+                  href="/request-quote"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-stone-950 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-100"
                 >
                   Request a sample

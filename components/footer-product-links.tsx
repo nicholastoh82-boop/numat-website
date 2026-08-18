@@ -21,7 +21,7 @@ const fetcher = async (url: string) => {
 const tailLinks = [
   { name: 'All products and pricing', href: '/products' },
   { name: 'Compare vs Plywood', href: '/compare' },
-  { name: 'Request a Sample', href: '/request-samples' },
+  { name: 'Request a quote', href: '/request-quote' },
   { name: 'Request a Quote', href: '/request-quote' },
 ]
 

@@ -179,7 +179,7 @@ export default function AboutPage() {
               Built for Commercial Confidence
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-base text-stone-600">
-              We're not just a materials supplier. We provide the documentation, samples,
+              We're not just a materials supplier. We provide the documentation,
               technical support, and commercial backing serious buyers need to specify with confidence.
             </p>
           </div>
@@ -291,7 +291,7 @@ export default function AboutPage() {
                   Ready to Source Bamboo Boards for Your Next Project?
                 </h2>
                 <p className="mt-4 text-base text-white/70">
-                  Our team is ready to support your project with samples, specs,
+                  Our team is ready to support your project with specs,
                   quotations, and commercial documentation.
                 </p>
               </div>

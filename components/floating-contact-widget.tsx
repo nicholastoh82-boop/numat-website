@@ -30,10 +30,10 @@ const btnStyle: React.CSSProperties = {
 export default function FloatingContactWidget() {
   return (
     <>
-      {/* Request Samples — sits above WhatsApp */}
+      {/* Request Quote, sits above WhatsApp */}
       <Link
-        href="/request-samples"
-        aria-label="Request Samples"
+        href="/request-quote"
+        aria-label="Request Quote"
         style={{ ...btnStyle, bottom: '152px', background: '#1D5C3A' }}
         onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
         onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
