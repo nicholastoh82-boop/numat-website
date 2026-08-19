@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom'
 function CaptureBarContent() {
   const [dismissed, setDismissed] = useState(false)
   const [visible, setVisible] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', interest: 'sample' })
+  const [form, setForm] = useState({ name: '', email: '', interest: 'quote' })
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
   useEffect(() => {
@@ -66,7 +66,7 @@ function CaptureBarContent() {
           ) : (
             <>
               <p style={{ color: '#6ee7b7', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                🌿 Free sample or quote →
+                🌿 Request a quote →
               </p>
 
               <div style={{ display: 'flex', flex: 1, gap: '8px', minWidth: 0 }}>
@@ -96,18 +96,6 @@ function CaptureBarContent() {
                   onFocus={e => (e.target.style.borderColor = '#059669')}
                   onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
                 />
-                <select
-                  value={form.interest}
-                  onChange={e => setForm(f => ({ ...f, interest: e.target.value }))}
-                  style={{
-                    padding: '9px 12px', borderRadius: '10px', flexShrink: 0,
-                    background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)',
-                    color: '#fff', fontSize: '14px', outline: 'none', cursor: 'pointer',
-                  }}
-                >
-                  <option value="sample" style={{ background: '#0f1e12' }}>🌿 Free Sample</option>
-                  <option value="quote" style={{ background: '#0f1e12' }}>📋 Get Quote</option>
-                </select>
                 <button
                   onClick={handleSubmit}
                   disabled={status === 'loading' || !form.name || !form.email}

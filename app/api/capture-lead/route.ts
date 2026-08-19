@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
     // Notify the sales inbox. A failure here must not fail the submission.
     try {
-      const interestLabel = interest === 'sample' ? 'Free sample' : 'Quote request'
+      const interestLabel = 'Quote request'
       await resend.emails.send({
         from: 'noreply@numat.ph',
         // Same as the contact form: upsertInboundLead assigns this to Erica, so

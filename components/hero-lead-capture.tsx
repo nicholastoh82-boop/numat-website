@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 export default function HeroLeadCapture() {
-  const [form, setForm] = useState({ name: '', company: '', email: '', interest: 'sample' })
+  const [form, setForm] = useState({ name: '', company: '', email: '', interest: 'quote' })
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
   const handleSubmit = async () => {
@@ -85,24 +85,6 @@ export default function HeroLeadCapture() {
           onFocus={e => (e.target.style.borderColor = '#06b6d4')}
           onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.15)')}
         />
-
-        {/* Toggle: Sample vs Quote */}
-        <div className="flex gap-2">
-          {(['sample', 'quote'] as const).map(opt => (
-            <button
-              key={opt}
-              onClick={() => setForm(f => ({ ...f, interest: opt }))}
-              className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
-              style={{
-                background: form.interest === opt ? '#06b6d4' : 'transparent',
-                border: `1px solid ${form.interest === opt ? '#06b6d4' : 'rgba(255,255,255,0.2)'}`,
-                color: form.interest === opt ? '#fff' : 'rgba(255,255,255,0.5)',
-              }}
-            >
-              {opt === 'sample' ? '🌿 Free Sample' : '📋 Get Quote'}
-            </button>
-          ))}
-        </div>
 
         <button
           onClick={handleSubmit}
