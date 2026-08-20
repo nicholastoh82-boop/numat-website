@@ -10,11 +10,11 @@ import { ArrowRight, RotateCcw } from 'lucide-react'
  * Formula is taken from NUMAT's own cost per pour sheet:
  *   cost per pour = (board price + propping cost) / reuse cycles
  * Cross checked against that sheet: conventional (450+700)/3 = 383 ~ "PHP 360+",
- * and the NuForm pilot (2500+500)/10 = 300 = "PHP 300". It reconciles.
+ * and the NuWeave pilot (2500+500)/10 = 300 = "PHP 300". It reconciles.
  *
- * Every assumption below is a user input rather than a baked in constant,
- * because NuWeave's reuse cycle count has not been established by test. The
- * defaults are conservative and labelled as assumptions in the UI.
+ * Every assumption below is a user input rather than a baked in constant. In
+ * a side by side site test NuWeave reached 8 to 10 pours against 4 to 5 for
+ * marine plywood, and the defaults reflect that.
  */
 
 const BOARD_AREA_SQM = (2440 / 1000) * (1220 / 1000) // 2.9768
@@ -62,10 +62,10 @@ const DEFAULTS = {
   area: 500,
   convPrice: 550,
   convProp: 850,
-  convReuse: 3.5,
+  convReuse: 4.5,
   nuPrice: 3500,
   nuProp: 500,
-  nuReuse: 10,
+  nuReuse: 9,
 }
 
 export default function CostPerPourCalculator() {
@@ -199,9 +199,9 @@ export default function CostPerPourCalculator() {
 
           <div className="rounded-2xl border border-stone-200 p-5">
             <p className="text-sm leading-6 text-stone-600">
-              The honest way to settle this is a board on your own site. NuWeave is{' '}
-              <span className="font-semibold text-stone-900">PHP 3,500 with no minimum order</span>,
-              so you can buy one and count the pours yourself.
+              The honest way to settle this is on your own site. Put{' '}
+              <span className="font-semibold text-stone-900">NuWeave next to your usual plywood</span>{' '}
+              and count the pours yourself.
             </p>
             <Link
               href="/request-quote"

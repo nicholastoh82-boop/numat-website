@@ -69,7 +69,7 @@ const SHEETS: Record<string, Sheet> = {
         { feature: 'Moisture resistance', values: [5, 3, 1, 1, 5] },
         { feature: 'Screw holding', values: [5, 4, 2, 2, 2] },
         { feature: 'Surface hardness', values: [5, 3, 3, 2, 4] },
-        { feature: 'Reusability (formwork)', values: ['30+ uses', '10 to 20 uses', 'N/A', 'N/A', '50+ uses'] },
+        { feature: 'Reusability (formwork)', values: ['8 to 10 uses', '4 to 5 uses', 'N/A', 'N/A', '50+ uses'] },
         { feature: 'Sustainability', values: [5, 2, 1, 1, 1] },
         { feature: 'Cost efficiency', values: [5, 3, 2, 2, 2] },
       ],
