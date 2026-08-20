@@ -75,7 +75,7 @@ const trustPoints = [
   'DOST tested',
   'Philippine sourced and made',
   'Sustainably harvested',
-  'No minimum order',
+  'Low minimum order',
   'Fast quote turnaround',
 ]
 
@@ -275,8 +275,8 @@ export default function NumatHomepage() {
               <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                 <span className="text-lg font-semibold text-stone-950">{priceLabel}</span>
                 <span className="text-sm text-stone-600">a board.</span>
-                <span className="text-sm font-semibold text-emerald-900">No minimum order.</span>
-                <span className="text-sm text-stone-600">Buy one and try it on site.</span>
+                <span className="text-sm font-semibold text-emerald-900">Minimum order 10 panels.</span>
+                <span className="text-sm text-stone-600">Prove it on your own site.</span>
               </div>
 
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
