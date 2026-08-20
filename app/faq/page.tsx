@@ -48,7 +48,7 @@ const faqs = [
   {
     question: 'Can NuWeave be used for concrete formwork and wet conditions?',
     answer:
-      'Yes. NuWeave is built for concrete formwork. The interwoven mats spread load across the whole sheet, so the board holds its line across repeated pours where conventional substrates start to bulge. It is used for wall, column, slab, and beam forming. For NuHybrid and NuBam CLB, which are intended for furniture, cabinetry, and interior or architectural surfaces, please consult our technical team to confirm suitability for high humidity or exposed conditions.',
+      'Yes. NuWeave is built for concrete formwork. The interwoven mats spread load across the whole sheet, so the board holds its line across repeated pours where conventional substrates start to bulge. On a site running both side by side, NuWeave reached 8 to 10 pours against 4 to 5 for marine plywood. It is used for wall, column, slab, and beam forming. For NuHybrid and NuBam CLB, which are intended for furniture, cabinetry, and interior or architectural surfaces, please consult our technical team to confirm suitability for high humidity or exposed conditions.',
   },
   {
     question: 'What are the production and lead times?',

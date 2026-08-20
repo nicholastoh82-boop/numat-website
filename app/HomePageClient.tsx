@@ -203,7 +203,7 @@ const manufacturing = [
 ]
 
 const comparison = [
-  { feature: 'Reuse cycles before failure', nuweave: 'Designed for repeated pours', plywood: 'Bulges after a few pours' },
+  { feature: 'Reuse cycles before failure', nuweave: '8 to 10 pours, proven on site', plywood: '4 to 5 pours' },
   { feature: 'Load spread', nuweave: 'Interwoven mats across the sheet', plywood: 'Layered veneer' },
   { feature: 'Philippine made', nuweave: 'Yes', plywood: 'Usually imported' },
   { feature: 'Renewable in 3 to 5 years', nuweave: 'Yes', plywood: 'No, decades for hardwood' },

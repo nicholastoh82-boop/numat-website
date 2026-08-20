@@ -240,7 +240,7 @@ export const applicationDetails: ApplicationItem[] = [
         title: 'Why It Works',
         body: [
           'Phenolic surface releases cleanly and resists moisture',
-          'Designed for 30 or more reuses',
+          'Proven on site to reach 8 to 10 pours, versus 4 to 5 for marine plywood',
           'DOST tested to ASTM D1037 for strength and stability',
           'Made from rapidly renewable bamboo',
         ],
