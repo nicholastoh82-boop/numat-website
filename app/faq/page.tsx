@@ -33,7 +33,7 @@ const faqs = [
   {
     question: 'What is the minimum order quantity (MOQ)?',
     answer:
-      'There is no minimum order at the moment. You can order a single board of any of the three products. For bulk, container, or recurring supply pricing, contact our sales team.',
+      'The minimum order is 10 panels per product. For bulk, container, or recurring supply pricing, contact our sales team.',
   },
   {
     question: 'How do I request a quote?',

@@ -107,7 +107,7 @@ const rows: CompareRow[] = [
   {
     category: 'Commercial',
     attribute: 'MOQ',
-    nubam: { value: '1 piece', rating: 'excellent' },
+    nubam: { value: '10 panels', rating: 'excellent' },
     plywood: { value: 'Varies', rating: 'good' },
     mdf: { value: 'Varies', rating: 'good' },
     solidwood: { value: 'Varies', rating: 'average' },
