@@ -104,8 +104,8 @@ export const solutions: SolutionItem[] = [
       { label: 'Surface grain options', value: 'Horizontal or vertical' },
       { label: 'Application', value: 'Interior walls' },
     ],
-    boardSlug: 'nubam-clb',
-    boardName: 'NuBam CLB',
+    boardSlug: 'nuweave',
+    boardName: 'NuWev',
   },
   {
     slug: 'columns-and-beams',
@@ -196,8 +196,8 @@ export const solutions: SolutionItem[] = [
       { label: 'Surface grain options', value: 'Horizontal or vertical' },
       { label: 'Application', value: 'Beams and columns, non load bearing' },
     ],
-    boardSlug: 'nubam-clb',
-    boardName: 'NuBam CLB',
+    boardSlug: 'nuweave',
+    boardName: 'NuWev',
   },
   {
     slug: 'furniture',
@@ -238,7 +238,7 @@ export const solutions: SolutionItem[] = [
       { label: 'Base', value: 'Solid cross base with a solid panel' },
       { label: 'Surface grain options', value: 'Horizontal or vertical' },
     ],
-    boardSlug: 'nubam-clb',
-    boardName: 'NuBam CLB',
+    boardSlug: 'nuhybrid',
+    boardName: 'NuBrid',
   },
 ]

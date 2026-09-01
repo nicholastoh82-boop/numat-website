@@ -1,6 +1,6 @@
 /**
  * Native technical content for a product, driven by the product data sheet.
- * Keyed by slug so each board can carry its own verified figures. NuWeave is
+ * Keyed by slug so each board can carry its own verified figures. NuWev is
  * populated from the DOST tested TDS (source of truth). Add other slugs as
  * their data sheets are finalised. Renders nothing for products without a
  * sheet, so it is safe to mount on every product page.
@@ -53,7 +53,7 @@ const SHEETS: Record<string, Sheet> = {
     ],
     dostNote:
       'Independently tested to ASTM D1037 by the DOST Regional Standards and Testing Laboratory. Results apply to the samples submitted and may vary by configuration, thickness, moisture content and manufacturing lot.',
-    dataSheet: '/docs/NuWeave-Technical-Data-Sheet.pdf',
+    dataSheet: '/docs/NuWev-Technical-Data-Sheet.pdf',
     applications: [
       'Interior wall panels',
       'Cabinets and furniture',
@@ -63,7 +63,7 @@ const SHEETS: Record<string, Sheet> = {
       'Partitions',
     ],
     comparison: {
-      columns: ['NuWeave', 'Plywood', 'MDF', 'Particle board', 'Plastic formwork'],
+      columns: ['NuWev', 'Plywood', 'MDF', 'Particle board', 'Plastic formwork'],
       rows: [
         { feature: 'Strength', values: [5, 4, 2, 2, 3] },
         { feature: 'Moisture resistance', values: [5, 3, 1, 1, 5] },

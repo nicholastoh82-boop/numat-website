@@ -48,6 +48,8 @@ const nextConfig = {
       { source: '/products/nucomposite', destination: '/products/nuhybrid', permanent: true },
       // Free samples were removed; testers place a minimum order instead.
       { source: '/request-samples', destination: '/request-quote', permanent: true },
+      // NuBam CLB deactivated as a product; its page redirects to the products list.
+      { source: '/products/nubam-clb', destination: '/products', permanent: true },
     ];
   },
 }

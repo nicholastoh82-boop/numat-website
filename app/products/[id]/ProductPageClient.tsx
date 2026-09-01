@@ -502,8 +502,8 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
   // These three start empty on purpose. They used to default to 'Horizontal',
   // 'premium' and '8ft', which are NuBam era values, and every current product
   // falls through to the fallback config rather than the variant driven one. The
-  // result was that a NuWeave quote line read
-  // "Model: premium | Core Type: Horizontal | Length: 8ft" when NuWeave has no
+  // result was that a NuWev quote line read
+  // "Model: premium | Core Type: Horizontal | Length: 8ft" when NuWev has no
   // model tiers, no core, and is a 2440 x 1220 sheet rather than a length.
   // Empty means the spec builder omits the line and the core filter does not
   // exclude variants that correctly have no core.

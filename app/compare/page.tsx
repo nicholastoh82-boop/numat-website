@@ -162,7 +162,7 @@ export default function ComparePage() {
                 Material Comparison
               </p>
               <h1 className="mt-3 text-4xl font-bold tracking-tight text-stone-950 sm:text-5xl">
-                NuBam vs Plywood vs MDF vs Solid Wood
+                NuBrid vs Plywood vs MDF vs Solid Wood
               </h1>
               <p className="mt-4 text-lg leading-8 text-stone-600">
                 A practical side-by-side comparison to help buyers, specifiers, and
@@ -220,7 +220,7 @@ export default function ComparePage() {
                       Attribute
                     </div>
                     {[
-                      { label: 'NuBam', sub: 'Engineered Bamboo', highlight: true },
+                      { label: 'NuBrid', sub: 'Engineered Bamboo', highlight: true },
                       { label: 'Plywood', sub: 'Hardwood / Softwood', highlight: false },
                       { label: 'MDF', sub: 'Medium Density Fibre', highlight: false },
                       { label: 'Solid Wood', sub: 'Hardwood Species', highlight: false },
@@ -276,7 +276,7 @@ export default function ComparePage() {
 
           {/* Disclaimer */}
           <p className="mt-8 text-xs text-stone-400">
-            All data based on published literature, DOST / ASTM D1037 testing (NuBam), and industry references.
+            All data based on published literature, DOST / ASTM D1037 testing (NuBrid), and industry references.
             Values are indicative ranges. Actual performance may vary by grade, species, and configuration.
             Contact NuMat Bamboo for product-specific technical data.
           </p>

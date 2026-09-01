@@ -15,7 +15,7 @@ type CurrencyContextValue = {
   lineTotalPhpFromUsd: (usdAmount: number | null | undefined, qty: number) => number | null
   formatPhpAmount: (phpAmount: number | null | undefined) => string
   exchangeRate: number
-  // PHP based pricing. NuWeave and everything priced after it authors its list
+  // PHP based pricing. NuWev and everything priced after it authors its list
   // price in PHP and converts outward at the rate of the day.
   convertFromPhp: (phpAmount: number | null | undefined) => number | null
   formatConvertedFromPhp: (phpAmount: number | null | undefined) => string

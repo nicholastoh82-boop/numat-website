@@ -20,7 +20,7 @@ export const applicationDetails: ApplicationItem[] = [
     cardDescription:
       'Boards for tables, cabinetry and custom furniture, from a smooth MDF substitute to premium cross laminated panels.',
     intro:
-      'NUMAT engineered bamboo is well suited to furniture, from cabinet bodies and panels to premium tables and worktops. NuHybrid gives a smooth, machinable surface in place of MDF, while NuBam CLB brings the strength and finish for visible, higher load pieces.',
+      'NUMAT engineered bamboo is well suited to furniture, from cabinet bodies and panels to premium tables and worktops. NuBrid gives a smooth, machinable surface in place of MDF for these pieces.',
     sections: [
       {
         title: 'Best Fit',
@@ -35,8 +35,8 @@ export const applicationDetails: ApplicationItem[] = [
       {
         title: 'Recommended Products',
         body: [
-          'NuHybrid for cabinetry, furniture bodies and panels that need a smooth, machinable surface in place of MDF',
-          'NuBam CLB for premium tables, worktops and structural furniture elements',
+          'NuBrid for cabinetry, furniture bodies and panels that need a smooth, machinable surface in place of MDF',
+          'NuBrid for premium tables, worktops and furniture elements',
           'The CLB Furniture solution for round tables on a solid cross base',
         ],
       },
@@ -85,8 +85,8 @@ export const applicationDetails: ApplicationItem[] = [
         title: 'Recommended Products',
         body: [
           'The CLB Wall Panels solution, tongue and groove at 14 mm, for interior walls and feature walls',
-          'NuBam CLB for architectural panels and premium joinery',
-          'NuHybrid for interior cabinetry and panel work',
+          'NuBrid for architectural panels and premium joinery',
+          'NuBrid for interior cabinetry and panel work',
         ],
       },
       {
@@ -135,7 +135,7 @@ export const applicationDetails: ApplicationItem[] = [
         body: [
           'The CLB Wall Panels solution for feature walls and paneling',
           'The CLB Columns and Beams solution for clad structure and pavilions',
-          'NuBam CLB and NuHybrid for cabinetry, shelving and joinery',
+          'NuBrid for cabinetry, shelving and joinery',
         ],
       },
       {
@@ -182,7 +182,7 @@ export const applicationDetails: ApplicationItem[] = [
       {
         title: 'Recommended Product',
         body: [
-          'NuBam CLB at 16 mm for wrapping column and beam members',
+          'NuWev for wrapping column and beam members',
           'Tongue and groove joints for a concealed, seamless surface',
           'Sized to wrap 8 by 8 inch members, columns up to 6 m and beams up to 3 m',
         ],
@@ -214,9 +214,9 @@ export const applicationDetails: ApplicationItem[] = [
     slug: 'concrete-formwork',
     title: 'Concrete Formwork',
     cardDescription:
-      'NuWeave woven bamboo board built for concrete forming, with a phenolic surface and strong reuse.',
+      'NuWev woven bamboo board built for concrete forming, with a phenolic surface and strong reuse.',
     intro:
-      'NuWeave woven bamboo mat board is built for concrete formwork. The phenolic surface strips clean and stands up to repeated pours, giving a strong, moisture resistant panel that competes with film faced plywood on reuse and cost.',
+      'NuWev woven bamboo mat board is built for concrete formwork. The phenolic surface strips clean and stands up to repeated pours, giving a strong, moisture resistant panel that competes with film faced plywood on reuse and cost.',
     sections: [
       {
         title: 'Best Fit',
@@ -231,7 +231,7 @@ export const applicationDetails: ApplicationItem[] = [
       {
         title: 'Recommended Product',
         body: [
-          'NuWeave woven bamboo mat board with a phenolic film on both sides',
+          'NuWev woven bamboo mat board with a phenolic film on both sides',
           'Available from 10 to 20 mm thick',
           'Standard sheet size 1220 by 2440 mm',
         ],
@@ -255,7 +255,7 @@ export const applicationDetails: ApplicationItem[] = [
       },
     ],
     ctas: [
-      { label: 'View NuWeave', href: '/products/nuweave' },
+      { label: 'View NuWev', href: '/products/nuweave' },
       { label: 'Request Quote', href: '/request-quote' },
     ],
   },

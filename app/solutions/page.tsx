@@ -12,7 +12,7 @@ const SITE = 'https://numatbamboo.com'
 export const metadata: Metadata = {
   title: 'Solutions | Engineered Bamboo Systems | NuMat Bamboo',
   description:
-    'Finished engineered bamboo systems built from NuBam CLB: interior wall panels, column and beam cladding, and furniture.',
+    'Finished engineered bamboo systems built from NuWev and NuBrid: interior wall panels, column and beam cladding, and furniture.',
   alternates: { canonical: `${SITE}/solutions` },
 }
 
@@ -34,8 +34,8 @@ export default function SolutionsPage() {
                 Finished systems, built from our boards
               </h1>
               <p className="mt-4 text-lg leading-8 text-stone-600">
-                Beyond raw panels, we build ready to install engineered bamboo systems from NuBam
-                CLB. Wall panels, column and beam cladding, and furniture, all designed for a clean
+                Beyond raw panels, we build ready to install engineered bamboo systems from NuWev and
+                NuBrid. Wall panels, column and beam cladding, and furniture, all designed for a clean
                 finish and a fast install.
               </p>
             </div>

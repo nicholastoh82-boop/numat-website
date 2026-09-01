@@ -4,7 +4,7 @@ interface QuoteEmailData {
   quoteDate?: string
   /**
    * Currency of every amount below, as an ISO code. Required, not optional:
-   * this template used to print bare numbers, so a NuWeave board quoted to a
+   * this template used to print bare numbers, so a NuWev board quoted to a
    * Malaysian lead read as "231" with nothing to say it meant MYR 231.25 and
    * not PHP 231.
    */
