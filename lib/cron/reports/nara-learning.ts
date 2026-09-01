@@ -170,7 +170,7 @@ export async function runNaraWeeklyLearning() {
     method: "POST",
     headers: anthropicHeaders(),
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 3000,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: JSON.stringify(pkg, null, 2) }],
