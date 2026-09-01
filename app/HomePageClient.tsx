@@ -105,8 +105,8 @@ const benefits = [
  * Nothing is averaged, rounded, interpolated or restated.
  *
  * The certificates name each sample by its own coding, not by product name.
- * Nick confirmed two of those codings: the Amakan Board sample is NuWeave and
- * the Hybrid Amakan Board sample is NuHybrid. Those two carry the product
+ * Nick confirmed two of those codings: the Amakan Board sample is NuWev and
+ * the Hybrid Amakan Board sample is NuBrid. Those two carry the product
  * name as the heading with the certificate coding shown beside it, so a buyer
  * or auditor can still tie the figure back to the paper.
  *
@@ -124,7 +124,7 @@ type DostReport = {
 
 const dostReports: DostReport[] = [
   {
-    heading: 'NuWeave',
+    heading: 'NuWev',
     certifiedAs: 'Amakan Board',
     method: 'ASTM D1037, Static Bending',
     analysed: '16 June 2026',
@@ -134,7 +134,7 @@ const dostReports: DostReport[] = [
     ],
   },
   {
-    heading: 'NuHybrid',
+    heading: 'NuBrid',
     certifiedAs: 'Hybrid Amakan Board',
     method: 'ASTM D1037, Static Bending',
     analysed: '16 June 2026',
@@ -268,7 +268,7 @@ export default function NumatHomepage() {
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-7 text-stone-700 sm:text-lg">
-                NuWeave is woven bamboo mat pressed under high heat and high pressure into a
+                NuWev is woven bamboo mat pressed under high heat and high pressure into a
                 16 mm three ply board. Proudly made in the Philippines.
               </p>
 
@@ -309,8 +309,8 @@ export default function NumatHomepage() {
               <div className="relative h-[320px] overflow-hidden rounded-[1.5rem] sm:h-[440px]">
                 <PlaceholderImage
                   src="/nuweave/numat-bamboo-formwork-construction-site.jpg"
-                  alt="NuWeave engineered bamboo panel"
-                  label="Hero image: NuWeave board on site"
+                  alt="NuWev engineered bamboo panel"
+                  label="Hero image: NuWev board on site"
                 />
               </div>
             </div>
@@ -339,10 +339,10 @@ export default function NumatHomepage() {
         {/* 2b. Partnerships and investor: high on the page for credibility */}
         <PartnersSection />
 
-        {/* 3. Why NuWeave */}
+        {/* 3. Why NuWev */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
-            Why NuWeave
+            Why NuWev
           </p>
           <h2 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
             Stronger boards, straighter concrete, lower cost per pour
@@ -580,10 +580,10 @@ export default function NumatHomepage() {
           </div>
         </section>
 
-        {/* 7. NuWeave vs plywood */}
+        {/* 7. NuWev vs plywood */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
           <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-            NuWeave vs traditional plywood
+            NuWev vs traditional plywood
           </h2>
 
           <div className="mt-8 overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
@@ -591,7 +591,7 @@ export default function NumatHomepage() {
               <thead className="bg-stone-50">
                 <tr>
                   <th className="px-6 py-4 font-semibold text-stone-500">Feature</th>
-                  <th className="px-6 py-4 font-semibold text-stone-950">NuWeave</th>
+                  <th className="px-6 py-4 font-semibold text-stone-950">NuWev</th>
                   <th className="px-6 py-4 font-semibold text-stone-500">Traditional plywood</th>
                 </tr>
               </thead>
@@ -797,7 +797,7 @@ export default function NumatHomepage() {
         <section className="mx-auto max-w-7xl px-6 pb-14 lg:px-8">
           <div className="relative overflow-hidden rounded-[2rem] bg-stone-950 px-8 py-12 text-white shadow-xl lg:px-12 lg:py-16">
             <div className="absolute inset-0 opacity-30">
-              <PlaceholderImage src="/nuweave/numat-engineered-bamboo-formwork-panels.jpg" alt="NuWeave board" label="" />
+              <PlaceholderImage src="/nuweave/numat-engineered-bamboo-formwork-panels.jpg" alt="NuWev board" label="" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-black/70" />
 
@@ -806,7 +806,7 @@ export default function NumatHomepage() {
                 Next step
               </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Ready to build with NuWeave?
+                Ready to build with NuWev?
               </h2>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <Link

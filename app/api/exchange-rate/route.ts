@@ -22,7 +22,7 @@ const SUPPORTED_CURRENCIES = new Set([
  * GET /api/exchange-rate?currency=MYR&base=PHP
  *
  * `base` defaults to USD so every existing caller keeps its previous behaviour.
- * NuWeave pricing is authored in PHP, so the product surfaces pass base=PHP and
+ * NuWev pricing is authored in PHP, so the product surfaces pass base=PHP and
  * convert outward from the PHP list price at the rate of the day.
  */
 export async function GET(request: NextRequest) {
