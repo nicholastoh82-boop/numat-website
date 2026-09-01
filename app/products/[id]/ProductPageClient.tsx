@@ -101,6 +101,7 @@ type SelectOption = {
   label: string
   value: string
   disabled?: boolean
+  hint?: string
 }
 
 type ResolvedQuoteState = {
@@ -394,14 +395,59 @@ function OptionPills({
   onChange,
   options,
   lockAll,
+  radio,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   options: SelectOption[]
   lockAll?: boolean
+  radio?: boolean
 }) {
   if (!options.length) return null
+
+  if (radio) {
+    return (
+      <div>
+        <label className="mb-3 block text-sm font-medium text-foreground">{label}</label>
+        <div className="space-y-2">
+          {options.map((opt) => {
+            const isActive = value === opt.value
+            const isDisabled = lockAll === true || opt.disabled === true
+
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => !isDisabled && onChange(opt.value)}
+                disabled={isDisabled}
+                title={isDisabled ? 'Out of stock' : undefined}
+                className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                  isDisabled
+                    ? 'cursor-not-allowed border-black/10 bg-white opacity-40 line-through'
+                    : isActive
+                    ? 'border-[#16361f] bg-[#16361f]/[0.06] shadow-sm'
+                    : 'border-black/10 bg-white hover:border-black/20 hover:bg-stone-50'
+                }`}
+              >
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    isActive ? 'border-[#16361f]' : 'border-black/25'
+                  }`}
+                >
+                  {isActive && <span className="h-2.5 w-2.5 rounded-full bg-[#16361f]" />}
+                </span>
+                <span className="flex-1 text-sm font-medium text-foreground">{opt.label}</span>
+                {opt.hint && (
+                  <span className="text-sm font-semibold text-[#16361f]">{opt.hint}</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -561,7 +607,7 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
 
   const useVariantDrivenConfig =
     pricedVariants.length > 0 &&
-    (family === 'nubam-boards' || family === 'nuwall' || family === 'nuslat' || family === 'nufloor' || family === 'nudoor')
+    (family === 'nubam-boards' || family === 'nuwall' || family === 'nuslat' || family === 'nufloor' || family === 'nudoor' || family === 'other')
 
   const nudoorGradeOptions = useMemo<SelectOption[]>(() => {
     if (family !== 'nudoor') return []
@@ -764,7 +810,33 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
       ? options.lengths ?? []
       : []
 
+  const otherThicknessRadioOptions = useMemo<SelectOption[]>(() => {
+    if (!useVariantDrivenConfig || family !== 'other') return []
+    return variantThicknessOptions.map((opt) => {
+      const variant = pricedVariants.find(
+        (v) =>
+          formatThicknessLabel(v.thickness_mm) === opt.value &&
+          v.in_stock !== false &&
+          v.is_available !== false
+      )
+      const pricePhp = variant?.base_price_php ?? null
+      return {
+        ...opt,
+        hint: pricePhp != null ? formatPhpAmount(convertFromPhp(pricePhp)) : undefined,
+      }
+    })
+  }, [useVariantDrivenConfig, family, variantThicknessOptions, pricedVariants, convertFromPhp, formatPhpAmount])
+
   useEffect(() => {
+    if (useVariantDrivenConfig && family === 'other') {
+      const firstThickness =
+        variantThicknessOptions.find((o) => !o.disabled)?.value ??
+        variantThicknessOptions[0]?.value ??
+        ''
+      if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
+      return
+    }
+
     if (useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')) {
       const firstCore = coreTypeOptions[0]?.value ?? ''
       const firstThickness = thicknessOptionsForBoards[0]?.value ?? ''
@@ -830,6 +902,7 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
     slatThicknessOptions,
     slatLengthOptions,
     nudoorGradeOptions,
+    variantThicknessOptions,
   ])
 
   useEffect(() => {
@@ -1387,6 +1460,16 @@ export default function ProductPageClient({ initialProduct }: ProductPageClientP
                         options={slatThicknessOptions}
                       />
                     </>
+                  )}
+
+                  {family === 'other' && otherThicknessRadioOptions.length > 0 && (
+                    <OptionPills lockAll={repricingLock}
+                      radio
+                      label="Thickness"
+                      value={selectedThickness}
+                      onChange={setSelectedThickness}
+                      options={otherThicknessRadioOptions}
+                    />
                   )}
 
                   <div className="rounded-[26px] border border-black/8 bg-[#faf6ef] p-5">
