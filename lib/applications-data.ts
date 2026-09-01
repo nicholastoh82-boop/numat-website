@@ -20,7 +20,7 @@ export const applicationDetails: ApplicationItem[] = [
     cardDescription:
       'Boards for tables, cabinetry and custom furniture, from a smooth MDF substitute to premium cross laminated panels.',
     intro:
-      'NUMAT engineered bamboo is well suited to furniture, from cabinet bodies and panels to premium tables and worktops. NuBrid gives a smooth, machinable surface in place of MDF, while NuBam CLB brings the strength and finish for visible, higher load pieces.',
+      'NUMAT engineered bamboo is well suited to furniture, from cabinet bodies and panels to premium tables and worktops. NuBrid gives a smooth, machinable surface in place of MDF for these pieces.',
     sections: [
       {
         title: 'Best Fit',
