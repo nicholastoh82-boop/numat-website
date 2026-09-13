@@ -214,9 +214,9 @@ export const applicationDetails: ApplicationItem[] = [
     slug: 'concrete-formwork',
     title: 'Concrete Formwork',
     cardDescription:
-      'NuWev woven bamboo board built for concrete forming, with a phenolic surface and strong reuse.',
+      'NuForm engineered bamboo formwork board, built for casting and forming concrete on site.',
     intro:
-      'NuWev woven bamboo mat board is built for concrete formwork. The phenolic surface strips clean and stands up to repeated pours, giving a strong, moisture resistant panel that competes with film faced plywood on reuse and cost.',
+      'NuForm is our concrete formwork board, built for casting and forming concrete on site. It holds its line across repeated pours, reaching 8 to 10 pours on site versus 4 to 5 for marine plywood, in the standard 4 by 8 ft panel.',
     sections: [
       {
         title: 'Best Fit',
@@ -231,17 +231,16 @@ export const applicationDetails: ApplicationItem[] = [
       {
         title: 'Recommended Product',
         body: [
-          'NuWev woven bamboo mat board with a phenolic film on both sides',
-          'Available from 10 to 20 mm thick',
+          'NuForm engineered bamboo formwork board',
+          'Available from 12 to 18 mm thick',
           'Standard sheet size 1220 by 2440 mm',
         ],
       },
       {
         title: 'Why It Works',
         body: [
-          'Phenolic surface releases cleanly and resists moisture',
+          'Holds its line across repeated pours',
           'Proven on site to reach 8 to 10 pours, versus 4 to 5 for marine plywood',
-          'DOST tested to ASTM D1037 for strength and stability',
           'Made from rapidly renewable bamboo',
         ],
       },
@@ -250,12 +249,11 @@ export const applicationDetails: ApplicationItem[] = [
         body: [
           'Seal cut edges for the longest service life',
           'Keep the surface clean between pours',
-          'Request samples to evaluate the surface and release',
         ],
       },
     ],
     ctas: [
-      { label: 'View NuWev', href: '/products/nuweave' },
+      { label: 'View NuForm', href: '/products/nuform' },
       { label: 'Request Quote', href: '/request-quote' },
     ],
   },
