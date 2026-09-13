@@ -236,8 +236,8 @@ export default function NumatHomepage() {
       })
     : []
 
-  const nuweave = products.find((p) => p.slug === 'nuweave') ?? null
-  const variant = nuweave?.variants?.[0] ?? null
+  const nuform = products.find((p) => p.slug === 'nuform') ?? null
+  const variant = nuform?.variants?.[0] ?? null
 
   const priceLabel = variant?.is_price_on_request
     ? 'Price on request'
@@ -268,8 +268,8 @@ export default function NumatHomepage() {
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-7 text-stone-700 sm:text-lg">
-                NuWev is woven bamboo mat pressed under high heat and high pressure into a
-                16 mm three ply board. Proudly made in the Philippines.
+                NuForm is a phenolic faced woven bamboo formwork panel, built for casting and
+                forming concrete on site. Proudly made in the Philippines.
               </p>
 
               <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
@@ -284,7 +284,7 @@ export default function NumatHomepage() {
                   href="/request-quote"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-stone-950 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-stone-900"
                 >
-                  Request a sample
+                  Request a quote
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
@@ -309,8 +309,8 @@ export default function NumatHomepage() {
               <div className="relative h-[320px] overflow-hidden rounded-[1.5rem] sm:h-[440px]">
                 <PlaceholderImage
                   src="/nuweave/numat-bamboo-formwork-construction-site.jpg"
-                  alt="NuWev engineered bamboo panel"
-                  label="Hero image: NuWev board on site"
+                  alt="NuForm engineered bamboo formwork panel"
+                  label="Hero image: NuForm formwork panels on site"
                 />
               </div>
             </div>
@@ -339,10 +339,10 @@ export default function NumatHomepage() {
         {/* 2b. Partnerships and investor: high on the page for credibility */}
         <PartnersSection />
 
-        {/* 3. Why NuWev */}
+        {/* 3. Why NuForm */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
-            Why NuWev
+            Why NuForm
           </p>
           <h2 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
             Stronger boards, straighter concrete, lower cost per pour
@@ -580,10 +580,10 @@ export default function NumatHomepage() {
           </div>
         </section>
 
-        {/* 7. NuWev vs plywood */}
+        {/* 7. NuForm vs plywood */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
           <h2 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-            NuWev vs traditional plywood
+            NuForm vs traditional plywood
           </h2>
 
           <div className="mt-8 overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
@@ -591,7 +591,7 @@ export default function NumatHomepage() {
               <thead className="bg-stone-50">
                 <tr>
                   <th className="px-6 py-4 font-semibold text-stone-500">Feature</th>
-                  <th className="px-6 py-4 font-semibold text-stone-950">NuWev</th>
+                  <th className="px-6 py-4 font-semibold text-stone-950">NuForm</th>
                   <th className="px-6 py-4 font-semibold text-stone-500">Traditional plywood</th>
                 </tr>
               </thead>
@@ -797,7 +797,7 @@ export default function NumatHomepage() {
         <section className="mx-auto max-w-7xl px-6 pb-14 lg:px-8">
           <div className="relative overflow-hidden rounded-[2rem] bg-stone-950 px-8 py-12 text-white shadow-xl lg:px-12 lg:py-16">
             <div className="absolute inset-0 opacity-30">
-              <PlaceholderImage src="/nuweave/numat-engineered-bamboo-formwork-panels.jpg" alt="NuWev board" label="" />
+              <PlaceholderImage src="/nuweave/numat-engineered-bamboo-formwork-panels.jpg" alt="NuForm formwork panels" label="" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-black/70" />
 
@@ -806,14 +806,14 @@ export default function NumatHomepage() {
                 Next step
               </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Ready to build with NuWev?
+                Ready to build with NuForm?
               </h2>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <Link
                   href="/request-quote"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-stone-950 transition duration-300 hover:-translate-y-0.5 hover:bg-stone-100"
                 >
-                  Request a sample
+                  Request a quote
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
