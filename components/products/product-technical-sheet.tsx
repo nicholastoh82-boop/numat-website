@@ -1,6 +1,6 @@
 /**
  * Native technical content for a product, driven by the product data sheet.
- * Keyed by slug so each board can carry its own verified figures. NuWev is
+ * Keyed by slug so each board can carry its own verified figures. NuForm is
  * populated from the DOST tested TDS (source of truth). Add other slugs as
  * their data sheets are finalised. Renders nothing for products without a
  * sheet, so it is safe to mount on every product page.
@@ -22,9 +22,9 @@ type Sheet = {
 }
 
 const SHEETS: Record<string, Sheet> = {
-  nuweave: {
+  nuform: {
     specs: [
-      { label: 'Thickness options', value: '4, 8, 12, 16 and 20 mm' },
+      { label: 'Thickness options', value: '12, 14, 16 and 18 mm' },
       { label: 'Standard width', value: '1220 mm (4 ft)' },
       { label: 'Standard length', value: '2440 mm (8 ft)' },
       { label: 'Density (typical)', value: '800 to 1,000 kg/m3' },
@@ -53,17 +53,16 @@ const SHEETS: Record<string, Sheet> = {
     ],
     dostNote:
       'Independently tested to ASTM D1037 by the DOST Regional Standards and Testing Laboratory. Results apply to the samples submitted and may vary by configuration, thickness, moisture content and manufacturing lot.',
-    dataSheet: '/docs/NuWev-Technical-Data-Sheet.pdf',
+    dataSheet: '/docs/NuForm-Technical-Data-Sheet.pdf',
     applications: [
-      'Interior wall panels',
-      'Cabinets and furniture',
-      'Concrete formwork',
-      'Industrial panels',
-      'Packaging and crates',
-      'Partitions',
+      'Concrete formwork panels',
+      'Wall and column forming',
+      'Slab and beam soffit forming',
+      'Precast and cast in place concrete',
+      'Industrial and infrastructure projects',
     ],
     comparison: {
-      columns: ['NuWev', 'Plywood', 'MDF', 'Particle board', 'Plastic formwork'],
+      columns: ['NuForm', 'Plywood', 'MDF', 'Particle board', 'Plastic formwork'],
       rows: [
         { feature: 'Strength', values: [5, 4, 2, 2, 3] },
         { feature: 'Moisture resistance', values: [5, 3, 1, 1, 5] },

@@ -23,12 +23,12 @@ const faqs = [
   {
     question: 'What products does NuMat Bamboo offer?',
     answer:
-      'NuMat Bamboo supplies two engineered bamboo boards, both in the standard 2440 mm x 1220 mm (4 by 8 ft) panel size across a range of thicknesses. NuWev, a woven bamboo board for concrete formwork and interior finishing, from PHP 1,000. NuBrid, a bamboo composite panel and MDF substitute for furniture and cabinetry, from PHP 3,500. Prices are ex factory and exclude shipping. See each product page for the full thickness and price list.',
+      'NuMat Bamboo supplies three engineered bamboo boards, all in the standard 2440 mm x 1220 mm (4 by 8 ft) panel size. NuWev, a woven bamboo board for interior wall cladding and as a laminating substrate, from PHP 1,000. NuBrid, a bamboo composite panel and MDF substitute for furniture and cabinetry, from PHP 3,500. NuForm, a phenolic faced woven bamboo board built for concrete formwork, from PHP 1,800. Prices are ex factory and exclude shipping. See each product page for the full thickness and price list.',
   },
   {
-    question: 'What is the difference between NuWev and NuBrid?',
+    question: 'What is the difference between NuWev, NuBrid, and NuForm?',
     answer:
-      'Both share the standard 2440 mm x 1220 mm (4 by 8 ft) panel size and come in a range of thicknesses. The difference is construction and use. NuWev is woven bamboo mats pressed under heat and pressure, and does two jobs: concrete formwork across repeated pours, and interior finishing where you want the weave visible in the face. NuBrid is built around a woven bamboo mat with bamboo sawdust filling the weave, a smooth and machinable MDF substitute for furniture and cabinetry.',
+      'All three share the standard 2440 mm x 1220 mm (4 by 8 ft) panel size. The difference is construction and use. NuWev is a plain woven bamboo board for interior wall cladding and as a substrate to be laminated with other finishes. NuForm is the same woven board faced with phenolic film on both sides and built for concrete formwork, holding its line across repeated pours. NuBrid is built around a woven bamboo mat with bamboo sawdust filling the weave, a smooth and machinable MDF substitute for furniture and cabinetry.',
   },
   {
     question: 'What is the minimum order quantity (MOQ)?',
@@ -46,9 +46,9 @@ const faqs = [
       'We no longer provide free samples. To evaluate the boards, place a minimum order of the product you want to test and request a quote through our website. The minimum order is 10 panels. That way you assess the actual board you would buy, at full size and finish, rather than a small offcut.',
   },
   {
-    question: 'Can NuWev be used for concrete formwork and wet conditions?',
+    question: 'Can NuForm be used for concrete formwork and wet conditions?',
     answer:
-      'Yes. NuWev is built for concrete formwork. The interwoven mats spread load across the whole sheet, so the board holds its line across repeated pours where conventional substrates start to bulge. On a site running both side by side, NuWev reached 8 to 10 pours against 4 to 5 for marine plywood. It is used for wall, column, slab, and beam forming. For NuBrid, which is intended for furniture, cabinetry, and interior or architectural surfaces, please consult our technical team to confirm suitability for high humidity or exposed conditions.',
+      'Yes. NuForm is built for concrete formwork. The interwoven mats spread load across the whole sheet, and the phenolic film faces strip clean, so the board holds its line across repeated pours where conventional substrates start to bulge. On a site running both side by side, NuForm reached 8 to 10 pours against 4 to 5 for marine plywood. It is used for wall, column, slab, and beam forming. NuWev and NuBrid are for interior and furniture use rather than formwork, so please consult our technical team on suitability for exposed or wet conditions.',
   },
   {
     question: 'What are the production and lead times?',
