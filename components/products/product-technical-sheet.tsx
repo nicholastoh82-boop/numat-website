@@ -45,14 +45,11 @@ const SHEETS: Record<string, Sheet> = {
       'Phenolic film (bottom)',
     ],
     dost: [
-      { label: 'Modulus of elasticity (MOE)', value: '4,210.56 MPa' },
-      { label: 'Modulus of rupture (MOR)', value: '89.01 MPa' },
-      { label: 'Internal bond strength', value: '1.24 MPa' },
-      { label: 'Water absorption (24 hr)', value: '12.7%' },
-      { label: 'Thickness swelling', value: '3.2%' },
+      { label: 'Modulus of rupture (MOR)', value: '29.57 MPa' },
+      { label: 'Modulus of elasticity (MOE)', value: '5,107.32 MPa' },
     ],
     dostNote:
-      'Independently tested to ASTM D1037 by the DOST Regional Standards and Testing Laboratory. Results apply to the samples submitted and may vary by configuration, thickness, moisture content and manufacturing lot.',
+      'Independently tested to ASTM D1037 by the DOST Regional Standards and Testing Laboratory (certificate 2026-0088M). Results apply to the samples submitted and may vary by configuration, thickness, moisture content and manufacturing lot.',
     dataSheet: '/docs/NuForm-Technical-Data-Sheet.pdf',
     applications: [
       'Concrete formwork panels',
