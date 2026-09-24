@@ -13,6 +13,8 @@ import {
   authorized,
   gmailListInboxSince,
   gmailMarkRead,
+  isGmailAuthError,
+  logGmailAuthError,
   repEmailFor,
   supabaseRpc,
   type GmailMessageSummary,
@@ -102,7 +104,8 @@ async function processRep(rep: RepKey): Promise<{ rep: RepKey; scanned: number; 
   try {
     messages = await gmailListInboxSince(rep, POLL_WINDOW_MINUTES, 50);
   } catch (err) {
-    console.error(`bounce-catcher poll ${rep} failed:`, err);
+    if (isGmailAuthError(err)) logGmailAuthError(err);
+    else console.error(`bounce-catcher poll ${rep} failed:`, err);
     return { rep, scanned: 0, logged: 0 };
   }
 

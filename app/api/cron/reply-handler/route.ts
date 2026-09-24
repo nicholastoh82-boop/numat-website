@@ -24,6 +24,8 @@ import {
   authorized,
   gmailListInboxSince,
   gmailMarkRead,
+  isGmailAuthError,
+  logGmailAuthError,
   gmailCreateReplyDraft,
   sendGmail,
   supabaseGetRaw,
@@ -272,7 +274,8 @@ async function processRep(
     messages = await gmailListInboxSince(rep, POLL_WINDOW_MINUTES, 50);
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    console.error(`poll ${rep} failed:`, errMsg);
+    if (isGmailAuthError(err)) logGmailAuthError(err);
+    else console.error(`poll ${rep} failed:`, errMsg);
     return { rep, scanned: 0, processed: 0, matched: 0, hot: 0, classify_errors: 0, error: errMsg };
   }
 
@@ -352,7 +355,8 @@ async function processRep(
         html,
       });
     } catch (err) {
-      console.error(`notification email failed for ${fromEmail}:`, err);
+      if (isGmailAuthError(err)) logGmailAuthError(err);
+      else console.error(`notification email failed for ${fromEmail}:`, err);
     }
 
     // Step 4b: pre-draft a reply in the rep's Gmail Drafts, threaded to the
@@ -391,7 +395,8 @@ async function processRep(
           });
         }
       } catch (err) {
-        console.error(`draft reply failed for ${fromEmail}:`, err);
+        if (isGmailAuthError(err)) logGmailAuthError(err);
+        else console.error(`draft reply failed for ${fromEmail}:`, err);
       }
     }
 

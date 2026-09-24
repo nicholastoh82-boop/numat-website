@@ -14,6 +14,9 @@ export const dynamic = 'force-dynamic';
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.readonly',
+  // gmail.modify lets the reply handler and bounce catcher crons mark messages
+  // read and save reply drafts (lib/cron/helpers.ts checks for it).
+  'https://www.googleapis.com/auth/gmail.modify',
   'https://www.googleapis.com/auth/drive.readonly',
   'https://www.googleapis.com/auth/userinfo.email',
 ];

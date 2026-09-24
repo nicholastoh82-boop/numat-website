@@ -4,7 +4,8 @@
 //   - authorized(req): Bearer CRON_SECRET verification with constant-time compare
 //   - required(name): env var reader that throws on missing
 //   - supabaseGet / supabasePost / supabasePatch / supabaseRpc: typed REST helpers
-//   - sendGmail: send plain-text email via Gmail API using a rep's OAuth refresh token
+//   - sendGmail: send email via Gmail API as a rep (portal token from rep_gmail_tokens,
+//     falling back to the legacy per rep env var; see repAccessToken)
 
 export type RepKey = "Nick" | "Mohan" | "Bryan" | "Eugene" | "Erica";
 
@@ -112,12 +113,82 @@ export async function supabaseRpc<T = unknown>(fn: string, params: Record<string
 }
 
 // ============================================================================
-// Gmail send
+// Gmail auth
 // ============================================================================
+//
+// Token source, in order:
+//   1. rep_gmail_tokens (the portal "connect Gmail" flow at /api/gmail/auth),
+//      the same active row lib/gmail.ts getValidAccessToken reads. These tokens
+//      were issued to GOOGLE_CLIENT_ID, so they are refreshed with that client.
+//   2. The legacy per rep env var (GOOGLE_REFRESH_TOKEN_<REP>), refreshed with
+//      GOOGLE_OAUTH_CLIENT_ID. Used only when the rep has no active portal row,
+//      or when the portal row lacks a scope the operation needs.
 
-async function getAccessToken(refreshToken: string): Promise<string> {
-  const clientId = required("GOOGLE_OAUTH_CLIENT_ID");
-  const clientSecret = required("GOOGLE_OAUTH_CLIENT_SECRET");
+// What a Gmail call needs the token to allow.
+type GmailNeed = "read" | "modify" | "send" | "compose";
+
+const SCOPE_FULL = "https://mail.google.com/";
+const SCOPE_MODIFY = "https://www.googleapis.com/auth/gmail.modify";
+const SCOPE_READONLY = "https://www.googleapis.com/auth/gmail.readonly";
+const SCOPE_SEND = "https://www.googleapis.com/auth/gmail.send";
+const SCOPE_COMPOSE = "https://www.googleapis.com/auth/gmail.compose";
+
+// Any one of these scopes satisfies the need.
+const SCOPES_FOR_NEED: Record<GmailNeed, string[]> = {
+  read: [SCOPE_READONLY, SCOPE_MODIFY, SCOPE_FULL],
+  modify: [SCOPE_MODIFY, SCOPE_FULL],
+  send: [SCOPE_SEND, SCOPE_COMPOSE, SCOPE_MODIFY, SCOPE_FULL],
+  compose: [SCOPE_COMPOSE, SCOPE_MODIFY, SCOPE_FULL],
+};
+
+export function gmailReconnectUrl(rep: RepKey): string {
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "https://numatbamboo.com";
+  return `${base}/api/gmail/auth?rep_email=${encodeURIComponent(REP_EMAIL[rep])}`;
+}
+
+// Thrown when a rep's Gmail credentials are unusable (revoked or expired
+// refresh token, or a missing scope). The message is a single line naming the
+// rep and the reconnect URL, so callers can log err.message as is.
+export class GmailAuthError extends Error {
+  readonly rep: RepKey;
+  readonly reason: "invalid_grant" | "missing_scope" | "no_token";
+  readonly reconnectUrl: string;
+  constructor(rep: RepKey, reason: GmailAuthError["reason"], detail: string) {
+    const url = gmailReconnectUrl(rep);
+    super(`[Gmail auth] ${rep} (${REP_EMAIL[rep]}): ${detail}. ${rep} must reconnect Gmail at ${url}`);
+    this.name = "GmailAuthError";
+    this.rep = rep;
+    this.reason = reason;
+    this.reconnectUrl = url;
+  }
+}
+
+export function isGmailAuthError(err: unknown): err is GmailAuthError {
+  return err instanceof GmailAuthError;
+}
+
+// Log a GmailAuthError once per rep and reason every few minutes, so a cron
+// that touches many messages does not repeat the same line for each one.
+const recentAuthLogs = new Map<string, number>();
+const AUTH_LOG_TTL_MS = 4 * 60_000;
+
+export function logGmailAuthError(err: GmailAuthError): void {
+  const key = `${err.rep}:${err.reason}`;
+  const last = recentAuthLogs.get(key) ?? 0;
+  if (Date.now() - last < AUTH_LOG_TTL_MS) return;
+  recentAuthLogs.set(key, Date.now());
+  console.error(err.message);
+}
+
+type TokenRefreshResult = { accessToken: string; expiresInSec: number };
+
+async function refreshAccessToken(
+  rep: RepKey,
+  refreshToken: string,
+  clientId: string,
+  clientSecret: string,
+  sourceLabel: string,
+): Promise<TokenRefreshResult> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -128,12 +199,149 @@ async function getAccessToken(refreshToken: string): Promise<string> {
       grant_type: "refresh_token",
     }).toString(),
   });
-  const json = (await res.json()) as { access_token?: string; error?: string; error_description?: string };
+  const json = (await res.json().catch(() => ({}))) as {
+    access_token?: string;
+    expires_in?: number;
+    error?: string;
+    error_description?: string;
+  };
   if (!res.ok || !json.access_token) {
-    throw new Error(`OAuth refresh failed: ${json.error ?? res.status} ${json.error_description ?? ""}`);
+    if (json.error === "invalid_grant") {
+      throw new GmailAuthError(
+        rep,
+        "invalid_grant",
+        `Google rejected the refresh token from ${sourceLabel} (invalid_grant: revoked or expired)`,
+      );
+    }
+    throw new Error(
+      `OAuth refresh failed for ${rep} (${sourceLabel}): ${json.error ?? res.status} ${json.error_description ?? ""}`.trim(),
+    );
   }
-  return json.access_token;
+  return { accessToken: json.access_token, expiresInSec: json.expires_in ?? 3600 };
 }
+
+type PortalTokenRow = {
+  id: string;
+  refresh_token: string;
+  access_token: string | null;
+  token_expires_at: string | null;
+  scope: string | null;
+};
+
+async function getPortalTokenRow(rep: RepKey): Promise<PortalTokenRow | null> {
+  const rows = await supabaseGet<PortalTokenRow[]>("rep_gmail_tokens", {
+    select: "id,refresh_token,access_token,token_expires_at,scope",
+    rep_email: `eq.${REP_EMAIL[rep]}`,
+    is_active: "eq.true",
+    limit: "1",
+  });
+  return rows[0] ?? null;
+}
+
+function hasScopeFor(scope: string | null, need: GmailNeed): boolean {
+  const granted = new Set((scope ?? "").split(/\s+/).filter(Boolean));
+  return SCOPES_FOR_NEED[need].some((s) => granted.has(s));
+}
+
+// In memory access token cache, so one cron run does not refresh (or hit
+// Supabase) for every message it touches.
+const accessTokenCache = new Map<string, { token: string; expiresAt: number }>();
+
+function cachedToken(key: string): string | null {
+  const hit = accessTokenCache.get(key);
+  return hit && hit.expiresAt - Date.now() > 60_000 ? hit.token : null;
+}
+
+async function portalAccessToken(rep: RepKey, row: PortalTokenRow): Promise<string> {
+  const cacheKey = `portal:${rep}:${row.id}`;
+  const cached = cachedToken(cacheKey);
+  if (cached) return cached;
+
+  // Reuse the access token lib/gmail.ts stored if it still has a minute left.
+  const storedExpiry = row.token_expires_at ? new Date(row.token_expires_at).getTime() : 0;
+  if (row.access_token && storedExpiry - Date.now() > 60_000) {
+    accessTokenCache.set(cacheKey, { token: row.access_token, expiresAt: storedExpiry });
+    return row.access_token;
+  }
+
+  const { accessToken, expiresInSec } = await refreshAccessToken(
+    rep,
+    row.refresh_token,
+    required("GOOGLE_CLIENT_ID"),
+    required("GOOGLE_CLIENT_SECRET"),
+    "rep_gmail_tokens",
+  );
+  const expiresAt = Date.now() + expiresInSec * 1000;
+  accessTokenCache.set(cacheKey, { token: accessToken, expiresAt });
+
+  const nowIso = new Date().toISOString();
+  try {
+    await supabasePatch(`rep_gmail_tokens?id=eq.${row.id}`, {
+      access_token: accessToken,
+      token_expires_at: new Date(expiresAt).toISOString(),
+      last_used_at: nowIso,
+    });
+  } catch (err) {
+    console.error(`[Gmail auth] ${rep}: could not store refreshed access token:`, err instanceof Error ? err.message : err);
+  }
+  return accessToken;
+}
+
+async function envAccessToken(rep: RepKey, envName: string, refreshToken: string): Promise<string> {
+  const cacheKey = `env:${rep}`;
+  const cached = cachedToken(cacheKey);
+  if (cached) return cached;
+  const { accessToken, expiresInSec } = await refreshAccessToken(
+    rep,
+    refreshToken,
+    required("GOOGLE_OAUTH_CLIENT_ID"),
+    required("GOOGLE_OAUTH_CLIENT_SECRET"),
+    `env var ${envName}`,
+  );
+  accessTokenCache.set(cacheKey, { token: accessToken, expiresAt: Date.now() + expiresInSec * 1000 });
+  return accessToken;
+}
+
+// Get a Gmail access token for the rep that allows `need`. Prefers the portal
+// token in rep_gmail_tokens and falls back to the legacy env var only when no
+// active row exists (or, with a logged warning, when the row lacks the scope).
+async function repAccessToken(rep: RepKey, need: GmailNeed): Promise<string> {
+  const envName = REP_REFRESH_TOKEN_ENV[rep];
+  if (!envName) throw new Error(`Unknown rep: ${rep}`);
+  const envToken = process.env[envName];
+
+  let row: PortalTokenRow | null = null;
+  try {
+    row = await getPortalTokenRow(rep);
+  } catch (err) {
+    console.error(
+      `[Gmail auth] ${rep}: could not read rep_gmail_tokens, trying ${envName}:`,
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  if (row) {
+    if (hasScopeFor(row.scope, need)) return portalAccessToken(rep, row);
+
+    const missing = new GmailAuthError(
+      rep,
+      "missing_scope",
+      `connected Gmail token lacks the "${need}" permission (needs one of ${SCOPES_FOR_NEED[need].join(", ")})`,
+    );
+    if (!envToken) throw missing;
+    // Keep working on the legacy token while the rep has not reconnected yet.
+    logGmailAuthError(missing);
+  }
+
+  if (!envToken) {
+    throw new GmailAuthError(rep, "no_token", `no connected Gmail token and ${envName} is not set`);
+  }
+  return envAccessToken(rep, envName, envToken);
+}
+
+// ============================================================================
+// Gmail send
+// ============================================================================
 
 function toBase64Url(input: Buffer | string): string {
   const buf = typeof input === "string" ? Buffer.from(input, "utf-8") : input;
@@ -154,19 +362,9 @@ type SendGmailOpts = {
   }>;
 };
 
-// Resolve a rep's Gmail refresh token from their per rep env var. Portal
-// connected tokens live in rep_gmail_tokens and are used by the canonical Gmail
-// send and sync paths, not here.
-async function resolveRefreshToken(rep: RepKey): Promise<string> {
-  const envName = REP_REFRESH_TOKEN_ENV[rep];
-  if (!envName) throw new Error(`Unknown rep: ${rep}`);
-  return required(envName);
-}
-
 export async function sendGmail(opts: SendGmailOpts): Promise<string> {
-  const refreshToken = await resolveRefreshToken(opts.from);
   const fromEmail = REP_EMAIL[opts.from];
-  const accessToken = await getAccessToken(refreshToken);
+  const accessToken = await repAccessToken(opts.from, "send");
 
   const subjectEncoded = `=?utf-8?B?${Buffer.from(opts.subject, "utf-8").toString("base64")}?=`;
   const topHeaders: string[] = [
@@ -242,9 +440,8 @@ export async function gmailCreateReplyDraft(opts: {
   threadId: string;
   inReplyToMessageIdHeader?: string; // the RFC822 Message-ID of the message being replied to
 }): Promise<string> {
-  const refreshToken = await resolveRefreshToken(opts.rep);
   const fromEmail = REP_EMAIL[opts.rep];
-  const accessToken = await getAccessToken(refreshToken);
+  const accessToken = await repAccessToken(opts.rep, "compose");
 
   const subjectEncoded = `=?utf-8?B?${Buffer.from(opts.subject, "utf-8").toString("base64")}?=`;
   const headers: string[] = [
@@ -283,8 +480,8 @@ export async function gmailCreateReplyDraft(opts: {
 // Gmail read / modify (for Reply Handler + Bounce Catcher)
 // ============================================================================
 
-// Requires the rep's OAuth refresh token to have gmail.modify or readonly scope
-// in addition to gmail.send.
+// Listing needs gmail.readonly (or gmail.modify); marking read and labelling
+// need gmail.modify. See repAccessToken above.
 
 export type GmailMessageSummary = {
   id: string;
@@ -298,10 +495,6 @@ export type GmailMessageSummary = {
   labelIds: string[];
   messageIdHeader?: string; // the RFC822 Message-ID header, for threading replies
 };
-
-async function repAccessToken(rep: RepKey): Promise<string> {
-  return getAccessToken(await resolveRefreshToken(rep));
-}
 
 function decodeBase64Url(s: string): string {
   const padded = s.replace(/-/g, "+").replace(/_/g, "/");
@@ -367,7 +560,7 @@ async function gmailListByFolderSince(
   minutes: number,
   maxResults: number,
 ): Promise<GmailMessageSummary[]> {
-  const accessToken = await repAccessToken(rep);
+  const accessToken = await repAccessToken(rep, "read");
   const cutoffEpoch = Math.floor((Date.now() - Math.max(60, minutes * 60) * 1000) / 1000);
   const q = `in:${folder} after:${cutoffEpoch}`;
   const listUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${encodeURIComponent(q)}`;
@@ -422,7 +615,7 @@ async function gmailGetMessage(
  * outreach.
  */
 export async function gmailGetThreadMessages(rep: RepKey, threadId: string): Promise<GmailMessageSummary[]> {
-  const accessToken = await repAccessToken(rep);
+  const accessToken = await repAccessToken(rep, "read");
   const url = `https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
   if (!res.ok) {
@@ -474,7 +667,7 @@ export function parseEmailAddress(headerValue: string | undefined): string {
  */
 export async function gmailMarkRead(rep: RepKey, messageId: string): Promise<void> {
   try {
-    const accessToken = await repAccessToken(rep);
+    const accessToken = await repAccessToken(rep, "modify");
     await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`, {
       method: "POST",
       headers: {
@@ -484,7 +677,8 @@ export async function gmailMarkRead(rep: RepKey, messageId: string): Promise<voi
       body: JSON.stringify({ removeLabelIds: ["UNREAD"] }),
     });
   } catch (err) {
-    console.error(`gmailMarkRead (${rep}, ${messageId}) failed:`, err);
+    if (isGmailAuthError(err)) logGmailAuthError(err);
+    else console.error(`gmailMarkRead (${rep}, ${messageId}) failed:`, err);
   }
 }
 
@@ -493,7 +687,7 @@ export async function gmailMarkRead(rep: RepKey, messageId: string): Promise<voi
  */
 export async function gmailAddLabel(rep: RepKey, messageId: string, labelId: string): Promise<void> {
   try {
-    const accessToken = await repAccessToken(rep);
+    const accessToken = await repAccessToken(rep, "modify");
     await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`, {
       method: "POST",
       headers: {
@@ -503,7 +697,8 @@ export async function gmailAddLabel(rep: RepKey, messageId: string, labelId: str
       body: JSON.stringify({ addLabelIds: [labelId] }),
     });
   } catch (err) {
-    console.error(`gmailAddLabel (${rep}, ${messageId}, ${labelId}) failed:`, err);
+    if (isGmailAuthError(err)) logGmailAuthError(err);
+    else console.error(`gmailAddLabel (${rep}, ${messageId}, ${labelId}) failed:`, err);
   }
 }
 
