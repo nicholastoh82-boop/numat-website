@@ -7,24 +7,36 @@
 // 2. logWebsiteSubmission(): appends one row to the "website" tab of the
 //    NUMAT sales tracker Google Sheet so the team can follow up on status.
 //
-// Sheet requirements (see CLAUDE.md, "Website submissions"):
-// - Must be a native Google Sheet. The Sheets API cannot write to an .xlsx
-//   file stored in Drive.
-// - Shared as Editor with the service account in GCP_SERVICE_ACCOUNT
-//   (gemini-cron-runner@numat-automation.iam.gserviceaccount.com).
-// - WEBSITE_SUBMISSIONS_SHEET_ID set in Vercel. Optional
-//   WEBSITE_SUBMISSIONS_SHEET_TAB (defaults to "website").
+// The tracker (NUMAT_Near_Term_Revenue_Tracker.xlsx) is an .xlsx file in Google
+// Drive that is already shared with the team, so it must stay that file:
+// - .xlsx: download it, append to the "website" tab only (lib/leads/xlsx-append.ts
+//   leaves every other part of the workbook byte for byte), upload it back as a
+//   new revision of the same file. Link, ID and sharing do not change.
+// - If it is ever converted to a native Google Sheet, the Sheets API append
+//   path below is used automatically instead.
+// Requirements: the file is shared as Editor with the service account in
+// GCP_SERVICE_ACCOUNT (gemini-cron-runner@numat-automation.iam.gserviceaccount.com)
+// and the Google Drive API is enabled for that GCP project.
+// Overrides: WEBSITE_SUBMISSIONS_SHEET_ID, WEBSITE_SUBMISSIONS_SHEET_TAB.
 //
 // Logging never throws: a sheet outage must not lose or block a customer's
 // submission, which is already saved in Supabase before this runs.
 
 import { getGcpAccessToken } from '@/lib/cron/gcp_auth'
+import { appendRowsToXlsx } from '@/lib/leads/xlsx-append'
 
 /** Everyone who must hear about a website order request or enquiry. */
 export const WEBSITE_ALERT_RECIPIENTS = ['nick@numat.ph', 'bryan@numat.ph', 'erica@numat.ph']
 
 const SHEETS_API = 'https://sheets.googleapis.com/v4'
-const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets'
+const DRIVE_API = 'https://www.googleapis.com/drive/v3'
+const DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+const GOOGLE_SHEET_MIME = 'application/vnd.google-apps.spreadsheet'
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+/** NUMAT_Near_Term_Revenue_Tracker.xlsx, "website" tab. */
+const DEFAULT_TRACKER_FILE_ID = '1TIwmgHhd5lbS0ucR4z8DbevGtptoE5T2'
 
 export const WEBSITE_SHEET_HEADERS = [
   'Submitted (PH time)',
@@ -89,12 +101,12 @@ function manilaTimestamp(date = new Date()): string {
   return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}`
 }
 
-/** Stop a visitor typing "=HYPERLINK(...)" and having the sheet run it. */
+/** Both write paths store text literally (inline strings / RAW), so a visitor
+ *  typing "=HYPERLINK(...)" is shown as text and never run as a formula. */
 function cell(value: string | number | null | undefined): string | number {
   if (value == null) return ''
   if (typeof value === 'number') return value
-  const text = value.replace(/\s+/g, ' ').trim().slice(0, 2000)
-  return /^[=+\-@]/.test(text) ? `'${text}` : text
+  return value.replace(/\s+/g, ' ').trim().slice(0, 2000)
 }
 
 export function buildSheetRow(s: WebsiteSubmission): (string | number)[] {
@@ -125,40 +137,71 @@ function quotedRange(tab: string, a1: string) {
   return encodeURIComponent(`'${tab.replace(/'/g, "''")}'!${a1}`)
 }
 
+async function appendToGoogleSheet(fileId: string, tab: string, row: (string | number)[], auth: Record<string, string>) {
+  const headRes = await fetch(`${SHEETS_API}/spreadsheets/${fileId}/values/${quotedRange(tab, 'A1:A1')}`, { headers: auth })
+  if (!headRes.ok) throw new Error(`read header ${headRes.status} ${await headRes.text()}`)
+  const head = (await headRes.json()) as { values?: string[][] }
+  const rows: (string | number)[][] = []
+  if (!head.values?.[0]?.[0]) rows.push([...WEBSITE_SHEET_HEADERS])
+  rows.push(row)
+  const res = await fetch(
+    `${SHEETS_API}/spreadsheets/${fileId}/values/${quotedRange(tab, 'A:P')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ values: rows }) },
+  )
+  if (!res.ok) throw new Error(`sheets append ${res.status} ${await res.text()}`)
+}
+
+async function driveMeta(fileId: string, auth: Record<string, string>) {
+  const res = await fetch(`${DRIVE_API}/files/${fileId}?fields=mimeType,modifiedTime&supportsAllDrives=true`, { headers: auth })
+  if (!res.ok) throw new Error(`drive metadata ${res.status} ${await res.text()}`)
+  return (await res.json()) as { mimeType: string; modifiedTime: string }
+}
+
 /**
- * Append one submission to the tracking sheet. Writes the header row first if
- * the tab is empty. Returns false (and logs) instead of throwing on failure.
+ * Download the .xlsx, append to one tab, upload as a new revision of the same
+ * file. If someone saved the file in between, start again from their version
+ * so their edit is kept (up to 3 attempts).
+ */
+async function appendToDriveXlsx(fileId: string, tab: string, row: (string | number)[], auth: Record<string, string>) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const before = await driveMeta(fileId, auth)
+    const dl = await fetch(`${DRIVE_API}/files/${fileId}?alt=media&supportsAllDrives=true`, { headers: auth })
+    if (!dl.ok) throw new Error(`drive download ${dl.status} ${await dl.text()}`)
+    const updated = appendRowsToXlsx(new Uint8Array(await dl.arrayBuffer()), tab, [row], [...WEBSITE_SHEET_HEADERS])
+
+    const check = await driveMeta(fileId, auth)
+    if (check.modifiedTime !== before.modifiedTime) continue
+
+    const up = await fetch(`${DRIVE_UPLOAD}/files/${fileId}?uploadType=media&supportsAllDrives=true`, {
+      method: 'PATCH',
+      headers: { ...auth, 'Content-Type': XLSX_MIME },
+      body: Buffer.from(updated),
+    })
+    if (!up.ok) throw new Error(`drive upload ${up.status} ${await up.text()}`)
+    return
+  }
+  throw new Error('tracker kept changing during upload, gave up after 3 attempts')
+}
+
+/**
+ * Append one submission to the "website" tab of the sales tracker. Returns
+ * false (and logs) instead of throwing, so a tracker problem never blocks or
+ * loses a submission; the submission is already saved in Supabase.
  */
 export async function logWebsiteSubmission(submission: WebsiteSubmission): Promise<boolean> {
-  const spreadsheetId = process.env.WEBSITE_SUBMISSIONS_SHEET_ID
+  const fileId = process.env.WEBSITE_SUBMISSIONS_SHEET_ID || DEFAULT_TRACKER_FILE_ID
   const tab = process.env.WEBSITE_SUBMISSIONS_SHEET_TAB || 'website'
-  if (!spreadsheetId) {
-    console.warn('[Website sheet] WEBSITE_SUBMISSIONS_SHEET_ID not set, skipping sheet log')
-    return false
-  }
+  const row = buildSheetRow(submission)
 
   try {
-    const token = await getGcpAccessToken([SHEETS_SCOPE])
+    const token = await getGcpAccessToken(SCOPES)
     const auth = { Authorization: `Bearer ${token}` }
-
-    const headRes = await fetch(`${SHEETS_API}/spreadsheets/${spreadsheetId}/values/${quotedRange(tab, 'A1:A1')}`, {
-      headers: auth,
-    })
-    if (!headRes.ok) throw new Error(`read header ${headRes.status} ${await headRes.text()}`)
-    const head = (await headRes.json()) as { values?: string[][] }
-    const rows: (string | number)[][] = []
-    if (!head.values?.[0]?.[0]) rows.push([...WEBSITE_SHEET_HEADERS])
-    rows.push(buildSheetRow(submission))
-
-    const appendRes = await fetch(
-      `${SHEETS_API}/spreadsheets/${spreadsheetId}/values/${quotedRange(tab, 'A:P')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
-      {
-        method: 'POST',
-        headers: { ...auth, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ values: rows }),
-      },
-    )
-    if (!appendRes.ok) throw new Error(`append ${appendRes.status} ${await appendRes.text()}`)
+    const meta = await driveMeta(fileId, auth)
+    if (meta.mimeType === GOOGLE_SHEET_MIME) {
+      await appendToGoogleSheet(fileId, tab, row, auth)
+    } else {
+      await appendToDriveXlsx(fileId, tab, row, auth)
+    }
     return true
   } catch (err) {
     console.error('[Website sheet] Failed to log submission', submission.reference ?? submission.type, err)
