@@ -32,6 +32,8 @@ export type ProductMarketing = {
   bestFor: string[]
   specs: SpecRow[]
   gallery: GalleryImage[]
+  /** Real, completed deliveries of this product, shown as proof on its page. */
+  deliveries?: Array<{ client: string; src: string; alt: string }>
 }
 
 const FORMWORK_PHOTOS: GalleryImage[] = [
@@ -130,6 +132,14 @@ export const PRODUCT_MARKETING: Record<string, ProductMarketing> = {
       { src: '/products/nubrid/nubrid-two-faces.jpg', alt: 'NuBrid panel showing the laminated face and the woven back', fit: 'contain' },
       { src: '/products/nubrid/nubrid-laminated-texture-closeup.jpg', alt: 'Close up of the NuBrid laminated bamboo face', fit: 'cover' },
       { src: '/products/nubrid/nubrid-laminated-face.jpg', alt: 'NuBrid laminated bamboo panel', fit: 'contain' },
+      { src: '/products/nubrid/nubrid-delivery-alina-resort.jpg', alt: 'Full NuBrid sheet delivered to Alina Resort', fit: 'cover' },
+    ],
+    deliveries: [
+      {
+        client: 'Alina Resort',
+        src: '/products/nubrid/nubrid-delivery-alina-resort.jpg',
+        alt: 'The NUMAT team with a full NuBrid sheet delivered to Alina Resort',
+      },
     ],
   },
 }
