@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sendNotificationEmail } from '@/lib/sendgrid'
+import { WEBSITE_ALERT_RECIPIENTS, escapeHtml, logWebsiteSubmission } from '@/lib/leads/website-intake'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -165,6 +167,53 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       console.error('Telegram alert failed:', e)
     }
+
+    try {
+      const rows: Array<[string, string | undefined | null]> = [
+        ['Name', body.full_name],
+        ['Title', body.title],
+        ['Company', body.company],
+        ['Email', body.email],
+        ['Phone', body.phone],
+        ['Preferred contact', body.preferred_contact],
+        ['Project', body.project_name],
+        ['Type', (body.project_types || []).join(', ')],
+        ['Stage', (body.project_stages || []).join(', ')],
+        ['Support', (body.support_types || []).join(', ')],
+        ['Timeline', body.timeline],
+        ['Budget', body.budget],
+        ['Wants consultation', body.follow_up],
+        ['Description', body.project_description],
+      ]
+      await sendNotificationEmail({
+        to: WEBSITE_ALERT_RECIPIENTS,
+        subject: `New website project qualification: ${body.full_name} (${body.company})`,
+        html: `<div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:640px;">
+          <h2 style="margin:0 0 12px;">New project qualification from the website</h2>
+          <table style="border-collapse:collapse;">${rows
+            .map(([k, v]) => `<tr><td style="padding:4px 12px 4px 0;color:#555;vertical-align:top;">${k}</td><td style="padding:4px 0;">${escapeHtml(v) || 'Not given'}</td></tr>`)
+            .join('')}</table>
+          <p style="margin:12px 0 0;color:#555;">Logged on the website tab of the sales tracker for follow up.</p>
+        </div>`,
+      })
+    } catch (e) {
+      console.error('Qualification email alert failed:', e)
+    }
+
+    await logWebsiteSubmission({
+      type: 'Project qualification',
+      reference: `QUAL-${String(lead.id).slice(0, 8)}`,
+      source: 'Website qualification form',
+      name: body.full_name,
+      company: body.company,
+      email: body.email,
+      phone: body.phone,
+      preferredReply: body.preferred_contact,
+      application: [body.project_name, (body.project_types || []).join(', '), body.timeline, body.budget]
+        .filter(Boolean)
+        .join(' | '),
+      message: body.project_description,
+    })
 
     return NextResponse.json({ ok: true, lead_id: lead.id })
   } catch (err: any) {

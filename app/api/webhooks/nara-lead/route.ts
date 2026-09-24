@@ -8,7 +8,9 @@
 // Expected JSON body (all optional, driven by the chatbot's captured state):
 //   { contact_name, email, phone, company, country, location, industry, notes }
 
-import { sendGmail, supabaseGetRaw, supabasePost } from "@/lib/cron/helpers";
+import { supabaseGetRaw, supabasePost } from "@/lib/cron/helpers";
+import { sendNotificationEmail } from "@/lib/sendgrid";
+import { WEBSITE_ALERT_RECIPIENTS, escapeHtml, logWebsiteSubmission } from "@/lib/leads/website-intake";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -104,7 +106,7 @@ export async function POST(req: Request) {
       const fullName = body.contact_name ?? firstName ?? "Unknown";
       const companyBit = body.company ? ` (${body.company})` : "";
       const emailBody =
-        `Hi ${repName},\n\n` +
+        `Hi team,\n\n` +
         `A new lead just came in through the NUMAT website chatbot.\n\n` +
         `Name: ${fullName}\n` +
         `Company: ${body.company ?? "Not provided"}\n` +
@@ -116,15 +118,29 @@ export async function POST(req: Request) {
         `${notesPreview || "No notes captured"}\n\n` +
         `CRM: https://numatbamboo.com/crm\n\n` +
         `NUMAT Automation\n`;
-      await sendGmail({
-        from: "Nick",
-        to: repEmail,
+      // Nick, Bryan and Erica all hear about every chatbot lead. Sent through
+      // Resend like the other website alerts, not Nick's Gmail, so an expired
+      // Gmail token (invalid_grant) can never silence it.
+      await sendNotificationEmail({
+        to: WEBSITE_ALERT_RECIPIENTS,
         subject: `New website lead: ${fullName}${companyBit}`,
-        text: emailBody,
+        html: `<pre style="font-family:Arial,Helvetica,sans-serif;white-space:pre-wrap;">${escapeHtml(emailBody)}</pre>`,
       });
     } catch (err) {
       console.error("NARA lead alert email failed:", err);
     }
+
+    await logWebsiteSubmission({
+      type: "Chatbot lead",
+      reference: leadId ? `NARA-${leadId.slice(0, 8)}` : null,
+      source: "NARA website chat",
+      name: body.contact_name ?? null,
+      company: body.company ?? null,
+      email: email || null,
+      phone: body.phone ?? null,
+      application: body.industry ?? null,
+      message: notesPreview || null,
+    });
 
     return Response.json({ ok: true, lead_id: leadId, rep: repEmail });
   } catch (err) {

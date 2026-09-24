@@ -39,8 +39,8 @@ export default function AboutPage() {
                   Building a Sustainable Future with Bamboo
                 </h1>
                 <p className="mt-6 text-lg leading-8 text-stone-600">
-                  NuMat Bamboo is a Singapore-founded, Philippines-manufactured engineered bamboo company.
-                  We supply commercial-grade boards to furniture makers, architects, contractors,
+                  NuMat Bamboo is an engineered bamboo company founded in Singapore and manufacturing in the Philippines.
+                  We supply commercial grade boards to furniture makers, architects, contractors,
                   and sourcing teams across Southeast Asia and beyond.
                 </p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -86,8 +86,8 @@ export default function AboutPage() {
               {[
                 { value: '50+', label: 'Local Bamboo Farmers', icon: Users },
                 { value: 'Singapore', label: 'Headquarters', icon: Globe },
-                { value: 'Sustainably Harvested', label: 'Certified plantation sourcing', icon: ShieldCheck },
-                { value: 'Climate Positive', label: 'Carbon-negative lifecycle', icon: Leaf },
+                { value: 'Sustainably Harvested', label: 'Sourced from Philippine bamboo farms', icon: ShieldCheck },
+                { value: 'Stores Carbon', label: 'Bamboo carbon locked into every board', icon: Leaf },
               ].map((stat) => (
                 <div key={stat.label} className="rounded-[1.75rem] border border-stone-200 bg-white px-6 py-5 shadow-sm">
                   <div className="flex items-center gap-3">
@@ -117,7 +117,7 @@ export default function AboutPage() {
                 <div className="mt-6 space-y-5 text-base leading-7 text-stone-600">
                   <p>
                     Founded in Singapore with manufacturing facilities in Manolo Fortich, Bukidnon, Philippines,
-                    NuMat Bamboo emerged from a simple observation — the construction and design industry
+                    NuMat Bamboo emerged from a simple observation: the construction and design industry
                     needed better, more sustainable materials.
                   </p>
                   <p>
@@ -129,7 +129,7 @@ export default function AboutPage() {
                   </p>
                   <p>
                     Today, we support furniture manufacturers, architects, contractors, developers,
-                    and sourcing teams with commercial-grade bamboo materials built for real projects.
+                    and sourcing teams with commercial grade bamboo materials built for real projects.
                   </p>
                 </div>
               </div>
@@ -144,16 +144,16 @@ export default function AboutPage() {
                   {
                     icon: Users,
                     title: '50+ Local Farmers',
-                    body: 'We work directly with local bamboo farming communities through fair-trade partnerships that support livelihoods and supply chain integrity.',
+                    body: 'We work directly with local bamboo farming communities through fair, direct partnerships that support livelihoods and supply chain integrity.',
                   },
                   {
                     icon: Award,
                     title: 'Wavemaker Impact Backed',
-                    body: "Portfolio company of Southeast Asia's leading climate-tech investor — independently verifying our carbon-negative impact claims.",
+                    body: "Portfolio company of Wavemaker Impact, Southeast Asia's leading climate tech investor.",
                   },
                   {
                     icon: Zap,
-                    title: 'Export-Ready Supply',
+                    title: 'Export Ready Supply',
                     body: 'Commercial documentation, technical data sheets, and procurement support available for serious buyers and project teams.',
                   },
                 ].map((item) => (
@@ -190,22 +190,22 @@ export default function AboutPage() {
               {
                 icon: ShieldCheck,
                 title: 'DOST / ASTM D1037 Tested',
-                body: 'Mechanical testing completed to international standards — MOR, MOE, compression, and hardness data available for specification.',
+                body: 'Mechanical testing completed to international standards: MOR, MOE, compression, and hardness data available for specification.',
               },
               {
                 icon: Leaf,
-                title: 'Sustainable Sourcing & Carbon-Negative',
-                body: 'All products sourced from sustainable plantations. Carbon-negative lifecycle verified by Wavemaker Impact.',
+                title: 'Sustainable Sourcing',
+                body: 'All products are made from fast growing Philippine bamboo, harvested from plantations that regrow from the same root.',
               },
               {
                 icon: Award,
-                title: 'Investor-Backed Credibility',
-                body: "Backed by Wavemaker Impact, Southeast Asia's leading climate-tech VC — giving buyers confidence in our long-term supply capability.",
+                title: 'Investor Backed Credibility',
+                body: "Backed by Wavemaker Impact, Southeast Asia's leading climate tech VC, giving buyers confidence in our long term supply capability.",
               },
               {
                 icon: MapPin,
                 title: 'Philippine Manufacturing',
-                body: 'Produced in Bukidnon using Giant Asper bamboo — a strong, dense species ideal for engineered board applications.',
+                body: 'Produced in Bukidnon using Giant Asper bamboo, a strong, dense species ideal for engineered board applications.',
               },
               {
                 icon: Users,
@@ -244,14 +244,14 @@ export default function AboutPage() {
                 {
                   icon: Target,
                   title: 'Mission',
-                  body: 'To provide procurement-ready engineered bamboo materials that help commercial buyers choose lower-impact alternatives without compromising performance, finish, or supply support.',
+                  body: 'To provide procurement ready engineered bamboo materials that help commercial buyers choose lower impact alternatives without compromising performance, finish, or supply support.',
                   color: 'bg-blue-50',
                   iconColor: 'text-blue-700',
                 },
                 {
                   icon: Leaf,
                   title: 'Sustainability',
-                  body: 'Every decision we make prioritizes environmental impact. Our products are certified carbon-negative and sourced from sustainable plantations.',
+                  body: 'Every decision we make prioritizes environmental impact. Our boards store the carbon their bamboo absorbed while growing, and are sourced from plantations that regrow in 3 to 5 years.',
                   color: 'bg-emerald-50',
                   iconColor: 'text-emerald-700',
                 },

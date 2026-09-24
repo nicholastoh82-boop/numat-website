@@ -144,7 +144,7 @@ export const aboutMetadata: Metadata = {
 export const contactMetadata: Metadata = {
   title: 'Contact NuMat Bamboo | Request a Quote or Sample',
   description:
-    'Get in touch with the NuMat Bamboo sales team for quotes, samples, and technical support. We respond within 24 hours. Export-ready engineered bamboo boards from the Philippines.',
+    'Get in touch with the NuMat Bamboo sales team for quotes, samples, and technical support. We respond within 24 hours. Export ready engineered bamboo boards from the Philippines.',
   alternates: { canonical: `${BASE_URL}/contact` },
   openGraph: {
     url: `${BASE_URL}/contact`,
@@ -155,15 +155,15 @@ export const contactMetadata: Metadata = {
 }
 
 export const esgMetadata: Metadata = {
-  title: 'ESG and Sustainability | NuMat Bamboo',
+  title: 'ESG and Sustainability',
   description:
-    'NuMat engineered bamboo boards are sustainably harvested from Dendrocalamus asper bamboo sequestering 66.3 tonnes of CO2 per hectare per year. Our commitment to responsible manufacturing and community development in Mindanao.',
+    'NuMat engineered bamboo boards are made from Philippine giant bamboo, a fast growing, renewable material. Growing bamboo stands absorb around 15 to 40 tonnes of CO2 per hectare each year according to peer reviewed research. Our commitment to responsible manufacturing and community development in Mindanao.',
   alternates: { canonical: `${BASE_URL}/esg` },
   openGraph: {
     url: `${BASE_URL}/esg`,
     title: 'ESG and Sustainability | NuMat Bamboo',
     description:
-      'Sustainably harvested bamboo sequestering 66.3 tonnes of CO2 per hectare per year. NuMat Bamboo commitment to responsible manufacturing and community development.',
+      'Fast growing Philippine bamboo, made into engineered boards in Bukidnon. NuMat Bamboo commitment to responsible manufacturing and community development.',
   },
 }
 

@@ -48,6 +48,9 @@ const nextConfig = {
       { source: '/products/nucomposite', destination: '/products/nuhybrid', permanent: true },
       // Free samples were removed; testers place a minimum order instead.
       { source: '/request-samples', destination: '/request-quote', permanent: true },
+      // Flooring is not in the range: the flooring comparison post was rewritten
+      // as a panels buyer's guide under a new slug.
+      { source: '/blog/bamboo-flooring-vs-hardwood-detailed-comparison-2026-04-06', destination: '/blog/engineered-bamboo-panels-vs-hardwood-plywood-mdf', permanent: true },
       // NuBam CLB deactivated as a product; its page redirects to the products list.
       { source: '/products/nubam-clb', destination: '/products', permanent: true },
       // Column and beam cladding pages were CLB only and were removed with it.

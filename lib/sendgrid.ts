@@ -63,7 +63,7 @@ export async function sendEmail(options: SendEmailOptions) {
 }
 // Plain notification email with no internal CC. Used for portal alerts
 // such as chat mention pings, so the whole team is not copied.
-export async function sendNotificationEmail(options: { to: string; subject: string; html: string }) {
+export async function sendNotificationEmail(options: { to: string | string[]; subject: string; html: string }) {
   if (!resendApiKey) {
     throw new Error('RESEND_API_KEY is not configured')
   }

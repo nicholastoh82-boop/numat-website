@@ -53,7 +53,8 @@ export default function NewsletterTopBar() {
   }
 
   return (
-    <div className="relative z-[60] bg-[#16361f] text-white">
+    // Desktop and tablet only: on phones it pushed the header and products below the fold.
+    <div className="relative z-[60] hidden bg-[#16361f] text-white md:block">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-6 lg:px-8">
         {state === 'done' ? (
           <p className="text-sm font-medium text-emerald-100">{message}</p>

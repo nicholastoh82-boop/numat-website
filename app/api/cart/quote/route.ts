@@ -5,6 +5,7 @@ import { detectSpam, sanitizeInput } from '@/lib/spam-detection'
 import { sendEmail, sendNotificationEmail } from '@/lib/sendgrid'
 import { upsertInboundLead } from '@/lib/leads/inbound'
 import { generateQuoteEmailHTML } from '@/lib/email-templates'
+import { WEBSITE_ALERT_RECIPIENTS, logWebsiteSubmission } from '@/lib/leads/website-intake'
 
 interface QuoteContact {
   name: string
@@ -33,9 +34,8 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 const RATE_LIMIT = 10
 const RATE_LIMIT_WINDOW = 60000
 
-// Recipient alerted on every inbound website quote submission. Erica heads the
-// CRM, so she gets each new request. Change this address to reroute the alert.
-const INBOUND_LEAD_NOTIFY = 'erica@numat.ph'
+// Everyone alerted on every website order request lives in
+// WEBSITE_ALERT_RECIPIENTS (lib/leads/website-intake.ts): Nick, Bryan, Erica.
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()
@@ -306,7 +306,7 @@ export async function POST(request: NextRequest) {
 
       const notifyHtml = `
     <div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:640px;">
-      <h2 style="margin:0 0 4px;">New quote request from the website</h2>
+      <h2 style="margin:0 0 4px;">New order request from the website</h2>
       <p style="margin:0 0 16px;color:#555;">Reference ${esc(createdQuoteNumber)}</p>
       <table style="border-collapse:collapse;margin-bottom:16px;">
         <tr><td style="padding:4px 12px 4px 0;color:#555;">Name</td><td style="padding:4px 0;"><strong>${esc(contact.name)}</strong></td></tr>
@@ -327,20 +327,39 @@ export async function POST(request: NextRequest) {
         </thead>
         <tbody>${itemRows}</tbody>
       </table>
-      <p style="margin:0;color:#555;">Preview total ${esc(contact.display_currency ?? 'USD')} ${Math.round(
-        contact.display_total ?? total
-      ).toLocaleString()}</p>
+      <p style="margin:0;color:#555;">Order value PHP ${Math.round(total).toLocaleString()} (priced from Supabase)${
+        contact.display_currency && contact.display_currency !== 'PHP'
+          ? `, shown to the customer as ${esc(contact.display_currency)} ${Math.round(contact.display_total ?? total).toLocaleString()}`
+          : ''
+      }</p>
+      <p style="margin:12px 0 0;color:#555;">Logged on the website tab of the sales tracker for follow up.</p>
     </div>`
 
       await sendNotificationEmail({
-        to: INBOUND_LEAD_NOTIFY,
-        subject: `New quote request: ${contact.name}${contact.company ? ` (${contact.company})` : ''}`,
+        to: WEBSITE_ALERT_RECIPIENTS,
+        subject: `New website order request ${createdQuoteNumber}: ${contact.name}${contact.company ? ` (${contact.company})` : ''}`,
         html: notifyHtml,
       })
-      console.log(`[Inbound Lead Notify] Sent to ${INBOUND_LEAD_NOTIFY} for ${createdQuoteNumber}`)
+      console.log(`[Inbound Lead Notify] Sent to ${WEBSITE_ALERT_RECIPIENTS.join(', ')} for ${createdQuoteNumber}`)
     } catch (notifyErr) {
       console.error('[Inbound Lead Notify] Failed to send:', notifyErr)
     }
+
+    // Track it on the "website" tab of the sales tracker sheet.
+    await logWebsiteSubmission({
+      type: 'Order request',
+      reference: createdQuoteNumber,
+      source: 'Website checkout',
+      name: contact.name,
+      company: contact.company,
+      email: contact.email,
+      phone: formattedPhone,
+      items: items.map((it) => ({ name: it.product_name, specs: it.product_specs, quantity: it.quantity })),
+      orderValuePhp: total,
+      preferredReply: contact.channel,
+      application: contact.application,
+      message: contact.notes,
+    })
 
     // Send email directly
     if (contact.channel === 'email') {

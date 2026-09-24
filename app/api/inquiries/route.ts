@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 import { detectSpam, sanitizeInput, validateSubmissionPattern } from '@/lib/spam-detection'
 import { upsertInboundLead } from '@/lib/leads/inbound'
+import { WEBSITE_ALERT_RECIPIENTS, logWebsiteSubmission } from '@/lib/leads/website-intake'
 
 // --- Rate Limiting Setup ---
 const rateLimitMap: Map<string, { count: number; resetTime: number }> = new Map()
@@ -197,10 +198,8 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           from: process.env.RESEND_FROM_EMAIL,
-          // Erica owns every inbound lead (see upsertInboundLead), so she gets
-          // the alert. This used to go to sales@ and nick@, which meant the
-          // person the lead was assigned to was not told it had arrived.
-          to: ['erica@numat.ph', 'sales@numat.ph'],
+          // Nick, Bryan and Erica (WEBSITE_ALERT_RECIPIENTS) plus the sales inbox.
+          to: [...WEBSITE_ALERT_RECIPIENTS, 'sales@numat.ph'],
           reply_to: email.trim().toLowerCase(),
           subject: `New Inquiry: ${subject} — ${name}`,
           html: generateInquiryNotificationHTML({
@@ -219,10 +218,22 @@ export async function POST(request: NextRequest) {
       console.error('[Inquiry Email] Failed:', emailError)
     }
 
+    await logWebsiteSubmission({
+      type: 'Contact enquiry',
+      reference: `INQ-${String(inquiry.id).slice(0, 8)}`,
+      source: 'Website contact form',
+      name: sanitizeInput(name.trim()),
+      company: company ? sanitizeInput(company.trim()) : null,
+      email: email.trim().toLowerCase(),
+      phone: phone ? sanitizeInput(phone.trim()) : null,
+      application: sanitizeInput(subject.trim()),
+      message: sanitizeInput(message.trim()),
+    })
+
     return NextResponse.json({
       ok: true,
       id: inquiry.id,
-      message: 'Thank you! We will respond within 24-48 hours.',
+      message: 'Thank you. We will respond within 24 to 48 hours.',
     })
 
   } catch (error) {

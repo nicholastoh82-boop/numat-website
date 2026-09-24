@@ -226,6 +226,12 @@ export default function NumatHomepage() {
                 <ArrowRight className="h-5 w-5 shrink-0 text-emerald-800" />
               </Link>
             </div>
+
+            <p className="max-w-4xl border-t border-stone-200 pt-8 text-lg leading-8 text-stone-700 lg:col-span-2">
+              NuMat transforms Philippine bamboo into engineered panels for construction, interiors,
+              fabrication, and new material applications. Made locally, developed for real world use,
+              and built for teams looking for better material possibilities.
+            </p>
           </div>
         </section>
 

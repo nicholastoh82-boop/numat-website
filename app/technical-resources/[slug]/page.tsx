@@ -131,7 +131,7 @@ export default async function TechnicalResourceDetailPage({ params }: PageProps)
 
                 <div className="rounded-[2rem] border border-stone-200 bg-stone-950 p-8 text-white shadow-sm">
                   <h2 className="text-2xl font-semibold">
-                    Need project-specific support?
+                    Need support for a specific project?
                   </h2>
                   <p className="mt-3 text-base leading-7 text-stone-300">
                     Contact the NuMat Bamboo team for buyer documentation, application

@@ -137,7 +137,7 @@ export function ContactForm() {
         setIsSuccess(true)
         toast({
           title: 'Message Sent!',
-          description: 'Thank you for your inquiry. We will respond within 24-48 hours.',
+          description: 'Thank you for your inquiry. We will respond within 24 to 48 hours.',
         })
         // Reset form
         setFormData({
@@ -175,7 +175,7 @@ export function ContactForm() {
         </div>
         <h3 className="font-semibold text-lg text-foreground">Message Sent!</h3>
         <p className="text-muted-foreground mt-2">
-          Thank you for your inquiry. We will respond within 24-48 hours.
+          Thank you for your inquiry. We will respond within 24 to 48 hours.
         </p>
         <Button 
           variant="outline" 

@@ -75,14 +75,22 @@ The only products that may appear anywhere customer facing, spelled exactly: NuF
 - It reads `master_leads`, `quotes`, `quote_items`, `lead_payments`, `crm_users`, `crm_viewer_settings`, `receipts` and `lead_samples`.
 - Current state: `middleware.ts` redirects `/crm/*` to `/` and returns 404 for `/api/crm/*`. Do not remove that block unless Nick asks.
 
-## 8. Leads
+## 8. Website submissions (orders and enquiries)
+- Every public form goes through `lib/leads/website-intake.ts`: checkout order requests (`app/api/cart/quote`), the contact form (`app/api/inquiries`), the quick capture bars (`app/api/capture-lead`), the project qualification form (`app/api/qualify/submit`) and NARA chatbot leads (`app/api/webhooks/nara-lead`).
+- Alerts go to `WEBSITE_ALERT_RECIPIENTS`: nick@numat.ph, bryan@numat.ph, erica@numat.ph (plus sales@ where it already was). Change recipients there only.
+- Each submission is appended as a row to the `website` tab of the NUMAT Near Term Revenue Tracker Google Sheet (columns: Submitted, Reference, Type, Source, Name, Company, Email, Phone, Products and quantities, Order value (PHP), Preferred reply, Application, Customer message, Assigned to, Status, Follow up notes). The team edits Status and Follow up notes by hand; code only appends.
+- The tracker is `NUMAT_Near_Term_Revenue_Tracker.xlsx` in Google Drive (file ID `1TIwmgHhd5lbS0ucR4z8DbevGtptoE5T2`), already shared with the team, so it stays an .xlsx. The site downloads it, appends to the `website` tab only via `lib/leads/xlsx-append.ts` (every other part of the workbook is kept byte for byte), and uploads it back as a new revision of the same file. If it is ever converted to a native Google Sheet, the Sheets API path is used automatically.
+- The file must be shared as Editor with `gemini-cron-runner@numat-automation.iam.gserviceaccount.com`, and the Google Drive API must be enabled in the `numat-automation` GCP project. Auth uses the Workload Identity Federation helper `lib/cron/gcp_auth.ts`, which only works on Vercel.
+- Sheet logging never blocks or fails a submission; failures are logged as `[Website sheet]`.
+
+## 9. Leads
 - Every lead from any source inserts into `master_leads`. Use `source` and `segment` to tell them apart. Never create a new lead table.
 - Philippines leads: bryan@numat.ph, cal.com/bryan-suarin-rxvhte/discovery
 - International leads: mohan@numat.ph, cal.com/mohanlouis/discovery
 - Nick: cal.com/numatnicholas/discovery
 - Lemuel and Arlene resigned in April 2026. Never reference or assign to them.
 
-## 9. Workflow (hard)
+## 10. Workflow (hard)
 Never push to `main`. It is protected, and Vercel deploys from it.
 
 1. Start from an up to date main and create a branch per change:
@@ -102,7 +110,7 @@ Never push to `main`. It is protected, and Vercel deploys from it.
 5. Open a pull request into `main` with a plain summary of what changed and why (no jargon). The `gh` CLI is not installed; use the URL that `git push` prints, or install it with `winget install GitHub.cli`.
 6. Nick merges in the GitHub UI.
 
-## 10. Source of truth for numbers
+## 11. Source of truth for numbers
 1. Actual reports and dashboards
 2. Bank transactions
 3. Source documents (invoices, contracts, purchase orders)
@@ -110,7 +118,7 @@ Never push to `main`. It is protected, and Vercel deploys from it.
 
 Transcripts are context only. Verify any figure before it goes into site copy, board material or investor communication.
 
-## 11. Key contacts
+## 12. Key contacts
 - Mark Sebastian: CEO
 - Bryan Suarin: COO, Philippines leads
 - Mohan Louis: Head of Growth, international leads
