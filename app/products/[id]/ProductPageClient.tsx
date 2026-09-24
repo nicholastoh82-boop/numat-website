@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -421,6 +422,29 @@ export default function ProductPageClient({ initialProduct }: { initialProduct: 
                   <Leaf className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
                   Bamboo matures in 3 to 5 years, against 20 to 40 years for traditional timber.
                 </div>
+              </div>
+            </section>
+          )}
+
+          {/* Completed deliveries */}
+          {marketing?.deliveries && marketing.deliveries.length > 0 && (
+            <section className="mt-16">
+              <h2 className="text-2xl font-semibold tracking-tight text-stone-950">Completed deliveries</h2>
+              <p className="mt-2 text-stone-600">{displayName} delivered to real projects.</p>
+              <div className="mt-6 grid gap-5 md:grid-cols-2">
+                {marketing.deliveries.map((d) => (
+                  <figure key={d.client} className="overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm">
+                    <div className="relative aspect-[16/9]">
+                      <Image src={d.src} alt={d.alt} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+                    </div>
+                    <figcaption className="flex items-center justify-between gap-3 px-5 py-4">
+                      <span className="text-lg font-semibold text-stone-950">{d.client}</span>
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-800">
+                        Delivered
+                      </span>
+                    </figcaption>
+                  </figure>
+                ))}
               </div>
             </section>
           )}
