@@ -82,6 +82,9 @@ The only products that may appear anywhere customer facing, spelled exactly: NuF
 - The tracker is `NUMAT_Near_Term_Revenue_Tracker.xlsx` in Google Drive (file ID `1TIwmgHhd5lbS0ucR4z8DbevGtptoE5T2`), already shared with the team, so it stays an .xlsx. The site downloads it, appends to the `website` tab only via `lib/leads/xlsx-append.ts` (every other part of the workbook is kept byte for byte), and uploads it back as a new revision of the same file. If it is ever converted to a native Google Sheet, the Sheets API path is used automatically.
 - The file must be shared as Editor with `gemini-cron-runner@numat-automation.iam.gserviceaccount.com`, and the Google Drive API must be enabled in the `numat-automation` GCP project. Auth uses the Workload Identity Federation helper `lib/cron/gcp_auth.ts`, which only works on Vercel.
 - Sheet logging never blocks or fails a submission; failures are logged as `[Website sheet]`.
+- Unfinished checkouts: the checkout form calls `app/api/checkout-draft` as soon as a valid email or phone is typed, which upserts the lead into `master_leads` with `last_activity_type = 'checkout_started'`. Submitting overwrites it. The cron `app/api/cron/unfinished-checkouts` (every 30 minutes, in `vercel.json`) reports leads still in that state after 30 minutes to the tracker and in one alert email, then marks them `checkout_unfinished`.
+- Price requests: when a board has no price (for example NuForm Lite), the product page shows `components/products/price-request-form.tsx`, which posts to `app/api/capture-lead` with `source: 'price-request'`.
+- Analytics: use `track()` from `lib/analytics.ts` (GA4 ecommerce names: view_item, add_to_cart, begin_checkout, generate_lead).
 
 ## 9. Leads
 - Every lead from any source inserts into `master_leads`. Use `source` and `segment` to tell them apart. Never create a new lead table.

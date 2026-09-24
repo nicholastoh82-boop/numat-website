@@ -63,6 +63,8 @@ export type WebsiteSubmissionType =
   | 'Quick enquiry'
   | 'Project qualification'
   | 'Chatbot lead'
+  | 'Price request'
+  | 'Unfinished checkout'
 
 export type WebsiteSubmission = {
   type: WebsiteSubmissionType

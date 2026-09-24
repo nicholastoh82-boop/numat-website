@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 declare const gtag: (...args: unknown[]) => void
 import { useRouter } from 'next/navigation'
@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import PhoneInput, { type Value } from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 import { toast } from '@/hooks/use-toast'
+import { track } from '@/lib/analytics'
 
 interface QuoteFormProps {
   /** Optional: the cart drawer passes this, /request-quote renders standalone. */
@@ -116,6 +117,50 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
     return lines.join('\n')
   }, [formData, phoneNumber, items, totalPhp, convertFromPhp, lineTotalFromPhp, formatPhpAmount, selectedCountry.currency])
 
+  // PHP value of the order from the list prices (unitPrice is always PHP).
+  const orderValuePhp = items.reduce(
+    (sum, item) => sum + (item.isPriceOnRequest || item.unitPrice == null ? 0 : item.unitPrice * item.quantity),
+    0,
+  )
+
+  // GA4 funnel: the shopper reached checkout with something in their order.
+  const checkoutTracked = useRef(false)
+  useEffect(() => {
+    if (checkoutTracked.current || items.length === 0) return
+    checkoutTracked.current = true
+    track('begin_checkout', {
+      currency: 'PHP',
+      value: orderValuePhp,
+      items: items.map((i) => ({ item_id: i.sku ?? i.id, item_name: i.name, price: i.unitPrice ?? undefined, quantity: i.quantity })),
+    })
+  }, [items, orderValuePhp])
+
+  // Save the shopper as a lead as soon as a valid email or phone is entered,
+  // so the team can follow up if they never submit (see /api/checkout-draft).
+  const lastDraftKey = useRef('')
+  function saveDraft() {
+    const email = formData.email.trim()
+    const phone = phoneNumber ? String(phoneNumber) : ''
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    if ((!emailOk && !phone) || items.length === 0) return
+    const key = `${emailOk ? email : ''}|${phone}`
+    if (key === lastDraftKey.current) return
+    lastDraftKey.current = key
+    fetch('/api/checkout-draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: formData.name.trim(),
+        email: emailOk ? email : '',
+        phone,
+        company: formData.company.trim(),
+        items: items.map((i) => ({ name: i.name, specs: i.specs, quantity: i.quantity })),
+        totalPhp: orderValuePhp,
+      }),
+      keepalive: true,
+    }).catch(() => {})
+  }
+
   function validateForm() {
     const nextErrors: Record<string, string> = {}
     if (!formData.name.trim()) nextErrors.name = 'Required'
@@ -173,6 +218,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
       if (!res.ok || !data?.ok) throw new Error(data?.error || 'Failed to submit your order.')
 
       gtag('event', 'quote_request', { event_category: 'conversion', event_label: 'Quote Form' })
+      track('generate_lead', { lead_type: 'order_request', currency: 'PHP', value: orderValuePhp })
 
       const quoteId = data.quoteId as string
       const quoteNumber = data.quoteNumber as string
@@ -251,6 +297,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onBlur={saveDraft}
                 placeholder="you@company.com"
                 className={cn('mt-1.5 h-11 rounded-xl', errors.email && 'border-red-400')}
                 disabled={isSubmitting}
@@ -263,7 +310,9 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
             <Label htmlFor="phone" className="text-sm font-semibold text-stone-700">
               Phone Number <span className="text-red-500">*</span>
             </Label>
-            <div className={cn(
+            <div
+              onBlur={saveDraft}
+              className={cn(
               'mt-1.5 flex h-11 w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2 text-sm focus-within:ring-1 focus-within:ring-emerald-600',
               errors.phone && 'border-red-400'
             )}>
@@ -277,6 +326,9 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
               />
             </div>
             {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
+            <p className="mt-1.5 text-xs text-stone-500">
+              We save your contact details as you type, so our team can help if you do not get to finish your order.
+            </p>
           </div>
 
           <div>

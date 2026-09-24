@@ -4,11 +4,20 @@ import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import useSWR from 'swr'
-import { CheckCircle2, Download, MessageCircle, Mail, ArrowRight, Leaf, Loader2 } from 'lucide-react'
+import { CheckCircle2, Download, MessageCircle, Mail, ArrowRight, Leaf, Loader2, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { QuoteWithItems } from '@/lib/supabase/types'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
+
+// Lead routing (CLAUDE.md): Philippine numbers to Bryan, everyone else to Mohan.
+function salesContact(phone: string | null | undefined) {
+  const digits = (phone ?? '').replace(/[^\d+]/g, '')
+  const isPH = digits.startsWith('+63') || digits.startsWith('63') || digits.startsWith('09')
+  return isPH
+    ? { name: 'Bryan', role: 'our Chief Operating Officer', calUrl: 'https://cal.com/bryan-suarin-rxvhte/discovery' }
+    : { name: 'Mohan', role: 'our Head of Growth', calUrl: 'https://cal.com/mohanlouis/discovery' }
+}
 
 export function QuoteConfirmation() {
   const searchParams = useSearchParams()
@@ -63,7 +72,7 @@ export function QuoteConfirmation() {
           <CheckCircle2 className="w-10 h-10 text-primary" />
         </div>
         <h1 className="font-serif text-3xl text-foreground mb-4">
-          Quote Request Submitted
+          Order Request Received
         </h1>
         <p className="text-muted-foreground max-w-md mx-auto mb-8">
           Your quote request has been received. We will contact you shortly with the details.
@@ -251,6 +260,43 @@ export function QuoteConfirmation() {
               </div>
             </div>
           </div>
+
+          {/* Talk to the team */}
+          {(() => {
+            const contact = salesContact((quote as any).phone)
+            const waText = `Hello NuMat Bamboo, I just submitted order request ${displayedQuoteNumber}.`
+            return (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                <p className="font-semibold text-stone-900">Want to move faster?</p>
+                <p className="mt-1 text-sm text-stone-600">
+                  Book a short call with {contact.name}, {contact.role}, to confirm delivery cost and lead time
+                  for order {displayedQuoteNumber}, or message us on WhatsApp.
+                </p>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <a
+                    href={contact.calUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => (window as any).gtag?.('event', 'book_call_click', { quote_number: displayedQuoteNumber })}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-900"
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                    Book a call with {contact.name}
+                  </a>
+                  <a
+                    href={`https://wa.me/639613076458?text=${encodeURIComponent(waText)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => (window as any).gtag?.('event', 'whatsapp_click', { event_label: 'Order confirmation' })}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-700 bg-white px-4 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Message us on WhatsApp
+                  </a>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Next steps */}
           <div className="border-t border-border pt-6">
