@@ -10,171 +10,110 @@ import {
   Award,
   TrendingDown,
   TreePine,
-  Recycle,
   Globe,
   ArrowRight,
   CheckCircle2,
-  BarChart3,
   Calculator,
   FlaskConical,
+  BookOpen,
+  Info,
 } from 'lucide-react'
 
-// D. asper (Dendrocalamus asper) specific figures
-// Source: Patricio & Dumago 2016 (Bukidnon, Philippines); Deepika et al. 2022 (IJECC)
-const CO2_PER_M3 = 2.5
-const PLYWOOD_CO2_PER_M3 = 1.2
-const TREES_PER_TONNE_CO2 = 0.0417
-const BOARD_VOLUME_M3 = 0.0036
+// ---------------------------------------------------------------------------
+// Carbon stored in NUMAT boards (estimate, not an annual uptake rate)
+//
+// stored CO2 per m3 = density x bamboo mass share x carbon fraction x (44 / 12)
+//   density          = 800 kg/m3  (conservative low end of NUMAT nominal 800 to 1,000 kg/m3)
+//   bamboo share     = 0.9        (assumed share of board mass that is bamboo; the rest is resin)
+//   carbon fraction  = 0.5        (carbon is about 50% of oven dry wood mass, EN 16449 method;
+//                                  Negro and Bergman 2019, doi:10.4067/S0718-221X2019005000106.
+//                                  Pongon et al. 2016 measured 52.09 to 54.24% in the bamboo
+//                                  species studied, so 0.5 is conservative)
+//   44 / 12          = molar mass ratio of CO2 to C
+//
+//   800 x 0.9 x 0.5 x 44 / 12 = 1,320 kg CO2 per m3, about 1.32 t CO2 per m3
+//
+// Sheet volume: 2.44 m x 1.22 m x 0.012 m = 0.0357 m3 per 12 mm sheet
+// ---------------------------------------------------------------------------
+const BOARD_DENSITY_KG_M3 = 800
+const BAMBOO_MASS_SHARE = 0.9
+const CARBON_FRACTION = 0.5
+const CO2_PER_C = 44 / 12
+const CO2_STORED_T_PER_M3 =
+  (BOARD_DENSITY_KG_M3 * BAMBOO_MASS_SHARE * CARBON_FRACTION * CO2_PER_C) / 1000
+const SHEET_VOLUME_M3 = 2.44 * 1.22 * 0.012
 
-// D. asper plantation data (per hectare)
-const ASPER_ANNUAL_CO2 = 20      // tCO2/ha/yr — conservative (range: 17–25)
-const ASPER_CARBON_STOCK = 234   // t C/ha total (Mindanao, Philippines)
-const ASPER_BIOMASS = 264        // t/ha aboveground
+// Species data (per hectare)
+// D. asper: Pongon, Aranico, Dagoc and Amparado (2016), 15 year old plantation, Claveria, Misamis Oriental
+const ASPER_CARBON_STOCK = 234.46 // t C/ha total (above ground, below ground and soil)
+// Moso: Xu, Ji and Zhuang (2018), PLoS ONE, stands in China, 87.83 to 119.5 t C/ha
+const MOSO_CARBON_STOCK_UPPER = 119.5 // t C/ha, upper end of reported range
 
-// Moso (Phyllostachys edulis) benchmark data for comparison
-const MOSO_ANNUAL_CO2 = 24       // tCO2/ha/yr — standard benchmark (INBAR)
-const MOSO_CARBON_STOCK = 120    // t C/ha total (upper range)
-const MOSO_BIOMASS = 150         // t/ha aboveground
+type Advantage = 'asper' | 'moso' | 'none'
 
-const lifecycleData = [
-  { label: 'Bamboo Growth (D. asper)', value: -3.0, color: 'bg-emerald-500', positive: false },
-  { label: 'Harvesting', value: 0.1, color: 'bg-stone-400', positive: true },
-  { label: 'Processing', value: 0.25, color: 'bg-stone-400', positive: true },
-  { label: 'Transportation', value: 0.15, color: 'bg-stone-400', positive: true },
-]
-
-const comparisonData = [
+const speciesRows: { metric: string; asper: string; moso: string; winner: Advantage }[] = [
   {
-    label: 'NuMat Bamboo Board',
-    value: 2.5,
-    max: 2.5,
-    color: 'bg-emerald-500',
-    textColor: 'text-emerald-700',
-    note: 'Sequesters & locks carbon permanently',
-    highlight: true,
-    negative: false,
+    metric: 'Total carbon stock (soil plus biomass)',
+    asper: '234 t C/ha (15 year old plantation, Northern Mindanao) [B]',
+    moso: '88 to 120 t C/ha (stands in China) [C]',
+    winner: 'asper',
   },
   {
-    label: 'Mature Tropical Forest',
-    value: 0.7,
-    max: 2.5,
-    color: 'bg-teal-400',
-    textColor: 'text-teal-700',
-    note: '~0.7 t CO₂/m³/yr (standing forest)',
-    highlight: false,
-    negative: false,
-  },
-  {
-    label: 'Mixed Hardwood Trees',
-    value: 0.3,
-    max: 2.5,
-    color: 'bg-amber-400',
-    textColor: 'text-amber-700',
-    note: '~0.3 t CO₂/m³/yr (growing trees)',
-    highlight: false,
-    negative: false,
-  },
-  {
-    label: 'Plywood (releases CO₂)',
-    value: 1.2,
-    max: 2.5,
-    color: 'bg-red-400',
-    textColor: 'text-red-600',
-    note: '+1.2 t CO₂/m³ emitted in production',
-    highlight: false,
-    negative: true,
-  },
-]
-
-const speciesRows = [
-  {
-    metric: 'Annual CO₂ sequestration',
-    asper: '17 to 20 tCO₂/ha/yr',
-    moso: '18 to 40 tCO₂/ha/yr',
-    winner: 'comparable' as const,
-    note: '* Moso upper range from 60yr managed Chinese plantations',
-  },
-  {
-    metric: 'Conservative benchmark',
-    asper: '17 tCO₂/ha/yr',
-    moso: '24 tCO₂/ha/yr',
-    winner: 'moso' as const,
-  },
-  {
-    metric: 'Total carbon stock',
-    asper: '234 t C/ha',
-    moso: '88 to 120 t C/ha',
-    winner: 'asper' as const,
-  },
-  {
-    metric: 'Aboveground biomass',
-    asper: '264 t/ha',
-    moso: '~150 t/ha',
-    winner: 'asper' as const,
+    metric: 'Above ground biomass',
+    asper: '264 t/ha [B]',
+    moso: 'Not reported in source',
+    winner: 'none',
   },
   {
     metric: 'Carbon content of biomass',
-    asper: '52 to 54%',
-    moso: '~47%',
-    winner: 'asper' as const,
+    asper: '52 to 54% (bamboo species in the Mindanao study) [B]',
+    moso: 'Not reported in source',
+    winner: 'none',
   },
   {
     metric: 'Root system',
     asper: 'Sympodial (clumping)',
     moso: 'Monopodial (running)',
-    winner: 'asper' as const,
+    winner: 'asper',
   },
   {
     metric: 'Climate suitability',
     asper: 'Tropical, year round',
-    moso: 'Subtropical/seasonal',
-    winner: 'asper' as const,
+    moso: 'Subtropical, seasonal',
+    winner: 'asper',
   },
   {
     metric: 'Invasive risk',
     asper: 'None',
     moso: 'High',
-    winner: 'asper' as const,
+    winner: 'asper',
   },
 ]
 
-type BarComparison = {
-  label: string
-  asperVal: number
-  mosoVal: number
-  asperLabel: string
-  mosoLabel: string
-  max: number
-  badge: string
-}
-
-const barComparisons: BarComparison[] = [
+const sources = [
   {
-    label: 'Annual CO₂ sequestration (tCO₂/ha/yr)',
-    asperVal: ASPER_ANNUAL_CO2,
-    mosoVal: MOSO_ANNUAL_CO2,
-    asperLabel: '17 to 20 t',
-    mosoLabel: '~24 t',
-    max: 40,
-    badge: 'Comparable',
+    key: 'A',
+    text: 'Yuen, Fung and Ziegler (2017). Carbon stocks in bamboo ecosystems worldwide: Estimates and uncertainties. Forest Ecology and Management 393: 113 to 138.',
+    href: 'https://doi.org/10.1016/j.foreco.2017.01.017',
+    linkLabel: 'doi.org/10.1016/j.foreco.2017.01.017',
   },
   {
-    label: 'Total carbon stock (t C/ha)',
-    asperVal: ASPER_CARBON_STOCK,
-    mosoVal: MOSO_CARBON_STOCK,
-    asperLabel: '234 t C',
-    mosoLabel: '~120 t C',
-    max: 240,
-    badge: 'Asper advantage',
+    key: 'B',
+    text: 'Pongon, Aranico, Dagoc and Amparado (2016). Carbon stock assessment of bamboo plantations in Northern Mindanao, Philippines. Journal of Biodiversity and Environmental Sciences 9(6): 97 to 112.',
+    href: 'https://innspub.net/wp-content/uploads/2022/10/JBES-V9-No6-p97-112.pdf',
+    linkLabel: 'innspub.net (PDF)',
   },
   {
-    label: 'Aboveground biomass (t/ha)',
-    asperVal: ASPER_BIOMASS,
-    mosoVal: MOSO_BIOMASS,
-    asperLabel: '264 t/ha',
-    mosoLabel: '~150 t/ha',
-    max: 270,
-    badge: 'Asper advantage',
+    key: 'C',
+    text: 'Xu, Ji and Zhuang (2018). Moso bamboo (Phyllostachys edulis) carbon stocks, China. PLoS ONE 13(2): e0193024.',
+    href: 'https://doi.org/10.1371/journal.pone.0193024',
+    linkLabel: 'doi.org/10.1371/journal.pone.0193024',
+  },
+  {
+    key: 'D',
+    text: 'Negro and Bergman (2019). Wood product carbon content, EN 16449 method. Maderas. Ciencia y Tecnología 21(1): 65 to 76.',
+    href: 'https://doi.org/10.4067/S0718-221X2019005000106',
+    linkLabel: 'doi.org/10.4067/S0718-221X2019005000106',
   },
 ]
 
@@ -182,11 +121,9 @@ export default function ESGPage() {
   const [boardCount, setBoardCount] = useState(50)
   const [unit, setUnit] = useState<'boards' | 'm3'>('boards')
 
-  const volumeM3 = unit === 'boards' ? boardCount * BOARD_VOLUME_M3 : boardCount
-  const co2Saved = volumeM3 * CO2_PER_M3
-  const vsPlywood = volumeM3 * (CO2_PER_M3 + PLYWOOD_CO2_PER_M3)
-  const treesEquivalent = Math.round(co2Saved / TREES_PER_TONNE_CO2)
-  const carsEquivalent = (co2Saved / 4.6).toFixed(1)
+  const volumeM3 = unit === 'boards' ? boardCount * SHEET_VOLUME_M3 : boardCount
+  const co2Stored = volumeM3 * CO2_STORED_T_PER_M3
+  const co2PerSheet = SHEET_VOLUME_M3 * CO2_STORED_T_PER_M3
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -200,15 +137,17 @@ export default function ESGPage() {
             <div className="max-w-3xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
                 <Award className="h-4 w-4" />
-                Wavemaker Impact Partner
+                Backed by Wavemaker Impact
               </div>
               <h1 className="text-4xl font-bold tracking-tight text-stone-950 sm:text-5xl lg:text-6xl">
                 Sustainable Bamboo for a{' '}
-                <span className="text-emerald-700">Carbon Negative</span> Future
+                <span className="text-emerald-700">Lower Carbon</span> Future
               </h1>
               <p className="mt-6 text-lg leading-8 text-stone-600">
-                At NuMat Bamboo, sustainability is measurable and verified. Our engineered bamboo
-                products are sustainably harvested and verified carbon negative by Wavemaker Impact.
+                Bamboo grows to harvest in 3 to 5 years, compared with 20 to 40 years for
+                traditional timber. On this page we share what published, peer reviewed research
+                says about bamboo and carbon, and how we estimate the carbon stored in our boards.
+                Every figure is cited, and our assumptions are shown.
               </p>
             </div>
           </div>
@@ -216,28 +155,28 @@ export default function ESGPage() {
 
         {/* Interactive Calculator */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-          <div className="rounded-[2rem] bg-stone-950 p-6 text-white lg:p-10">
+          <div className="rounded-[2rem] border border-stone-200 bg-white p-6 text-stone-900 shadow-sm lg:p-10">
             <div className="mb-8 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/20">
-                <Calculator className="h-5 w-5 text-emerald-400" />
+                <Calculator className="h-5 w-5 text-emerald-700" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400">Interactive Tool</p>
-                <h2 className="text-2xl font-bold text-white">Your Purchase Impact Calculator</h2>
+                <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">Interactive Tool</p>
+                <h2 className="text-2xl font-bold text-stone-950">Carbon Stored in Your Boards</h2>
               </div>
             </div>
 
             {/* Unit toggle */}
-            <div className="mb-6 flex gap-2">
+            <div className="mb-6 flex flex-wrap gap-2">
               <button
                 onClick={() => { setUnit('boards'); setBoardCount(50) }}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${unit === 'boards' ? 'bg-emerald-600 text-white' : 'bg-white/10 text-white/70 hover:bg-white/15'}`}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${unit === 'boards' ? 'bg-emerald-600 text-white' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'}`}
               >
-                Number of Boards
+                Number of 12 mm Sheets
               </button>
               <button
                 onClick={() => { setUnit('m3'); setBoardCount(1) }}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${unit === 'm3' ? 'bg-emerald-600 text-white' : 'bg-white/10 text-white/70 hover:bg-white/15'}`}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${unit === 'm3' ? 'bg-emerald-600 text-white' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'}`}
               >
                 Cubic Meters (m³)
               </button>
@@ -246,11 +185,11 @@ export default function ESGPage() {
             {/* Slider */}
             <div className="mb-8">
               <div className="mb-3 flex items-end justify-between">
-                <label className="text-sm font-medium text-white/80">
-                  {unit === 'boards' ? 'Number of boards' : 'Volume in m³'}
+                <label className="text-sm font-medium text-stone-700">
+                  {unit === 'boards' ? 'Number of 2440 × 1220 × 12 mm sheets' : 'Volume in m³'}
                 </label>
-                <span className="text-3xl font-extrabold text-emerald-400">
-                  {unit === 'boards' ? `${boardCount} boards` : `${boardCount} m³`}
+                <span className="text-3xl font-extrabold text-emerald-700">
+                  {unit === 'boards' ? `${boardCount} sheets` : `${boardCount} m³`}
                 </span>
               </div>
               <input
@@ -262,172 +201,122 @@ export default function ESGPage() {
                 onChange={(e) => setBoardCount(Number(e.target.value))}
                 className="w-full accent-emerald-500"
               />
-              <div className="mt-1 flex justify-between text-xs text-white/40">
-                <span>{unit === 'boards' ? '10 boards' : '1 m³'}</span>
-                <span>{unit === 'boards' ? '500 boards' : '50 m³'}</span>
+              <div className="mt-1 flex justify-between text-xs text-stone-400">
+                <span>{unit === 'boards' ? '10 sheets' : '1 m³'}</span>
+                <span>{unit === 'boards' ? '500 sheets' : '50 m³'}</span>
               </div>
             </div>
 
-            {/* Impact cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Result cards */}
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-[1.5rem] border border-emerald-500/20 bg-emerald-500/10 p-5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400">CO₂ Sequestered</p>
-                <p className="mt-2 text-3xl font-extrabold text-emerald-300">{co2Saved.toFixed(1)}t</p>
-                <p className="mt-1 text-xs text-white/50">tonnes of CO₂ locked in</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">CO₂ stored in your boards</p>
+                <p className="mt-2 text-3xl font-extrabold text-emerald-700">{co2Stored.toFixed(2)} t CO₂</p>
+                <p className="mt-1 text-xs text-stone-500">Estimated carbon held in the product, expressed as CO₂</p>
               </div>
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-white/60">vs Plywood</p>
-                <p className="mt-2 text-3xl font-extrabold text-white">{vsPlywood.toFixed(1)}t</p>
-                <p className="mt-1 text-xs text-white/50">CO₂ avoided compared to plywood</p>
+              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-stone-500">Board volume</p>
+                <p className="mt-2 text-3xl font-extrabold text-stone-950">{volumeM3.toFixed(2)} m³</p>
+                <p className="mt-1 text-xs text-stone-500">
+                  {unit === 'boards'
+                    ? `${SHEET_VOLUME_M3.toFixed(4)} m³ per 12 mm sheet`
+                    : 'Volume entered'}
+                </p>
               </div>
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-white/60">Trees Equivalent</p>
-                <p className="mt-2 text-3xl font-extrabold text-white">{treesEquivalent}</p>
-                <p className="mt-1 text-xs text-white/50">mature trees absorbing for 1 year</p>
-              </div>
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-white/60">Cars Off Road</p>
-                <p className="mt-2 text-3xl font-extrabold text-white">{carsEquivalent}</p>
-                <p className="mt-1 text-xs text-white/50">equivalent cars removed for 1 year</p>
-              </div>
-            </div>
-
-            {/* Visual bar */}
-            <div className="mt-8">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/50">Carbon offset progress</p>
-              <div className="h-4 w-full overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-500"
-                  style={{ width: `${Math.min((co2Saved / 50) * 100, 100)}%` }}
-                />
-              </div>
-              <div className="mt-2 flex justify-between text-xs text-white/30">
-                <span>0t CO₂</span>
-                <span>50t CO₂</span>
-              </div>
-            </div>
-
-            <p className="mt-6 text-xs text-white/30">
-              Based on D. asper (Giant Asper) plantation data: 20 tCO₂/ha/yr sequestration rate.
-              Source: Patricio &amp; Dumago (2016), Bukidnon, Philippines; Deepika et al. (2022) IJECC.
-            </p>
-          </div>
-        </section>
-
-        {/* Charts + Carbon Impact */}
-        <section className="border-y border-stone-200 bg-white">
-          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-
-            {/* Two charts side by side */}
-            <div className="grid gap-6 lg:grid-cols-2">
-
-              {/* Carbon Lifecycle */}
-              <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-8 shadow-sm">
-                <div className="mb-6 flex items-center gap-3">
-                  <BarChart3 className="h-5 w-5 text-emerald-800" />
-                  <h3 className="text-lg font-bold text-stone-950">Carbon Lifecycle Analysis</h3>
-                </div>
-
-                <div className="space-y-5">
-                  {lifecycleData.map((item) => {
-                    const maxVal = 3.0
-                    const pct = Math.abs(item.value) / maxVal * 100
-                    return (
-                      <div key={item.label}>
-                        <div className="mb-1.5 flex items-center justify-between">
-                          <span className="text-sm text-stone-700">{item.label}</span>
-                          <span className={`text-sm font-bold ${item.positive ? 'text-stone-500' : 'text-emerald-700'}`}>
-                            {item.positive ? '+' : ''}{item.value} t CO₂
-                          </span>
-                        </div>
-                        <div className="h-3 w-full overflow-hidden rounded-full bg-stone-200">
-                          <div
-                            className={`h-full rounded-full transition-all duration-700 ${item.positive ? 'bg-stone-400' : 'bg-emerald-500'}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
-
-                  <div className="mt-4 border-t border-stone-200 pt-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-stone-950">Net Carbon Impact</span>
-                      <span className="text-2xl font-extrabold text-emerald-700">-2.5 t CO₂</span>
-                    </div>
-                    <p className="mt-1 text-xs text-stone-400">Per cubic meter of bamboo product</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sequestration Comparison */}
-              <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-8 shadow-sm">
-                <div className="mb-2 flex items-center gap-3">
-                  <TreePine className="h-5 w-5 text-emerald-800" />
-                  <h3 className="text-lg font-bold text-stone-950">Sequestration Comparison</h3>
-                </div>
-                <p className="mb-6 text-xs text-stone-500">CO₂ absorbed per m³ or equivalent volume, per year</p>
-
-                {comparisonData.map((item) => (
-                  <div
-                    key={item.label}
-                    className={`mb-4 rounded-2xl p-4 ${item.highlight ? 'border border-emerald-200 bg-emerald-50' : 'border border-stone-100 bg-white'}`}
-                  >
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <div>
-                        <p className={`text-sm font-bold ${item.highlight ? 'text-emerald-800' : 'text-stone-800'}`}>
-                          {item.highlight && '★ '}{item.label}
-                        </p>
-                        <p className="text-xs text-stone-400">{item.note}</p>
-                      </div>
-                      <span className={`shrink-0 text-base font-extrabold ${item.textColor}`}>
-                        {item.negative ? '+' : '-'}{item.value} t
-                      </span>
-                    </div>
-                    <div className="h-3 w-full overflow-hidden rounded-full bg-stone-200">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ${item.color}`}
-                        style={{ width: `${(item.value / item.max) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-
-                <p className="mt-2 text-xs text-stone-400">
-                  Sources: IPCC, FAO Forest Carbon estimates, peer reviewed LCA studies.
-                  Bamboo figure represents net sequestration locked into product lifetime.
+              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-stone-500">Stored per unit</p>
+                <p className="mt-2 text-3xl font-extrabold text-stone-950">{CO2_STORED_T_PER_M3.toFixed(2)} t CO₂/m³</p>
+                <p className="mt-1 text-xs text-stone-500">
+                  About {co2PerSheet.toFixed(3)} t CO₂ per 12 mm sheet
                 </p>
               </div>
             </div>
 
-            {/* Our Carbon Impact — below both charts */}
-            <div className="mt-8 rounded-[2rem] border border-stone-200 bg-stone-50 p-8">
+            <p className="mt-6 text-xs leading-5 text-stone-500">
+              How this is estimated: 800 kg/m³ board density (the low end of our 800 to 1,000 kg/m³
+              range) × 90% bamboo by mass (our assumption; the rest is resin) × 50% carbon in dry wood
+              (Negro and Bergman 2019 [D]) × 44/12 to convert carbon to CO₂, which gives about 1.32 t CO₂
+              per m³. This is carbon stored in the product while it is in use, not a yearly uptake
+              rate, and it does not subtract emissions from harvesting, processing or transport. It is
+              an estimate: a full life cycle assessment is planned.
+            </p>
+          </div>
+        </section>
+
+        {/* What the research says */}
+        <section className="border-y border-stone-200 bg-white">
+          <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
+            <div className="mb-8">
               <p className="text-xs font-semibold uppercase tracking-widest text-emerald-800">Carbon Science</p>
               <h2 className="mt-3 text-2xl font-bold tracking-tight text-stone-950">
-                Our Carbon Impact
+                What the Research Says
               </h2>
-              <p className="mt-3 text-base leading-7 text-stone-600">
-                Bamboo absorbs CO₂ at rates far exceeding most trees. Our engineered boards
-                lock in this carbon for the product's lifetime, making every board a
-                net positive contribution.
+              <p className="mt-3 max-w-3xl text-base leading-7 text-stone-600">
+                Figures below come directly from peer reviewed studies. Letters in brackets refer to
+                the source list at the bottom of this page.
               </p>
-              <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                {[
-                  { icon: TrendingDown, label: '-2.5 tonnes CO₂ per cubic meter', sub: 'Net carbon sequestration' },
-                  { icon: TreePine, label: '3 to 5 year harvest cycle', sub: 'Sustainable regrowth without replanting' },
-                  { icon: Recycle, label: '100% natural materials', sub: 'Biodegradable at end of life' },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-white px-5 py-4">
-                    <item.icon className="h-6 w-6 shrink-0 text-emerald-700" />
-                    <div>
-                      <p className="text-sm font-semibold text-stone-950">{item.label}</p>
-                      <p className="text-xs text-stone-500">{item.sub}</p>
-                    </div>
-                  </div>
-                ))}
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-8 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <Globe className="h-5 w-5 text-emerald-800" />
+                  <h3 className="text-lg font-bold text-stone-950">Bamboo worldwide [A]</h3>
+                </div>
+                <ul className="space-y-3 text-sm leading-6 text-stone-600">
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
+                    Most bamboo stands accumulate 4 to 11 t C per hectare per year during their first
+                    5 to 7 years, about 15 to 40 t CO₂ per hectare per year.
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
+                    Once stands are mature and selectively harvested, accumulation slows to 2 to 4 t C
+                    per hectare per year.
+                  </li>
+                </ul>
+                <p className="mt-4 text-xs text-stone-400">
+                  Yuen, Fung and Ziegler (2017). These are global figures for bamboo in general, not
+                  specific to Dendrocalamus asper.
+                </p>
+              </div>
+
+              <div className="rounded-[2rem] border border-emerald-200 bg-emerald-50 p-8 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <TreePine className="h-5 w-5 text-emerald-800" />
+                  <h3 className="text-lg font-bold text-stone-950">Giant bamboo in Northern Mindanao [B]</h3>
+                </div>
+                <ul className="space-y-3 text-sm leading-6 text-stone-600">
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
+                    A 15 year old Dendrocalamus asper plantation in Claveria, Misamis Oriental held a
+                    total carbon stock of 234.46 t C per hectare: 143.39 above ground, 33.55 below
+                    ground and 57.52 in the soil.
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
+                    Above ground biomass was 264.37 t per hectare, the highest of the three bamboo
+                    species studied.
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-600" />
+                    Carbon content of the bamboo species studied ranged from 52.09 to 54.24%.
+                  </li>
+                </ul>
+                <p className="mt-4 text-xs text-stone-500">
+                  Pongon, Aranico, Dagoc and Amparado (2016).
+                </p>
               </div>
             </div>
 
+            <div className="mt-6 flex items-start gap-3 rounded-2xl border border-stone-200 bg-stone-50 px-5 py-4">
+              <Info className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+              <p className="text-sm leading-6 text-stone-600">
+                There is not yet a published annual carbon uptake rate specific to Dendrocalamus
+                asper. The yearly figures above apply to bamboo in general; the Mindanao study
+                measures the total carbon held in a plantation at one point in time.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -439,71 +328,68 @@ export default function ESGPage() {
               Species Science
             </div>
             <h2 className="text-3xl font-bold tracking-tight text-stone-950">
-              Why Giant Asper Outperforms Moso
+              Giant Bamboo and Moso Bamboo Compared
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-base text-stone-500">
-              Moso (<em>Phyllostachys edulis</em>) is the world's most studied bamboo, but our
-              Dendrocalamus asper stores nearly twice the total carbon per hectare and
-              is native to the Philippines' tropical climate.
+              Moso (<em>Phyllostachys edulis</em>) is the most widely studied bamboo. A 15 year old
+              giant bamboo (<em>Dendrocalamus asper</em>) plantation in Northern Mindanao held
+              234 t C per hectare, compared with 88 to 120 t C per hectare measured in Moso stands in
+              China. The studies differ in site, stand age and method, so treat this as an indication
+              rather than a like for like result.
             </p>
           </div>
 
-          {/* Bar comparisons */}
+          {/* Bar comparison */}
           <div className="rounded-[2rem] border border-stone-200 bg-white p-8 shadow-sm">
 
             {/* Legend */}
             <div className="mb-8 flex flex-wrap gap-6 text-sm">
               <span className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-sm bg-emerald-600" />
-                <span className="font-semibold text-stone-900">D. asper: Giant Asper (NuMat Bamboo)</span>
+                <span className="font-semibold text-stone-900">D. asper: giant bamboo (NuMat Bamboo)</span>
               </span>
               <span className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-sm bg-sky-500" />
-                <span className="text-stone-600">Moso bamboo (P. edulis): industry benchmark</span>
+                <span className="text-stone-600">Moso bamboo (P. edulis)</span>
               </span>
             </div>
 
-            <div className="space-y-8">
-              {barComparisons.map((item) => (
-                <div key={item.label}>
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-sm font-semibold text-stone-800">{item.label}</p>
-                    <span className={`rounded-full px-3 py-0.5 text-xs font-semibold ${
-                      item.badge === 'Comparable'
-                        ? 'bg-stone-100 text-stone-600'
-                        : 'bg-emerald-100 text-emerald-800'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  </div>
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-semibold text-stone-800">Total carbon stock (t C/ha)</p>
+                <span className="rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-800">
+                  Asper higher in these studies
+                </span>
+              </div>
 
-                  {/* Asper bar */}
-                  <div className="mb-2 flex items-center gap-3">
-                    <span className="w-20 shrink-0 text-right text-xs font-semibold text-emerald-700">D. asper</span>
-                    <div className="flex-1 overflow-hidden rounded-full bg-stone-100" style={{ height: 28 }}>
-                      <div
-                        className="flex h-full items-center rounded-full bg-emerald-600 px-3 text-xs font-semibold text-emerald-50 transition-all duration-700"
-                        style={{ width: `${(item.asperVal / item.max) * 100}%` }}
-                      >
-                        {item.asperLabel}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Moso bar */}
-                  <div className="flex items-center gap-3">
-                    <span className="w-20 shrink-0 text-right text-xs text-stone-500">Moso</span>
-                    <div className="flex-1 overflow-hidden rounded-full bg-stone-100" style={{ height: 28 }}>
-                      <div
-                        className="flex h-full items-center rounded-full bg-sky-500 px-3 text-xs font-semibold text-sky-50 transition-all duration-700"
-                        style={{ width: `${(item.mosoVal / item.max) * 100}%` }}
-                      >
-                        {item.mosoLabel}
-                      </div>
-                    </div>
+              {/* Asper bar */}
+              <div className="mb-2 flex items-center gap-3">
+                <span className="w-20 shrink-0 text-right text-xs font-semibold text-emerald-700">D. asper</span>
+                <div className="flex-1 overflow-hidden rounded-full bg-stone-100" style={{ height: 28 }}>
+                  <div
+                    className="flex h-full items-center rounded-full bg-emerald-600 px-3 text-xs font-semibold text-emerald-50 transition-all duration-700"
+                    style={{ width: `${(ASPER_CARBON_STOCK / 240) * 100}%` }}
+                  >
+                    234 t C [B]
                   </div>
                 </div>
-              ))}
+              </div>
+
+              {/* Moso bar */}
+              <div className="flex items-center gap-3">
+                <span className="w-20 shrink-0 text-right text-xs text-stone-500">Moso</span>
+                <div className="flex-1 overflow-hidden rounded-full bg-stone-100" style={{ height: 28 }}>
+                  <div
+                    className="flex h-full items-center rounded-full bg-sky-500 px-3 text-xs font-semibold text-sky-50 transition-all duration-700"
+                    style={{ width: `${(MOSO_CARBON_STOCK_UPPER / 240) * 100}%` }}
+                  >
+                    88 to 120 t C [C]
+                  </div>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-stone-400">
+                Moso bar shows the upper end of the reported range.
+              </p>
             </div>
           </div>
 
@@ -512,7 +398,7 @@ export default function ESGPage() {
             <div className="border-b border-stone-100 px-8 py-5">
               <h3 className="text-base font-bold text-stone-950">Full species comparison</h3>
               <p className="text-xs text-stone-400 mt-0.5">
-                Sources: Patricio &amp; Dumago (2016) Bukidnon Philippines; Deepika et al. (2022) IJECC; Xu et al. (2018) PLOS One; INBAR/Yiping et al. (2010)
+                Sources: Pongon et al. (2016) [B], Northern Mindanao, Philippines; Xu, Ji and Zhuang (2018) [C], PLoS ONE
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -528,12 +414,9 @@ export default function ESGPage() {
                 <tbody>
                   {speciesRows.map((row, i) => (
                     <tr key={row.metric} className={`border-b border-stone-100 ${i % 2 === 0 ? 'bg-white' : 'bg-stone-50/50'}`}>
-                      <td className="px-6 py-3.5 font-medium text-stone-700">
-                        {row.metric}
-                        {row.note && <span className="ml-1 text-xs text-stone-400">*</span>}
-                      </td>
+                      <td className="px-6 py-3.5 font-medium text-stone-700">{row.metric}</td>
                       <td className="px-6 py-3.5 font-semibold text-emerald-700">{row.asper}</td>
-                      <td className="px-6 py-3.5 font-semibold text-sky-700">{row.moso}</td>
+                      <td className={`px-6 py-3.5 ${row.moso === 'Not reported in source' ? 'text-stone-400' : 'font-semibold text-sky-700'}`}>{row.moso}</td>
                       <td className="px-6 py-3.5">
                         {row.winner === 'asper' && (
                           <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">Asper</span>
@@ -541,8 +424,8 @@ export default function ESGPage() {
                         {row.winner === 'moso' && (
                           <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">Moso</span>
                         )}
-                        {row.winner === 'comparable' && (
-                          <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-semibold text-stone-600">Comparable</span>
+                        {row.winner === 'none' && (
+                          <span className="text-xs text-stone-400">Not compared</span>
                         )}
                       </td>
                     </tr>
@@ -552,9 +435,9 @@ export default function ESGPage() {
             </div>
             <div className="border-t border-stone-100 px-8 py-4">
               <p className="text-xs text-stone-400">
-                * Moso's upper range (40 tCO₂/ha/yr) reflects intensively managed Chinese plantations after 60+ years.
-                Early stage Moso plantations (0 to 5 years) sequester as little as 1.86 tCO₂/ha/yr.
-                D. asper figures are from Philippine plantation studies, in the same climate conditions as NuMat Bamboo's supply chain.
+                D. asper figures come from a Philippine plantation study, in the same region and climate
+                as NuMat Bamboo&apos;s supply chain. Moso figures come from stands in China. Root system,
+                climate and invasiveness rows are general characteristics of each species.
               </p>
             </div>
           </div>
@@ -569,22 +452,23 @@ export default function ESGPage() {
                   <Award className="h-7 w-7 text-emerald-800" />
                 </div>
                 <h2 className="text-3xl font-bold tracking-tight text-stone-950">
-                  Wavemaker Impact Partnership
+                  Backed by Wavemaker Impact
                 </h2>
                 <p className="mt-4 text-base leading-7 text-stone-600">
-                  NuMat Bamboo is a portfolio company of Wavemaker Impact, Southeast Asia's leading
-                  climate tech investor. All carbon claims are independently verified.{' '}
+                  NuMat Bamboo is a portfolio company of Wavemaker Impact, a climate tech venture
+                  investor. The carbon figures on this page are our own estimates, based on the
+                  published research cited below.{' '}
                   <a href="https://www.wavemakerimpact.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-700 hover:underline">
-                    Learn more →
+                    Learn more about Wavemaker →
                   </a>
                 </p>
               </div>
 
               <div className="mt-10 grid gap-5 md:grid-cols-3">
                 {[
-                  { icon: Globe, title: 'Verified Impact', body: "All carbon claims independently verified through Wavemaker's rigorous impact measurement framework." },
-                  { icon: Leaf, title: 'Sustainable Sourcing', body: 'Bamboo sourced exclusively from plantations prioritizing biodiversity and community welfare.' },
-                  { icon: TrendingDown, title: 'Continuous Improvement', body: 'Committed to reducing operational footprint through renewable energy and optimised logistics.' },
+                  { icon: BookOpen, title: 'Transparent Estimates', body: 'Every carbon figure on this page links to a published, peer reviewed study, and our own assumptions are stated openly.' },
+                  { icon: Leaf, title: 'Sustainable Sourcing', body: 'We aim to source bamboo from plantations that prioritise biodiversity and community welfare.' },
+                  { icon: TrendingDown, title: 'Continuous Improvement', body: 'We are working to reduce our operational footprint through renewable energy and better logistics.' },
                 ].map((item) => (
                   <div key={item.title} className="rounded-[1.75rem] border border-stone-200 bg-stone-50 p-6">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50">
@@ -602,21 +486,24 @@ export default function ESGPage() {
         {/* ESG Commitments */}
         <section className="border-y border-stone-200 bg-white">
           <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-            <h2 className="mb-10 text-center text-3xl font-bold tracking-tight text-stone-950">
+            <h2 className="text-center text-3xl font-bold tracking-tight text-stone-950">
               Our ESG Commitments
             </h2>
+            <p className="mx-auto mb-10 mt-3 max-w-2xl text-center text-base text-stone-500">
+              What we are working toward.
+            </p>
             <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-2">
               {[
                 {
                   icon: Leaf,
                   title: 'Environmental',
                   items: [
-                    'Carbon negative product lifecycle',
-                    'Zero deforestation supply chain',
-                    '100% sustainably harvested bamboo',
-                    'Minimal water usage in processing',
-                    'Renewable energy transition roadmap',
-                    'Waste reduction and recycling programs',
+                    'Complete a full life cycle assessment of our boards',
+                    'Source bamboo without deforestation',
+                    'Harvest bamboo sustainably, letting clumps regrow',
+                    'Keep water use in processing low',
+                    'Transition toward renewable energy',
+                    'Reduce and recycle production waste',
                   ],
                 },
                 {
@@ -626,8 +513,8 @@ export default function ESGPage() {
                     'Fair wages for plantation workers',
                     'Safe working conditions',
                     'Community development programs',
-                    'Transparent supply chain',
-                    'Regular third party audits',
+                    'A transparent supply chain',
+                    'Open, cited reporting of our environmental figures',
                   ],
                 },
               ].map((col) => (
@@ -652,24 +539,45 @@ export default function ESGPage() {
           </div>
         </section>
 
-        {/* Methodology */}
+        {/* Methodology and Sources */}
         <section className="bg-[#f6f1e8] py-10">
-          <div className="mx-auto max-w-3xl px-6 text-center lg:px-8">
-            <p className="text-sm text-stone-500">
-              Carbon calculations based on LCA methodology following ISO 14040/14044 standards,
-              reviewed and validated by Wavemaker Impact. D. asper sequestration figures sourced
-              from Philippine plantation studies (Patricio &amp; Dumago 2016; Deepika et al. 2022).
-              For detailed methodology and verification documents, please{' '}
+          <div className="mx-auto max-w-3xl px-6 lg:px-8">
+            <p className="text-center text-sm text-stone-500">
+              A full life cycle assessment of our boards is planned but has not yet been done. The
+              carbon figures on this page are estimates drawn from the published, peer reviewed
+              research listed below, together with our stated assumptions about board density and
+              resin content. They are not a certification. For questions about our methodology,
+              please{' '}
               <Link href="/contact" className="font-semibold text-emerald-700 hover:underline">
                 contact us
               </Link>.
             </p>
+
+            <div className="mt-8 rounded-[1.5rem] border border-stone-200 bg-white p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-emerald-800" />
+                <h3 className="text-sm font-bold uppercase tracking-widest text-stone-700">Sources</h3>
+              </div>
+              <ol className="space-y-3">
+                {sources.map((s) => (
+                  <li key={s.key} className="flex gap-3 text-xs leading-5 text-stone-600">
+                    <span className="shrink-0 font-bold text-emerald-800">[{s.key}]</span>
+                    <span>
+                      {s.text}{' '}
+                      <a href={s.href} target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-700 hover:underline break-all">
+                        {s.linkLabel}
+                      </a>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
         </section>
 
         {/* CTA */}
         <section className="mx-auto max-w-7xl px-6 py-14 lg:px-8 lg:py-18">
-          <div className="relative overflow-hidden rounded-[2rem] bg-stone-950 px-8 py-12 text-center text-white shadow-xl lg:px-12 lg:py-16">
+          <div className="relative overflow-hidden rounded-[2rem] bg-emerald-900 px-8 py-12 text-center text-white shadow-xl lg:px-12 lg:py-16">
             <div className="pointer-events-none absolute -left-16 -top-16 h-64 w-64 rounded-full bg-emerald-900/30 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-16 -right-16 h-64 w-64 rounded-full bg-emerald-900/20 blur-3xl" />
             <div className="relative">
@@ -677,8 +585,8 @@ export default function ESGPage() {
                 Choose Sustainable. Choose NuMat Bamboo.
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-base text-white/70">
-                Every board you order contributes to carbon reduction and supports
-                local sustainable forestry. Use the calculator above to see your impact.
+                Our boards are made from fast growing bamboo and hold the carbon it captured while
+                they are in use. Use the calculator above to estimate how much.
               </p>
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 <Link

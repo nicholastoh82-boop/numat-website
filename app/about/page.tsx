@@ -87,7 +87,7 @@ export default function AboutPage() {
                 { value: '50+', label: 'Local Bamboo Farmers', icon: Users },
                 { value: 'Singapore', label: 'Headquarters', icon: Globe },
                 { value: 'Sustainably Harvested', label: 'Sourced from Philippine bamboo farms', icon: ShieldCheck },
-                { value: 'Climate Positive', label: 'Carbon negative lifecycle', icon: Leaf },
+                { value: 'Stores Carbon', label: 'Bamboo carbon locked into every board', icon: Leaf },
               ].map((stat) => (
                 <div key={stat.label} className="rounded-[1.75rem] border border-stone-200 bg-white px-6 py-5 shadow-sm">
                   <div className="flex items-center gap-3">
@@ -149,7 +149,7 @@ export default function AboutPage() {
                   {
                     icon: Award,
                     title: 'Wavemaker Impact Backed',
-                    body: "Portfolio company of Southeast Asia's leading climate tech investor, which independently verifies our carbon negative impact claims.",
+                    body: "Portfolio company of Wavemaker Impact, Southeast Asia's leading climate tech investor.",
                   },
                   {
                     icon: Zap,
@@ -194,8 +194,8 @@ export default function AboutPage() {
               },
               {
                 icon: Leaf,
-                title: 'Sustainable Sourcing and Carbon Negative',
-                body: 'All products sourced from sustainable plantations. Carbon negative lifecycle verified by Wavemaker Impact.',
+                title: 'Sustainable Sourcing',
+                body: 'All products are made from fast growing Philippine bamboo, harvested from plantations that regrow from the same root.',
               },
               {
                 icon: Award,
@@ -251,7 +251,7 @@ export default function AboutPage() {
                 {
                   icon: Leaf,
                   title: 'Sustainability',
-                  body: 'Every decision we make prioritizes environmental impact. Our products are carbon negative and sourced from sustainable plantations.',
+                  body: 'Every decision we make prioritizes environmental impact. Our boards store the carbon their bamboo absorbed while growing, and are sourced from plantations that regrow in 3 to 5 years.',
                   color: 'bg-emerald-50',
                   iconColor: 'text-emerald-700',
                 },

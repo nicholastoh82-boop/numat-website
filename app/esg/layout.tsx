@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'ESG and Sustainability: Carbon Negative Bamboo Products',
-  description: 'NuMat bamboo is verified carbon negative by Wavemaker Impact. Dendrocalamus asper sequesters 17 to 20 tCO₂/ha/yr. Calculate your purchase carbon impact.',
+  title: 'ESG and Sustainability: Lower Carbon Bamboo Boards',
+  description: 'How NuMat bamboo boards support lower carbon building. Peer reviewed research on bamboo carbon uptake, and a calculator for the carbon stored in your order.',
   openGraph: {
     title: 'ESG and Sustainability | NuMat Bamboo',
-    description: 'Carbon negative bamboo verified by Wavemaker Impact. Calculate your CO₂ impact and compare D. asper vs Moso sequestration data.',
+    description: 'Fast growing Philippine bamboo made into engineered boards. See the research on bamboo carbon uptake and calculate the carbon stored in your order.',
     url: 'https://numatbamboo.com/esg',
   },
 }
