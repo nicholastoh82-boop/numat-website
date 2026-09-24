@@ -8,8 +8,9 @@
 // Expected JSON body (all optional, driven by the chatbot's captured state):
 //   { contact_name, email, phone, company, country, location, industry, notes }
 
-import { sendGmail, supabaseGetRaw, supabasePost } from "@/lib/cron/helpers";
-import { WEBSITE_ALERT_RECIPIENTS, logWebsiteSubmission } from "@/lib/leads/website-intake";
+import { supabaseGetRaw, supabasePost } from "@/lib/cron/helpers";
+import { sendNotificationEmail } from "@/lib/sendgrid";
+import { WEBSITE_ALERT_RECIPIENTS, escapeHtml, logWebsiteSubmission } from "@/lib/leads/website-intake";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -117,19 +118,14 @@ export async function POST(req: Request) {
         `${notesPreview || "No notes captured"}\n\n` +
         `CRM: https://numatbamboo.com/crm\n\n` +
         `NUMAT Automation\n`;
-      // Nick, Bryan and Erica all hear about every chatbot lead.
-      for (const to of WEBSITE_ALERT_RECIPIENTS) {
-        try {
-          await sendGmail({
-            from: "Nick",
-            to,
-            subject: `New website lead: ${fullName}${companyBit}`,
-            text: emailBody,
-          });
-        } catch (err) {
-          console.error(`NARA lead alert to ${to} failed:`, err);
-        }
-      }
+      // Nick, Bryan and Erica all hear about every chatbot lead. Sent through
+      // Resend like the other website alerts, not Nick's Gmail, so an expired
+      // Gmail token (invalid_grant) can never silence it.
+      await sendNotificationEmail({
+        to: WEBSITE_ALERT_RECIPIENTS,
+        subject: `New website lead: ${fullName}${companyBit}`,
+        html: `<pre style="font-family:Arial,Helvetica,sans-serif;white-space:pre-wrap;">${escapeHtml(emailBody)}</pre>`,
+      });
     } catch (err) {
       console.error("NARA lead alert email failed:", err);
     }
