@@ -9,7 +9,7 @@ const footerLinks = {
   resources: [
     { name: 'Solutions', href: '/solutions' },
     { name: 'Technical Resources', href: '/technical-resources' },
-    { name: 'Request Quote', href: '/request-quote' },
+    { name: 'Checkout', href: '/request-quote' },
     { name: 'FAQ', href: '/faq' },
     { name: 'ESG', href: '/esg' },
     { name: 'Contact Sales', href: '/contact' },

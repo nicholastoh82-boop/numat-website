@@ -4,8 +4,8 @@ import CartDrawer from '@/components/cart-drawer'
 import { CartContent } from '@/components/cart/cart-content'
 
 export const metadata = {
-  title: 'Request Quote | NUMAT',
-  description: 'Review your cart and request an instant quote delivered via WhatsApp or Email.',
+  title: 'Your Order | NUMAT',
+  description: 'Review your order of NUMAT engineered bamboo boards and check out.',
 }
 
 export default function CartPage() {

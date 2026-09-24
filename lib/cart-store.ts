@@ -141,6 +141,14 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'numat-cart',
+      // Persist the order lines only. Persisting isOpen reopened the drawer on
+      // every page load after the first add.
+      partialize: (state) => ({ items: state.items }),
+      // Older saved carts also carry isOpen: restore the items only.
+      merge: (persisted, current) => ({
+        ...current,
+        items: (persisted as { items?: CartItem[] } | undefined)?.items ?? [],
+      }),
     }
   )
 )

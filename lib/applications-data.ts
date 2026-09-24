@@ -18,9 +18,9 @@ export const applicationDetails: ApplicationItem[] = [
     slug: 'furniture-manufacturing',
     title: 'Furniture Manufacturing',
     cardDescription:
-      'Boards for tables, cabinetry and custom furniture, from a smooth MDF substitute to premium cross laminated panels.',
+      'NuBrid boards for tables, cabinetry and custom furniture, a smooth bamboo substitute for MDF.',
     intro:
-      'NUMAT engineered bamboo is well suited to furniture, from cabinet bodies and panels to premium tables and worktops. NuBrid gives a smooth, machinable surface in place of MDF for these pieces.',
+      'NuBrid is our furniture board, from cabinet bodies and panels to tables and worktops. Its laminated bamboo face on a woven bamboo back gives a smooth, machinable surface in place of MDF.',
     sections: [
       {
         title: 'Best Fit',
@@ -36,8 +36,8 @@ export const applicationDetails: ApplicationItem[] = [
         title: 'Recommended Products',
         body: [
           'NuBrid for cabinetry, furniture bodies and panels that need a smooth, machinable surface in place of MDF',
-          'NuBrid for premium tables, worktops and furniture elements',
-          'The CLB Furniture solution for round tables on a solid cross base',
+          'NuBrid for tables, worktops and furniture elements',
+          'The NuBrid Furniture and Cabinetry solution for finished pieces',
         ],
       },
       {
@@ -59,7 +59,8 @@ export const applicationDetails: ApplicationItem[] = [
       },
     ],
     ctas: [
-      { label: 'View the CLB Furniture solution', href: '/solutions/furniture' },
+      { label: 'View NuBrid', href: '/products/nuhybrid' },
+      { label: 'View the furniture solution', href: '/solutions/furniture' },
       { label: 'Request Quote', href: '/request-quote' },
     ],
   },
@@ -69,7 +70,7 @@ export const applicationDetails: ApplicationItem[] = [
     cardDescription:
       'For wall panels, partitions, feature panels and premium interior surfacing.',
     intro:
-      'Interior fit outs are one of the clearest use cases for NUMAT, from office interiors and wall paneling to partitions and premium surfacing. The CLB Wall Panels solution adds a tongue and groove system for a fast, seamless wall.',
+      'Interior fit outs are one of the clearest use cases for NUMAT, from office interiors and wall paneling to partitions and premium surfacing. NuWev brings a woven bamboo feature to walls and ceilings, and NuBrid covers the joinery.',
     sections: [
       {
         title: 'Best Fit',
@@ -84,8 +85,9 @@ export const applicationDetails: ApplicationItem[] = [
       {
         title: 'Recommended Products',
         body: [
-          'The CLB Wall Panels solution, tongue and groove at 14 mm, for interior walls and feature walls',
-          'NuBrid for architectural panels and premium joinery',
+          'NuWev for decorative indoor wall cladding, feature walls and ceilings',
+          'NuWev as a substrate when a laminate or veneer finish is needed',
+          'NuBrid for wall panels, ceilings and premium joinery',
           'NuBrid for interior cabinetry and panel work',
         ],
       },
@@ -93,7 +95,7 @@ export const applicationDetails: ApplicationItem[] = [
         title: 'Why It Works',
         body: [
           'A natural material finish suited to premium interiors',
-          'A tongue and groove wall system that installs fast with minimal visible gaps',
+          'A woven bamboo pattern that turns a plain wall into a feature',
           'Supports projects balancing performance and lower impact sourcing',
         ],
       },
@@ -107,7 +109,8 @@ export const applicationDetails: ApplicationItem[] = [
       },
     ],
     ctas: [
-      { label: 'View the CLB Wall Panels solution', href: '/solutions/wall-panels' },
+      { label: 'View NuWev', href: '/products/nuweave' },
+      { label: 'View the wall cladding solution', href: '/solutions/wall-panels' },
       { label: 'Request Quote', href: '/request-quote' },
     ],
   },
@@ -117,7 +120,7 @@ export const applicationDetails: ApplicationItem[] = [
     cardDescription:
       'A strong fit for hotels, retail, offices and branded interiors.',
     intro:
-      'NUMAT is suited to hospitality and commercial interiors where buyers need panels that carry design value, practical fabrication and a stronger sustainability story, from feature walls to cabinetry and clad columns.',
+      'NUMAT is suited to hospitality and commercial interiors where buyers need panels that carry design value, practical fabrication and a stronger sustainability story, from feature walls and ceilings to cabinetry and joinery.',
     sections: [
       {
         title: 'Best Fit',
@@ -127,15 +130,13 @@ export const applicationDetails: ApplicationItem[] = [
           'Office interiors',
           'Feature walls and paneling',
           'Reception and back of house joinery',
-          'Clad columns, beams and pavilions',
         ],
       },
       {
         title: 'Recommended Products',
         body: [
-          'The CLB Wall Panels solution for feature walls and paneling',
-          'The CLB Columns and Beams solution for clad structure and pavilions',
-          'NuBrid for cabinetry, shelving and joinery',
+          'NuWev for feature walls, paneling and ceilings',
+          'NuBrid for cabinetry, shelving, furniture and joinery',
         ],
       },
       {
@@ -161,62 +162,12 @@ export const applicationDetails: ApplicationItem[] = [
     ],
   },
   {
-    slug: 'columns-beams-and-cladding',
-    title: 'Columns, Beams and Cladding',
-    cardDescription:
-      'Cross laminated bamboo that wraps steel columns and beams for a warm architectural finish.',
-    intro:
-      'Engineered bamboo CLB panels wrap steel columns and beams to give a structure a warm, natural finish without carrying load. It is a fast, clean way to lift the look of pavilions, atriums and architectural features while protecting the steel underneath.',
-    sections: [
-      {
-        title: 'Best Fit',
-        body: [
-          'Steel column and beam cladding',
-          'Open air pavilions',
-          'Interior architectural features',
-          'Commercial lobbies and atriums',
-          'Hospitality and resort structures',
-          'Exposed frames and feature ceilings',
-        ],
-      },
-      {
-        title: 'Recommended Product',
-        body: [
-          'NuWev for wrapping column and beam members',
-          'Tongue and groove joints for a concealed, seamless surface',
-          'Sized to wrap 8 by 8 inch members, columns up to 6 m and beams up to 3 m',
-        ],
-      },
-      {
-        title: 'Why It Works',
-        body: [
-          'Installs directly onto the steel member',
-          'Lightweight yet strong and quick to fit on site',
-          'UV and moisture resistant finish for covered exterior use',
-          'Turns plain structure into a design feature',
-        ],
-      },
-      {
-        title: 'Buyer Considerations',
-        body: [
-          'Confirm member sizes and lengths at quote stage',
-          'This is a non load bearing finish, not a structural replacement',
-          'Request samples to approve the grain and finish',
-        ],
-      },
-    ],
-    ctas: [
-      { label: 'View the CLB Columns and Beams solution', href: '/solutions/columns-and-beams' },
-      { label: 'Request Quote', href: '/request-quote' },
-    ],
-  },
-  {
     slug: 'concrete-formwork',
     title: 'Concrete Formwork',
     cardDescription:
-      'NuForm woven bamboo board built for concrete forming, with a phenolic surface and strong reuse.',
+      'NuForm and NuForm Lite bamboo formwork boards with a phenolic film on both faces.',
     intro:
-      'NuForm woven bamboo mat board is built for concrete formwork. The phenolic surface strips clean and stands up to repeated pours, giving a strong, moisture resistant panel that competes with film faced plywood on reuse and cost.',
+      'NuForm is an engineered bamboo formwork board with a phenolic film on both faces, built to replace imported phenolic plywood on site. Choose NuForm for the most reuse on demanding pours, or NuForm Lite for a lighter, lower cost board on standard work.',
     sections: [
       {
         title: 'Best Fit',
@@ -231,23 +182,25 @@ export const applicationDetails: ApplicationItem[] = [
       {
         title: 'Recommended Product',
         body: [
-          'NuForm woven bamboo mat board with a phenolic film on both sides',
-          'Available from 12 to 18 mm thick',
-          'Standard sheet size 1220 by 2440 mm',
+          'NuForm for the most reuse on demanding pours',
+          'NuForm Lite for a lighter, lower cost board on standard work',
+          'Standard 4 by 8 ft (1220 x 2440 mm) sheet, several thicknesses per grade',
         ],
       },
       {
         title: 'Why It Works',
         body: [
-          'Phenolic surface releases cleanly and resists moisture',
+          'Phenolic film on both faces for a smooth concrete finish',
           'Proven on site to reach 8 to 10 pours, versus 4 to 5 for marine plywood',
           'DOST tested to ASTM D1037 for strength and stability',
-          'Made from rapidly renewable bamboo',
+          'Fits your existing formwork system',
+          'Made from rapidly renewable Philippine bamboo',
         ],
       },
       {
         title: 'Buyer Considerations',
         body: [
+          'Confirm the grade and thickness at quote stage',
           'Seal cut edges for the longest service life',
           'Keep the surface clean between pours',
         ],

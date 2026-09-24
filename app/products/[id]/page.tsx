@@ -44,7 +44,7 @@ export async function generateMetadata({
   }
 
   const url = `${SITE}/products/${product.slug || id}`
-  const title = `${product.name} | Engineered Bamboo Panel | NuMat Bamboo`
+  const title = `${product.name} | Engineered Bamboo Board`
   const description = metaDescription(product.description, product.name)
   const image = product.image_url?.startsWith('http')
     ? product.image_url

@@ -333,7 +333,7 @@ export default function VEReportClient() {
               <div className="gallery-card">
                 <img src={PHOTOS.lounge} alt="Hotel lounge with bamboo flooring — sunken fire pit area" loading="lazy" style={{ objectPosition: 'center 40%' }} />
                 <div className="gallery-caption">
-                  <div className="tag">NuFloor</div>
+                  <div className="tag">Engineered bamboo</div>
                   <div className="cap">Hotel Lounge — Bamboo Flooring<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo flooring across the full social space — warm, stable, zero refinishing</span></div>
                 </div>
               </div>
@@ -342,7 +342,7 @@ export default function VEReportClient() {
               <div className="gallery-card">
                 <img src={PHOTOS.guestroom} alt="Hotel guestroom with bamboo feature wall headboard panel" loading="lazy" />
                 <div className="gallery-caption">
-                  <div className="tag">NuWall</div>
+                  <div className="tag">NuWev</div>
                   <div className="cap">Hotel Guestroom — Feature Wall<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo headboard wall panel — the detail guests photograph and remember</span></div>
                 </div>
               </div>
@@ -351,7 +351,7 @@ export default function VEReportClient() {
               <div className="gallery-card">
                 <img src={PHOTOS.bar} alt="Hotel bar counter — engineered bamboo surface in F&B setting" loading="lazy" />
                 <div className="gallery-caption">
-                  <div className="tag">NuWall</div>
+                  <div className="tag">NuBrid</div>
                   <div className="cap">Hotel Bar — Bamboo Counter Surface<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>High-traffic F&amp;B surface — bamboo board that handles daily commercial use</span></div>
                 </div>
               </div>
@@ -360,7 +360,7 @@ export default function VEReportClient() {
               <div className="gallery-card">
                 <img src={PHOTOS.ceiling} alt="Bamboo ceiling panels in hotel interior — skylight installation" loading="lazy" />
                 <div className="gallery-caption">
-                  <div className="tag">NuDoor</div>
+                  <div className="tag">NuBrid</div>
                   <div className="cap">Hotel Interior — Bamboo Ceiling<br /><span style={{ fontSize: 12, color: '#94c5f0', fontWeight: 400 }}>Bamboo ceiling panels with skylight — an application most suppliers cannot deliver</span></div>
                 </div>
               </div>

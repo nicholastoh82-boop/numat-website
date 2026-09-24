@@ -121,10 +121,11 @@ export default function AboutPage() {
                     needed better, more sustainable materials.
                   </p>
                   <p>
-                    Bamboo, with its remarkable strength, rapid growth, and carbon-negative
-                    properties, was the obvious answer. We partnered with local bamboo farmers
-                    and invested in state-of-the-art processing to create premium engineered
-                    bamboo boards under the NuBam brand.
+                    Bamboo, with its remarkable strength and rapid growth, was the obvious
+                    answer. We partnered with local bamboo farmers and invested in modern
+                    processing to create premium engineered bamboo boards under the NUMAT name:
+                    NuForm for concrete formwork, NuWev for decorative interior walls, and NuBrid
+                    in place of MDF.
                   </p>
                   <p>
                     Today, we support furniture manufacturers, architects, contractors, developers,

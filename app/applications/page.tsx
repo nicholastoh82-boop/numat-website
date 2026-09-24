@@ -18,7 +18,6 @@ const iconMap = {
   'furniture-manufacturing': Armchair,
   'interior-fit-outs': LayoutPanelTop,
   'hospitality-and-commercial-spaces': Building2,
-  'columns-beams-and-cladding': Building2,
   'concrete-formwork': LayoutPanelTop,
   'project-and-procurement-use': BriefcaseBusiness,
 }
@@ -27,8 +26,7 @@ const imageMap: Record<string, string> = {
   'furniture-manufacturing': '/Bamboo-Furniture.png',
   'interior-fit-outs': '/Bamboo-Wall.png',
   'hospitality-and-commercial-spaces': '/Bamboo-Door.png',
-  'columns-beams-and-cladding': '/nuweave/numat-nubam-clb-bamboo-cladding.jpg',
-  'concrete-formwork': '/nuweave/numat-bamboo-formwork-construction-site.jpg',
+  'concrete-formwork': '/nuweave/numat-engineered-bamboo-formwork-panels.jpg',
   'project-and-procurement-use': '/Bamboo-Board.png',
 }
 

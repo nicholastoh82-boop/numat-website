@@ -89,7 +89,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
 
   const quoteMessage = useMemo(() => {
     const lines: string[] = []
-    lines.push('Hello NuMat Bamboo, I would like to request a quote.')
+    lines.push('Hello NuMat Bamboo, I would like to place an order.')
     lines.push('')
     lines.push(`Name: ${formData.name}`)
     lines.push(`Phone: ${phoneNumber || ''}`)
@@ -132,7 +132,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
     if (!validateForm()) return
     if (items.length === 0) {
       toast({
-        title: 'Nothing to quote yet',
+        title: 'Your order is empty',
         description: 'Pick at least one board above, then submit.',
         variant: 'destructive',
       })
@@ -170,7 +170,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
       })
 
       const data = await res.json()
-      if (!res.ok || !data?.ok) throw new Error(data?.error || 'Failed to submit quote.')
+      if (!res.ok || !data?.ok) throw new Error(data?.error || 'Failed to submit your order.')
 
       gtag('event', 'quote_request', { event_category: 'conversion', event_label: 'Quote Form' })
 
@@ -179,7 +179,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
       const confirmationUrl = `/quote/confirmation?id=${encodeURIComponent(quoteId)}&number=${encodeURIComponent(quoteNumber)}`
 
       if (channel === 'whatsapp') {
-        const confirmMsg = `Hello NuMat Bamboo, I submitted a quote request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`
+        const confirmMsg = `Hello NuMat Bamboo, I submitted an order request.\nQuote #: ${quoteNumber}\nLink: ${window.location.origin}${confirmationUrl}`
         window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(confirmMsg)}`, '_blank')
       }
 
@@ -187,7 +187,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
       router.push(confirmationUrl)
     } catch (err) {
       toast({
-        title: 'Quote submission failed',
+        title: 'Order submission failed',
         description: err instanceof Error ? err.message : 'Please try again.',
         variant: 'destructive',
       })
@@ -212,9 +212,9 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
       {/* Reassurance bar */}
       <div className="grid gap-3 sm:grid-cols-3">
         {[
-          { icon: Clock, text: 'Quote in 24 hours' },
+          { icon: Clock, text: 'Confirmed within 24 hours' },
           { icon: ShieldCheck, text: 'No obligation to buy' },
-          { icon: CheckCircle, text: 'PDF quote via email' },
+          { icon: CheckCircle, text: 'PDF order confirmation by email' },
         ].map((item) => (
           <div key={item.text} className="flex items-center gap-2.5 rounded-2xl border border-stone-200 bg-white px-4 py-3">
             <item.icon className="h-4 w-4 shrink-0 text-emerald-700" />
@@ -336,7 +336,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
               disabled={isSubmitting}
             />
             <span className="text-sm text-stone-600">
-              I consent to being contacted about this quote request. <span className="text-red-500">*</span>
+              I consent to being contacted about this order. <span className="text-red-500">*</span>
             </span>
           </label>
         </div>
@@ -344,7 +344,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
 
       {/* Quote preview */}
       <div className="rounded-[1.75rem] border border-stone-200 bg-white p-6">
-        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-400">Quote Preview</p>
+        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-stone-400">Order preview</p>
         <pre className="whitespace-pre-wrap rounded-2xl bg-stone-50 p-4 text-xs leading-6 text-stone-600">
           {quoteMessage}
         </pre>
@@ -352,7 +352,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
 
       {/* Submit buttons */}
       <div className="space-y-3">
-        <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Choose how to receive your quote</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Place your order and choose how we confirm</p>
 
         <button
           type="button"
@@ -361,7 +361,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
           className="flex w-full items-center justify-center gap-3 rounded-2xl bg-stone-950 py-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-stone-900 disabled:opacity-60"
         >
           {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Mail className="h-5 w-5" />}
-          Email me the quote (PDF)
+          Place order, confirm by email
         </button>
 
         <button
@@ -371,7 +371,7 @@ export function QuoteForm({ onBack, prefillProduct }: QuoteFormProps) {
           className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-700 py-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-emerald-800 disabled:opacity-60"
         >
           {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <MessageCircle className="h-5 w-5" />}
-          Continue via WhatsApp
+          Place order, confirm on WhatsApp
         </button>
       </div>
 

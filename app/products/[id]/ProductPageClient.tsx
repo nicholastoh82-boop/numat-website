@@ -1,1732 +1,605 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import {
-  ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
   CheckCircle2,
   ChevronRight,
+  ClipboardCheck,
+  Factory,
+  Leaf,
   MessageCircle,
   Minus,
+  PackageCheck,
   Plus,
   ShoppingBag,
+  Truck,
 } from 'lucide-react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import CartDrawer from '@/components/cart-drawer'
-import ProductDetailImage from '@/components/products/product-detail-image'
+import ProductGallery from '@/components/products/product-gallery'
 import ProductTechnicalSheet from '@/components/products/product-technical-sheet'
 import { useCurrency } from '@/components/providers/currency-provider'
 import { toast } from '@/hooks/use-toast'
 import { useCartStore } from '@/lib/cart-store'
+import type { ProductDetail, ProductVariant } from '@/lib/products/get-product'
 import {
-  detectProductFamily,
-  getConfiguratorOptions,
-  validateConfiguredQuantity,
-  type ProductFamily,
-} from '@/lib/product-config'
+  NUFORM_GRADES,
+  PRODUCT_ORDER,
+  getMarketing,
+  thicknessLabel,
+  type GalleryImage,
+} from '@/lib/product-media'
 
-const DOST_PDF_PATH = '/docs/DOST%20Results.pdf'
+const WHATSAPP_NUMBER = '639613076458'
+const QUICK_QUANTITIES = [10, 25, 50, 100]
 
-type Product = {
+type ListProduct = {
   id: string
   name: string
   slug: string
-  description: string | null
-  image_url: string | null
-  category: string | null
-  unit?: string | null
-  base_price_php?: number | null
-  is_price_on_request?: boolean
-  sku?: string | null
-  thickness_mm?: number | null
-  ply_count?: number | null
-  dimensions?: string | null
-  min_order_qty?: number | null
-  variants?: Array<{
-    id: string
-    sku: string
-    thickness_mm: number | null
-    ply_count: number | null
-    dimensions: string | null
-    length_mm: number | null
-    width_mm: number | null
-    base_price_php: number | null
-    unit: string
-    min_order_qty: number
-    core_type: string | null
-    grade: string | null
-    size_label: string | null
-    is_price_on_request: boolean
-    price_notes: string | null
-    in_stock?: boolean
-    is_available?: boolean
-    images?: Array<{
-      id: string
-      image_url: string
-      alt_text: string
-      is_primary: boolean
-    }>
-  }>
-  images?: Array<{
-    id: string
-    image_url: string
-    alt_text: string
-    is_primary: boolean
-  }>
-}
-
-type ProductListItem = {
-  id: string
-  name: string
-  slug?: string
-  category?: string | { id?: string; name?: string } | null
-  categories?: { id: string; name: string } | null
-  created_at?: string | null
-  base_price_php?: number | null
-}
-
-type Category = {
-  id: string
-  name: string
-  slug?: string
-  created_at?: string
-  is_active?: boolean
-  display_order?: number | null
-}
-
-type SelectOption = {
-  label: string
-  value: string
-  disabled?: boolean
-  hint?: string
-}
-
-type ResolvedQuoteState = {
-  productLabel: string
-  model: string
-  coreType: string
-  thickness: string
-  ply: string
-  length: string
-  dimensions: string
-  moq: number
-  unit: string
-  pricePhp: number | null
-  inStock: boolean
-  stockMessage: string
-  sku: string
-  variantId: string | null
-  isPriceOnRequest: boolean
+  starting_price_php: number | null
+  variants: Array<{ base_price_php: number | null; is_available?: boolean; is_price_on_request?: boolean }>
 }
 
 const fetcher = async (url: string) => {
-  // Force no-store so prices reflect Supabase live, no CDN/browser caching
   const res = await fetch(url, { cache: 'no-store' })
-  const data = await res.json()
-
-  if (!res.ok) {
-    throw new Error(data?.error || 'Failed to load data.')
-  }
-
-  return data
+  if (!res.ok) throw new Error('Failed to load')
+  return res.json()
 }
 
-function slugify(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/['"]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
+/** Priced only when active (already filtered server side), available and not on request. */
+function livePrice(variant: ProductVariant | null | undefined): number | null {
+  if (!variant || !variant.is_available || variant.is_price_on_request) return null
+  return typeof variant.base_price_php === 'number' && variant.base_price_php > 0
+    ? variant.base_price_php
+    : null
 }
 
-function normalizeCategorySlug(input: string): string {
-  const raw = slugify(input)
-
-  const aliasMap: Record<string, string> = {
-    door: 'nudoor',
-    nudoor: 'nudoor',
-
-    flooring: 'nufloor',
-    floor: 'nufloor',
-    nufloor: 'nufloor',
-
-    wall: 'nuwall',
-    'wall-panelling': 'nuwall',
-    'wall-paneling': 'nuwall',
-    nuwall: 'nuwall',
-
-    nubam: 'nubam-boards',
-    'nubam-boards': 'nubam-boards',
-    veneer: 'nubam-boards',
-
-    diy: 'nuslat',
-    'diy-project': 'nuslat',
-    'diy-projects': 'nuslat',
-    nuslat: 'nuslat',
-
-    furniture: 'furniture',
-  }
-
-  return aliasMap[raw] ?? raw
+function minPrice(variants: ProductVariant[]): number | null {
+  const prices = variants.map(livePrice).filter((p): p is number => p != null)
+  return prices.length ? Math.min(...prices) : null
 }
 
-function normalizeCategoryName(input: string): string {
-  const normalizedSlug = normalizeCategorySlug(input)
-
-  const labelMap: Record<string, string> = {
-    nudoor: 'NuDoor',
-    nufloor: 'NuFloor',
-    nuwall: 'NuWall',
-    'nubam-boards': 'NuBam Boards',
-    nuslat: 'NuSlat',
-    furniture: 'Furniture',
-  }
-
-  return labelMap[normalizedSlug] ?? input
-}
-
-function getProductCategoryLabel(product: Product | null): string {
-  if (!product?.category) return 'Product'
-  return normalizeCategoryName(product.category)
-}
-
-function getProductCategorySlugFromListItem(product: ProductListItem): string {
-  const raw =
-    typeof product.category === 'string'
-      ? product.category
-      : product.category?.name || product.categories?.name || ''
-
-  return normalizeCategorySlug(raw)
-}
-
-function cleanText(value: string | null | undefined): string {
-  return value?.replace(/\s+/g, ' ').trim() ?? ''
-}
-
-function normalizeValue(input: string | null | undefined) {
-  return (input || '').trim().toLowerCase()
-}
-
-function formatThicknessLabel(value: number | null | undefined) {
-  return typeof value === 'number' ? `${value}mm` : ''
-}
-
-function formatPlyLabel(value: number | null | undefined) {
-  return typeof value === 'number' ? `${value} Ply` : ''
-}
-
-function getUniqueOptions(values: Array<string | null | undefined>): SelectOption[] {
-  return Array.from(new Set(values.map((v) => (v || '').trim()).filter(Boolean))).map((value) => ({
-    label: value,
-    value,
-  }))
-}
-
-function getDisplayProductName(name: string, _family: ProductFamily) {
-  return name
-}
-
-function getNuDoorModelLabel(name: string) {
-  const raw = name.trim().toLowerCase()
-
-  if (raw === 'nudoor light') return 'NuDoor Light'
-  if (raw === 'nudoor composite') return 'NuDoor Composite'
-  if (raw === 'nudoor premium') return 'NuDoor Premium'
-
-  return name
-}
-
-function splitDescriptionContent(
-  description: string | null,
-  productName: string,
-  family: ProductFamily
-) {
-  if (family === 'nuwall') {
-    return {
-      intro:
-        'NuWall engineered bamboo panels manufactured for structural integrity and aesthetic performance.',
-      specsText: '',
-      highlights: [] as string[],
-    }
-  }
-
-  const cleaned = cleanText(description)
-
-  if (!cleaned) {
-    return {
-      intro: `${productName} is designed for sustainable performance, reliable quality, and modern architectural or interior applications.`,
-      specsText: '',
-      highlights: [] as string[],
-    }
-  }
-
-  const withoutLabels = cleaned
-    .replace(/key benefits\s*:?\s*/gi, ' | ')
-    .replace(/applications?\s*:?\s*/gi, ' | ')
-    .replace(/specifications?\s*:?\s*/gi, ' | ')
-    .replace(/\s*[•·]\s*/g, ' | ')
-
-  const parts = withoutLabels
-    .split('|')
-    .map((part) => cleanText(part))
-    .filter(Boolean)
-
-  const intro = parts[0] || cleaned
-  const remaining = parts.slice(1)
-
-  const specLike: string[] = []
-  const highlights: string[] = []
-
-  for (const item of remaining) {
-    const lower = item.toLowerCase()
-
-    const isSpec =
-      lower.includes('thickness') ||
-      lower.includes('size') ||
-      lower.includes('dimension') ||
-      lower.includes('standard size') ||
-      lower.includes('custom sizing') ||
-      /\b\d+\s*mm\b/i.test(item)
-
-    if (isSpec) {
-      specLike.push(item)
-      continue
-    }
-
-    if (item.toLowerCase() !== intro.toLowerCase()) {
-      highlights.push(item)
-    }
-  }
-
-  const dedupedHighlights = Array.from(
-    new Set(
-      highlights.filter(
-        (item) =>
-          item &&
-          /[a-z]/i.test(item) &&
-          item.toLowerCase() !== intro.toLowerCase() &&
-          !specLike.some((spec) => spec.toLowerCase() === item.toLowerCase())
-      )
-    )
-  )
-
-  const specsText = Array.from(new Set(specLike)).join(' • ')
-
-  return {
-    intro,
-    specsText,
-    highlights: dedupedHighlights,
-  }
-}
-
-function getProductUseCases(family: ProductFamily): string[] {
-  switch (family) {
-    case 'nubam-boards':
-      return ['Furniture manufacturing', 'Interior fit-outs', 'Cabinetry']
-    case 'nuwall':
-      return ['Wall panels', 'Interior surfaces', 'Architectural finishes']
-    case 'nudoor':
-      return ['Residential doors', 'Commercial interiors', 'Premium fit-out projects']
-    case 'nufloor':
-      return ['Residential flooring', 'Commercial flooring', 'Sustainable interiors']
-    case 'nuslat':
-      return ['Feature walls', 'Decorative detailing', 'Custom joinery']
-    case 'furniture':
-      return ['Custom furniture', 'Built-in joinery', 'Interior applications']
-    default:
-      return ['Interior applications', 'Architectural projects', 'Sustainable build use']
-  }
-}
-
-function getProductFeatureHighlights(family: ProductFamily): string[] {
-  switch (family) {
-    case 'nubam-boards':
-    case 'nuwall':
-      return ['Engineered strength', 'Premium finish quality', 'Moisture-resistant performance']
-    case 'nudoor':
-      return ['Elegant finish', 'Durable construction', 'Ready for premium projects']
-    case 'nufloor':
-      return ['Clean modern look', 'Stable construction', 'Sustainable material choice']
-    case 'nuslat':
-      return ['Lightweight format', 'Design flexibility', 'In-stock option available']
-    case 'furniture':
-      return ['Custom quote workflow', 'Interior-ready material', 'Design flexibility']
-    default:
-      return ['Engineered bamboo', 'Sustainable material', 'Project-ready quality']
-  }
-}
-
-function getFamilyBadge(family: ProductFamily, categoryLabel: string): string {
-  if (family === 'other') return categoryLabel
-  return normalizeCategoryName(categoryLabel)
-}
-
-function getSelectionRows(resolved: ResolvedQuoteState) {
-  const rows = [
-    resolved.model ? { label: 'Model', value: resolved.model } : null,
-    resolved.coreType && resolved.coreType !== '—'
-      ? { label: 'Core Type', value: resolved.coreType }
-      : null,
-    resolved.thickness && resolved.thickness !== '—'
-      ? { label: 'Thickness', value: resolved.thickness }
-      : null,
-    resolved.ply && resolved.ply !== '—' ? { label: 'Ply', value: resolved.ply } : null,
-    resolved.length ? { label: 'Length', value: resolved.length } : null,
-    resolved.dimensions && resolved.dimensions !== '—'
-      ? { label: 'Dimensions', value: resolved.dimensions }
-      : null,
-  ].filter(Boolean) as Array<{ label: string; value: string }>
-
-  return rows
-}
-
-function formatDimensions(value: string) {
-  return value.replace(/\s*x\s*/gi, ' × ')
-}
-
-function OptionPills({
-  label,
-  value,
-  onChange,
-  options,
-  lockAll,
-  radio,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  options: SelectOption[]
-  lockAll?: boolean
-  radio?: boolean
-}) {
-  if (!options.length) return null
-
-  if (radio) {
-    return (
-      <div>
-        <label className="mb-3 block text-sm font-medium text-foreground">{label}</label>
-        <div className="space-y-2">
-          {options.map((opt) => {
-            const isActive = value === opt.value
-            const isDisabled = lockAll === true || opt.disabled === true
-
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => !isDisabled && onChange(opt.value)}
-                disabled={isDisabled}
-                title={isDisabled ? 'Out of stock' : undefined}
-                className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-                  isDisabled
-                    ? 'cursor-not-allowed border-black/10 bg-white opacity-40 line-through'
-                    : isActive
-                    ? 'border-[#16361f] bg-[#16361f]/[0.06] shadow-sm'
-                    : 'border-black/10 bg-white hover:border-black/20 hover:bg-stone-50'
-                }`}
-              >
-                <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                    isActive ? 'border-[#16361f]' : 'border-black/25'
-                  }`}
-                >
-                  {isActive && <span className="h-2.5 w-2.5 rounded-full bg-[#16361f]" />}
-                </span>
-                <span className="flex-1 text-sm font-medium text-foreground">{opt.label}</span>
-                {opt.hint && (
-                  <span className="text-sm font-semibold text-[#16361f]">{opt.hint}</span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div>
-      <label className="mb-3 block text-sm font-medium text-foreground">{label}</label>
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt) => {
-          const isActive = value === opt.value
-          const isDisabled = lockAll === true || opt.disabled === true
-
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => !isDisabled && onChange(opt.value)}
-              disabled={isDisabled}
-              title={isDisabled ? 'Out of stock' : undefined}
-              className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
-                isDisabled
-                  ? 'cursor-not-allowed border-black/10 bg-white text-foreground/40 opacity-40 line-through'
-                  : isActive
-                  ? 'border-[#16361f] bg-[#16361f] text-white shadow-sm'
-                  : 'border-black/10 bg-white text-foreground hover:border-black/20 hover:bg-stone-50'
-              }`}
-            >
-              {opt.label}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-type ProductPageClientProps = {
-  /** Server rendered product. Present on first paint, so no spinner and the
-   *  markup ships in the HTML for crawlers. */
-  initialProduct: Product | null
-}
-
-export default function ProductPageClient({ initialProduct }: ProductPageClientProps) {
-  const params = useParams<{ id: string }>()
+export default function ProductPageClient({ initialProduct }: { initialProduct: ProductDetail }) {
+  const product = initialProduct
   const router = useRouter()
-  const productId = params?.id
+  const { formatConvertedFromPhp, currency } = useCurrency()
+  const { addItem, openCart } = useCartStore()
 
-  const { convertFromPhp, lineTotalFromPhp, formatPhpAmount } = useCurrency()
-  const { addItem } = useCartStore()
+  const marketing = getMarketing(product.slug)
+  const displayName = marketing?.displayName ?? product.name
 
-  const [loading, setLoading] = useState(!initialProduct)
-  const [error, setError] = useState('')
-  const [product, setProduct] = useState<Product | null>(initialProduct)
-
-  // These three start empty on purpose. They used to default to 'Horizontal',
-  // 'premium' and '8ft', which are NuBam era values, and every current product
-  // falls through to the fallback config rather than the variant driven one. The
-  // result was that a NuWev quote line read
-  // "Model: premium | Core Type: Horizontal | Length: 8ft" when NuWev has no
-  // model tiers, no core, and is a 2440 x 1220 sheet rather than a length.
-  // Empty means the spec builder omits the line and the core filter does not
-  // exclude variants that correctly have no core.
-  const [selectedCoreType, setSelectedCoreType] = useState('')
-  const [selectedThickness, setSelectedThickness] = useState('')
-  const [selectedPly, setSelectedPly] = useState('')
-  const [selectedModel, setSelectedModel] = useState('')
-  const [selectedLength, setSelectedLength] = useState('')
-  const [quantity, setQuantity] = useState(10)
-
-  const { data: categories } = useSWR<Category[]>('/api/categories', fetcher, {
-    fallbackData: [],
-    revalidateOnMount: true,
-    revalidateOnFocus: true,
-  })
-
-  const { data: allProducts } = useSWR<ProductListItem[]>('/api/products', fetcher, {
-    fallbackData: [],
-    revalidateOnMount: true,
-    revalidateOnFocus: true,
-  })
-
-  useEffect(() => {
-    if (!productId) {
-      setError('Missing product ID in route.')
-      setLoading(false)
-      return
-    }
-
-    // Already server rendered. Nothing to fetch and nothing to flash.
-    if (initialProduct && initialProduct.slug === productId) return
-    if (initialProduct && initialProduct.id === productId) return
-
-    let isMounted = true
-
-    async function loadProduct() {
-      try {
-        setLoading(true)
-        setError('')
-        setProduct(null)
-
-        const res = await fetch(`/api/products/${productId}`, { cache: 'no-store' })
-        const data = await res.json()
-
-        if (!isMounted) return
-
-        if (!res.ok) {
-          throw new Error(data?.error || 'Failed to load product.')
-        }
-
-        if (!data || !data.id) {
-          throw new Error('API returned empty product data.')
-        }
-
-        setProduct(data)
-      } catch (err) {
-        if (!isMounted) return
-        const message = err instanceof Error ? err.message : 'Something went wrong.'
-        setError(message)
-      } finally {
-        if (isMounted) setLoading(false)
-      }
-    }
-
-    loadProduct()
-
-    return () => {
-      isMounted = false
-    }
-  }, [productId, initialProduct])
-
-  const family: ProductFamily = useMemo(() => {
-    if (!product) return 'other'
-    return detectProductFamily(product.name, product.category)
-  }, [product])
-
-  const displayProductName = useMemo(
-    () => getDisplayProductName(product?.name || '', family),
-    [product?.name, family]
+  // Only variants a customer can actually order are offered.
+  const variants = useMemo(
+    () => product.variants.filter((v) => v.is_available),
+    [product.variants],
   )
 
-  const options = useMemo(() => getConfiguratorOptions(family), [family])
+  const grades = useMemo(
+    () => Array.from(new Set(variants.map((v) => v.grade).filter((g): g is string => Boolean(g)))),
+    [variants],
+  )
+  const [grade, setGrade] = useState<string | null>(grades[0] ?? null)
 
-  // When a product is flagged price-on-request at the product level (used as a
-  // repricing freeze), lock every configurator option into the disabled
-  // (greyed, struck-through) style and suppress the price. This reverts the
-  // moment the product flag is set back to false.
-  const repricingLock = product?.is_price_on_request === true
-
-  const pricedVariants = useMemo(
-    () =>
-      (product?.variants ?? []).filter(
-        (variant) =>
-          !variant.is_price_on_request &&
-          typeof variant.base_price_php === 'number' &&
-          Number.isFinite(variant.base_price_php) &&
-          variant.base_price_php > 0
-      ),
-    [product?.variants]
+  const gradeVariants = useMemo(
+    () => (grade ? variants.filter((v) => v.grade === grade) : variants),
+    [variants, grade],
   )
 
-  const useVariantDrivenConfig =
-    pricedVariants.length > 0 &&
-    (family === 'nubam-boards' || family === 'nuwall' || family === 'nuslat' || family === 'nufloor' || family === 'nudoor' || family === 'other')
+  const defaultVariant =
+    gradeVariants.find((v) => v.thickness_mm === 12 && livePrice(v) != null) ??
+    gradeVariants.find((v) => livePrice(v) != null) ??
+    gradeVariants[0] ??
+    null
+  const [variantId, setVariantId] = useState<string | null>(defaultVariant?.id ?? null)
+  const variant = gradeVariants.find((v) => v.id === variantId) ?? defaultVariant
 
-  const nudoorGradeOptions = useMemo<SelectOption[]>(() => {
-    if (family !== 'nudoor') return []
+  const moq = Math.max(1, variant?.min_order_qty ?? product.min_order_qty ?? 1)
+  const [quantity, setQuantity] = useState(moq)
+  const safeQty = Math.max(moq, quantity || 0)
 
-    const gradesOrder: Record<string, number> = {
-      light: 0,
-      composite: 1,
-      premium: 2,
-    }
+  const unitPrice = livePrice(variant)
+  const fromPrice = minPrice(variants)
+  const gradeInfo = NUFORM_GRADES.find((g) => g.grade === grade)
+  const itemName = gradeInfo ? gradeInfo.name : displayName
 
-    const grades = pricedVariants
-      .map((v) => (v.grade || '').trim())
-      .filter(Boolean)
-
-    const unique = Array.from(new Set(grades))
-
-    return unique
-      .sort((a, b) => {
-        const aOrder = gradesOrder[a.toLowerCase()] ?? 999
-        const bOrder = gradesOrder[b.toLowerCase()] ?? 999
-        if (aOrder !== bOrder) return aOrder - bOrder
-        return a.localeCompare(b)
-      })
-      .map((grade) => {
-        const variantsAtGrade = pricedVariants.filter(
-          (v) => (v.grade || '').toLowerCase() === grade.toLowerCase(),
-        )
-        const allOut = variantsAtGrade.length > 0 && variantsAtGrade.every((v) => v.in_stock === false || v.is_available === false)
-        return { label: grade, value: grade, disabled: allOut }
-      })
-  }, [family, pricedVariants])
-
-  const variantCoreTypeOptions = useMemo(() => {
-    if (!useVariantDrivenConfig) return []
-    return getUniqueOptions(pricedVariants.map((v) => v.core_type))
-  }, [useVariantDrivenConfig, pricedVariants])
-
-  const variantThicknessOptions = useMemo(() => {
-    if (!useVariantDrivenConfig) return []
-
-    if (family === 'nuslat') {
-      // Length is the first selector now, so thickness is scoped to the chosen length
-      const scoped = selectedLength
-        ? pricedVariants.filter((v) => `${v.length_mm}mm` === selectedLength)
-        : pricedVariants
-      const uniqueThicknesses = Array.from(
-        new Set(scoped.map((v) => formatThicknessLabel(v.thickness_mm)).filter(Boolean))
-      )
-      return uniqueThicknesses
-        .map((thickness) => ({
-          label: thickness,
-          value: thickness,
-          disabled: scoped
-            .filter((v) => formatThicknessLabel(v.thickness_mm) === thickness)
-            .every((v) => v.in_stock === false || v.is_available === false),
-        }))
-        .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
-    }
-
-    const scoped =
-      family === 'nubam-boards' || family === 'nuwall'
-        ? pricedVariants.filter((v) =>
-            selectedCoreType ? normalizeValue(v.core_type) === normalizeValue(selectedCoreType) : true
-          )
-        : pricedVariants
-
-    const uniqueThicknesses = Array.from(
-      new Set(scoped.map((v) => formatThicknessLabel(v.thickness_mm)).filter(Boolean))
-    )
-    return uniqueThicknesses
-      .map((thickness) => ({
-        label: thickness,
-        value: thickness,
-        disabled: scoped
-          .filter((v) => formatThicknessLabel(v.thickness_mm) === thickness)
-          .every((v) => v.in_stock === false || v.is_available === false),
-      }))
-      .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
-  }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType, selectedLength])
-
-  const variantPlyOptions = useMemo(() => {
-    if (!useVariantDrivenConfig) return []
-
-    const scoped = pricedVariants.filter((v) => {
-      if (family === 'nuslat') {
-        const thicknessMatch = selectedThickness
-          ? formatThicknessLabel(v.thickness_mm) === selectedThickness
-          : true
-        return thicknessMatch
-      }
-
-      const coreMatch =
-        family === 'nubam-boards' || family === 'nuwall'
-          ? selectedCoreType
-            ? normalizeValue(v.core_type) === normalizeValue(selectedCoreType)
-            : true
-          : true
-
-      const thicknessMatch = selectedThickness
-        ? formatThicknessLabel(v.thickness_mm) === selectedThickness
-        : true
-
-      return coreMatch && thicknessMatch
+  // Curated gallery first, then anything uploaded through admin, without repeats.
+  const gallery: GalleryImage[] = useMemo(() => {
+    const curated = marketing?.gallery ?? []
+    const uploaded = [
+      ...(variant?.images ?? []),
+      ...product.images,
+    ].map((img) => ({ src: img.image_url, alt: img.alt_text || displayName, fit: 'cover' as const }))
+    const fallback = product.image_url ? [{ src: product.image_url, alt: displayName, fit: 'cover' as const }] : []
+    const seen = new Set<string>()
+    return [...curated, ...uploaded, ...(curated.length || uploaded.length ? [] : fallback)].filter((img) => {
+      if (!img.src || seen.has(img.src)) return false
+      seen.add(img.src)
+      return true
     })
+  }, [marketing, variant, product.images, product.image_url, displayName])
 
-    const uniquePlys = Array.from(
-      new Set(scoped.map((v) => formatPlyLabel(v.ply_count)).filter(Boolean))
-    )
-    return uniquePlys
-      .map((ply) => ({
-        label: ply,
-        value: ply,
-        disabled: scoped
-          .filter((v) => formatPlyLabel(v.ply_count) === ply)
-          .every((v) => v.in_stock === false || v.is_available === false),
-      }))
-      .sort((a, b) => Number(a.value.replace(/\D/g, '')) - Number(b.value.replace(/\D/g, '')))
-  }, [useVariantDrivenConfig, pricedVariants, family, selectedCoreType, selectedThickness])
+  const { data: allProducts } = useSWR<ListProduct[]>('/api/products', fetcher)
+  const related = (allProducts ?? [])
+    .filter((p) => p.slug !== product.slug && (PRODUCT_ORDER as readonly string[]).includes(p.slug))
+    .sort((a, b) => PRODUCT_ORDER.indexOf(a.slug as never) - PRODUCT_ORDER.indexOf(b.slug as never))
 
-  const variantLengthOptions = useMemo(() => {
-    if (!useVariantDrivenConfig || family !== 'nuslat') return []
-
-    // Length is the first selector: one option per distinct length (width is constant)
-    const uniqueLengths = Array.from(
-      new Set(
-        pricedVariants
-          .map((v) => v.length_mm)
-          .filter((n): n is number => typeof n === 'number')
-      )
-    ).sort((a, b) => a - b)
-
-    return uniqueLengths.map((lengthMm) => {
-      const value = `${lengthMm}mm`
-      const matchingVariants = pricedVariants.filter((v) => v.length_mm === lengthMm)
-      const disabled =
-        matchingVariants.length === 0 ||
-        matchingVariants.every((v) => v.in_stock === false || v.is_available === false)
-      return { label: value, value, disabled }
-    })
-  }, [useVariantDrivenConfig, pricedVariants, family])
-
-  const coreTypeOptions: SelectOption[] =
-    useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')
-      ? variantCoreTypeOptions
-      : 'coreTypes' in options
-      ? options.coreTypes ?? []
-      : []
-
-  const thicknessOptionsForBoards: SelectOption[] =
-    useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')
-      ? variantThicknessOptions
-      : 'thicknesses' in options && typeof options.thicknesses === 'function'
-      ? (options.thicknesses(selectedCoreType) ?? []).sort(
-          (a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', ''))
-        )
-      : []
-
-  const plyOptionsForBoards: SelectOption[] =
-    useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')
-      ? variantPlyOptions
-      : 'plys' in options && typeof options.plys === 'function'
-      ? (options.plys(selectedCoreType, selectedThickness) ?? []).sort(
-          (a, b) => Number(a.value.replace(/\D/g, '')) - Number(b.value.replace(/\D/g, ''))
-        )
-      : []
-
-  const floorThicknessOptions: SelectOption[] =
-    useVariantDrivenConfig && family === 'nufloor'
-      ? Array.from(
-          new Set(
-            pricedVariants
-              .filter((v) => v.in_stock !== false && v.is_available !== false)
-              .map((v) => formatThicknessLabel(v.thickness_mm))
-              .filter(Boolean)
-          )
-        )
-          .map((t) => ({ label: t, value: t }))
-          .sort((a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', '')))
-      : 'thicknesses' in options && Array.isArray(options.thicknesses)
-      ? [...options.thicknesses].sort(
-          (a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', ''))
-        )
-      : []
-
-  const slatThicknessOptions: SelectOption[] =
-    useVariantDrivenConfig && family === 'nuslat'
-      ? variantThicknessOptions.sort(
-          (a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', ''))
-        )
-      : 'thicknesses' in options && Array.isArray(options.thicknesses)
-      ? [...options.thicknesses].sort(
-          (a, b) => Number(a.value.replace('mm', '')) - Number(b.value.replace('mm', ''))
-        )
-      : []
-
-  const slatLengthOptions: SelectOption[] =
-    useVariantDrivenConfig && family === 'nuslat'
-      ? variantLengthOptions
-      : 'lengths' in options
-      ? options.lengths ?? []
-      : []
-
-  const otherThicknessRadioOptions = useMemo<SelectOption[]>(() => {
-    if (!useVariantDrivenConfig || family !== 'other') return []
-    return variantThicknessOptions.map((opt) => {
-      const variant = pricedVariants.find(
-        (v) =>
-          formatThicknessLabel(v.thickness_mm) === opt.value &&
-          v.in_stock !== false &&
-          v.is_available !== false
-      )
-      const pricePhp = variant?.base_price_php ?? null
-      return {
-        ...opt,
-        hint: pricePhp != null ? formatPhpAmount(convertFromPhp(pricePhp)) : undefined,
-      }
-    })
-  }, [useVariantDrivenConfig, family, variantThicknessOptions, pricedVariants, convertFromPhp, formatPhpAmount])
-
-  useEffect(() => {
-    if (useVariantDrivenConfig && family === 'other') {
-      const firstThickness =
-        variantThicknessOptions.find((o) => !o.disabled)?.value ??
-        variantThicknessOptions[0]?.value ??
-        ''
-      if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
-      return
-    }
-
-    if (useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')) {
-      const firstCore = coreTypeOptions[0]?.value ?? ''
-      const firstThickness = thicknessOptionsForBoards[0]?.value ?? ''
-      const firstPly = plyOptionsForBoards.find((p) => !p.disabled)?.value ?? plyOptionsForBoards[0]?.value ?? ''
-
-      if (!selectedCoreType && firstCore) setSelectedCoreType(firstCore)
-      if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
-      if (!selectedPly && firstPly) setSelectedPly(firstPly)
-      return
-    }
-
-    if (useVariantDrivenConfig && family === 'nuslat') {
-      // Length first: ensure a valid length is selected before thickness
-      const firstLength =
-        slatLengthOptions.find((o) => !o.disabled)?.value ?? slatLengthOptions[0]?.value ?? ''
-      const lengthValid = slatLengthOptions.some((o) => o.value === selectedLength)
-      if (!lengthValid && firstLength) {
-        setSelectedLength(firstLength)
-        return
-      }
-
-      // Thickness second: must be one offered for the chosen length
-      const firstThickness =
-        slatThicknessOptions.find((o) => !o.disabled)?.value ?? slatThicknessOptions[0]?.value ?? ''
-      const thicknessValid = slatThicknessOptions.some(
-        (o) => o.value === selectedThickness && !o.disabled
-      )
-      if ((!selectedThickness || !thicknessValid) && firstThickness) {
-        setSelectedThickness(firstThickness)
-      }
-      return
-    }
-
-    if (useVariantDrivenConfig && family === 'nudoor') {
-      const firstGrade = nudoorGradeOptions.find((o) => !o.disabled)?.value ?? nudoorGradeOptions[0]?.value ?? ''
-      if (firstGrade && !nudoorGradeOptions.find((g) => g.value.toLowerCase() === selectedModel.toLowerCase())) {
-        setSelectedModel(firstGrade)
-      }
-      return
-    }
-
-    if (family === 'nufloor') {
-      const firstThickness = floorThicknessOptions[0]?.value ?? '12mm'
-      if (!selectedThickness && firstThickness) setSelectedThickness(firstThickness)
-    }
-
-    if (family === 'nuslat') {
-      if (!selectedThickness) setSelectedThickness('5mm')
-      if (!selectedLength) setSelectedLength('8ft')
-    }
-  }, [
-    useVariantDrivenConfig,
-    family,
-    selectedCoreType,
-    selectedThickness,
-    selectedPly,
-    selectedLength,
-    selectedModel,
-    coreTypeOptions,
-    thicknessOptionsForBoards,
-    plyOptionsForBoards,
-    floorThicknessOptions,
-    slatThicknessOptions,
-    slatLengthOptions,
-    nudoorGradeOptions,
-    variantThicknessOptions,
-  ])
-
-  useEffect(() => {
-    if (useVariantDrivenConfig && (family === 'nubam-boards' || family === 'nuwall')) {
-      const firstPly = plyOptionsForBoards.find((p) => !p.disabled)?.value ?? plyOptionsForBoards[0]?.value ?? ''
-      if (firstPly && !plyOptionsForBoards.find((p) => p.value === selectedPly)) {
-        setSelectedPly(firstPly)
-      }
-      return
-    }
-
-    if (family === 'nufloor') {
-      setSelectedPly('3 Ply')
-    }
-  }, [useVariantDrivenConfig, family, plyOptionsForBoards, selectedPly])
-
-  useEffect(() => {
-    if (family === 'nubam-boards' || family === 'nuwall') setQuantity(10)
-    if (family === 'nudoor') setQuantity(5)
-    if (family === 'nufloor') setQuantity(20)
-    if (family === 'nuslat') setQuantity(2000)
-    if (family === 'furniture') setQuantity(1)
-  }, [family])
-
-  const selectedVariant = useMemo(() => {
-    if (!useVariantDrivenConfig) return null
-
-    return (
-      pricedVariants.find((variant) => {
-        if (variant.in_stock === false) return false
-        if (variant.is_available === false) return false
-
-        if (family === 'nudoor') {
-          return selectedModel
-            ? (variant.grade || '').toLowerCase() === selectedModel.toLowerCase()
-            : true
-        }
-
-        if (family === 'nuslat') {
-          const thicknessMatch = selectedThickness
-            ? formatThicknessLabel(variant.thickness_mm) === selectedThickness
-            : true
-
-          const lengthMatch = selectedLength
-            ? `${variant.length_mm}mm` === selectedLength
-            : true
-
-          return thicknessMatch && lengthMatch
-        }
-
-        if (family === 'nufloor') {
-          return (
-            selectedThickness ? formatThicknessLabel(variant.thickness_mm) === selectedThickness : true
-          )
-        }
-
-        if (
-          (family === 'nubam-boards' || family === 'nuwall') &&
-          selectedCoreType &&
-          normalizeValue(variant.core_type) !== normalizeValue(selectedCoreType)
-        ) {
-          return false
-        }
-
-        if (selectedThickness && formatThicknessLabel(variant.thickness_mm) !== selectedThickness) {
-          return false
-        }
-
-        if (selectedPly && formatPlyLabel(variant.ply_count) !== selectedPly) {
-          return false
-        }
-
-        return true
-      }) ?? null
-    )
-  }, [
-    useVariantDrivenConfig,
-    pricedVariants,
-    family,
-    selectedCoreType,
-    selectedThickness,
-    selectedPly,
-    selectedLength,
-    selectedModel,
-  ])
-
-  const fallbackResolved = useMemo((): ResolvedQuoteState => {
-    return {
-      productLabel: displayProductName || '',
-      model:
-        family === 'nudoor'
-          ? selectedModel
-          : selectedModel || '',
-      coreType: family === 'nudoor' ? 'Horizontal' : selectedCoreType || '',
-      thickness: family === 'nufloor' ? selectedThickness || '—' : selectedThickness || '',
-      ply: family === 'nufloor' ? '3 Ply' : selectedPly || '',
-      length: family === 'nudoor' ? '8ft' : selectedLength || '',
-      dimensions: product?.dimensions || '2440mm x 1220mm',
-      moq: product?.min_order_qty || 10,
-      unit: product?.unit || 'piece',
-      pricePhp: product?.base_price_php ?? null,
-      inStock: true,
-      stockMessage: product?.base_price_php != null ? '' : 'Request Quote',
-      sku: product?.sku || '',
-      variantId: null,
-      isPriceOnRequest: product?.base_price_php == null,
-    }
-  }, [product, displayProductName, family, selectedModel, selectedCoreType, selectedThickness, selectedPly, selectedLength])
-
-  const resolved: ResolvedQuoteState = useMemo(() => {
-    if (useVariantDrivenConfig && selectedVariant) {
-      return {
-        productLabel: displayProductName || '',
-        model: family === 'nudoor' ? (selectedVariant.grade || '') : (selectedVariant.size_label || ''),
-        coreType: selectedVariant.core_type || '',
-        thickness: formatThicknessLabel(selectedVariant.thickness_mm) || '—',
-        ply: formatPlyLabel(selectedVariant.ply_count) || '—',
-        length: family === 'nuslat' ? selectedVariant.size_label || selectedLength || '' : '',
-        dimensions:
-          family === 'nufloor' && selectedVariant.thickness_mm
-            ? (selectedVariant.dimensions || product?.dimensions || '—')
-            : selectedVariant.dimensions || product?.dimensions || '—',
-        moq: selectedVariant.min_order_qty || product?.min_order_qty || 10,
-        unit: selectedVariant.unit || product?.unit || 'piece',
-        pricePhp: selectedVariant.base_price_php,
-        inStock: true,
-        stockMessage: '',
-        sku: selectedVariant.sku || product?.sku || '',
-        variantId: selectedVariant.id,
-        isPriceOnRequest: false,
-      }
-    }
-
-    return fallbackResolved
-  }, [useVariantDrivenConfig, selectedVariant, product, family, selectedLength, displayProductName, fallbackResolved])
-
-  // Display values rounded once at unit so estimated total reconciles with unit × qty.
-  const unitPriceDisplayPhp = convertFromPhp(resolved.pricePhp)
-  const estimatedTotalPhp = lineTotalFromPhp(resolved.pricePhp, quantity)
-  const familyQuantityError = validateConfiguredQuantity(family, quantity)
-  const quantityError =
-    quantity < resolved.moq
-      ? `Minimum order quantity is ${resolved.moq} ${resolved.unit}.`
-      : familyQuantityError
-
-  const allCategories = useMemo(() => {
-    const source = categories ?? []
-    const dedupedMap = new Map<string, Category>()
-
-    for (const category of source) {
-      if (category.is_active === false) continue
-
-      const normalizedSlug = normalizeCategorySlug(category.slug || category.name)
-      const normalizedName = normalizeCategoryName(category.name)
-
-      if (!dedupedMap.has(normalizedSlug)) {
-        dedupedMap.set(normalizedSlug, {
-          ...category,
-          name: normalizedName,
-          slug: normalizedSlug,
-        })
-      }
-    }
-
-    return Array.from(dedupedMap.values()).sort((a, b) => {
-      const ao = a.display_order ?? 999999
-      const bo = b.display_order ?? 999999
-      if (ao !== bo) return ao - bo
-      return a.name.localeCompare(b.name)
-    })
-  }, [categories])
-
-  const categoryRepresentativeProducts = useMemo(() => {
-    const map = new Map<string, ProductListItem>()
-
-    for (const item of allProducts ?? []) {
-      const slug = getProductCategorySlugFromListItem(item)
-      if (!slug) continue
-      if (!map.has(slug)) {
-        map.set(slug, item)
-      }
-    }
-
-    return map
-  }, [allProducts])
-
-  const categoryLabel = getProductCategoryLabel(product)
-
-  const descriptionContent = useMemo(
-    () =>
-      splitDescriptionContent(
-        product?.description ?? null,
-        displayProductName || 'This product',
-        family
-      ),
-    [product, displayProductName, family]
-  )
-
-  const useCases = useMemo(() => getProductUseCases(family), [family])
-  const featureHighlights = useMemo(() => getProductFeatureHighlights(family), [family])
-  const selectionRows = useMemo(() => getSelectionRows(resolved), [resolved])
-
-  function buildSpecs() {
-    const lines = [
-      resolved.model ? `Model: ${resolved.model}` : '',
-      resolved.coreType && resolved.coreType !== '—' ? `Core Type: ${resolved.coreType}` : '',
-      resolved.thickness && resolved.thickness !== '—' ? `Thickness: ${resolved.thickness}` : '',
-      resolved.ply && resolved.ply !== '—' ? `Ply: ${resolved.ply}` : '',
-      resolved.length ? `Length: ${resolved.length}` : '',
-      resolved.dimensions && resolved.dimensions !== '—' ? `Dimensions: ${resolved.dimensions}` : '',
-      `MOQ: ${resolved.moq} ${resolved.unit}`,
-    ].filter(Boolean)
-
-    return lines.join(' | ')
+  function selectGrade(next: string) {
+    setGrade(next)
+    const pool = variants.filter((v) => v.grade === next)
+    const keep = pool.find((v) => v.thickness_mm === variant?.thickness_mm)
+    const pick = keep ?? pool.find((v) => livePrice(v) != null) ?? pool[0]
+    setVariantId(pick?.id ?? null)
   }
 
-  function handleAddToQuote() {
-    if (!product) return
-
-    if (quantityError) {
-      toast({
-        title: 'Quantity issue',
-        description: quantityError,
-        variant: 'destructive',
-      })
-      return
-    }
-
+  function addToOrder(goToCheckout: boolean) {
+    if (!variant) return
+    const thickness = thicknessLabel(variant.size_label, variant.thickness_mm)
     addItem({
-      id: resolved.variantId || product.id,
-      variantId: resolved.variantId,
-      sku: resolved.sku,
-      name: resolved.productLabel,
-      specs: buildSpecs(),
-      quantity,
-      unitPrice: resolved.pricePhp,
-      minOrderQty: resolved.moq,
-      unit: resolved.unit,
-      imageUrl: product.image_url || '/Bamboo-Board.png',
-      isPriceOnRequest: resolved.isPriceOnRequest || resolved.pricePhp == null,
-      family,
-      dimensions: resolved.dimensions,
-      thickness: resolved.thickness,
-      ply: resolved.ply,
-      coreType: resolved.coreType,
-      model: resolved.model,
-      length: resolved.length,
-      stockMessage: resolved.stockMessage,
+      id: variant.id,
+      variantId: variant.id,
+      sku: variant.sku,
+      name: itemName,
+      specs: [
+        thickness && `Thickness: ${thickness}`,
+        'Sheet: 2440 x 1220 mm',
+        `MOQ: ${moq} boards`,
+      ]
+        .filter(Boolean)
+        .join(' | '),
+      quantity: safeQty,
+      unitPrice,
+      minOrderQty: moq,
+      unit: variant.unit || 'piece',
+      imageUrl: gallery[0]?.src ?? product.image_url,
+      isPriceOnRequest: unitPrice == null,
+      family: product.slug,
+      thickness,
+      dimensions: '2440 x 1220 mm',
     })
 
-    router.push(`/request-quote?product=${encodeURIComponent(resolved.productLabel)}`)
+    if (goToCheckout) {
+      router.push('/request-quote')
+      return
+    }
+    toast({
+      title: 'Added to your order',
+      description: `${safeQty} x ${itemName}${thickness ? `, ${thickness}` : ''}`,
+    })
+    openCart()
   }
 
-  function decrementQty() {
-    const next =
-      family === 'nufloor'
-        ? Math.max(resolved.moq, quantity - 20)
-        : Math.max(resolved.moq, quantity - 1)
+  const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    `Hello NUMAT, I would like to order ${itemName}${variant ? ` (${thicknessLabel(variant.size_label, variant.thickness_mm)})` : ''}. Quantity: ${safeQty} boards.`,
+  )}`
 
-    setQuantity(next)
-  }
-
-  function incrementQty() {
-    const next = family === 'nufloor' ? quantity + 20 : quantity + 1
-    setQuantity(next)
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <CartDrawer />
-        <main className="flex-1 bg-[#f7f2e8]">
-          <div className="mx-auto max-w-7xl px-4 py-10 lg:px-8 lg:py-12">
-            <div className="rounded-[32px] border border-black/10 bg-white p-8 shadow-sm">
-              <p className="text-muted-foreground">Loading product...</p>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    )
-  }
-
-  if (error || !product) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <CartDrawer />
-        <main className="flex-1 bg-[#f7f2e8]">
-          <div className="mx-auto max-w-7xl px-4 py-10 lg:px-8 lg:py-12">
-            <div className="rounded-[32px] border border-black/10 bg-white p-8 shadow-sm">
-              <div className="text-xl font-semibold text-red-700">
-                {error || 'Product not found.'}
-              </div>
-              <div className="mt-4">
-                <Link
-                  href="/products"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  ← Back to products
-                </Link>
-              </div>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    )
-  }
+  const total = unitPrice != null ? unitPrice * safeQty : null
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-[#faf7f1]">
       <Header />
       <CartDrawer />
-      <main className="flex-1 bg-[#f7f2e8] pb-28 lg:pb-0">
-        <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8 lg:py-10">
-          <div className="mb-6 flex flex-col gap-4">
-            <Link
-              href="/products"
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to products
-            </Link>
 
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span>Products</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-              <span>{categoryLabel}</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-              <span className="text-foreground">{displayProductName}</span>
+      <main className="flex-1 pb-28 text-stone-900 lg:pb-0">
+        <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8 lg:py-10">
+          <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-sm text-stone-500" aria-label="Breadcrumb">
+            <Link href="/" className="hover:text-stone-900">Home</Link>
+            <ChevronRight className="h-3.5 w-3.5" />
+            <Link href="/products" className="hover:text-stone-900">Shop</Link>
+            <ChevronRight className="h-3.5 w-3.5" />
+            <span className="text-stone-900">{itemName}</span>
+          </nav>
+
+          {/* Gallery and buy box */}
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
+            <div className="lg:sticky lg:top-24 lg:self-start">
+              <ProductGallery images={gallery} priority />
             </div>
-          </div>
 
-          <div className="mb-6">
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              <button
-                type="button"
-                onClick={() => router.push('/products')}
-                className="shrink-0 rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-foreground"
-              >
-                All Products
-              </button>
+            <div>
+              {marketing?.badge && (
+                <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-900">
+                  {marketing.badge}
+                </span>
+              )}
+              <h1 className="mt-3 text-4xl font-semibold tracking-tight text-stone-950 sm:text-5xl">
+                {itemName}
+              </h1>
+              {marketing?.tagline && (
+                <p className="mt-2 text-lg font-medium text-emerald-900">{marketing.tagline}</p>
+              )}
+              <p className="mt-4 text-base leading-7 text-stone-600">
+                {marketing?.pitch ?? product.description}
+              </p>
 
-              {allCategories.map((category) => {
-                const slug = normalizeCategorySlug(category.slug || category.name)
-                const label = normalizeCategoryName(category.name)
-                const isActive = slug === normalizeCategorySlug(product.category || '')
-                const targetProduct = categoryRepresentativeProducts.get(slug)
+              {fromPrice != null && (
+                <p className="mt-5 text-sm text-stone-600">
+                  From{' '}
+                  <span className="text-2xl font-semibold text-stone-950">{formatConvertedFromPhp(fromPrice)}</span>{' '}
+                  per board
+                </p>
+              )}
 
-                return (
-                  <button
-                    key={slug}
-                    type="button"
-                    onClick={() => {
-                      if (targetProduct?.id) {
-                        router.push(`/products/${targetProduct.id}`)
-                      } else {
-                        router.push(`/products?category=${slug}`)
-                      }
-                    }}
-                    className={`shrink-0 rounded-full px-4 py-2 text-sm transition ${
-                      isActive
-                        ? 'bg-[#16361f] text-white'
-                        : 'border border-black/10 bg-white text-foreground'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
-            <section className="space-y-8">
-              <div className="overflow-hidden rounded-[34px] border border-black/8 bg-white shadow-sm">
-                <div className="grid gap-0 lg:grid-cols-[0.95fr_1.05fr]">
-                  <div className="relative min-h-[320px] bg-[#efe7d9] sm:min-h-[420px] lg:min-h-[620px]">
-                    <ProductDetailImage
-                      product={product}
-                      variantImages={selectedVariant?.images}
-                    />
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
-                  </div>
-
-                  <div className="p-6 lg:p-8 xl:p-10">
-                    <div className="mb-4 flex flex-wrap items-center gap-3">
-                      <span className="inline-flex rounded-full border border-[#16361f]/15 bg-[#16361f]/8 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-[#16361f]">
-                        {getFamilyBadge(family, categoryLabel)}
-                      </span>
+              <div className="mt-6 space-y-6 rounded-[1.75rem] border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
+                {grades.length > 1 && (
+                  <fieldset>
+                    <legend className="mb-3 text-sm font-semibold text-stone-900">Choose your board</legend>
+                    <div className="grid grid-cols-2 gap-3">
+                      {grades.map((g) => {
+                        const info = NUFORM_GRADES.find((x) => x.grade === g)
+                        const active = g === grade
+                        return (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => selectGrade(g)}
+                            aria-pressed={active}
+                            className={`rounded-2xl border-2 p-4 text-left transition ${
+                              active ? 'border-emerald-800 bg-emerald-50' : 'border-stone-200 hover:border-stone-400'
+                            }`}
+                          >
+                            <span className="block text-base font-semibold text-stone-950">{info?.name ?? g}</span>
+                            <span className="mt-1 block text-xs leading-5 text-stone-600">{info?.promise}</span>
+                          </button>
+                        )
+                      })}
                     </div>
+                  </fieldset>
+                )}
 
-                    {family !== 'nuwall' ? (
-                      <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl xl:text-5xl">
-                        {displayProductName}
-                      </h1>
-                    ) : (
-                      <h1 className="sr-only">{displayProductName}</h1>
-                    )}
+                {gradeVariants.length > 0 && (
+                  <fieldset>
+                    <legend className="mb-3 text-sm font-semibold text-stone-900">
+                      Thickness <span className="font-normal text-stone-500">(2440 x 1220 mm sheet)</span>
+                    </legend>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {gradeVariants.map((v) => {
+                        const active = v.id === variant?.id
+                        const price = livePrice(v)
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => setVariantId(v.id)}
+                            aria-pressed={active}
+                            className={`rounded-xl border-2 px-3 py-2.5 text-left transition ${
+                              active ? 'border-emerald-800 bg-emerald-50' : 'border-stone-200 hover:border-stone-400'
+                            }`}
+                          >
+                            <span className="block text-sm font-semibold text-stone-950">
+                              {thicknessLabel(v.size_label, v.thickness_mm)}
+                            </span>
+                            <span className="block text-xs text-stone-600">
+                              {price != null ? formatConvertedFromPhp(price) : 'Price on request'}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </fieldset>
+                )}
 
-                    <p
-                      className={`${
-                        family !== 'nuwall' ? 'mt-5' : 'mt-2'
-                      } max-w-2xl text-base leading-8 text-muted-foreground`}
-                    >
-                      {descriptionContent.intro}
-                    </p>
-
-                    <div className="mt-6 flex flex-wrap gap-2">
-                      {featureHighlights.map((item) => (
-                        <span
-                          key={item}
-                          className="inline-flex rounded-full border border-black/8 bg-stone-50 px-3.5 py-2 text-sm text-foreground"
+                <div>
+                  <p className="mb-3 text-sm font-semibold text-stone-900">Quantity (boards)</p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="inline-flex items-center rounded-full border border-stone-300 bg-white p-1">
+                      <button
+                        type="button"
+                        onClick={() => setQuantity(Math.max(moq, safeQty - 1))}
+                        disabled={safeQty <= moq}
+                        className="flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-stone-100 disabled:opacity-40"
+                        aria-label="Decrease quantity"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={quantity === 0 ? '' : String(quantity)}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/[^0-9]/g, '')
+                          setQuantity(digits === '' ? 0 : Math.min(100000, parseInt(digits, 10)))
+                        }}
+                        onBlur={() => setQuantity(safeQty)}
+                        aria-label="Quantity in boards"
+                        className="w-16 bg-transparent text-center text-base font-semibold outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setQuantity(safeQty + 1)}
+                        className="flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-stone-100"
+                        aria-label="Increase quantity"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {QUICK_QUANTITIES.filter((q) => q >= moq).map((q) => (
+                        <button
+                          key={q}
+                          type="button"
+                          onClick={() => setQuantity(q)}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                            safeQty === q ? 'border-stone-950 bg-stone-950 text-white' : 'border-stone-300 text-stone-700 hover:border-stone-500'
+                          }`}
                         >
-                          {item}
-                        </span>
+                          {q}
+                        </button>
                       ))}
                     </div>
-
                   </div>
-                </div>
-              </div>
-
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm">
-                  <div className="mb-5">
-                    <h2 className="text-xl font-semibold text-foreground">Best For</h2>
-                  </div>
-
-                  <div className="space-y-3">
-                    {useCases.map((item) => (
-                      <div key={item} className="flex items-start gap-3">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
-                        <p className="text-sm leading-7 text-foreground">{item}</p>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="mt-2 text-xs text-stone-500">Minimum order {moq} boards per thickness.</p>
                 </div>
 
-                <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm">
-                  <div className="mb-5">
-                    <h2 className="text-xl font-semibold text-foreground">Product Overview</h2>
+                <div className="rounded-2xl bg-stone-50 p-4">
+                  <div className="flex items-baseline justify-between gap-3 text-sm text-stone-600">
+                    <span>
+                      {unitPrice != null ? `${formatConvertedFromPhp(unitPrice)} x ${safeQty} boards` : `${safeQty} boards`}
+                    </span>
                   </div>
-
-                  <p className="text-sm leading-7 text-foreground/75">
-                    Built for modern projects that require a balance of durability,
-                    clean aesthetics, and sustainable material sourcing.
+                  <p className="mt-1 text-3xl font-semibold tracking-tight text-stone-950">
+                    {total != null ? formatConvertedFromPhp(total) : 'Price on request'}
                   </p>
-                </div>
-              </div>
-
-              {descriptionContent.highlights.length > 0 && (
-                <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm lg:p-8">
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-semibold text-foreground">Key Highlights</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Main benefits and application strengths
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {descriptionContent.highlights.map((item, index) => (
-                      <div
-                        key={`${item}-${index}`}
-                        className="rounded-[24px] border border-black/8 bg-[#faf6ef] p-5"
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="mt-2 inline-block h-2.5 w-2.5 rounded-full bg-[#16361f]" />
-                          <p className="text-sm leading-7 text-foreground">{item}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm lg:p-8">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-semibold text-foreground">Configure Your Product</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Select the required specifications below to prepare your quote.
+                  <p className="mt-1 text-xs text-stone-500">
+                    {total != null
+                      ? `Ex works price, delivery quoted separately.${currency !== 'PHP' ? ' Converted from PHP at the rate of the day.' : ''}`
+                      : 'Add it to your order and we will confirm the price with you.'}
                   </p>
                 </div>
 
-                <div className="space-y-8">
-                  {(family === 'nubam-boards' || family === 'nuwall') && (
-                    <>
-                      <OptionPills lockAll={repricingLock}
-                        label="Core Type"
-                        value={selectedCoreType}
-                        onChange={setSelectedCoreType}
-                        options={coreTypeOptions}
-                      />
-
-                      <OptionPills lockAll={repricingLock}
-                        label="Thickness"
-                        value={selectedThickness}
-                        onChange={setSelectedThickness}
-                        options={thicknessOptionsForBoards}
-                      />
-
-                      <OptionPills lockAll={repricingLock}
-                        label="Ply"
-                        value={selectedPly}
-                        onChange={setSelectedPly}
-                        options={plyOptionsForBoards}
-                      />
-                    </>
-                  )}
-
-                  {family === 'nudoor' && nudoorGradeOptions.length > 0 && (
-                    <OptionPills lockAll={repricingLock}
-                      label="Grade"
-                      value={selectedModel}
-                      onChange={setSelectedModel}
-                      options={nudoorGradeOptions}
-                    />
-                  )}
-
-                  {family === 'nufloor' && (
-                    <>
-                      <OptionPills lockAll={repricingLock}
-                        label="Thickness"
-                        value={selectedThickness}
-                        onChange={setSelectedThickness}
-                        options={floorThicknessOptions}
-                      />
-
-                      <div className="rounded-[24px] border border-black/8 bg-[#faf6ef] p-4 text-sm leading-7 text-foreground/80">
-                        <span className="font-medium text-foreground">Standard build:</span> {selectedPly || '3 Ply'}
-                        <br />
-                        <span className="font-medium text-foreground">Dimensions:</span>{' '}
-                        {resolved.dimensions && resolved.dimensions !== '—'
-                          ? formatDimensions(resolved.dimensions)
-                          : '1220mm × 305mm'}
-                      </div>
-                    </>
-                  )}
-
-                  {family === 'nuslat' && (
-                    <>
-                      <OptionPills lockAll={repricingLock}
-                        label="Length"
-                        value={selectedLength}
-                        onChange={setSelectedLength}
-                        options={slatLengthOptions}
-                      />
-
-                      <OptionPills lockAll={repricingLock}
-                        label="Thickness"
-                        value={selectedThickness}
-                        onChange={setSelectedThickness}
-                        options={slatThicknessOptions}
-                      />
-                    </>
-                  )}
-
-                  {family === 'other' && otherThicknessRadioOptions.length > 0 && (
-                    <OptionPills lockAll={repricingLock}
-                      radio
-                      label="Thickness"
-                      value={selectedThickness}
-                      onChange={setSelectedThickness}
-                      options={otherThicknessRadioOptions}
-                    />
-                  )}
-
-                  <div className="rounded-[26px] border border-black/8 bg-[#faf6ef] p-5">
-                    <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-                      <div>
-                        <label className="mb-3 block text-sm font-medium text-foreground">
-                          Quantity
-                        </label>
-
-                        <div className="inline-flex items-center rounded-full border border-black/10 bg-white p-1 shadow-sm">
-                          <button
-                            type="button"
-                            onClick={decrementQty}
-                            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition hover:bg-stone-50"
-                            aria-label="Decrease quantity"
-                          >
-                            <Minus className="h-4 w-4" />
-                          </button>
-
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={quantity === 0 ? '' : String(quantity)}
-                            onChange={(e) => {
-                              const digits = e.target.value.replace(/[^0-9]/g, '')
-                              setQuantity(digits === '' ? 0 : parseInt(digits, 10))
-                            }}
-                            placeholder={String(resolved.moq)}
-                            aria-label="Quantity"
-                            className="min-w-[72px] w-24 px-3 text-center text-base font-semibold text-foreground bg-transparent outline-none"
-                          />
-
-                          <button
-                            type="button"
-                            onClick={incrementQty}
-                            className="flex h-10 w-10 items-center justify-center rounded-full text-foreground transition hover:bg-stone-50"
-                            aria-label="Increase quantity"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        </div>
-
-                        <div className="mt-3 text-sm text-muted-foreground">
-                          MOQ: {resolved.moq} {resolved.unit}
-                          {family === 'nufloor' ? ' | Must be in multiples of 20' : ''}
-                        </div>
-
-                        {quantityError && (
-                          <p className="mt-2 text-sm text-red-600">{quantityError}</p>
-                        )}
-                      </div>
-
-                      <div className="rounded-[22px] border border-black/8 bg-white p-4 sm:min-w-[220px]">
-                        <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                          Estimated total
-                        </p>
-                        <p className="mt-2 text-xl font-semibold text-foreground">
-                          {estimatedTotalPhp != null
-                            ? formatPhpAmount(estimatedTotalPhp)
-                            : resolved.stockMessage || 'Request Quote'}
-                        </p>
-                        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-                          Prices set in PHP, converted daily
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <ProductTechnicalSheet slug={product?.slug} />
-
-              {product?.slug !== 'nuweave' && (
-              <div className="rounded-[30px] border border-black/8 bg-white p-6 shadow-sm lg:p-8">
-                <div className="mb-5">
-                  <h2 className="text-2xl font-semibold text-foreground">Third-party testing</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    ASTM D1037 mechanical testing (ranges published to avoid cherry-picking).
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
-                    MOR: 22.77 to 69.44 MPa
-                  </span>
-                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
-                    MOE: 2211.82 to 10256.71 MPa
-                  </span>
-                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
-                    Compression: 25.19 to 30.46 MPa
-                  </span>
-                  <span className="rounded-full border border-black/8 bg-[#faf6ef] px-3 py-1 text-foreground/80">
-                    Hardness: 3918.33 to 7377.33 N
-                  </span>
-                </div>
-
-                <p className="mt-4 text-xs leading-6 text-muted-foreground">
-                  Results apply to the specific samples submitted for testing (Oct to Nov 2025) and are
-                  provided for reference. Values may vary by product configuration, thickness, moisture
-                  content, and manufacturing lot.
-                </p>
-
-                <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                  <Link
-                    href="/testing"
-                    className="font-semibold text-primary hover:underline underline-offset-4"
-                  >
-                    View testing page
-                  </Link>
-                  <a
-                    href={DOST_PDF_PATH}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold text-primary hover:underline underline-offset-4"
-                  >
-                    Download DOST results (PDF)
-                  </a>
-                </div>
-              </div>
-              )}
-            </section>
-
-            <aside className="hidden xl:block">
-              <div className="sticky top-24 rounded-[30px] bg-[#16241a] p-6 text-white shadow-[0_18px_48px_rgba(0,0,0,0.18)]">
-                <p className="text-xs uppercase tracking-[0.16em] text-white/45">
-                  Configuration summary
-                </p>
-
-                <div className="mt-5 space-y-4">
-                  <div className="rounded-[22px] bg-white/6 p-4">
-                    <p className="text-sm text-white/50">Product</p>
-                    <p className="mt-1 text-lg font-semibold">{resolved.productLabel}</p>
-                  </div>
-
-                  {selectionRows.length > 0 && (
-                    <div className="rounded-[22px] bg-white/6 p-4">
-                      <p className="text-sm text-white/50">Selected configuration</p>
-                      <div className="mt-3 space-y-2.5 text-sm">
-                        {selectionRows.map((row) => (
-                          <div
-                            key={`${row.label}-${row.value}`}
-                            className="flex items-start justify-between gap-4"
-                          >
-                            <span className="text-white/50">{row.label}</span>
-                            <span className="text-right font-medium text-white">
-                              {row.label === 'Dimensions'
-                                ? formatDimensions(row.value)
-                                : row.value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-[22px] bg-white/6 p-4">
-                      <p className="text-xs uppercase tracking-[0.14em] text-white/45">MOQ</p>
-                      <p className="mt-2 text-sm font-medium">
-                        {resolved.moq} {resolved.unit}
-                      </p>
-                    </div>
-
-                    <div className="rounded-[22px] bg-white/6 p-4">
-                      <p className="text-xs uppercase tracking-[0.14em] text-white/45">
-                        Quantity
-                      </p>
-                      <p className="mt-2 text-sm font-medium">
-                        {quantity} {resolved.unit}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[22px] border border-white/10 bg-amber-400/10 p-4">
-                    <p className="text-sm text-amber-100/80">Unit Price</p>
-                    <p className="mt-1 text-2xl font-semibold">
-                      {unitPriceDisplayPhp != null
-                        ? formatPhpAmount(unitPriceDisplayPhp)
-                        : resolved.stockMessage || 'Request Quote'}
-                    </p>
-                    <p className="mt-1 text-[11px] leading-snug text-white/55">
-                      Prices set in PHP, converted daily
-                    </p>
-                  </div>
-
-                  <div className="rounded-[22px] border border-white/10 bg-emerald-400/10 p-4">
-                    <p className="text-sm text-emerald-100/80">Estimated Total</p>
-                    <p className="mt-1 text-xl font-semibold">
-                      {estimatedTotalPhp != null
-                        ? formatPhpAmount(estimatedTotalPhp)
-                        : resolved.stockMessage || 'Request Quote'}
-                    </p>
-                  </div>
-
+                <div className="grid gap-3 sm:grid-cols-2">
                   <button
                     type="button"
-                    onClick={handleAddToQuote}
-                    disabled={!!quantityError}
-                    className="mt-2 w-full rounded-full bg-white px-4 py-3.5 font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => addToOrder(false)}
+                    disabled={!variant}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-stone-950 bg-white px-5 py-3.5 text-sm font-semibold text-stone-950 transition hover:bg-stone-50 disabled:opacity-50"
                   >
-                    Add to Quote
+                    <ShoppingBag className="h-4 w-4" />
+                    Add to order
                   </button>
-
-                  <a
-                    href={`https://wa.me/639613076458?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20"
+                  <button
+                    type="button"
+                    onClick={() => addToOrder(true)}
+                    disabled={!variant}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-900 disabled:opacity-50"
                   >
-                    <MessageCircle className="h-4 w-4" />
-                    Ask about this product
-                  </a>
+                    Order now
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 text-sm font-semibold text-emerald-800 hover:underline"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Prefer to chat? Order on WhatsApp
+                </a>
+              </div>
+
+              <ul className="mt-5 grid gap-3 text-sm text-stone-700 sm:grid-cols-2">
+                <li className="flex items-center gap-2"><Factory className="h-4 w-4 text-emerald-800" /> Made in Bukidnon, Philippines</li>
+                <li className="flex items-center gap-2"><PackageCheck className="h-4 w-4 text-emerald-800" /> Low minimum order: {moq} boards</li>
+                <li className="flex items-center gap-2"><Truck className="h-4 w-4 text-emerald-800" /> Delivery quoted to your site</li>
+                <li className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-emerald-800" /> No payment until we confirm</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Why buyers choose it */}
+          {marketing && (
+            <section className="mt-16 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm lg:p-8">
+                <h2 className="text-2xl font-semibold tracking-tight text-stone-950">Why buyers choose {displayName}</h2>
+                <ul className="mt-5 space-y-3">
+                  {marketing.highlights.map((item) => (
+                    <li key={item} className="flex items-start gap-3 text-base leading-7 text-stone-700">
+                      <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-emerald-700" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-[1.75rem] bg-emerald-900 p-6 text-white lg:p-8">
+                <h2 className="text-2xl font-semibold tracking-tight">Best for</h2>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {marketing.bestFor.map((item) => (
+                    <span key={item} className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-8 flex items-start gap-3 rounded-2xl bg-white/10 p-4 text-sm leading-6 text-white/85">
+                  <Leaf className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
+                  Bamboo matures in 3 to 5 years, against 20 to 40 years for traditional timber.
                 </div>
               </div>
-            </aside>
+            </section>
+          )}
+
+          {/* NuForm vs NuForm Lite */}
+          {grades.length > 1 && (
+            <section className="mt-16">
+              <h2 className="text-3xl font-semibold tracking-tight text-stone-950">NuForm or NuForm Lite?</h2>
+              <p className="mt-2 max-w-2xl text-stone-600">
+                Same engineered bamboo, same phenolic film on both faces. Pick the board that fits your pour.
+              </p>
+              <div className="mt-8 grid gap-5 md:grid-cols-2">
+                {NUFORM_GRADES.map((g) => {
+                  const price = minPrice(variants.filter((v) => v.grade === g.grade))
+                  const thicknesses = variants
+                    .filter((v) => v.grade === g.grade)
+                    .map((v) => thicknessLabel(v.size_label, v.thickness_mm))
+                  const active = g.grade === grade
+                  return (
+                    <div
+                      key={g.grade}
+                      className={`rounded-[1.75rem] border-2 bg-white p-6 shadow-sm ${active ? 'border-emerald-800' : 'border-stone-200'}`}
+                    >
+                      <p className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-800">{g.promise}</p>
+                      <h3 className="mt-2 text-2xl font-semibold text-stone-950">{g.name}</h3>
+                      <dl className="mt-5 space-y-3 text-sm">
+                        <div className="flex justify-between gap-4 border-b border-stone-100 pb-3">
+                          <dt className="text-stone-500">Best application</dt>
+                          <dd className="text-right font-medium">{g.bestFor}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4 border-b border-stone-100 pb-3">
+                          <dt className="text-stone-500">Key advantage</dt>
+                          <dd className="text-right font-medium">{g.advantage}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4 border-b border-stone-100 pb-3">
+                          <dt className="text-stone-500">Bending strength</dt>
+                          <dd className="text-right font-medium">{g.strength}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4 border-b border-stone-100 pb-3">
+                          <dt className="text-stone-500">Thicknesses</dt>
+                          <dd className="text-right font-medium">{thicknesses.join(', ') || 'On request'}</dd>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-stone-500">Price</dt>
+                          <dd className="text-right font-semibold text-stone-950">
+                            {price != null ? `From ${formatConvertedFromPhp(price)}` : 'On request'}
+                          </dd>
+                        </div>
+                      </dl>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          selectGrade(g.grade)
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }}
+                        className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800"
+                      >
+                        Choose {g.name}
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Specifications */}
+          {marketing && (
+            <section className="mt-16 rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm lg:p-8">
+              <h2 className="text-2xl font-semibold tracking-tight text-stone-950">Specifications</h2>
+              <dl className="mt-6 grid gap-x-10 sm:grid-cols-2">
+                {[
+                  ...marketing.specs,
+                  {
+                    label: 'Thicknesses available',
+                    value:
+                      Array.from(new Set(variants.map((v) => thicknessLabel(v.size_label, v.thickness_mm)))).join(', ') ||
+                      'On request',
+                  },
+                ].map((row) => (
+                  <div key={row.label} className="flex justify-between gap-6 border-b border-stone-100 py-3 text-sm">
+                    <dt className="text-stone-500">{row.label}</dt>
+                    <dd className="text-right font-medium text-stone-900">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+
+          <div className="mt-8 space-y-8">
+            <ProductTechnicalSheet slug={product.slug} hideSpecs />
           </div>
+
+          {/* How ordering works */}
+          <section className="mt-16 rounded-[1.75rem] border border-stone-200 bg-white p-6 shadow-sm lg:p-8">
+            <h2 className="text-2xl font-semibold tracking-tight text-stone-950">How ordering works</h2>
+            <ol className="mt-6 grid gap-5 md:grid-cols-3">
+              {[
+                { icon: ShoppingBag, title: 'Build your order', body: 'Pick your boards, thicknesses and quantities. Prices and totals update as you go.' },
+                { icon: ClipboardCheck, title: 'We confirm', body: 'Our team confirms stock, delivery cost to your site and payment details with you.' },
+                { icon: Truck, title: 'Pay and receive', body: 'Once you approve, you pay and we produce and dispatch your boards.' },
+              ].map(({ icon: Icon, title, body }, i) => (
+                <li key={title} className="rounded-2xl bg-stone-50 p-5">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-800 text-sm font-semibold text-white">{i + 1}</span>
+                    <Icon className="h-5 w-5 text-emerald-800" />
+                  </div>
+                  <h3 className="mt-4 font-semibold text-stone-950">{title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-stone-600">{body}</p>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {/* Rest of the range */}
+          {related.length > 0 && (
+            <section className="mt-16">
+              <h2 className="text-2xl font-semibold tracking-tight text-stone-950">Complete your order</h2>
+              <div className="mt-6 grid gap-5 md:grid-cols-2">
+                {related.map((p) => {
+                  const m = getMarketing(p.slug)
+                  const prices = p.variants
+                    .filter((v) => v.is_available !== false && !v.is_price_on_request && v.base_price_php)
+                    .map((v) => Number(v.base_price_php))
+                  const from = prices.length ? Math.min(...prices) : null
+                  return (
+                    <div key={p.id} className="overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm">
+                      {m && <ProductGallery images={m.gallery} compact />}
+                      <div className="flex items-end justify-between gap-4 p-5">
+                        <div>
+                          <h3 className="text-xl font-semibold text-stone-950">{m?.displayName ?? p.name}</h3>
+                          <p className="text-sm text-stone-600">{m?.tagline}</p>
+                          {from != null && (
+                            <p className="mt-2 text-sm text-stone-600">
+                              From <span className="font-semibold text-stone-950">{formatConvertedFromPhp(from)}</span>
+                            </p>
+                          )}
+                        </div>
+                        <Link
+                          href={`/products/${p.slug}`}
+                          className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-stone-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800"
+                        >
+                          Shop
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
         </div>
 
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/8 bg-white/96 px-4 py-3 backdrop-blur lg:hidden">
+        {/* Mobile order bar */}
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
           <div className="mx-auto flex max-w-7xl items-center gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                Estimated total
+              <p className="truncate text-xs text-stone-500">
+                {safeQty} x {itemName}
               </p>
-              <p className="truncate text-base font-semibold text-foreground">
-                {estimatedTotalPhp != null
-                  ? formatPhpAmount(estimatedTotalPhp)
-                  : resolved.stockMessage || 'Request Quote'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                MOQ {resolved.moq} {resolved.unit}
+              <p className="truncate text-lg font-semibold text-stone-950">
+                {total != null ? formatConvertedFromPhp(total) : 'Price on request'}
               </p>
             </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleAddToQuote}
-                disabled={!!quantityError}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#16361f] px-5 py-3 font-semibold text-white transition hover:bg-[#204a2b] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <ShoppingBag className="h-4 w-4" />
-                Add to Quote
-              </button>
-              <a
-                href={`https://wa.me/639613076458?text=${encodeURIComponent(`Hello NUMAT, I would like to ask about ${resolved.productLabel}. Please provide more information.`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-full border border-emerald-600 bg-emerald-600 px-4 py-3 text-stone-50 transition hover:bg-emerald-700"
-                aria-label="Ask about this product on WhatsApp"
-              >
-                <MessageCircle className="h-4 w-4" />
-              </a>
-            </div>
+            <button
+              type="button"
+              onClick={() => addToOrder(false)}
+              disabled={!variant}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:opacity-50"
+            >
+              <ShoppingBag className="h-4 w-4" />
+              Add to order
+            </button>
           </div>
         </div>
       </main>
+
       <Footer />
     </div>
   )

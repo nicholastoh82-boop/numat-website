@@ -1,111 +1,117 @@
-# NUMAT Sustainable Manufacturing — numatbamboo.com
+# NUMAT Sustainable Manufacturing: numatbamboo.com
 
-This repo is the production site, in house CRM, CEO dashboard, and lead capture surface for NUMAT. It also hosts the NARA AI chat widget, automated SEO article pipeline, and financial operations system (receipt upload + Claude Vision extraction + admin dashboard).
+This repo is the production sales site, the in house CRM, the staff portal, the finance system and the lead capture surface for NUMAT. Every future session in this repo follows the rules below.
 
-> Inherits global rules from `C:\Users\nicho\.claude\CLAUDE.md`. The notes below extend, not replace, those rules.
+> Inherits global rules from `C:\Users\nicho\.claude\CLAUDE.md`. The notes below extend, never replace, those rules.
 
-## Stack
-- Next.js (App Router), React, TypeScript, Tailwind CSS, shadcn/ui
-- Supabase (Postgres, Auth, Edge Functions), project ID `peuwxnrojlfybdymkazj`
-- Vercel hosting
-- Anthropic Claude via Cloudflare AI Gateway (never direct to api.anthropic.com)
-- n8n for outreach orchestration (being progressively replaced by Next.js API routes for new flows; existing n8n workflows remain in place)
+## 1. Stack
+- Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix)
+- Hosting: Vercel. Production deploys automatically when a pull request merges into `main`.
+- Database, auth, storage: Supabase project `peuwxnrojlfybdymkazj`
+- Client state: zustand (cart), SWR (client fetches), zod and react hook form (forms)
+- Email: SendGrid and Resend. WhatsApp: Twilio and `wa.me` links.
+- Claude API calls go through Cloudflare AI Gateway only. Never call `api.anthropic.com` directly.
+- n8n still runs older outreach workflows. New flows go into Next.js API routes.
 
-## Critical product names (use these exactly)
-NuBam Boards, NuWall, NuDoor, NuFloor, NuSlat.
+## 2. Folder map
+| Path | What lives there |
+|---|---|
+| `app/` | App Router pages. Public site pages sit at the top level (`/`, `/products`, `/about`, `/contact`, `/faq`, `/applications`, `/solutions`, `/blog`, `/news` and so on). |
+| `app/products/` | `page.tsx` (catalogue) and `[id]/page.tsx` plus `[id]/ProductPageClient.tsx` (product detail, accepts a slug or a UUID) |
+| `app/cart`, `app/request-quote`, `app/quote/confirmation` | Cart and quote request flow |
+| `app/(shell)/` | Route group for signed in areas: `crm/`, `finance/`, `portal/(authed)/` |
+| `app/admin/` | Admin screens: products, quotes, leads, inquiries, news, newsletter, testimonials |
+| `app/api/` | API routes: `products`, `categories`, `cart/quote`, `quote/*`, `admin/*`, `crm/*`, `cron/*`, `portal/*`, `finance/*`, `webhooks/*` and others |
+| `components/` | Site components (header, footer, cart drawer, chat and WhatsApp widgets). Subfolders: `products/`, `cart/`, `quote/`, `home/`, `crm/`, `admin/`, `portal/`, `finance/`, `ui/` (shadcn) |
+| `lib/` | Data access and helpers: `products/get-product.ts`, `product-media.ts`, `product-image.ts`, `cart-store.ts`, `leads/inbound.ts`, `quotes/notify.ts`, `supabase/` clients, `portal/roles.ts`, `cron/` |
+| `supabase/migrations/` | Dated SQL migrations. All schema, product and price changes land here. |
+| `scripts/` | Legacy numbered SQL seeds. Reference only. |
+| `public/` | Static images and PDFs. Product images live in `public/products/<product>/`; older site photos in `public/nuweave/`. |
+| `middleware.ts` | Auth and route gating, including the `/crm` block |
 
-Never write BambooMDF, BambooPlywood, or "Bamboo Decking". Past content may contain the wrong names; correct on sight.
+## 3. Product and pricing data flow
+1. Product rows live in Supabase tables `products`, `product_variants`, `product_images` and `categories`. Uploaded images go to the Supabase storage bucket `products`.
+2. `/products` (`app/products/page.tsx`) queries active products and shows a "from" price equal to the lowest active, available variant `base_price_php`.
+3. `/products/[id]` loads the product and variants through `lib/products/get-product.ts` and renders in `ProductPageClient.tsx`. The image carousel is `components/products/product-gallery.tsx`. Curated gallery images and sales copy per product live in `lib/product-media.ts` (never prices).
+4. The header and footer product menus load from `/api/products`.
+5. Prices are stored in PHP. The currency switcher (`components/providers/currency-provider`, `/api/exchange-rate`) converts on the client for display only.
+6. The cart (`lib/cart-store.ts`, persisted in the browser) submits to `/request-quote`, which posts to `app/api/cart/quote/route.ts`. That route writes `quotes` and `quote_items`, upserts the lead into `master_leads` via `lib/leads/inbound.ts`, and emails the team and the customer. There is no online card payment today.
 
-## Cold outreach copy rules (hard constraints)
-- Never claim certifications, LEED credits, fire ratings, acoustic ratings, ASTM ratings, or Class A ratings. NUMAT does not currently hold these.
-- No shortforms or jargon. Expand all acronyms on first use.
-- Signoffs by sender:
-  - Nick: "Business Administrator"
-  - Bryan Suarin: "Chief Operating Officer"
-  - Mohan Louis: "Head of Growth"
-- Any change to outbound email content (subject, body, signature, CTA) requires Nick's review and approval before being applied. Surface the diff first.
+## 4. Pricing rules (hard)
+- Prices come only from Supabase `product_variants`, using rows where `is_active = true` and `is_available = true`, reading `base_price_php`.
+- Never hardcode a price in code, copy, metadata, structured data or images. The old static price lists (`lib/products.ts`, `lib/product-config.ts`) were deleted; do not recreate them.
+- Any server route that accepts a cart must look prices up again from Supabase and never trust a price sent by the browser.
+- Price changes are made through a migration in `supabase/migrations/` or through the admin screens, never in page code.
 
-## Lead routing
+## 5. Products (hard)
+The only products that may appear anywhere customer facing, spelled exactly: NuForm, NuForm Lite, NuWev, NuBrid.
+
+| Product | What it is | URL slug |
+|---|---|---|
+| NuForm | Concrete formwork board, phenolic film on both faces | `nuform` |
+| NuForm Lite | Lighter, lower cost NuForm for standard pours. Sold on the NuForm page (`product_variants.grade = 'Lite'`; NuForm rows use `'Standard'`) | `nuform` |
+| NuWev | Decorative indoor wall cladding, or a substrate for lamination. Never describe it as formwork. | `nuweave` (unchanged) |
+| NuBrid | MDF substitute | `nuhybrid` (unchanged) |
+
+- NuBam CLB is discontinued. It must not appear on any customer facing page, menu, sitemap, structured data, download or email.
+- There is no "NuForm Prime". Never write it.
+- Never use these names: BambooMDF, BambooPlywood, Bamboo Decking, NuWall, NuDoor, NuFloor, NuSlat. Correct them on sight in customer facing code.
+- The URL slugs `nuweave` and `nuhybrid` stay unchanged even though the display names differ. Do not add redirects that rename them.
+
+## 6. Copy rules (hard, site and email)
+- No certification, fire rating, acoustic rating, LEED, ASTM rating, Class A or Class B claims in site copy, spec tables, metadata or downloads. NUMAT does not hold these. This applies even when a sales kit or brochure contains such a claim (for example the kit's "Class B (ASTM E84)" and "E1" lines).
+- Exception, approved by Nick: the existing DOST Region X test results (ASTM D1037 mechanical tests, as published on `/testing`, the NuForm technical sheet and the DOST PDF) may be shown exactly as published. Do not add new figures or restate them as a certification.
+- Reuse figure: use only the existing site figure for NuForm, "8 to 10 pours, versus 4 to 5 for marine plywood". Do not publish the sales kit's 16 or 23 to 25 pour figures. NuForm Lite has no published reuse figure yet.
+- Outbound WhatsApp templates (`lib/whatsapp-templates.ts`) and the `/ve-report` page content stay as they are unless Nick asks for a change (the `/ve-report` gallery tags were renamed from old product lines only).
+- No hyphens or dashes (`-`, `–`, `—`) in any user facing copy. Rewrite with commas, colons, parentheses or new sentences. Hyphens are fine only inside code identifiers, slugs and file names.
+- No emoji in user facing copy.
+- Expand acronyms on first use.
+- Any change to outbound email content (subject, body, signature, call to action) needs Nick's review first. Show the proposed diff before editing a live template.
+- Website pages, dashboards and HTML deliverables use white or light backgrounds.
+
+## 7. CRM at /crm
+- Lives in `app/(shell)/crm/` (dashboard, outreach, scoreboard, signals, production forecast and QC, schematic estimator). The main screen is `app/(shell)/crm/dashboard/page.tsx`. Drawers and modals are in `components/crm/`. API routes are `app/api/crm/*`.
+- Access requires a signed in numat.ph user (`requirePortalUser()`) with the `crm` feature (`requireFeature('crm')`), both in `lib/portal/roles.ts`.
+- It reads `master_leads`, `quotes`, `quote_items`, `lead_payments`, `crm_users`, `crm_viewer_settings`, `receipts` and `lead_samples`.
+- Current state: `middleware.ts` redirects `/crm/*` to `/` and returns 404 for `/api/crm/*`. Do not remove that block unless Nick asks.
+
+## 8. Leads
+- Every lead from any source inserts into `master_leads`. Use `source` and `segment` to tell them apart. Never create a new lead table.
 - Philippines leads: bryan@numat.ph, cal.com/bryan-suarin-rxvhte/discovery
 - International leads: mohan@numat.ph, cal.com/mohanlouis/discovery
 - Nick: cal.com/numatnicholas/discovery
-- Lemuel and Arlene resigned April 2026. Do not reference, do not auto assign to either.
+- Lemuel and Arlene resigned in April 2026. Never reference or assign to them.
 
-## Lead consolidation
-All leads from any source (Apollo, scrapers, web forms, manual entry, ARCHI dataset, partner referrals) insert directly into the `master_leads` table on Supabase project `peuwxnrojlfybdymkazj`. Use `source` and `segment` fields to differentiate. Do not create new separate lead tables.
+## 9. Workflow (hard)
+Never push to `main`. It is protected, and Vercel deploys from it.
 
-## Apollo.io scope
-Apollo is used only for lead sourcing into `master_leads`. Not used for email sending, sequences, or outreach. All sending happens via n8n through Gmail (nick@numat.ph) or via Next.js API routes calling Resend.
+1. Start from an up to date main and create a branch per change:
+   ```powershell
+   git checkout main; git pull; git checkout -b feat/short-description
+   ```
+2. Make the change.
+3. Run the build and lint locally and fix every error before committing:
+   ```powershell
+   npm run build; if ($?) { npm run lint }
+   ```
+   Note: ESLint is not yet in `package.json`, so `npm run lint` fails until it is added. Local builds need `.env.local` with the Supabase URL and anon key; admin routes also expect `SUPABASE_SERVICE_ROLE_KEY`.
+4. Commit and push the branch:
+   ```powershell
+   git add -A; git commit -m "Plain description of the change"; git push -u origin feat/short-description
+   ```
+5. Open a pull request into `main` with a plain summary of what changed and why (no jargon). The `gh` CLI is not installed; use the URL that `git push` prints, or install it with `winget install GitHub.cli`.
+6. Nick merges in the GitHub UI.
 
-## n8n outreach workflow rules
-Every new workflow must include:
-
-1. `SEQUENCE_NAME` and `FORMAT_VERSION` constants at the top of the first Code node.
-2. A Supabase HTTP Request node after every Send Email node, logging to `sequence_events` with fields: `email`, `company`, `country`, `sequence_name`, `sequence_step`, `email_subject`, `format_version`, `event_type` (set to `"sent"`), `rooms`.
-
-Weekly report sends to mark@numat.ph every Monday 8am MYT.
-
-## n8n technical constraints (v2.16 / v2.17, learned the hard way)
-- Code nodes do NOT support `$helpers`, `URLSearchParams`, `fetch`, or browser/Node globals. Use dedicated HTTP Request nodes for HTTP calls.
-- HTTP Request nodes use Raw body mode with `JSON.stringify()` on the payload object.
-- Supabase REST requires both `apikey` and `Authorization: Bearer ...` headers added manually. The built in Supabase node sometimes drops one.
-- Single row PostgREST returns are flat objects, not arrays. Adjust downstream nodes accordingly.
-
-## Source of truth hierarchy
+## 10. Source of truth for numbers
 1. Actual reports and dashboards
 2. Bank transactions
 3. Source documents (invoices, contracts, purchase orders)
 4. Supabase records
 
-Transcripts are context only. Verify numbers against documents or DB before including in board materials, investor updates, or financial dashboards.
+Transcripts are context only. Verify any figure before it goes into site copy, board material or investor communication.
 
-## Adhesives (RI Chemical Corp, Pasig City)
-- R22 017 PRF resin: Phenol Resorcinol Formaldehyde
-- R22 012 PF resin: Phenol Formaldehyde
-- R21 036 LoFoUF: low formaldehyde Urea Formaldehyde, H351 suspected carcinogen
-
-All HMIS Health 2, non regulated transport. Storage range 10 to 35 degrees C.
-
-## Capacity and operations
-- Single shift production: 360 boards per month
-- Double shift production: 570 boards per month (no capex required for the jump)
-- USD 100K capacity scaling model walks production from 360 to 2,500 boards per month
-- Malaysia factory relocation is an open board level discussion item
-
-## Existential risks (April 2026 audit)
-1. Labor cost overrun at 5x model
-2. Certification gaps blocking hotel and international sales
-3. Single person technology dependency (Nick)
-
-These are not abstract: they directly inform engineering, hiring, and roadmap decisions. When prioritizing technical work, prefer changes that reduce the third risk (better docs, agent infrastructure, clearer system inventory).
-
-## Investor and governance
-- Backed by Wavemaker Impact (WMI)
-- Paul Lam: key investor
-- Quarterly board reporting; financials must reconcile against bank and source documents before slides go out
-
-## Output formatting (inherits global)
-- No hyphens or dashes in prose (commas, colons, parentheses, or new sentences instead).
-- HTML deliverables, dashboards, financial reports use white or light backgrounds.
-
-## Execution preferences (inherits global)
-- Proceed autonomously to completion.
-- Full file replacements over snippets.
-- Always provide PowerShell git commands.
-
-## Key contacts
+## 11. Key contacts
 - Mark Sebastian: CEO
-- Bryan Suarin: COO, runs Philippines leads
-- Mohan Louis: Head of Growth, runs international leads and is also CRO of Kastelon
-- Nick: Business Administrator, owns technology and ops
-
-## Git workflow and branch protection
-The `main` branch is protected on GitHub: direct pushes are rejected, and changes must go through a pull request. The global rule "always commit and push to main" is overridden for this repo. Standard flow:
-
-1. Branch off main: `git checkout -b feature-name`
-2. Commit on the feature branch
-3. Push with upstream tracking: `git push -u origin feature-name`
-4. Open a PR via the URL GitHub returns, or via `gh pr create --base main --head feature-name --title "..." --body "..."`
-5. Merge in the GitHub UI; Vercel deploys from main on merge
-
-The `gh` CLI is not installed on this Windows machine. Install with `winget install GitHub.cli` if you want PR creation from PowerShell; otherwise open the PR URL in a browser.
+- Bryan Suarin: COO, Philippines leads
+- Mohan Louis: Head of Growth, international leads
+- Nick Toh: Business Administrator, owns technology and operations
