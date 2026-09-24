@@ -24,7 +24,8 @@ import {
 //
 // stored CO2 per m3 = density x bamboo mass share x carbon fraction x (44 / 12)
 //   density          = 800 kg/m3  (conservative low end of NUMAT nominal 800 to 1,000 kg/m3)
-//   bamboo share     = 0.9        (assumed share of board mass that is bamboo; the rest is resin)
+//   bamboo share     = 0.9        (boards are only bamboo plus resin and adhesives, confirmed by Nick;
+//                                  the 10% resin and adhesive share by weight is an assumption)
 //   carbon fraction  = 0.5        (carbon is about 50% of oven dry wood mass, EN 16449 method;
 //                                  Negro and Bergman 2019, doi:10.4067/S0718-221X2019005000106.
 //                                  Pongon et al. 2016 measured 52.09 to 54.24% in the bamboo
@@ -105,13 +106,13 @@ const sources = [
   },
   {
     key: 'C',
-    text: 'Xu, Ji and Zhuang (2018). Moso bamboo (Phyllostachys edulis) carbon stocks, China. PLoS ONE 13(2): e0193024.',
+    text: 'Xu, M., Ji, H. and Zhuang, S. (2018). Carbon stock of Moso bamboo (Phyllostachys pubescens) forests along a latitude gradient in the subtropical region of China. PLoS ONE 13(2): e0193024.',
     href: 'https://doi.org/10.1371/journal.pone.0193024',
     linkLabel: 'doi.org/10.1371/journal.pone.0193024',
   },
   {
     key: 'D',
-    text: 'Negro and Bergman (2019). Wood product carbon content, EN 16449 method. Maderas. Ciencia y Tecnología 21(1): 65 to 76.',
+    text: 'Negro, F. and Bergman, R. (2019). Carbon stored by furnishing wood-based products: An Italian case study. Maderas. Ciencia y Tecnología 21(1): 65 to 76.',
     href: 'https://doi.org/10.4067/S0718-221X2019005000106',
     linkLabel: 'doi.org/10.4067/S0718-221X2019005000106',
   },
@@ -234,7 +235,7 @@ export default function ESGPage() {
 
             <p className="mt-6 text-xs leading-5 text-stone-500">
               How this is estimated: 800 kg/m³ board density (the low end of our 800 to 1,000 kg/m³
-              range) × 90% bamboo by mass (our assumption; the rest is resin) × 50% carbon in dry wood
+              range) × 90% bamboo by mass (NUMAT boards are made only of bamboo bonded with resin and adhesives; we assume these make up about 10% of board weight) × 50% carbon in dry wood
               (Negro and Bergman 2019 [D]) × 44/12 to convert carbon to CO₂, which gives about 1.32 t CO₂
               per m³. This is carbon stored in the product while it is in use, not a yearly uptake
               rate, and it does not subtract emissions from harvesting, processing or transport. It is
