@@ -204,10 +204,10 @@ export default function CostPerPourCalculator() {
               and count the pours yourself.
             </p>
             <Link
-              href="/request-quote"
+              href="/products/nuform"
               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-900"
             >
-              Request a sample board
+              Order a 10 board trial
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

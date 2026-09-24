@@ -61,12 +61,12 @@ function CaptureBarContent() {
         >
           {status === 'success' ? (
             <p style={{ flex: 1, textAlign: 'center', color: '#34d399', fontWeight: 600, fontSize: '14px' }}>
-              ✓ Received! We'll reach out within 24 hours.
+              Received. We will reach out within 24 hours.
             </p>
           ) : (
             <>
               <p style={{ color: '#6ee7b7', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                🌿 Request a quote →
+                Questions before you order? →
               </p>
 
               <div style={{ display: 'flex', flex: 1, gap: '8px', minWidth: 0 }}>

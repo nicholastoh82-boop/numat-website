@@ -10,12 +10,13 @@ export const globalMetadata: Metadata = {
     template: '%s | NuMat Bamboo',
   },
   description:
-    'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards for construction, furniture, and interior finishing. Export ready from Manolo Fortich, Bukidnon, with DOST and ASTM D1037 mechanical testing. Get a quote in 24 hours.',
+    'Engineered bamboo boards: NuForm and NuForm Lite concrete formwork boards, NuWev woven bamboo wall cladding, and NuBrid, a bamboo substitute for MDF. Made in Manolo Fortich, Bukidnon, Philippines, and export ready, with DOST and ASTM D1037 mechanical testing. Get a quote in 24 hours.',
   keywords: [
     'engineered bamboo boards',
     'bamboo boards Philippines',
     'bamboo wall panels',
-    'bamboo flooring supplier',
+    'bamboo concrete formwork',
+    'bamboo MDF alternative',
     'bamboo boards for furniture',
     'sustainable bamboo building materials',
     'bamboo boards supplier Southeast Asia',
@@ -35,7 +36,7 @@ export const globalMetadata: Metadata = {
     siteName: 'NuMat Bamboo',
     title: 'NuMat Bamboo | Engineered Bamboo Boards from the Philippines',
     description:
-      'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards. Export ready from Manolo Fortich, Bukidnon, Philippines.',
+      'Engineered bamboo boards: NuForm and NuForm Lite concrete formwork boards, NuWev woven bamboo wall cladding, and NuBrid, a bamboo substitute for MDF. Export ready from Manolo Fortich, Bukidnon, Philippines.',
     images: [
       {
         url: OG_IMAGE,
@@ -65,26 +66,26 @@ export const globalMetadata: Metadata = {
 export const homeMetadata: Metadata = {
   title: 'NuMat Bamboo | Engineered Bamboo Boards from the Philippines',
   description:
-    'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards. Backed by DOST and ASTM D1037 mechanical testing. Export ready from Manolo Fortich, Bukidnon, Philippines. Request a quote in 24 hours.',
+    'Engineered bamboo boards: NuForm and NuForm Lite concrete formwork boards, NuWev woven bamboo wall cladding, and NuBrid, a bamboo substitute for MDF. Backed by DOST and ASTM D1037 mechanical testing. Export ready from Manolo Fortich, Bukidnon, Philippines. Request a quote in 24 hours.',
   alternates: { canonical: `${BASE_URL}/` },
   openGraph: {
     url: `${BASE_URL}/`,
     title: 'NuMat Bamboo | Engineered Bamboo Boards from the Philippines',
     description:
-      'Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards. Export ready from Manolo Fortich, Bukidnon, Philippines.',
+      'Engineered bamboo boards: NuForm and NuForm Lite concrete formwork boards, NuWev woven bamboo wall cladding, and NuBrid, a bamboo substitute for MDF. Export ready from Manolo Fortich, Bukidnon, Philippines.',
   },
 }
 
 export const productsMetadata: Metadata = {
   title: 'Bamboo Boards and Panels | Product Catalog',
   description:
-    'Browse NuMat engineered bamboo boards: woven bamboo formwork boards, bamboo composite panels, and cross laminated boards in multiple thicknesses and finishes. Export ready from the Philippines. Download specs and request samples.',
+    'Browse NuMat engineered bamboo boards: NuForm and NuForm Lite concrete formwork boards, NuWev woven bamboo wall cladding, and NuBrid, a bamboo substitute for MDF. Export ready from the Philippines. Download specs and request a quote.',
   alternates: { canonical: `${BASE_URL}/products` },
   openGraph: {
     url: `${BASE_URL}/products`,
     title: 'Bamboo Boards and Panels | Product Catalog | NuMat Bamboo',
     description:
-      'Woven bamboo formwork boards, bamboo composite panels, and cross laminated boards in multiple configurations. Export ready from the Philippines.',
+      'NuForm and NuForm Lite concrete formwork boards, NuWev woven bamboo wall cladding, and NuBrid, a bamboo substitute for MDF. Export ready from the Philippines.',
   },
 }
 
@@ -167,9 +168,9 @@ export const esgMetadata: Metadata = {
 }
 
 export const requestQuoteMetadata: Metadata = {
-  title: 'Request a Quote | Engineered Bamboo Boards',
+  title: 'Checkout | Order Engineered Bamboo Boards',
   description:
-    'Submit your project details and receive a quote within 24 hours. Engineered bamboo boards: woven bamboo formwork, bamboo composite panels, and cross laminated boards. Export ready from Manolo Fortich, Bukidnon, Philippines.',
+    'Place your order for engineered bamboo boards and we confirm stock, delivery and payment within 24 hours. Engineered bamboo boards: NuForm and NuForm Lite concrete formwork boards, NuWev woven bamboo wall cladding, and NuBrid, a bamboo substitute for MDF. Export ready from Manolo Fortich, Bukidnon, Philippines.',
   alternates: { canonical: `${BASE_URL}/request-quote` },
   robots: { index: false, follow: false },
 }
@@ -196,7 +197,7 @@ export const organizationSchema = {
   logo: `${BASE_URL}/logo.png`,
   image: OG_IMAGE,
   description:
-    'Engineered bamboo board manufacturer producing woven bamboo formwork boards, bamboo composite panels, and cross laminated bamboo boards for construction, furniture, cabinetry, and interior finishing. Manufactured in Manolo Fortich, Bukidnon, Philippines.',
+    'Engineered bamboo board manufacturer producing NuForm and NuForm Lite concrete formwork boards, NuWev woven bamboo board for decorative indoor wall cladding, and NuBrid, a bamboo substitute for MDF in cabinetry and furniture. Manufactured in Manolo Fortich, Bukidnon, Philippines.',
   foundingLocation: {
     '@type': 'Place',
     name: 'Singapore',
@@ -238,7 +239,7 @@ export const localBusinessSchema = {
   url: BASE_URL,
   image: OG_IMAGE,
   description:
-    'Engineered bamboo board manufacturer and supplier. Woven bamboo formwork boards, bamboo composite panels, and cross laminated bamboo boards, manufactured in Manolo Fortich, Bukidnon, Philippines.',
+    'Engineered bamboo board manufacturer and supplier. NuForm and NuForm Lite concrete formwork boards, NuWev woven bamboo wall cladding, and NuBrid, a bamboo substitute for MDF, manufactured in Manolo Fortich, Bukidnon, Philippines.',
   address: {
     '@type': 'PostalAddress',
     streetAddress: 'Global Agro Milling Corp., Warehouse B22, Barangay Alae',

@@ -122,7 +122,7 @@ export async function GET() {
         // authoritative base; other currencies convert at the daily rate.
         starting_price_php: (() => {
           const prices = productVariants
-            .filter((v: any) => !v.is_price_on_request && v.base_price_php != null)
+            .filter((v: any) => v.is_available !== false && !v.is_price_on_request && v.base_price_php != null)
             .map((v: any) => Number(v.base_price_php))
             .filter((n: number) => Number.isFinite(n) && n > 0)
           return prices.length ? Math.min(...prices) : null

@@ -1,481 +1,224 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import useSWR from 'swr'
-import { Search, SlidersHorizontal, X, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ProductCard } from '@/components/products/product-card'
-import { ProductQuickView } from '@/components/products/product-quick-view'
+import { ArrowRight, CheckCircle2, ClipboardCheck, MessageCircle, ShoppingBag, Truck } from 'lucide-react'
+import ProductGallery from '@/components/products/product-gallery'
+import { useCurrency } from '@/components/providers/currency-provider'
+import { PRODUCT_ORDER, getMarketing } from '@/lib/product-media'
 
-type ProductVariant = {
+type Variant = {
   id: string
-  product_id: string
-  sku: string
-  size_label: string
-  length_mm: number | null
-  width_mm: number | null
-  thickness_mm: number | null
-  core_type: string | null
-  ply_count: number | null
-  unit: string | null
-  moq: number | null
   base_price_php: number | null
   is_price_on_request?: boolean
-  price_notes?: string | null
+  is_available?: boolean
   is_active?: boolean
-  sort_order?: number | null
+  thickness_mm?: number | null
+  grade?: string | null
 }
 
-type ProductApiItem = {
+type ShopProduct = {
   id: string
   name: string
   slug: string
   description?: string
-  image_url?: string | null
-  category: string | { id?: string; name?: string } | null
-  categories?: { id: string; name: string } | null
-  base_price_php: number | null
-  starting_price_php: number | null
-  min_order_qty?: number | null
-  unit?: string | null
-  sku?: string
-  is_featured?: boolean
-  created_at?: string | null
-  variants: ProductVariant[]
-}
-
-type Category = {
-  id: string
-  name: string
-  slug?: string
-  created_at?: string
-  is_active?: boolean
-  display_order?: number | null
+  variants: Variant[]
 }
 
 const fetcher = async (url: string) => {
-  const res = await fetch(url)
-  const data = await res.json()
-  if (data.error) {
-    throw new Error(data.error)
-  }
-  return data
+  const res = await fetch(url, { cache: 'no-store' })
+  if (!res.ok) throw new Error('Failed to load products')
+  return res.json()
 }
 
-function slugify(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/['"]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
+/** Lowest live price: active and available variants only, never on request. */
+function fromPrice(variants: Variant[]): number | null {
+  const prices = variants
+    .filter((v) => v.is_active !== false && v.is_available !== false && !v.is_price_on_request)
+    .map((v) => Number(v.base_price_php))
+    .filter((n) => Number.isFinite(n) && n > 0)
+  return prices.length ? Math.min(...prices) : null
 }
 
-function normalizeCategorySlug(input: string): string {
-  const raw = slugify(input)
+export function ProductsContent({
+  initialProducts,
+}: {
+  initialProducts: ShopProduct[]
+  initialCategories?: unknown[]
+}) {
+  const { formatConvertedFromPhp, currency } = useCurrency()
+  const { data } = useSWR<ShopProduct[]>('/api/products', fetcher, { fallbackData: initialProducts })
 
-  const aliasMap: Record<string, string> = {
-    door: 'nudoor',
-    nudoor: 'nudoor',
-
-    flooring: 'nufloor',
-    floor: 'nufloor',
-    nufloor: 'nufloor',
-
-    wall: 'nuwall',
-    'wall-panelling': 'nuwall',
-    'wall-paneling': 'nuwall',
-    nuwall: 'nuwall',
-
-    nubam: 'nubam-boards',
-    'nubam-boards': 'nubam-boards',
-    veneer: 'nubam-boards',
-
-    diy: 'nuslat',
-    'diy-project': 'nuslat',
-    'diy-projects': 'nuslat',
-    nuslat: 'nuslat',
-
-    furniture: 'furniture',
-  }
-
-  return aliasMap[raw] ?? raw
-}
-
-function normalizeCategoryName(input: string): string {
-  const normalizedSlug = normalizeCategorySlug(input)
-
-  const labelMap: Record<string, string> = {
-    nudoor: 'NuDoor',
-    nufloor: 'NuFloor',
-    nuwall: 'NuWall',
-    'nubam-boards': 'NuBam Boards',
-    nuslat: 'NuSlat',
-    furniture: 'Furniture',
-  }
-
-  return labelMap[normalizedSlug] ?? input
-}
-
-function getProductCategoryName(product: ProductApiItem): string {
-  if (typeof product.category === 'string') return product.category
-  if (product.category && typeof product.category === 'object' && typeof product.category.name === 'string') {
-    return product.category.name
-  }
-  if (typeof product.categories?.name === 'string') return product.categories.name
-  return ''
-}
-
-function shouldHideFromProductsListing(product: ProductApiItem): boolean {
-  const name = (product.name || '').trim().toLowerCase()
-  return name === 'nudoor premium' || name === 'nudoor composite'
-}
-
-function getListingDisplayName(product: ProductApiItem): string {
-  const name = (product.name || '').trim().toLowerCase()
-  if (name === 'nudoor light') return 'NuDoor'
-  return product.name
-}
-
-interface ProductsContentProps {
-  initialProducts?: ProductApiItem[]
-  initialCategories?: Category[]
-}
-
-export function ProductsContent({ initialProducts = [], initialCategories = [] }: ProductsContentProps) {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const initialCategory = normalizeCategorySlug(searchParams.get('category') || 'all')
-
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<
-    'newest' | 'latest-updated' | 'price-asc' | 'price-desc' | 'name'
-  >('newest')
-  const [quickViewProduct, setQuickViewProduct] = useState<ProductApiItem | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
-
-  const handleCategoryChange = useCallback(
-    (category: string | null) => {
-      const normalizedCategory = normalizeCategorySlug(category ?? 'all')
-      setSelectedCategory(normalizedCategory)
-
-      if (normalizedCategory === 'all') {
-        router.push('/products', { scroll: false })
-      } else {
-        router.push(`/products?category=${normalizedCategory}`, { scroll: false })
-      }
-    },
-    [router]
-  )
-
-  const {
-    data: products,
-    isLoading: productsLoading,
-    error: productsError,
-  } = useSWR<ProductApiItem[]>('/api/products', fetcher, {
-    fallbackData: initialProducts,
-  })
-
-  const { data: categories } = useSWR<Category[]>('/api/categories', fetcher, {
-    fallbackData: initialCategories,
-  })
-
-  useEffect(() => {
-    const cat = searchParams.get('category')
-    if (cat) {
-      setSelectedCategory(normalizeCategorySlug(cat))
-    } else {
-      setSelectedCategory('all')
-    }
-  }, [searchParams])
-
-  const filteredProducts = useMemo(() => {
-    if (!products) return []
-
-    let filtered = [...products].filter((p) => !shouldHideFromProductsListing(p))
-
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter((p) => {
-        const rawCategory = getProductCategoryName(p)
-        const normalizedSlug = normalizeCategorySlug(rawCategory)
-        return normalizedSlug === selectedCategory
-      })
-    }
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter((p) => {
-        const categoryName = normalizeCategoryName(getProductCategoryName(p)).toLowerCase()
-        const displayName = getListingDisplayName(p).toLowerCase()
-
-        return (
-          displayName.includes(query) ||
-          p.name?.toLowerCase().includes(query) ||
-          p.slug?.toLowerCase().includes(query) ||
-          p.description?.toLowerCase().includes(query) ||
-          categoryName.includes(query) ||
-          (p.variants ?? []).some((v) =>
-            [
-              v.sku,
-              v.core_type ?? '',
-              String(v.thickness_mm ?? ''),
-              String(v.ply_count ?? ''),
-            ]
-              .join(' ')
-              .toLowerCase()
-              .includes(query)
-          )
-        )
-      })
-    }
-
-    switch (sortBy) {
-      case 'newest':
-      case 'latest-updated':
-        filtered.sort(
-          (a, b) =>
-            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-        )
-        break
-      case 'price-asc':
-        filtered.sort((a, b) => (a.starting_price_php || 0) - (b.starting_price_php || 0))
-        break
-      case 'price-desc':
-        filtered.sort((a, b) => (b.starting_price_php || 0) - (a.starting_price_php || 0))
-        break
-      case 'name':
-        filtered.sort((a, b) =>
-          getListingDisplayName(a).localeCompare(getListingDisplayName(b))
-        )
-        break
-    }
-
-    return filtered
-  }, [products, selectedCategory, searchQuery, sortBy])
-
-  const allCategories = useMemo(() => {
-    const source = categories ?? []
-    const dedupedMap = new Map<string, Category>()
-
-    for (const category of source) {
-      if (category.is_active === false) continue
-
-      const normalizedSlug = normalizeCategorySlug(category.slug || category.name)
-      const normalizedName = normalizeCategoryName(category.name)
-
-      if (!dedupedMap.has(normalizedSlug)) {
-        dedupedMap.set(normalizedSlug, {
-          ...category,
-          name: normalizedName,
-          slug: normalizedSlug,
-        })
-      }
-    }
-
-    return Array.from(dedupedMap.values()).sort((a, b) => {
-      const ao = a.display_order ?? 999999
-      const bo = b.display_order ?? 999999
-      if (ao !== bo) return ao - bo
-      return a.name.localeCompare(b.name)
-    })
-  }, [categories])
-
-  const selectedCategoryName =
-    allCategories.find((c) => normalizeCategorySlug(c.slug || c.name) === selectedCategory)?.name ||
-    'All Products'
+  const products = (Array.isArray(data) ? data : initialProducts)
+    .filter((p) => (PRODUCT_ORDER as readonly string[]).includes(p.slug))
+    .sort((a, b) => PRODUCT_ORDER.indexOf(a.slug as never) - PRODUCT_ORDER.indexOf(b.slug as never))
 
   return (
-    <>
-      <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8 lg:py-12">
-        <div className="mb-8 flex flex-col gap-4">
-          <div>
-            <h1 className="font-serif text-3xl text-foreground sm:text-4xl">
-              {selectedCategoryName}
-            </h1>
-            <p className="mt-2 text-muted-foreground">
-              {productsLoading
-                ? 'Loading...'
-                : `${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''} available`}
-            </p>
-            
-          </div>
-
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <div className="relative max-w-md flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="newest">Newest First</option>
-                <option value="latest-updated">Latest Updated</option>
-                <option value="name">Sort by Name</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-              </select>
-
-              <Button
-                variant="outline"
-                size="icon"
-                className="bg-transparent lg:hidden"
-                onClick={() => setShowFilters(!showFilters)}
-                aria-label="Toggle filters"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+    <div className="bg-[#faf7f1] text-stone-900">
+      <section className="border-b border-stone-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-10 lg:px-8 lg:py-14">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Shop</p>
+          <h1 className="mt-2 max-w-3xl text-4xl font-semibold tracking-tight text-stone-950 sm:text-5xl">
+            Engineered bamboo boards, priced and ready to order
+          </h1>
+          <p className="mt-4 max-w-2xl text-lg leading-8 text-stone-600">
+            Made in Bukidnon from Philippine bamboo. Standard 4 by 8 ft sheets, live prices, and a minimum
+            order of just 10 boards.
+          </p>
         </div>
+      </section>
 
-        <div className="flex flex-col gap-8 lg:flex-row">
-          <aside className="hidden w-72 flex-shrink-0 lg:block">
-            <div className="sticky top-24 rounded-3xl border bg-white p-5 shadow-sm">
-              <CategoryFilters
-                categories={allCategories}
-                selectedSlug={selectedCategory === 'all' ? null : selectedCategory}
-                onSelectSlug={handleCategoryChange}
-              />
-            </div>
-          </aside>
-
-          {showFilters && (
-            <div className="fixed inset-0 z-50 lg:hidden">
-              <div
-                className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
-                onClick={() => setShowFilters(false)}
-              />
-              <div className="absolute left-0 top-0 h-full w-[85vw] max-w-[288px] bg-background p-4 shadow-xl">
-                <div className="mb-6 flex items-center justify-between">
-                  <h2 className="font-semibold text-foreground">Categories</h2>
-                  <Button variant="ghost" size="icon" onClick={() => setShowFilters(false)}>
-                    <X className="h-5 w-5" />
-                  </Button>
+      <div className="mx-auto max-w-7xl px-4 py-10 lg:px-8 lg:py-14">
+        <div className="grid gap-6 lg:grid-cols-3">
+          {products.map((product, index) => {
+            const m = getMarketing(product.slug)
+            const price = fromPrice(product.variants ?? [])
+            const featured = index === 0
+            return (
+              <article
+                key={product.id}
+                className={`flex flex-col overflow-hidden rounded-[1.75rem] border bg-white shadow-sm transition hover:shadow-lg ${
+                  featured ? 'border-emerald-800 lg:col-span-3 lg:grid lg:grid-cols-[1.1fr_0.9fr]' : 'border-stone-200'
+                }`}
+              >
+                <div className="relative p-3">
+                  {m && <ProductGallery images={m.gallery} compact priority={featured} />}
+                  {m?.badge && (
+                    <span className="absolute left-6 top-6 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-amber-900">
+                      {m.badge}
+                    </span>
+                  )}
                 </div>
 
-                <CategoryFilters
-                  categories={allCategories}
-                  selectedSlug={selectedCategory === 'all' ? null : selectedCategory}
-                  onSelectSlug={(slug) => {
-                    handleCategoryChange(slug)
-                    setShowFilters(false)
-                  }}
-                />
-              </div>
-            </div>
-          )}
+                <div className={`flex flex-1 flex-col p-6 ${featured ? 'lg:justify-center lg:p-10' : ''}`}>
+                  <h2 className={`${featured ? 'text-4xl' : 'text-2xl'} font-semibold tracking-tight text-stone-950`}>
+                    {m?.displayName ?? product.name}
+                  </h2>
+                  {m?.alsoAvailable && (
+                    <p className="mt-1 text-sm font-semibold text-amber-800">{m.alsoAvailable}</p>
+                  )}
+                  {m?.tagline && <p className="mt-1 font-medium text-emerald-900">{m.tagline}</p>}
+                  {featured && m?.pitch && <p className="mt-4 leading-7 text-stone-600">{m.pitch}</p>}
 
-          <div className="min-w-0 flex-1">
-            {productsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="py-12 text-center">
-                <p className="text-muted-foreground">No products found matching your criteria.</p>
-                <Button
-                  variant="link"
-                  className="mt-2"
-                  onClick={() => {
-                    handleCategoryChange('all')
-                    setSearchQuery('')
-                  }}
-                >
-                  Clear filters
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={{
-                      ...product,
-                      name: getListingDisplayName(product),
-                    } as any}
-                    onQuickView={() =>
-                      setQuickViewProduct({
-                        ...product,
-                        name: getListingDisplayName(product),
-                      })
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+                  {m && (
+                    <ul className="mt-5 space-y-2">
+                      {m.highlights.slice(0, featured ? 4 : 3).map((h) => (
+                        <li key={h} className="flex items-start gap-2 text-sm leading-6 text-stone-700">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+                          {h}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {featured && (
+                    <p className="mt-5 text-sm text-stone-600">
+                      Choose <span className="font-semibold text-stone-900">NuForm</span> for the most pours, or{' '}
+                      <span className="font-semibold text-stone-900">NuForm Lite</span> for lighter, lower cost
+                      forming. Both on one page.
+                    </p>
+                  )}
+
+                  <div className="mt-auto flex flex-wrap items-end justify-between gap-4 pt-6">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.14em] text-stone-500">From</p>
+                      <p className="text-2xl font-semibold text-stone-950">
+                        {price != null ? formatConvertedFromPhp(price) : 'Price on request'}
+                        {price != null && <span className="ml-1 text-sm font-normal text-stone-500">per board</span>}
+                      </p>
+                    </div>
+                    <Link
+                      href={`/products/${product.slug}`}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-emerald-800 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-900"
+                    >
+                      Shop {m?.displayName ?? product.name}
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            )
+          })}
         </div>
-      </div>
 
-      {quickViewProduct && (
-        <ProductQuickView
-          product={quickViewProduct as any}
-          onClose={() => setQuickViewProduct(null)}
-        />
-      )}
-    </>
-  )
-}
+        <p className="mt-4 text-xs text-stone-500">
+          Ex works prices per 2440 x 1220 mm sheet, delivery quoted separately.
+          {currency !== 'PHP' ? ' Converted from PHP at the rate of the day.' : ''}
+        </p>
 
-interface CategoryFiltersProps {
-  categories: Category[]
-  selectedSlug: string | null
-  onSelectSlug: (slug: string | null) => void
-}
+        {/* Which board */}
+        <section className="mt-14 overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm">
+          <h2 className="px-6 pt-6 text-2xl font-semibold tracking-tight text-stone-950 lg:px-8">Which board do I need?</h2>
+          <div className="overflow-x-auto">
+            <table className="mt-4 w-full min-w-[560px] text-left text-sm">
+              <thead className="bg-stone-50 text-stone-500">
+                <tr>
+                  <th className="px-6 py-3 font-medium lg:px-8">If you are</th>
+                  <th className="px-6 py-3 font-medium">Choose</th>
+                  <th className="px-6 py-3 font-medium">From</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { need: 'Casting slabs, beams, walls or columns (NuForm Lite for lighter, standard work)', slug: 'nuform' },
+                  { need: 'Cladding a feature wall or ceiling indoors', slug: 'nuweave' },
+                  { need: 'Building cabinets, furniture or joinery instead of MDF', slug: 'nuhybrid' },
+                ].map((row) => {
+                  const p = products.find((x) => x.slug === row.slug)
+                  const m = getMarketing(row.slug)
+                  const price = p ? fromPrice(p.variants ?? []) : null
+                  return (
+                    <tr key={row.slug} className="border-t border-stone-100">
+                      <td className="px-6 py-4 text-stone-700 lg:px-8">{row.need}</td>
+                      <td className="px-6 py-4">
+                        <Link href={`/products/${row.slug}`} className="font-semibold text-emerald-800 hover:underline">
+                          {m?.displayName}
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4 font-medium text-stone-900">
+                        {price != null ? formatConvertedFromPhp(price) : 'On request'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-function CategoryFilters({ categories, selectedSlug, onSelectSlug }: CategoryFiltersProps) {
-  const allSelected = !selectedSlug
+        {/* How ordering works */}
+        <section className="mt-14 grid gap-5 md:grid-cols-3">
+          {[
+            { icon: ShoppingBag, title: 'Build your order', body: 'Choose boards, thicknesses and quantities with live prices.' },
+            { icon: ClipboardCheck, title: 'We confirm', body: 'We confirm stock, delivery cost and payment details with you.' },
+            { icon: Truck, title: 'Pay and receive', body: 'Approve, pay, and we dispatch your boards to site.' },
+          ].map(({ icon: Icon, title, body }, i) => (
+            <div key={title} className="rounded-[1.5rem] border border-stone-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-800 text-sm font-semibold text-white">{i + 1}</span>
+                <Icon className="h-5 w-5 text-emerald-800" />
+              </div>
+              <h3 className="mt-4 font-semibold text-stone-950">{title}</h3>
+              <p className="mt-1 text-sm leading-6 text-stone-600">{body}</p>
+            </div>
+          ))}
+        </section>
 
-  return (
-    <div>
-      <div className="mb-4 text-lg font-semibold text-foreground">Categories</div>
-
-      <div className="space-y-1">
-        <button
-          type="button"
-          onClick={() => onSelectSlug(null)}
-          className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-            allSelected
-              ? 'bg-primary text-primary-foreground'
-              : 'text-foreground hover:bg-muted'
-          }`}
-        >
-          <span>All Products</span>
-        </button>
-
-        {categories.map((c) => {
-          const slug = normalizeCategorySlug(c.slug || c.name)
-          const selected = slug === (selectedSlug ?? '')
-
-          return (
-            <button
-              key={slug}
-              type="button"
-              onClick={() => onSelectSlug(slug)}
-              className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                selected
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-foreground hover:bg-muted'
-              }`}
-            >
-              <span>{normalizeCategoryName(c.name)}</span>
-            </button>
-          )
-        })}
+        <div className="mt-10 flex flex-col items-start justify-between gap-4 rounded-[1.75rem] bg-emerald-900 px-6 py-6 text-white sm:flex-row sm:items-center lg:px-8">
+          <div>
+            <p className="text-lg font-semibold">Ordering for a big project?</p>
+            <p className="text-sm text-white/75">Talk to us about large orders and delivery schedules.</p>
+          </div>
+          <a
+            href="https://wa.me/639613076458?text=Hello%20NUMAT%2C%20I%20would%20like%20to%20discuss%20a%20volume%20order."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-50"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Chat on WhatsApp
+          </a>
+        </div>
       </div>
     </div>
   )

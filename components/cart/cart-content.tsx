@@ -60,9 +60,9 @@ export function CartContent() {
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-stone-100">
             <ShoppingCart className="h-10 w-10 text-stone-400" />
           </div>
-          <h1 className="text-2xl font-bold text-stone-950">Your quote list is empty</h1>
+          <h1 className="text-2xl font-bold text-stone-950">Your order is empty</h1>
           <p className="mx-auto mt-3 text-base text-stone-500">
-            Browse our products, configure your specs, and add items to request a quote.
+            Browse our boards, choose your thicknesses and add them to your order.
           </p>
           <Link
             href="/products"
@@ -136,7 +136,7 @@ export function CartContent() {
 
             {!showQuoteForm && (
               <>
-                <h1 className="text-2xl font-bold text-stone-950">Review Your Quote List</h1>
+                <h1 className="text-2xl font-bold text-stone-950">Review your order</h1>
 
                 {/* Cart items */}
                 {items.map((item, index) => (
@@ -162,7 +162,7 @@ export function CartContent() {
                         <h3 className="font-bold text-stone-950">{item.name}</h3>
                         <p className="mt-1 text-sm text-stone-500">{item.specs}</p>
                         <p className="mt-2 text-sm font-semibold text-emerald-700">
-                          {formatPhpAmount(convertFromPhp(item.unitPrice))} / {item.unit}
+                          {formatPhpAmount(convertFromPhp(item.unitPrice))} / {item.unit === 'piece' ? 'board' : item.unit}
                         </p>
                       </div>
                     </div>
@@ -219,9 +219,9 @@ export function CartContent() {
                   <div className="mt-5 space-y-4">
                     {[
                       { icon: FileText, step: '1', title: 'Fill in your details', body: 'Name, email, phone and your project application.' },
-                      { icon: MessageCircle, step: '2', title: 'Choose how to receive your quote', body: 'Via email (PDF) or WhatsApp — your choice.' },
-                      { icon: Clock, step: '3', title: 'We respond within 24 hours', body: 'Our team reviews your request and sends a formal quotation.' },
-                      { icon: CheckCircle, step: '4', title: 'Confirm and order', body: 'Accept the quote, pay 50% deposit, and we begin production.' },
+                      { icon: MessageCircle, step: '2', title: 'Choose how we confirm', body: 'By email (PDF) or WhatsApp, your choice.' },
+                      { icon: Clock, step: '3', title: 'We confirm within 24 hours', body: 'Our team confirms stock, delivery cost and your final total.' },
+                      { icon: CheckCircle, step: '4', title: 'Approve and pay', body: 'Approve your order, pay a 50% deposit, and we begin production.' },
                     ].map((item) => (
                       <div key={item.step} className="flex items-start gap-4">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-stone-950">
@@ -252,7 +252,7 @@ export function CartContent() {
 
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-stone-500">Total Items</span>
+                    <span className="text-stone-500">Total boards</span>
                     <span className="font-semibold text-stone-950">{totalItems}</span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -278,13 +278,13 @@ export function CartContent() {
                     onClick={() => setShowQuoteForm(true)}
                     className="mt-5 w-full rounded-2xl bg-stone-950 py-3.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-stone-900"
                   >
-                    Continue to Quote →
+                    Continue to checkout →
                   </button>
                 )}
 
                 <div className="mt-4 flex items-center justify-center gap-2 text-xs text-stone-400">
                   <Clock className="h-3.5 w-3.5" />
-                  Quote valid for 14 days · Lead time 10 working days
+                  Prices held for 14 days · Lead time 10 working days
                 </div>
               </div>
 
@@ -294,11 +294,11 @@ export function CartContent() {
                   DOST / ASTM D1037 Testing
                 </p>
                 <p className="mt-3 text-sm leading-6 text-stone-600">
-                  Mechanical testing by DOST RSTL Region X — static bending,
+                  Mechanical testing by DOST RSTL Region X: static bending,
                   compression, and hardness.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {['MOR: 22.77–69.44 MPa', 'MOE: 2211–10256 MPa', 'Compression: 25–30 MPa', 'Hardness: 3918–7377 N'].map((val) => (
+                  {['MOR: 22.77 to 69.44 MPa', 'MOE: 2211 to 10256 MPa', 'Compression: 25 to 30 MPa', 'Hardness: 3918 to 7377 N'].map((val) => (
                     <span key={val} className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs text-stone-600">
                       {val}
                     </span>

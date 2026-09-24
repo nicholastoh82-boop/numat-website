@@ -5,8 +5,8 @@ import CartDrawer from '@/components/cart-drawer'
 import { QuoteConfirmation } from '@/components/quote/quote-confirmation'
 
 export const metadata = {
-  title: 'Quote Confirmation | NUMAT',
-  description: 'Your quote has been created and is being delivered.',
+  title: 'Order Received | NUMAT',
+  description: 'Your order request has been received and is being confirmed.',
 }
 
 export default function QuoteConfirmationPage() {

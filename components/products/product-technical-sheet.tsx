@@ -24,7 +24,7 @@ type Sheet = {
 const SHEETS: Record<string, Sheet> = {
   nuform: {
     specs: [
-      { label: 'Thickness options', value: '12, 14, 16 and 18 mm' },
+      { label: 'Thickness options', value: '2 to 20 mm (see the product page for live stock)' },
       { label: 'Standard width', value: '1220 mm (4 ft)' },
       { label: 'Standard length', value: '2440 mm (8 ft)' },
       { label: 'Density (typical)', value: '800 to 1,000 kg/m3' },
@@ -91,7 +91,14 @@ function Rating({ score }: { score: number }) {
   )
 }
 
-export default function ProductTechnicalSheet({ slug }: { slug: string | null | undefined }) {
+export default function ProductTechnicalSheet({
+  slug,
+  hideSpecs = false,
+}: {
+  slug: string | null | undefined
+  /** The product page renders its own live specification table. */
+  hideSpecs?: boolean
+}) {
   const sheet = slug ? SHEETS[slug] : undefined
   if (!sheet) return null
 
@@ -100,6 +107,7 @@ export default function ProductTechnicalSheet({ slug }: { slug: string | null | 
   return (
     <>
       {/* Technical specifications */}
+      {!hideSpecs && (
       <div className={cardClass}>
         <div className="mb-6">
           <h2 className="text-2xl font-semibold text-foreground">Technical specifications</h2>
@@ -118,6 +126,7 @@ export default function ProductTechnicalSheet({ slug }: { slug: string | null | 
           ))}
         </dl>
       </div>
+      )}
 
       {/* Construction */}
       <div className={cardClass}>

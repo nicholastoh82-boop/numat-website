@@ -66,7 +66,7 @@ export default function CartDrawer() {
         )}
       >
         <div className="flex items-center justify-between border-b border-border p-4">
-          <h2 className="text-lg font-semibold text-foreground">Your Cart</h2>
+          <h2 className="text-lg font-semibold text-foreground">Your order</h2>
           <Button variant="ghost" size="icon" onClick={closeCart} aria-label="Close cart">
             <X className="h-5 w-5" />
           </Button>
@@ -119,7 +119,7 @@ export default function CartDrawer() {
                         </p>
                         <p className="mt-1 text-sm font-medium text-primary">
                           {hasPrice
-                            ? `${formatPhpAmount(convertFromPhp(item.unitPrice!))} / ${item.unit}`
+                            ? `${formatPhpAmount(convertFromPhp(item.unitPrice!))} / ${item.unit === 'piece' ? 'board' : item.unit}`
                             : 'Price on request'}
                         </p>
                       </div>
@@ -160,7 +160,7 @@ export default function CartDrawer() {
                         </Button>
                       </div>
                       <p className="font-semibold text-foreground">
-                        {hasPrice ? formatPhpAmount(lineTotalFromPhp(item.unitPrice!, item.quantity)) : '—'}
+                        {hasPrice ? formatPhpAmount(lineTotalFromPhp(item.unitPrice!, item.quantity)) : 'On request'}
                       </p>
                     </div>
                   </div>
@@ -173,7 +173,7 @@ export default function CartDrawer() {
         {items.length > 0 && (
           <div className="space-y-3 border-t border-border bg-card p-4">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total Items</span>
+              <span className="text-muted-foreground">Total boards</span>
               <span className="font-medium text-foreground">{totalItems}</span>
             </div>
 
@@ -201,7 +201,7 @@ export default function CartDrawer() {
 
             <Link href="/cart" onClick={closeCart} className="block">
               <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                Request Quote
+                Checkout
               </Button>
             </Link>
           </div>

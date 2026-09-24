@@ -50,6 +50,9 @@ const nextConfig = {
       { source: '/request-samples', destination: '/request-quote', permanent: true },
       // NuBam CLB deactivated as a product; its page redirects to the products list.
       { source: '/products/nubam-clb', destination: '/products', permanent: true },
+      // Column and beam cladding pages were CLB only and were removed with it.
+      { source: '/solutions/columns-and-beams', destination: '/solutions', permanent: true },
+      { source: '/applications/columns-beams-and-cladding', destination: '/applications', permanent: true },
     ];
   },
 }

@@ -100,10 +100,60 @@ export async function POST(request: NextRequest) {
     }
     const formattedPhone = phoneNumber.number
 
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ ok: false, error: 'Your order is empty' }, { status: 400 })
+    }
+
+    // Never trust a price sent by the browser. Every line is repriced from
+    // product_variants (active and available rows only, base_price_php). A line
+    // with no matching priced variant is recorded as price on request (0) so the
+    // team confirms it, rather than keeping whatever the client submitted.
+    const clientSubtotal = items.reduce(
+      (sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0),
+      0
+    )
+    const variantIds = Array.from(
+      new Set(items.map((item) => item.variant_id).filter((id): id is string => Boolean(id)))
+    )
+    const livePrices = new Map<string, number | null>()
+    if (variantIds.length > 0) {
+      const { data: liveVariants, error: priceError } = await supabase
+        .from('product_variants')
+        .select('id, base_price_php, is_price_on_request')
+        .in('id', variantIds)
+        .eq('is_active', true)
+        .eq('is_available', true)
+      if (priceError) {
+        console.error('[Quote] Price lookup failed:', JSON.stringify(priceError))
+        return NextResponse.json(
+          { ok: false, error: 'Could not confirm prices. Please try again.' },
+          { status: 500 }
+        )
+      }
+      for (const v of liveVariants ?? []) {
+        const price = Number(v.base_price_php)
+        livePrices.set(
+          v.id,
+          !v.is_price_on_request && Number.isFinite(price) && price > 0 ? price : null
+        )
+      }
+    }
+    for (const item of items) {
+      item.quantity = Math.max(1, Math.floor(Number(item.quantity) || 0))
+      item.unit_price = (item.variant_id && livePrices.get(item.variant_id)) || 0
+    }
+
     // Calculations
     const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0)
     const total = subtotal
     const quoteNumber = generateQuoteNumber()
+
+    // The display total was converted in the browser from the client prices.
+    // Rescale it to the repriced total so the customer never sees a stale figure.
+    if (typeof contact.display_total === 'number' && clientSubtotal !== total) {
+      contact.display_total =
+        clientSubtotal > 0 ? (contact.display_total * total) / clientSubtotal : total
+    }
 
     // Valid until = 14 days from now
     const validUntil = new Date()

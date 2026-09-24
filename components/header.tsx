@@ -257,10 +257,10 @@ export default function Header() {
           </div>
 
           <Link
-            href="/request-quote"
+            href="/products"
             className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-emerald-800 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-emerald-900"
           >
-            Request Quote
+            Shop now
           </Link>
         </div>
 
@@ -367,11 +367,11 @@ export default function Header() {
             </nav>
 
             <Link
-              href="/request-quote"
+              href="/products"
               onClick={() => setMobileMenuOpen(false)}
               className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-emerald-800 px-5 py-3 text-sm font-semibold text-white shadow-sm"
             >
-              Request Quote
+              Shop now
             </Link>
           </div>
         </div>

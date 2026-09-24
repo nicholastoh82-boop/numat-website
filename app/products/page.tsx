@@ -47,7 +47,10 @@ async function getInitialData() {
     const mergedProducts = (products ?? []).map((p: any) => {
       const category = p.category_id ? categoryMap.get(p.category_id) ?? null : null
       const productVariants = variantsMap.get(p.id) ?? []
-      const variantPrices = productVariants.map((v: any) => v.base_price_php).filter((x: any) => typeof x === 'number' && x > 0)
+      const variantPrices = productVariants
+        .filter((v: any) => v.is_available !== false && !v.is_price_on_request)
+        .map((v: any) => Number(v.base_price_php))
+        .filter((x: number) => Number.isFinite(x) && x > 0)
       const startingPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : p.base_price_php
       return {
         id: p.id, name: p.name, slug: p.slug ?? '', description: p.description ?? '',

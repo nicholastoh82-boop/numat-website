@@ -19,10 +19,9 @@ const fetcher = async (url: string) => {
 
 // Fixed links pinned under the board list.
 const tailLinks = [
-  { name: 'All products and pricing', href: '/products' },
+  { name: 'Shop all boards', href: '/products' },
   { name: 'Compare vs Plywood', href: '/compare' },
-  { name: 'Request a quote', href: '/request-quote' },
-  { name: 'Request a Quote', href: '/request-quote' },
+  { name: 'Your order and checkout', href: '/request-quote' },
 ]
 
 /**
