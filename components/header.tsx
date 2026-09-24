@@ -3,12 +3,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, Menu, X } from 'lucide-react'
+import { ChevronDown, Menu, ShoppingBag, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useSWR from 'swr'
 import { useCurrency } from '@/components/providers/currency-provider'
 import { COUNTRY_OPTIONS } from '@/lib/currency'
 import NewsletterTopBar from '@/components/newsletter-top-bar'
+import { useCartStore } from '@/lib/cart-store'
 
 type NavChild = { label: string; href: string; description?: string }
 type NavItem = { label: string; href?: string; children?: NavChild[] }
@@ -256,6 +257,8 @@ export default function Header() {
             <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-500" />
           </div>
 
+          <OrderButton />
+
           <Link
             href="/products"
             className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-emerald-800 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:bg-emerald-900"
@@ -265,6 +268,9 @@ export default function Header() {
         </div>
 
         {/* Mobile menu toggle */}
+        <div className="ml-auto mr-2 lg:hidden">
+          <OrderButton />
+        </div>
         <button
           type="button"
           aria-label="Toggle menu"
@@ -378,5 +384,30 @@ export default function Header() {
       )}
     </header>
     </div>
+  )
+}
+
+/** Opens the order drawer. The count only renders after mount because the cart lives in browser storage. */
+function OrderButton() {
+  const items = useCartStore((state) => state.items)
+  const openCart = useCartStore((state) => state.openCart)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  const count = mounted ? items.reduce((sum, item) => sum + item.quantity, 0) : 0
+
+  return (
+    <button
+      type="button"
+      onClick={openCart}
+      aria-label={count > 0 ? `Your order, ${count} boards` : 'Your order'}
+      className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-300 bg-white text-stone-800 shadow-sm transition hover:bg-stone-50"
+    >
+      <ShoppingBag className="h-5 w-5" />
+      {count > 0 && (
+        <span className="absolute -right-1.5 -top-1.5 min-w-[20px] rounded-full bg-emerald-800 px-1.5 text-center text-[11px] font-semibold leading-5 text-white">
+          {count > 999 ? '999+' : count}
+        </span>
+      )}
+    </button>
   )
 }

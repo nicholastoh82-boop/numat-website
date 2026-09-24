@@ -8,18 +8,18 @@ export type CountryOption = {
 
 export const COUNTRY_OPTIONS: CountryOption[] = [
   {
-    code: 'MY',
-    name: 'Malaysia',
-    currency: 'MYR',
-    locale: 'en-MY',
-    flagSrc: '/flags/my.png',
-  },
-  {
     code: 'PH',
     name: 'Philippines',
     currency: 'PHP',
     locale: 'en-PH',
     flagSrc: '/flags/ph.png',
+  },
+  {
+    code: 'MY',
+    name: 'Malaysia',
+    currency: 'MYR',
+    locale: 'en-MY',
+    flagSrc: '/flags/my.png',
   },
   {
     code: 'SG',
@@ -51,13 +51,14 @@ export const COUNTRY_OPTIONS: CountryOption[] = [
   },
   {
     code: 'EU',
-    name: 'Europen Union',
+    name: 'European Union',
     currency: 'EUR',
     locale: 'en-EU',
     flagSrc: '/flags/eu.jpg',
   },
 ]
 
+// Philippines first: it is the home market and prices are set in PHP.
 export const DEFAULT_COUNTRY = COUNTRY_OPTIONS[0]
 
 export function getCountryByCode(code?: string | null) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useOrderBarOffset } from "@/hooks/use-order-bar-offset";
 
 interface Message {
   role: "assistant" | "user";
@@ -26,6 +27,7 @@ const SB_URL = "https://peuwxnrojlfybdymkazj.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBldXd4bnJvamxmeWJkeW1rYXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTAzNjMsImV4cCI6MjA4ODI2NjM2M30.qCmHAsm8AqpV-LsnRac631au_Ff8fk1S7Dbeq5O-aGM";
 
 export default function ChatWidget() {
+  const lift = useOrderBarOffset();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -260,7 +262,7 @@ export default function ChatWidget() {
         <div
           style={{
             position: "fixed",
-            bottom: "88px",
+            bottom: `${88 + lift}px`,
             right: "24px",
             width: "380px",
             height: windowVisible ? windowHeight : "0px",
@@ -621,7 +623,7 @@ export default function ChatWidget() {
         aria-label="Chat with NARA"
         style={{
           position: "fixed",
-          bottom: "24px",
+          bottom: `${24 + lift}px`,
           right: "24px",
           width: "56px",
           height: "56px",

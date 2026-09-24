@@ -89,8 +89,8 @@ const comparisonData = [
 const speciesRows = [
   {
     metric: 'Annual CO₂ sequestration',
-    asper: '17–20 tCO₂/ha/yr',
-    moso: '18–40 tCO₂/ha/yr',
+    asper: '17 to 20 tCO₂/ha/yr',
+    moso: '18 to 40 tCO₂/ha/yr',
     winner: 'comparable' as const,
     note: '* Moso upper range from 60yr managed Chinese plantations',
   },
@@ -103,7 +103,7 @@ const speciesRows = [
   {
     metric: 'Total carbon stock',
     asper: '234 t C/ha',
-    moso: '88–120 t C/ha',
+    moso: '88 to 120 t C/ha',
     winner: 'asper' as const,
   },
   {
@@ -114,7 +114,7 @@ const speciesRows = [
   },
   {
     metric: 'Carbon content of biomass',
-    asper: '52–54%',
+    asper: '52 to 54%',
     moso: '~47%',
     winner: 'asper' as const,
   },
@@ -126,7 +126,7 @@ const speciesRows = [
   },
   {
     metric: 'Climate suitability',
-    asper: 'Tropical year-round',
+    asper: 'Tropical, year round',
     moso: 'Subtropical/seasonal',
     winner: 'asper' as const,
   },
@@ -153,7 +153,7 @@ const barComparisons: BarComparison[] = [
     label: 'Annual CO₂ sequestration (tCO₂/ha/yr)',
     asperVal: ASPER_ANNUAL_CO2,
     mosoVal: MOSO_ANNUAL_CO2,
-    asperLabel: '17–20 t',
+    asperLabel: '17 to 20 t',
     mosoLabel: '~24 t',
     max: 40,
     badge: 'Comparable',
@@ -204,11 +204,11 @@ export default function ESGPage() {
               </div>
               <h1 className="text-4xl font-bold tracking-tight text-stone-950 sm:text-5xl lg:text-6xl">
                 Sustainable Bamboo for a{' '}
-                <span className="text-emerald-700">Carbon-Negative</span> Future
+                <span className="text-emerald-700">Carbon Negative</span> Future
               </h1>
               <p className="mt-6 text-lg leading-8 text-stone-600">
                 At NuMat Bamboo, sustainability is measurable and verified. Our engineered bamboo
-                products are sustainably harvested and verified carbon-negative by Wavemaker Impact.
+                products are sustainably harvested and verified carbon negative by Wavemaker Impact.
               </p>
             </div>
           </div>
@@ -366,7 +366,7 @@ export default function ESGPage() {
                   <TreePine className="h-5 w-5 text-emerald-800" />
                   <h3 className="text-lg font-bold text-stone-950">Sequestration Comparison</h3>
                 </div>
-                <p className="mb-6 text-xs text-stone-500">CO₂ absorbed per m³ or equivalent volume — per year</p>
+                <p className="mb-6 text-xs text-stone-500">CO₂ absorbed per m³ or equivalent volume, per year</p>
 
                 {comparisonData.map((item) => (
                   <div
@@ -394,7 +394,7 @@ export default function ESGPage() {
                 ))}
 
                 <p className="mt-2 text-xs text-stone-400">
-                  Sources: IPCC, FAO Forest Carbon estimates, peer-reviewed LCA studies.
+                  Sources: IPCC, FAO Forest Carbon estimates, peer reviewed LCA studies.
                   Bamboo figure represents net sequestration locked into product lifetime.
                 </p>
               </div>
@@ -408,13 +408,13 @@ export default function ESGPage() {
               </h2>
               <p className="mt-3 text-base leading-7 text-stone-600">
                 Bamboo absorbs CO₂ at rates far exceeding most trees. Our engineered boards
-                lock in this carbon for the product's lifetime — making every board a
-                net-positive contribution.
+                lock in this carbon for the product's lifetime, making every board a
+                net positive contribution.
               </p>
               <div className="mt-6 grid gap-4 sm:grid-cols-3">
                 {[
                   { icon: TrendingDown, label: '-2.5 tonnes CO₂ per cubic meter', sub: 'Net carbon sequestration' },
-                  { icon: TreePine, label: '3–5 year harvest cycle', sub: 'Sustainable regrowth without replanting' },
+                  { icon: TreePine, label: '3 to 5 year harvest cycle', sub: 'Sustainable regrowth without replanting' },
                   { icon: Recycle, label: '100% natural materials', sub: 'Biodegradable at end of life' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-white px-5 py-4">
@@ -442,7 +442,7 @@ export default function ESGPage() {
               Why Giant Asper Outperforms Moso
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-base text-stone-500">
-              Moso (<em>Phyllostachys edulis</em>) is the world's most studied bamboo — but our
+              Moso (<em>Phyllostachys edulis</em>) is the world's most studied bamboo, but our
               Dendrocalamus asper stores nearly twice the total carbon per hectare and
               is native to the Philippines' tropical climate.
             </p>
@@ -455,11 +455,11 @@ export default function ESGPage() {
             <div className="mb-8 flex flex-wrap gap-6 text-sm">
               <span className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-sm bg-emerald-600" />
-                <span className="font-semibold text-stone-900">D. asper — Giant Asper (NuMat Bamboo)</span>
+                <span className="font-semibold text-stone-900">D. asper: Giant Asper (NuMat Bamboo)</span>
               </span>
               <span className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-sm bg-sky-500" />
-                <span className="text-stone-600">Moso bamboo (P. edulis) — industry benchmark</span>
+                <span className="text-stone-600">Moso bamboo (P. edulis): industry benchmark</span>
               </span>
             </div>
 
@@ -553,8 +553,8 @@ export default function ESGPage() {
             <div className="border-t border-stone-100 px-8 py-4">
               <p className="text-xs text-stone-400">
                 * Moso's upper range (40 tCO₂/ha/yr) reflects intensively managed Chinese plantations after 60+ years.
-                Early-stage Moso plantations (0–5 years) sequester as little as 1.86 tCO₂/ha/yr.
-                D. asper figures are from Philippine plantation studies — the same climate conditions as NuMat Bamboo's supply chain.
+                Early stage Moso plantations (0 to 5 years) sequester as little as 1.86 tCO₂/ha/yr.
+                D. asper figures are from Philippine plantation studies, in the same climate conditions as NuMat Bamboo's supply chain.
               </p>
             </div>
           </div>
@@ -573,7 +573,7 @@ export default function ESGPage() {
                 </h2>
                 <p className="mt-4 text-base leading-7 text-stone-600">
                   NuMat Bamboo is a portfolio company of Wavemaker Impact, Southeast Asia's leading
-                  climate-tech investor. All carbon claims are independently verified.{' '}
+                  climate tech investor. All carbon claims are independently verified.{' '}
                   <a href="https://www.wavemakerimpact.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-emerald-700 hover:underline">
                     Learn more →
                   </a>
@@ -611,7 +611,7 @@ export default function ESGPage() {
                   icon: Leaf,
                   title: 'Environmental',
                   items: [
-                    'Carbon-negative product lifecycle',
+                    'Carbon negative product lifecycle',
                     'Zero deforestation supply chain',
                     '100% sustainably harvested bamboo',
                     'Minimal water usage in processing',
@@ -627,7 +627,7 @@ export default function ESGPage() {
                     'Safe working conditions',
                     'Community development programs',
                     'Transparent supply chain',
-                    'Regular third-party audits',
+                    'Regular third party audits',
                   ],
                 },
               ].map((col) => (

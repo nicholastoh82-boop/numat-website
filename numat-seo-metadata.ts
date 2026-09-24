@@ -144,7 +144,7 @@ export const aboutMetadata: Metadata = {
 export const contactMetadata: Metadata = {
   title: 'Contact NuMat Bamboo | Request a Quote or Sample',
   description:
-    'Get in touch with the NuMat Bamboo sales team for quotes, samples, and technical support. We respond within 24 hours. Export-ready engineered bamboo boards from the Philippines.',
+    'Get in touch with the NuMat Bamboo sales team for quotes, samples, and technical support. We respond within 24 hours. Export ready engineered bamboo boards from the Philippines.',
   alternates: { canonical: `${BASE_URL}/contact` },
   openGraph: {
     url: `${BASE_URL}/contact`,

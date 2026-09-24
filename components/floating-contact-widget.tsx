@@ -3,6 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { PackageCheck } from 'lucide-react'
+import { useOrderBarOffset } from '@/hooks/use-order-bar-offset'
 
 declare const gtag: (...args: unknown[]) => void
 
@@ -28,13 +29,14 @@ const btnStyle: React.CSSProperties = {
 }
 
 export default function FloatingContactWidget() {
+  const lift = useOrderBarOffset()
   return (
     <>
       {/* Your order, sits above WhatsApp */}
       <Link
         href="/request-quote"
         aria-label="Your order and checkout"
-        style={{ ...btnStyle, bottom: '152px', background: '#1D5C3A' }}
+        style={{ ...btnStyle, bottom: `${152 + lift}px`, background: '#1D5C3A' }}
         onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
         onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
       >
@@ -47,7 +49,7 @@ export default function FloatingContactWidget() {
         target="_blank"
         rel="noreferrer"
         aria-label="Chat on WhatsApp"
-        style={{ ...btnStyle, bottom: '88px', background: '#25D366' }}
+        style={{ ...btnStyle, bottom: `${88 + lift}px`, background: '#25D366' }}
         onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
         onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
         onClick={() =>

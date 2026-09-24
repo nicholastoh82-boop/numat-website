@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
 import { upsertInboundLead } from '@/lib/leads/inbound'
+import { WEBSITE_ALERT_RECIPIENTS, escapeHtml, logWebsiteSubmission } from '@/lib/leads/website-intake'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
 
@@ -30,18 +31,16 @@ export async function POST(req: Request) {
       const interestLabel = 'Quote request'
       await resend.emails.send({
         from: 'noreply@numat.ph',
-        // Same as the contact form: upsertInboundLead assigns this to Erica, so
-      // Erica is who needs to hear about it.
-      to: ['erica@numat.ph', 'sales@numat.ph'],
+        to: [...WEBSITE_ALERT_RECIPIENTS, 'sales@numat.ph'],
         subject: `New lead: ${name} (${interestLabel})`,
         html: `
         <h2 style="color:#0d1b2a">New lead captured</h2>
         <table style="border-collapse:collapse;width:100%">
-          <tr><td style="padding:6px;font-weight:bold">Name</td><td style="padding:6px">${name}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold">Email</td><td style="padding:6px"><a href="mailto:${email}">${email}</a></td></tr>
-          <tr><td style="padding:6px;font-weight:bold">Company</td><td style="padding:6px">${company || 'Not provided'}</td></tr>
+          <tr><td style="padding:6px;font-weight:bold">Name</td><td style="padding:6px">${escapeHtml(name)}</td></tr>
+          <tr><td style="padding:6px;font-weight:bold">Email</td><td style="padding:6px"><a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></td></tr>
+          <tr><td style="padding:6px;font-weight:bold">Company</td><td style="padding:6px">${escapeHtml(company) || 'Not provided'}</td></tr>
           <tr><td style="padding:6px;font-weight:bold">Interest</td><td style="padding:6px">${interestLabel}</td></tr>
-          <tr><td style="padding:6px;font-weight:bold">Source</td><td style="padding:6px">${source || 'Not provided'}</td></tr>
+          <tr><td style="padding:6px;font-weight:bold">Source</td><td style="padding:6px">${escapeHtml(source) || 'Not provided'}</td></tr>
           <tr><td style="padding:6px;font-weight:bold">Time</td><td style="padding:6px">${new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} PH</td></tr>
         </table>
       `,
@@ -49,6 +48,15 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error('Lead capture notify failed:', e)
     }
+
+    await logWebsiteSubmission({
+      type: 'Quick enquiry',
+      source: source ? `Website capture (${source})` : 'Website capture',
+      name,
+      company,
+      email,
+      message: interest ? String(interest) : null,
+    })
 
     return NextResponse.json({ success: true, leadId })
   } catch (err) {

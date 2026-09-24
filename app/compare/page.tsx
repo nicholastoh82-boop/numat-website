@@ -27,26 +27,26 @@ const rows: CompareRow[] = [
   {
     category: 'Strength',
     attribute: 'Bending Strength (MOR)',
-    nubam: { value: '22–69 MPa', rating: 'excellent' },
-    plywood: { value: '20–50 MPa', rating: 'good' },
-    mdf: { value: '20–38 MPa', rating: 'average' },
-    solidwood: { value: '40–80 MPa', rating: 'excellent' },
+    nubam: { value: '22 to 69 MPa', rating: 'excellent' },
+    plywood: { value: '20 to 50 MPa', rating: 'good' },
+    mdf: { value: '20 to 38 MPa', rating: 'average' },
+    solidwood: { value: '40 to 80 MPa', rating: 'excellent' },
   },
   {
     category: 'Strength',
     attribute: 'Hardness',
-    nubam: { value: '3918–7377 N', rating: 'excellent' },
-    plywood: { value: '2000–5000 N', rating: 'good' },
-    mdf: { value: '1000–2500 N', rating: 'poor' },
-    solidwood: { value: '2000–8000 N', rating: 'good' },
+    nubam: { value: '3918 to 7377 N', rating: 'excellent' },
+    plywood: { value: '2000 to 5000 N', rating: 'good' },
+    mdf: { value: '1000 to 2500 N', rating: 'poor' },
+    solidwood: { value: '2000 to 8000 N', rating: 'good' },
   },
   {
     category: 'Strength',
     attribute: 'Compression Strength',
-    nubam: { value: '25–30 MPa', rating: 'good' },
-    plywood: { value: '20–35 MPa', rating: 'good' },
-    mdf: { value: '15–25 MPa', rating: 'average' },
-    solidwood: { value: '25–50 MPa', rating: 'excellent' },
+    nubam: { value: '25 to 30 MPa', rating: 'good' },
+    plywood: { value: '20 to 35 MPa', rating: 'good' },
+    mdf: { value: '15 to 25 MPa', rating: 'average' },
+    solidwood: { value: '25 to 50 MPa', rating: 'excellent' },
   },
   {
     category: 'Sustainability',
@@ -59,15 +59,15 @@ const rows: CompareRow[] = [
   {
     category: 'Sustainability',
     attribute: 'Harvest Cycle',
-    nubam: { value: '3–5 years', rating: 'excellent' },
-    plywood: { value: '25–80 years', rating: 'poor' },
-    mdf: { value: '25–80 years', rating: 'poor' },
-    solidwood: { value: '25–100 years', rating: 'poor' },
+    nubam: { value: '3 to 5 years', rating: 'excellent' },
+    plywood: { value: '25 to 80 years', rating: 'poor' },
+    mdf: { value: '25 to 80 years', rating: 'poor' },
+    solidwood: { value: '25 to 100 years', rating: 'poor' },
   },
   {
     category: 'Sustainability',
-    attribute: 'Sustainable Sourcing / Certified Source',
-    nubam: { value: 'Sustainably Harvested', rating: 'excellent' },
+    attribute: 'Sustainable Sourcing',
+    nubam: { value: 'Sourced from Philippine bamboo farms', rating: 'excellent' },
     plywood: { value: 'Varies by supplier', rating: 'average' },
     mdf: { value: 'Varies by supplier', rating: 'average' },
     solidwood: { value: 'Varies by supplier', rating: 'average' },
@@ -115,7 +115,7 @@ const rows: CompareRow[] = [
   {
     category: 'Commercial',
     attribute: 'Price Point',
-    nubam: { value: 'Mid-premium', rating: 'good' },
+    nubam: { value: 'Mid to premium', rating: 'good' },
     plywood: { value: 'Low to mid', rating: 'excellent' },
     mdf: { value: 'Low', rating: 'excellent' },
     solidwood: { value: 'Mid to high', rating: 'average' },
@@ -165,7 +165,7 @@ export default function ComparePage() {
                 NuBrid vs Plywood vs MDF vs Solid Wood
               </h1>
               <p className="mt-4 text-lg leading-8 text-stone-600">
-                A practical side-by-side comparison to help buyers, specifiers, and
+                A practical side by side comparison to help buyers, specifiers, and
                 project teams evaluate engineered bamboo against traditional panel materials.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
@@ -278,7 +278,7 @@ export default function ComparePage() {
           <p className="mt-8 text-xs text-stone-400">
             All data based on published literature, DOST / ASTM D1037 testing (NuBrid), and industry references.
             Values are indicative ranges. Actual performance may vary by grade, species, and configuration.
-            Contact NuMat Bamboo for product-specific technical data.
+            Contact NuMat Bamboo for technical data on a specific product.
           </p>
         </section>
 

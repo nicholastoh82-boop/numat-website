@@ -85,8 +85,8 @@ export default function TechnicalResourcesPage() {
                 Technical Information for Buyers
               </h1>
               <p className="mt-4 text-lg leading-8 text-stone-600">
-                Explore product specifications, sizing references, certifications,
-                and handling guidance to support commercial evaluation.
+                Explore product specifications, sizing references, documentation,
+                certification pathway information, and handling guidance to support commercial evaluation.
               </p>
             </div>
           </div>

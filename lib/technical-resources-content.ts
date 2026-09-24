@@ -26,23 +26,23 @@ export const technicalResourceDetails: TechnicalResourceItem[] = [
         title: 'Product Overview',
         body: [
           'NUMAT boards are engineered bamboo plyboards made using laminated slat construction.',
-          'Suitable for interior panels, furniture cores, non-structural substrates, shopfitting, door cores, and similar applications.',
+          'Suitable for interior panels, furniture cores, non structural substrates, shopfitting, door cores, and similar applications.',
         ],
       },
       {
         title: 'Material and Processing',
         body: [
           'Giant Asper bamboo',
-          'Borax–boric acid treatment and kiln drying',
-          'Hydraulic hot-press manufacturing',
+          'Borax and boric acid treatment and kiln drying',
+          'Hydraulic hot press manufacturing',
           'Sanded surface ready for finishing',
         ],
       },
       {
         title: 'Physical Reference Properties',
         body: [
-          'Base density target: 650–750 kg/m3',
-          'Moisture target at shipment: 8–12%',
+          'Base density target: 650 to 750 kg/m3',
+          'Moisture target at shipment: 8 to 12%',
           'Optional edge sealing depending on project requirements',
         ],
       },
@@ -121,7 +121,7 @@ export const technicalResourceDetails: TechnicalResourceItem[] = [
         title: 'Available Documentation',
         body: [
           'DOST / ASTM D1037 testing references',
-          'Export-supporting documentation where applicable',
+          'Documentation to support export where applicable',
           'Technical support documents for buyer review',
         ],
       },
@@ -165,13 +165,13 @@ export const technicalResourceDetails: TechnicalResourceItem[] = [
         title: 'Machining Guidance',
         body: [
           'Carbide tooling is recommended',
-          'Pre-drilling is recommended for screws near edges',
+          'Drilling pilot holes is recommended for screws near edges',
         ],
       },
       {
         title: 'Finishing Guidance',
         body: [
-          'Compatible with water-borne PU, UV, or oil-wax systems',
+          'Compatible with waterborne PU, UV, or oil and wax systems',
           'Surface is prepared for finishing depending on end use',
         ],
       },
@@ -185,7 +185,7 @@ export const technicalResourceDetails: TechnicalResourceItem[] = [
       {
         title: 'Application Notes',
         body: [
-          'Best suited for interior panels, furniture, shopfitting, cabinetry, door-related applications, and similar uses unless otherwise reviewed for a specific project.',
+          'Best suited for interior panels, furniture, shopfitting, cabinetry, door applications, and similar uses unless otherwise reviewed for a specific project.',
         ],
       },
     ],

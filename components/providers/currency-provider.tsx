@@ -44,11 +44,13 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       const country = getCountryByCode(stored)
 
       setSelectedCountry(country)
-      setShowCountryModal(!stored)
+      // No blocking pop up on the first visit: start in PHP and let the visitor
+      // switch currency from the header whenever they want.
+      setShowCountryModal(false)
     } catch (error) {
       console.error('Currency provider hydration error:', error)
       setSelectedCountry(DEFAULT_COUNTRY)
-      setShowCountryModal(true)
+      setShowCountryModal(false)
     } finally {
       setHasHydrated(true)
     }
