@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import {
@@ -28,6 +28,8 @@ import ProductTechnicalSheet from '@/components/products/product-technical-sheet
 import { useCurrency } from '@/components/providers/currency-provider'
 import { toast } from '@/hooks/use-toast'
 import { useCartStore } from '@/lib/cart-store'
+import { track } from '@/lib/analytics'
+import PriceRequestForm from '@/components/products/price-request-form'
 import type { ProductDetail, ProductVariant } from '@/lib/products/get-product'
 import {
   NUFORM_GRADES,
@@ -165,7 +167,14 @@ export default function ProductPageClient({ initialProduct }: { initialProduct: 
       dimensions: '2440 x 1220 mm',
     })
 
+    track('add_to_cart', {
+      currency: 'PHP',
+      value: unitPrice != null ? unitPrice * safeQty : 0,
+      items: [{ item_id: variant.sku, item_name: itemName, item_variant: thickness, price: unitPrice ?? undefined, quantity: safeQty }],
+    })
+
     if (goToCheckout) {
+      track('begin_checkout', { currency: 'PHP', value: unitPrice != null ? unitPrice * safeQty : 0 })
       router.push('/request-quote')
       return
     }
@@ -181,6 +190,16 @@ export default function ProductPageClient({ initialProduct }: { initialProduct: 
   )}`
 
   const total = unitPrice != null ? unitPrice * safeQty : null
+
+  // GA4 funnel: one view_item per product page view.
+  useEffect(() => {
+    track('view_item', {
+      currency: 'PHP',
+      value: fromPrice ?? 0,
+      items: [{ item_id: product.slug, item_name: displayName, price: fromPrice ?? undefined }],
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.slug])
 
   return (
     <div className="flex min-h-screen flex-col bg-[#faf7f1]">
@@ -353,6 +372,13 @@ export default function ProductPageClient({ initialProduct }: { initialProduct: 
                       : 'Add it to your order and we will confirm the price with you.'}
                   </p>
                 </div>
+
+                {variant && unitPrice == null && (
+                  <PriceRequestForm
+                    productLabel={`${itemName}, ${thicknessLabel(variant.size_label, variant.thickness_mm)}`}
+                    quantity={safeQty}
+                  />
+                )}
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <button

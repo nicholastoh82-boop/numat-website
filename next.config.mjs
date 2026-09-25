@@ -18,7 +18,10 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    unoptimized: true,
+    // Optimised: Vercel resizes each image to the screen that asks for it and
+    // serves WebP or AVIF, so phones no longer download full size photos.
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 2678400,
     remotePatterns: [
       {
         protocol: 'https',

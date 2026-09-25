@@ -66,6 +66,10 @@
     {
       "path": "/api/cron/mention_emails",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/unfinished-checkouts",
+      "schedule": "*/30 * * * *"
     }
   ]
 }

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getProduct } from '@/lib/products/get-product'
 import ProductPageClient from './ProductPageClient'
+import { getMarketing } from '@/lib/product-media'
 
 // Dynamic: prices come from Supabase and a new board must appear without a
 // redeploy. Known limitation, present before this change too: an unknown slug
@@ -84,7 +85,48 @@ export default async function ProductPage({
 
   if (!product) notFound()
 
+  // Product structured data for Google. Prices come straight from the live
+  // Supabase variants (active and available, never price on request), so
+  // search results show the same "from" price as the page.
+  const marketing = getMarketing(product.slug)
+  const prices = product.variants
+    .filter((v) => v.is_available && !v.is_price_on_request && typeof v.base_price_php === 'number' && v.base_price_php > 0)
+    .map((v) => v.base_price_php as number)
+  const url = `${SITE}/products/${product.slug || id}`
+  const images = (marketing?.gallery ?? [])
+    .slice(0, 4)
+    .map((g) => (g.src.startsWith('http') ? g.src : `${SITE}${g.src}`))
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: marketing?.displayName ?? product.name,
+    description: marketing?.pitch ?? product.description,
+    url,
+    image: images.length ? images : undefined,
+    brand: { '@type': 'Brand', name: 'NUMAT' },
+    manufacturer: { '@type': 'Organization', name: 'NUMAT Sustainable Manufacturing Inc.' },
+    offers: prices.length
+      ? {
+          '@type': 'AggregateOffer',
+          priceCurrency: 'PHP',
+          lowPrice: Math.min(...prices),
+          highPrice: Math.max(...prices),
+          offerCount: prices.length,
+          availability: 'https://schema.org/InStock',
+          url,
+        }
+      : undefined,
+  }
+
   // Handed to the client component as initial state, so the board name, price
   // and specs are in the served HTML rather than appearing only once JS runs.
-  return <ProductPageClient initialProduct={product} />
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
+      <ProductPageClient initialProduct={product} />
+    </>
+  )
 }
