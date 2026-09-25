@@ -38,6 +38,7 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { uploadAdminImage } from '@/lib/admin/upload-image'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -456,12 +457,7 @@ export default function AdminProductsPage() {
       let imageUrl = currentProduct.image_url
 
       if (imageFile) {
-        const formData = new FormData()
-        formData.append('file', imageFile)
-        const uploadRes = await fetch('/api/admin/upload', { method: 'POST', body: formData })
-        const uploadData = await uploadRes.json().catch(() => null)
-        if (!uploadRes.ok) throw new Error(uploadData?.error || 'Image upload failed')
-        imageUrl = uploadData.url
+        imageUrl = await uploadAdminImage(imageFile)
       }
 
       // Build a clean payload with only fields that exist in the new schema
