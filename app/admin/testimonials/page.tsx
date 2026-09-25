@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { uploadAdminImage } from '@/lib/admin/upload-image'
 
 type Testimonial = {
   id: string
@@ -108,13 +109,7 @@ function ImageUploadWidget({
     // Upload
     setUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await fetch('/api/admin/upload', { method: 'POST', body: formData })
-      const data = await parseJsonSafely(res)
-      if (!res.ok) throw new Error(data?.error || 'Upload failed')
-      const url = data?.url || data?.publicUrl || data?.path
-      if (!url) throw new Error('No URL returned from upload')
+      const url = await uploadAdminImage(file)
       setPreview(url)
       onUploaded(url)
     } catch (err) {

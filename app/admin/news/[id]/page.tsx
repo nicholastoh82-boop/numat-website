@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import RichTextEditor from '@/components/admin/rich-text-editor'
+import { uploadAdminImage } from '@/lib/admin/upload-image'
 
 type ContentBlock = {
   type: 'heading' | 'paragraph' | 'image' | 'quote'
@@ -92,13 +93,10 @@ export default function EditNewsPage() {
     setContent((prev) => prev.filter((_, i) => i !== index))
   }
 
+  // Uploads straight to Supabase storage (shrunk in the browser first), so
+  // large photos no longer hit Vercel's 4.5 MB request limit.
   async function uploadSingleFile(file: File) {
-    const formData = new FormData()
-    formData.append('file', file)
-    const response = await fetch('/api/admin/upload', { method: 'POST', body: formData })
-    const result = await response.json()
-    if (!response.ok) throw new Error(result.error || 'Failed to upload image.')
-    return result.url as string
+    return uploadAdminImage(file)
   }
 
   async function handleCoverUpload(file: File) {
