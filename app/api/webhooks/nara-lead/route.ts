@@ -50,7 +50,7 @@ export async function POST(req: Request) {
 
   try {
     // All inbound goes to Erica; she evaluates and reassigns to the reps.
-    const repEmail = "erica@numat.ph";
+    const repEmail = "bryan@numat.ph";
     const repName = "Erica";
 
     const nameParts = (body.contact_name ?? "").trim().split(" ");

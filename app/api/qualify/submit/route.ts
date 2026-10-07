@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
         source_type: 'inbound_form',
         lead_source: 'sead_collaboration',
         rep_assigned: 'Erica',
-        rep_email: 'erica@numat.ph',
+        rep_email: 'bryan@numat.ph',
         status: 'new',
         pipeline_stage: 'inquiry',
         source_payload: sourcePayload,

@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
       `<p>${closingLine}</p>`,
       '<p style="margin-top: 24px;">Best regards,<br/>',
       "<strong>NUMAT Sustainable Manufacturing</strong><br/>",
-      '<span style="color: #8A958D; font-size: 12px;">sales@numat.ph \u00b7 numatbamboo.com</span></p>',
+      '<span style="color: #8A958D; font-size: 12px;">bryan@numat.ph \u00b7 numatbamboo.com</span></p>',
       "</div>",
     ].join("");
 

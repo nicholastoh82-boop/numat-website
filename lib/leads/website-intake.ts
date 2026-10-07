@@ -26,7 +26,7 @@ import { getGcpAccessToken } from '@/lib/cron/gcp_auth'
 import { appendRowsToXlsx } from '@/lib/leads/xlsx-append'
 
 /** Everyone who must hear about a website order request or enquiry. */
-export const WEBSITE_ALERT_RECIPIENTS = ['nick@numat.ph', 'bryan@numat.ph', 'erica@numat.ph']
+export const WEBSITE_ALERT_RECIPIENTS = ['nick@numat.ph', 'bryan@numat.ph']
 
 const SHEETS_API = 'https://sheets.googleapis.com/v4'
 const DRIVE_API = 'https://www.googleapis.com/drive/v3'

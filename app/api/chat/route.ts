@@ -266,7 +266,7 @@ Do not make certification, fire rating, acoustic rating, LEED or ASTM claims abo
 
 PRIMARY MARKETS: Philippines, Malaysia, Singapore
 SECONDARY MARKETS: Indonesia, Thailand, Vietnam, Australia, Middle East
-WEBSITE: numatbamboo.com | CONTACT: sales@numat.ph
+WEBSITE: numatbamboo.com | CONTACT: bryan@numat.ph
 ${veContextBlock}${internalBlock ? `\nBEHAVIORAL GUIDELINES (always follow):\n${internalBlock}\n` : ''}
 RELEVANT KNOWLEDGE BASE ENTRIES:
 ${knowledgeBlock}
@@ -404,7 +404,7 @@ export async function POST(request: NextRequest) {
 
     const claudeData = await claudeRes.json()
     const rawText: string = claudeData.content?.[0]?.text ||
-      "I'm sorry, I had a connection issue. Please email us at sales@numat.ph"
+      "I'm sorry, I had a connection issue. Please email us at bryan@numat.ph"
 
     const isComplete = rawText.includes('[LEAD_COMPLETE]')
 

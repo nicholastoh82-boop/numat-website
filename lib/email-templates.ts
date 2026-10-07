@@ -76,9 +76,9 @@ export function generateQuoteEmailHTML(data: QuoteEmailData): string {
                   </td>
                   <td style="padding:24px 32px;text-align:right;vertical-align:middle;">
                     <p style="margin:0;color:#333333;font-size:13px;line-height:1.8;">
-                      📞 +639613076458<br>
+                      📞 +639628127829<br>
                       🌐 www.numatbamboo.com<br>
-                      ✉️ sales@numat.ph
+                      ✉️ bryan@numat.ph
                     </p>
                   </td>
                 </tr>
@@ -208,12 +208,12 @@ export function generateQuoteEmailHTML(data: QuoteEmailData): string {
           <!-- CTA -->
           <tr>
             <td style="padding:0 32px 32px;text-align:center;">
-              <a href="mailto:sales@numat.ph?subject=Proceed with Quote ${data.quoteNumber}"
+              <a href="mailto:bryan@numat.ph?subject=Proceed with Quote ${data.quoteNumber}"
                 style="display:inline-block;background-color:#1a237e;color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:600;">
                 Proceed with Order
               </a>
               <p style="margin:12px 0 0;font-size:12px;color:#999;">
-                Reply to this email or contact us at <a href="mailto:sales@numat.ph" style="color:#1a237e;">sales@numat.ph</a>
+                Reply to this email or contact us at <a href="mailto:bryan@numat.ph" style="color:#1a237e;">bryan@numat.ph</a>
               </p>
             </td>
           </tr>
@@ -229,8 +229,8 @@ export function generateQuoteEmailHTML(data: QuoteEmailData): string {
                   </td>
                   <td style="text-align:right;vertical-align:top;">
                     <p style="margin:0;font-size:11px;color:#9fa8da;">
-                      sales@numat.ph<br>
-                      +639613076458
+                      bryan@numat.ph<br>
+                      +639628127829
                     </p>
                   </td>
                 </tr>
@@ -288,7 +288,7 @@ export function generateReminderEmailHTML(data: QuoteEmailData): string {
                 </tr>
               </table>
               <div style="text-align:center;margin-top:28px;">
-                <a href="mailto:sales@numat.ph?subject=Question about Quote ${data.quoteNumber}"
+                <a href="mailto:bryan@numat.ph?subject=Question about Quote ${data.quoteNumber}"
                   style="display:inline-block;background-color:#1a237e;color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:600;">
                   Contact Sales Team
                 </a>
@@ -297,7 +297,7 @@ export function generateReminderEmailHTML(data: QuoteEmailData): string {
           </tr>
           <tr>
             <td style="background-color:#1a237e;padding:16px 32px;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#9fa8da;">NUMAT — sales@numat.ph | +639613076458</p>
+              <p style="margin:0;font-size:12px;color:#9fa8da;">NUMAT — bryan@numat.ph | +639628127829</p>
             </td>
           </tr>
         </table>

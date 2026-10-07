@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       const interestLabel = isPriceRequest ? String(interest || 'Price request') : 'Quote request'
       await resend.emails.send({
         from: 'noreply@numat.ph',
-        to: [...WEBSITE_ALERT_RECIPIENTS, 'sales@numat.ph'],
+        to: [...WEBSITE_ALERT_RECIPIENTS],
         subject: isPriceRequest ? `Price request from the website: ${name}` : `New lead: ${name} (${interestLabel})`,
         html: `
         <h2 style="color:#0d1b2a">New lead captured</h2>
