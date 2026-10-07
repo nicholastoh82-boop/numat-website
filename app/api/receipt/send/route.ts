@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
       `<p>${closingLine}</p>`,
       '<p style="margin-top: 24px;">Best regards,<br/>',
       "<strong>NUMAT Sustainable Manufacturing</strong><br/>",
-      '<span style="color: #8A958D; font-size: 12px;">sales@numat.ph \u00b7 numatbamboo.com</span></p>',
+      '<span style="color: #8A958D; font-size: 12px;">bryan@numat.ph \u00b7 numatbamboo.com</span></p>',
       '<p style="color: #8A958D; font-size: 11px; margin-top: 16px;">Note: this document is a commercial payment acknowledgment. It is not a BIR Official Receipt.</p>',
       "</div>",
     ].join("");

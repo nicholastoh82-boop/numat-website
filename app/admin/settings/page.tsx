@@ -17,7 +17,7 @@ const DEFAULT_SETTINGS: AdminSettings = {
   quote_validity_days: 14,
   default_lead_time_days: 10,
   whatsapp_number: '+639123456789',
-  sales_email: 'sales@numat.ph',
+  sales_email: 'bryan@numat.ph',
 }
 
 export default function AdminSettingsPage() {

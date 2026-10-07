@@ -86,7 +86,7 @@ function generateInquiryNotificationHTML(data: {
           </tr>
           <tr>
             <td style="background-color:#1a237e;padding:16px 32px;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#9fa8da;">NUMAT — sales@numat.ph | numatbamboo.com</p>
+              <p style="margin:0;font-size:12px;color:#9fa8da;">NUMAT, bryan@numat.ph | numatbamboo.com</p>
             </td>
           </tr>
         </table>
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           from: process.env.RESEND_FROM_EMAIL,
           // Nick, Bryan and Erica (WEBSITE_ALERT_RECIPIENTS) plus the sales inbox.
-          to: [...WEBSITE_ALERT_RECIPIENTS, 'sales@numat.ph'],
+          to: [...WEBSITE_ALERT_RECIPIENTS],
           reply_to: email.trim().toLowerCase(),
           subject: `New Inquiry: ${subject} — ${name}`,
           html: generateInquiryNotificationHTML({

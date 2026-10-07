@@ -55,7 +55,7 @@ Total Quote: *PHP ${data.total.toLocaleString()}*
 Have questions? We're here to help! 🎋
 
 _NUMAT - NuBam Engineered Bamboo Products_
-📧 sales@numat.ph
+📧 bryan@numat.ph
 `.trim()
 }
 
@@ -87,7 +87,7 @@ This is a great opportunity to secure sustainable bamboo products at this quoted
 Your satisfaction is our priority! 🎋
 
 _NUMAT - NuBam Engineered Bamboo Products_
-📧 sales@numat.ph
+📧 bryan@numat.ph
 `.trim()
 }
 
@@ -117,7 +117,7 @@ Total: PHP ${total.toLocaleString()}
 Just reply here or reach out directly. We're committed to finding the perfect solution for your bamboo product needs! 🌱
 
 _NUMAT - NuBam Engineered Bamboo Products_
-📧 sales@numat.ph
+📧 bryan@numat.ph
 `.trim()
 }
 
@@ -156,7 +156,7 @@ Have any questions? We're just a message away!
 Thank you for choosing NUBAMBU! 🎋
 
 _NUMAT - NuBam Engineered Bamboo Products_
-📧 sales@numat.ph
+📧 bryan@numat.ph
 `.trim()
 }
 
@@ -199,7 +199,7 @@ ${
 Reply to this message anytime. We're here to help! 🎋
 
 _NUMAT - NuBam Engineered Bamboo Products_
-📧 sales@numat.ph
+📧 bryan@numat.ph
 `.trim()
 }
 
@@ -236,7 +236,7 @@ Customers who provide feedback get 10% off their next order! 🎁
 Thank you for being part of the NUBAMBU family! 🎋
 
 _NUMAT - NuBam Engineered Bamboo Products_
-📧 sales@numat.ph
+📧 bryan@numat.ph
 `.trim()
 }
 

@@ -648,7 +648,7 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
   const incoterms = data.incoterms || "EXW Warehouse B22, Manolo Fortich, Bukidnon, Philippines.";
 
   const repName = data.issued_by_name || "NUMAT Sales Team";
-  const repEmail = data.issued_by_email || data.generated_by || "sales@numat.ph";
+  const repEmail = data.issued_by_email || data.generated_by || "bryan@numat.ph";
 
   return (
     <Document>

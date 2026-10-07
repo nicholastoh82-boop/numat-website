@@ -90,7 +90,7 @@ export default function PrivacyPage() {
               <h2 className="text-2xl font-semibold text-foreground mb-4">7. Contact Us</h2>
               <p className="text-muted-foreground leading-relaxed">
                 If you have any questions about this Privacy Policy or wish to exercise your rights, 
-                please contact us at sales@numat.ph or through our contact page.
+                please contact us at bryan@numat.ph or through our contact page.
               </p>
             </section>
           </div>

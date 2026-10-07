@@ -9,7 +9,7 @@ if (!resendApiKey) {
 const resend = new Resend(resendApiKey)
 
 // Internal recipients always CC'd on every quote email
-const INTERNAL_CC: string[] = ['sales@numat.ph', 'nick@numat.ph']
+const INTERNAL_CC: string[] = ['bryan@numat.ph', 'nick@numat.ph']
 
 export interface SendEmailOptions {
   to: string
@@ -30,7 +30,7 @@ export async function sendEmail(options: SendEmailOptions) {
 
   try {
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@numat.ph'
-    const replyToEmail = process.env.RESEND_REPLY_TO || 'sales@numat.ph'
+    const replyToEmail = process.env.RESEND_REPLY_TO || 'bryan@numat.ph'
 
     const attachments =
       options.attachments?.map((att) => ({

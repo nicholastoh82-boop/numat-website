@@ -68,7 +68,7 @@ export default function ContactPage() {
                     <div>
                       <h3 className="font-semibold text-foreground">Phone</h3>
                       <p className="text-muted-foreground mt-1">
-                        +63 961 307 6458
+                        +63 962 812 7829
                       </p>
                     </div>
                   </div>
@@ -79,7 +79,7 @@ export default function ContactPage() {
                     <div>
                       <h3 className="font-semibold text-foreground">Email</h3>
                       <p className="text-muted-foreground mt-1">
-                        sales@numat.ph
+                        bryan@numat.ph
                       </p>
                     </div>
                   </div>
