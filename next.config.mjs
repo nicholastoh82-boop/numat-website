@@ -59,6 +59,8 @@ const nextConfig = {
       // Column and beam cladding pages were CLB only and were removed with it.
       { source: '/solutions/columns-and-beams', destination: '/solutions', permanent: true },
       { source: '/applications/columns-beams-and-cladding', destination: '/applications', permanent: true },
+      // CSS Borneo 2026 lead page retired (October 2026).
+      { source: '/borneo.html', destination: '/', permanent: true },
     ];
   },
 }
