@@ -55,10 +55,7 @@
       "path": "/api/cron/scan-rep-outreach",
       "schedule": "15 * * * *"
     },
-    {
-      "path": "/api/cron/parse-tenders",
-      "schedule": "*/30 * * * *"
-    },
+    
     {
       "path": "/api/cron/daily-rep-telegram",
       "schedule": "0 10 * * *"
