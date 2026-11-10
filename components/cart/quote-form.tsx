@@ -31,7 +31,7 @@ interface QuoteFormProps {
   prefillProduct?: string
 }
 
-const WHATSAPP_NUMBER = '639613076458'
+const WHATSAPP_NUMBER = '639178991444'
 
 type DeliveryChannel = 'email' | 'whatsapp'
 

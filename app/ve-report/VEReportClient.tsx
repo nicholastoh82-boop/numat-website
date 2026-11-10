@@ -466,9 +466,9 @@ export default function VEReportClient() {
         <div className="container">
           <div className="cta-wrap">
             <h2 className="syne">Ready to spec this for {resort}?</h2>
-            <p>Mohan Louis, our Head of Growth, can walk you through product options, sample availability, and a tailored lead time for your next renovation phase.</p>
-            <a href="https://cal.com/mohanlouis/discovery" target="_blank" rel="noopener noreferrer" className="cta-btn syne">Book a 15-Minute Call →</a>
-            <p className="cta-note">Or email: bryan@numat.ph &nbsp;·&nbsp; numatbamboo.com</p>
+            <p>Laurence De Castro, our Head of Sales, can walk you through product options and a tailored lead time for your next renovation phase.</p>
+            <a href="mailto:laurence@numat.ph" className="cta-btn syne">Email Laurence →</a>
+            <p className="cta-note">Or WhatsApp: +63 917 899 1444 &nbsp;·&nbsp; numatbamboo.com</p>
           </div>
 
           <div className="footnote">

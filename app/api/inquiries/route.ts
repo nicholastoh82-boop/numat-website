@@ -86,7 +86,7 @@ function generateInquiryNotificationHTML(data: {
           </tr>
           <tr>
             <td style="background-color:#1a237e;padding:16px 32px;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#9fa8da;">NUMAT, bryan@numat.ph | numatbamboo.com</p>
+              <p style="margin:0;font-size:12px;color:#9fa8da;">NUMAT, laurence@numat.ph | numatbamboo.com</p>
             </td>
           </tr>
         </table>

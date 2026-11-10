@@ -210,7 +210,7 @@ export function ProductsContent({
             <p className="text-sm text-white/75">Talk to us about large orders and delivery schedules.</p>
           </div>
           <a
-            href="https://wa.me/639613076458?text=Hello%20NUMAT%2C%20I%20would%20like%20to%20discuss%20a%20volume%20order."
+            href="https://wa.me/639178991444?text=Hello%20NUMAT%2C%20I%20would%20like%20to%20discuss%20a%20volume%20order."
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-50"

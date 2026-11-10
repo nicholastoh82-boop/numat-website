@@ -113,8 +113,8 @@ export async function POST(req: NextRequest) {
         source: FORM_VERSION,
         source_type: 'inbound_form',
         lead_source: 'sead_collaboration',
-        rep_assigned: 'Erica',
-        rep_email: 'bryan@numat.ph',
+        rep_assigned: 'Laurence',
+        rep_email: 'laurence@numat.ph',
         status: 'new',
         pipeline_stage: 'inquiry',
         source_payload: sourcePayload,
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
       `Email: ${body.email}\n` +
       `Phone: ${body.phone}\n` +
       `Preferred: ${body.preferred_contact}\n\n` +
-      `Assigned: Mohan\nLead ID: ${lead.id}`
+      `Assigned: Laurence\nLead ID: ${lead.id}`
 
     try {
       await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {

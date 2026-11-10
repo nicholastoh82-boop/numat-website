@@ -311,9 +311,9 @@ const QuoteDocument = ({ quote, logoBase64 }: { quote: QuoteData; logoBase64: st
               )}
             </View>
             <View style={styles.headerContact}>
-              <Text style={styles.headerContactText}>+639628127829</Text>
+              <Text style={styles.headerContactText}>+639178991444</Text>
               <Text style={styles.headerContactText}>www.numatbamboo.com</Text>
-              <Text style={styles.headerContactText}>bryan@numat.ph</Text>
+              <Text style={styles.headerContactText}>laurence@numat.ph</Text>
             </View>
           </View>
         </View>
@@ -409,7 +409,7 @@ const QuoteDocument = ({ quote, logoBase64 }: { quote: QuoteData; logoBase64: st
         {/* FOOTER */}
         <View style={styles.footer} fixed>
           <Text style={styles.footerText}>NUMAT — Numat Sustainable Manufacturing Inc.</Text>
-          <Text style={styles.footerText}>bryan@numat.ph | +639628127829</Text>
+          <Text style={styles.footerText}>laurence@numat.ph | +639178991444</Text>
         </View>
 
       </Page>

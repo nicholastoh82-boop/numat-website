@@ -4,19 +4,15 @@ import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import useSWR from 'swr'
-import { CheckCircle2, Download, MessageCircle, Mail, ArrowRight, Leaf, Loader2, CalendarDays } from 'lucide-react'
+import { CheckCircle2, Download, MessageCircle, Mail, ArrowRight, Leaf, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { QuoteWithItems } from '@/lib/supabase/types'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
-// Lead routing (CLAUDE.md): Philippine numbers to Bryan, everyone else to Mohan.
-function salesContact(phone: string | null | undefined) {
-  const digits = (phone ?? '').replace(/[^\d+]/g, '')
-  const isPH = digits.startsWith('+63') || digits.startsWith('63') || digits.startsWith('09')
-  return isPH
-    ? { name: 'Bryan', role: 'our Chief Operating Officer', calUrl: 'https://cal.com/bryan-suarin-rxvhte/discovery' }
-    : { name: 'Mohan', role: 'our Head of Growth', calUrl: 'https://cal.com/mohanlouis/discovery' }
+// All customer contact goes to Laurence De Castro, Head of Sales.
+function salesContact(_phone?: string | null) {
+  return { name: 'Laurence', role: 'our Head of Sales', email: 'laurence@numat.ph' }
 }
 
 export function QuoteConfirmation() {
@@ -269,22 +265,20 @@ export function QuoteConfirmation() {
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
                 <p className="font-semibold text-stone-900">Want to move faster?</p>
                 <p className="mt-1 text-sm text-stone-600">
-                  Book a short call with {contact.name}, {contact.role}, to confirm delivery cost and lead time
-                  for order {displayedQuoteNumber}, or message us on WhatsApp.
+                  Contact {contact.name}, {contact.role}, to confirm delivery cost and lead time
+                  for order {displayedQuoteNumber}, by email or WhatsApp.
                 </p>
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                   <a
-                    href={contact.calUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => (window as any).gtag?.('event', 'book_call_click', { quote_number: displayedQuoteNumber })}
+                    href={`mailto:${contact.email}?subject=${encodeURIComponent(`Order request ${displayedQuoteNumber}`)}`}
+                    onClick={() => (window as any).gtag?.('event', 'email_sales_click', { quote_number: displayedQuoteNumber })}
                     className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-900"
                   >
-                    <CalendarDays className="h-4 w-4" />
-                    Book a call with {contact.name}
+                    <Mail className="h-4 w-4" />
+                    Email {contact.name}
                   </a>
                   <a
-                    href={`https://wa.me/639613076458?text=${encodeURIComponent(waText)}`}
+                    href={`https://wa.me/639178991444?text=${encodeURIComponent(waText)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => (window as any).gtag?.('event', 'whatsapp_click', { event_label: 'Order confirmation' })}

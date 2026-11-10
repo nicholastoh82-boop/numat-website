@@ -584,7 +584,7 @@ export default function NumatHomepage() {
                   Start your order
                 </Link>
                 <a
-                  href="https://wa.me/639613076458?text=Hello%20NUMAT%2C%20I%20would%20like%20to%20place%20an%20order."
+                  href="https://wa.me/639178991444?text=Hello%20NUMAT%2C%20I%20would%20like%20to%20place%20an%20order."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/30 px-7 py-4 text-base font-semibold text-white transition hover:bg-white/10"

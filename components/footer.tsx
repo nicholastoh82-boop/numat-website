@@ -59,8 +59,8 @@ export default function Footer() {
             </div>
 
             <div className="mt-6 space-y-2 text-sm text-white/68">
-              <p>Sales: bryan@numat.ph</p>
-              <p>WhatsApp: +639613076458</p>
+              <p>Sales: laurence@numat.ph</p>
+              <p>WhatsApp: +639178991444</p>
               <a
                 href="https://www.facebook.com/NuMatPH/"
                 target="_blank"

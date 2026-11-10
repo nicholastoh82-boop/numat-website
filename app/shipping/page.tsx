@@ -144,10 +144,10 @@ export default function ShippingPage() {
               <h2 className="text-2xl font-semibold text-foreground mb-4">Questions?</h2>
               <p className="text-muted-foreground">
                 For shipping inquiries or special delivery requirements, contact our team at{" "}
-                <a href="mailto:bryan@numat.ph" className="text-primary hover:underline">
-                  bryan@numat.ph
+                <a href="mailto:laurence@numat.ph" className="text-primary hover:underline">
+                  laurence@numat.ph
                 </a>{" "}
-                or call us at +63 962 812 7829.
+                or call us at +63 917 899 1444.
               </p>
             </section>
           </div>
