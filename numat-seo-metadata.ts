@@ -220,7 +220,8 @@ export const organizationSchema = {
   contactPoint: [
     {
       '@type': 'ContactPoint',
-      email: 'bryan@numat.ph',
+      email: 'laurence@numat.ph',
+      telephone: '+639178991444',
       contactType: 'sales',
       areaServed: ['PH', 'SG', 'MY', 'ID', 'AU', 'GB', 'US'],
       availableLanguage: 'English',
@@ -248,8 +249,8 @@ export const localBusinessSchema = {
     postalCode: '8703',
     addressCountry: 'PH',
   },
-  email: 'bryan@numat.ph',
-  telephone: '+639628127829',
+  email: 'laurence@numat.ph',
+  telephone: '+639178991444',
   priceRange: '$$',
   currenciesAccepted: 'PHP USD SGD MYR',
   paymentAccepted: 'Bank Transfer, TT',
