@@ -5,7 +5,7 @@ import { useOrderBarOffset } from '@/hooks/use-order-bar-offset'
 
 declare const gtag: (...args: unknown[]) => void
 
-const whatsappUrl = `https://wa.me/639613076458?text=${encodeURIComponent(
+const whatsappUrl = `https://wa.me/639178991444?text=${encodeURIComponent(
   'Hello NuMat Bamboo, I would like to request product information and a quotation.'
 )}`
 

@@ -26,7 +26,7 @@ import { getGcpAccessToken } from '@/lib/cron/gcp_auth'
 import { appendRowsToXlsx } from '@/lib/leads/xlsx-append'
 
 /** Everyone who must hear about a website order request or enquiry. */
-export const WEBSITE_ALERT_RECIPIENTS = ['nick@numat.ph', 'bryan@numat.ph']
+export const WEBSITE_ALERT_RECIPIENTS = ['nick@numat.ph', 'laurence@numat.ph']
 
 const SHEETS_API = 'https://sheets.googleapis.com/v4'
 const DRIVE_API = 'https://www.googleapis.com/drive/v3'
@@ -81,12 +81,12 @@ export type WebsiteSubmission = {
   message?: string | null
 }
 
-/** Lead routing from CLAUDE.md: Philippine numbers to Bryan, others to Mohan. */
+/** Lead routing: every website lead goes to Laurence De Castro, Head of Sales. */
 export function assignOwner(phone?: string | null): string {
   if (!phone) return 'Unassigned'
   const digits = phone.replace(/[^\d+]/g, '')
-  if (digits.startsWith('+63') || digits.startsWith('63') || digits.startsWith('09')) return 'Bryan'
-  return 'Mohan'
+  if (!digits) return 'Unassigned'
+  return 'Laurence'
 }
 
 function manilaTimestamp(date = new Date()): string {

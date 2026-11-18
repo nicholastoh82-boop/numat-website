@@ -222,7 +222,7 @@ export default function ChatWidget() {
         {
           role: "assistant",
           content:
-            "Sorry, I had a connection issue. Please email us at bryan@numat.ph",
+            "Sorry, I had a connection issue. Please email us at laurence@numat.ph",
         },
       ]);
     }

@@ -54,8 +54,8 @@ export async function GET() {
         {
           quote_validity_days: 14,
           default_lead_time_days: 10,
-          whatsapp_number: '+639613076458',
-          sales_email: 'bryan@numat.ph',
+          whatsapp_number: '+639178991444',
+          sales_email: 'laurence@numat.ph',
         },
         { status: 200 }
       )
@@ -87,8 +87,8 @@ export async function PATCH(request: Request) {
     const payload = {
       quote_validity_days: Number(body.quote_validity_days ?? 14),
       default_lead_time_days: Number(body.default_lead_time_days ?? 10),
-      whatsapp_number: body.whatsapp_number ?? '+639613076458',
-      sales_email: body.sales_email ?? 'bryan@numat.ph',
+      whatsapp_number: body.whatsapp_number ?? '+639178991444',
+      sales_email: body.sales_email ?? 'laurence@numat.ph',
       updated_at: new Date().toISOString(),
     }
 

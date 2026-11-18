@@ -43,6 +43,7 @@ const REP_DIRECTORY: Record<string, string> = {
   "nick@numat.ph": "Nicholas Toh",
   "mohan@numat.ph": "Mohan Louis",
   "bryan@numat.ph": "Bryan",
+  "laurence@numat.ph": "Laurence De Castro",
   "erica@numat.ph": "Erica",
   "eugene@numat.ph": "Eugene",
   "lemuelaseniero@numat.ph": "Lemuel Aseniero",
@@ -648,7 +649,7 @@ const QuotePDF: React.FC<{ data: QuoteData }> = ({ data }) => {
   const incoterms = data.incoterms || "EXW Warehouse B22, Manolo Fortich, Bukidnon, Philippines.";
 
   const repName = data.issued_by_name || "NUMAT Sales Team";
-  const repEmail = data.issued_by_email || data.generated_by || "bryan@numat.ph";
+  const repEmail = data.issued_by_email || data.generated_by || "laurence@numat.ph";
 
   return (
     <Document>

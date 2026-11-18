@@ -39,7 +39,7 @@ import {
   type GalleryImage,
 } from '@/lib/product-media'
 
-const WHATSAPP_NUMBER = '639613076458'
+const WHATSAPP_NUMBER = '639178991444'
 const QUICK_QUANTITIES = [10, 25, 50, 100]
 
 type ListProduct = {

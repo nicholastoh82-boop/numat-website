@@ -49,9 +49,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    // All inbound goes to Erica; she evaluates and reassigns to the reps.
-    const repEmail = "bryan@numat.ph";
-    const repName = "Erica";
+    // All inbound goes to Laurence De Castro, Head of Sales.
+    const repEmail = "laurence@numat.ph";
+    const repName = "Laurence";
 
     const nameParts = (body.contact_name ?? "").trim().split(" ");
     const firstName = nameParts[0] || "there";
